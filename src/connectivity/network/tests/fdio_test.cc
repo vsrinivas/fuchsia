@@ -5,13 +5,13 @@
 // These tests ensure the zircon libc can talk to netstack.
 // No network connection is required, only a running netstack binary.
 
+#include <thread>
+
 #include <fuchsia/posix/socket/cpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-
-#include <thread>
 
 #include "gtest/gtest.h"
 #include "util.h"

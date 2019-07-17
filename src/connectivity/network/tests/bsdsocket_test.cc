@@ -27,8 +27,7 @@ TEST(LocalhostTest, IP_ADD_MEMBERSHIP_INADDR_ANY) {
   param.imr_ifindex = 1;
   param.imr_multiaddr.s_addr = inet_addr("224.0.2.1");
   param.imr_address.s_addr = htonl(INADDR_ANY);
-  ASSERT_EQ(setsockopt(s, SOL_IP, IP_ADD_MEMBERSHIP, &param, sizeof(param)), 0)
-      << strerror(errno);
+  ASSERT_EQ(setsockopt(s, SOL_IP, IP_ADD_MEMBERSHIP, &param, sizeof(param)), 0) << strerror(errno);
 }
 
 TEST(LocalhostTest, IP_MULTICAST_IF_ifindex) {
@@ -37,63 +36,51 @@ TEST(LocalhostTest, IP_MULTICAST_IF_ifindex) {
 
   ip_mreqn param_in = {};
   param_in.imr_ifindex = 1;
-  ASSERT_EQ(setsockopt(s, SOL_IP, IP_MULTICAST_IF, &param_in, sizeof(param_in)),
-            0)
+  ASSERT_EQ(setsockopt(s, SOL_IP, IP_MULTICAST_IF, &param_in, sizeof(param_in)), 0)
       << strerror(errno);
 
   in_addr param_out = {};
   socklen_t len = sizeof(param_out);
-  ASSERT_EQ(getsockopt(s, SOL_IP, IP_MULTICAST_IF, &param_in, &len), 0)
-      << strerror(errno);
+  ASSERT_EQ(getsockopt(s, SOL_IP, IP_MULTICAST_IF, &param_in, &len), 0) << strerror(errno);
   ASSERT_EQ(len, sizeof(param_out));
 
   ASSERT_EQ(param_out.s_addr, INADDR_ANY);
 }
 
 class ReuseTest
-    : public ::testing::TestWithParam<
-          ::testing::tuple<int /* type */, in_addr_t /* address */>> {};
+    : public ::testing::TestWithParam<::testing::tuple<int /* type */, in_addr_t /* address */>> {};
 
 TEST_P(ReuseTest, AllowsAddressReuse) {
   const int on = true;
 
   int s1;
-  ASSERT_GE(s1 = socket(AF_INET, ::testing::get<0>(GetParam()), 0), 0)
-      << strerror(errno);
+  ASSERT_GE(s1 = socket(AF_INET, ::testing::get<0>(GetParam()), 0), 0) << strerror(errno);
 
-  ASSERT_EQ(setsockopt(s1, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0)
-      << strerror(errno);
+  ASSERT_EQ(setsockopt(s1, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0) << strerror(errno);
 
   struct sockaddr_in addr = {};
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = ::testing::get<1>(GetParam());
-  ASSERT_EQ(
-      bind(s1, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
-      0)
+  ASSERT_EQ(bind(s1, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(
-      getsockname(s1, reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
+  ASSERT_EQ(getsockname(s1, reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
       << strerror(errno);
   ASSERT_EQ(addrlen, sizeof(addr));
 
   int s2 = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   ASSERT_GE(s2, 0) << strerror(errno);
 
-  ASSERT_EQ(setsockopt(s2, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0)
-      << strerror(errno);
+  ASSERT_EQ(setsockopt(s2, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0) << strerror(errno);
 
-  ASSERT_EQ(
-      bind(s2, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
-      0)
+  ASSERT_EQ(bind(s2, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    LocalhostTest, ReuseTest,
-    ::testing::Combine(::testing::Values(SOCK_DGRAM, SOCK_STREAM),
-                       ::testing::Values(htonl(INADDR_LOOPBACK),
-                                         inet_addr("224.0.2.1"))));
+INSTANTIATE_TEST_SUITE_P(LocalhostTest, ReuseTest,
+                         ::testing::Combine(::testing::Values(SOCK_DGRAM, SOCK_STREAM),
+                                            ::testing::Values(htonl(INADDR_LOOPBACK),
+                                                              inet_addr("224.0.2.1"))));
 
 TEST(LocalhostTest, Accept) {
   int serverfd;
@@ -103,17 +90,14 @@ TEST(LocalhostTest, Accept) {
   serveraddr.sin6_family = AF_INET6;
   serveraddr.sin6_addr = IN6ADDR_LOOPBACK_INIT;
   socklen_t serveraddrlen = sizeof(serveraddr);
-  ASSERT_EQ(bind(serverfd, (sockaddr*)&serveraddr, serveraddrlen), 0)
-      << strerror(errno);
-  ASSERT_EQ(getsockname(serverfd, (sockaddr*)&serveraddr, &serveraddrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(bind(serverfd, (sockaddr*)&serveraddr, serveraddrlen), 0) << strerror(errno);
+  ASSERT_EQ(getsockname(serverfd, (sockaddr*)&serveraddr, &serveraddrlen), 0) << strerror(errno);
   ASSERT_EQ(serveraddrlen, sizeof(serveraddr));
   ASSERT_EQ(listen(serverfd, 1), 0) << strerror(errno);
 
   int clientfd;
   ASSERT_GE(clientfd = socket(AF_INET6, SOCK_STREAM, 0), 0) << strerror(errno);
-  ASSERT_EQ(connect(clientfd, (sockaddr*)&serveraddr, serveraddrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(connect(clientfd, (sockaddr*)&serveraddr, serveraddrlen), 0) << strerror(errno);
 
   struct sockaddr_in connaddr;
   socklen_t connaddrlen = sizeof(connaddr);
@@ -130,25 +114,20 @@ TEST(LocalhostTest, ConnectAFMismatchINET) {
   addr.sin6_family = AF_INET6;
   addr.sin6_addr = IN6ADDR_LOOPBACK_INIT;
   addr.sin6_port = htons(1337);
-  EXPECT_EQ(
-      connect(s, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
-      -1);
+  EXPECT_EQ(connect(s, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), -1);
   EXPECT_EQ(errno, EAFNOSUPPORT) << strerror(errno);
   EXPECT_EQ(close(s), 0) << strerror(errno);
 }
 
 TEST(LocalhostTest, ConnectAFMismatchINET6) {
   int s;
-  ASSERT_GE(s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP), 0)
-      << strerror(errno);
+  ASSERT_GE(s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP), 0) << strerror(errno);
 
   struct sockaddr_in addr = {};
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   addr.sin_port = htons(1337);
-  EXPECT_EQ(
-      connect(s, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
-      0)
+  EXPECT_EQ(connect(s, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
   EXPECT_EQ(close(s), 0) << strerror(errno);
 }
@@ -160,14 +139,10 @@ TEST(NetStreamTest, ConnectTwice) {
   struct sockaddr_in addr = {};
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  ASSERT_EQ(bind(server_fd, reinterpret_cast<const struct sockaddr*>(&addr),
-                 sizeof(addr)),
-            0)
+  ASSERT_EQ(bind(server_fd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(server_fd, reinterpret_cast<struct sockaddr*>(&addr),
-                        &addrlen),
-            0)
+  ASSERT_EQ(getsockname(server_fd, reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
       << strerror(errno);
   ASSERT_EQ(addrlen, sizeof(addr));
   ASSERT_EQ(listen(server_fd, 1), 0) << strerror(errno);
@@ -177,16 +152,13 @@ TEST(NetStreamTest, ConnectTwice) {
 
   addr.sin_port++;
 
-  ASSERT_EQ(connect(client_fd, reinterpret_cast<const struct sockaddr*>(&addr),
-                    sizeof(addr)),
-            -1);
+  ASSERT_EQ(connect(client_fd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), -1);
   ASSERT_EQ(errno, ECONNREFUSED) << strerror(errno);
 
   addr.sin_port--;
 
   // TODO(tamird): decide if we want to match Linux's behaviour.
-  ASSERT_EQ(connect(client_fd, reinterpret_cast<const struct sockaddr*>(&addr),
-                    sizeof(addr)),
+  ASSERT_EQ(connect(client_fd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
 #if defined(__linux__)
             0)
       << strerror(errno);
@@ -206,8 +178,7 @@ TEST(LocalhostTest, GetAddrInfo) {
   hints.ai_socktype = SOCK_STREAM;
 
   struct addrinfo* result;
-  ASSERT_EQ(getaddrinfo("localhost", NULL, &hints, &result), 0)
-      << strerror(errno);
+  ASSERT_EQ(getaddrinfo("localhost", NULL, &hints, &result), 0) << strerror(errno);
 
   int i = 0;
   for (struct addrinfo* ai = result; ai != NULL; ai = ai->ai_next) {
@@ -223,17 +194,15 @@ TEST(LocalhostTest, GetAddrInfo) {
         unsigned char expected_addr[4] = {0x7f, 0x00, 0x00, 0x01};
 
         const struct sockaddr_in* sin = (struct sockaddr_in*)sa;
-        EXPECT_EQ(sin->sin_addr.s_addr,
-                  *reinterpret_cast<uint32_t*>(expected_addr));
+        EXPECT_EQ(sin->sin_addr.s_addr, *reinterpret_cast<uint32_t*>(expected_addr));
 
         break;
       }
       case AF_INET6: {
         EXPECT_EQ(ai->ai_addrlen, (socklen_t)28);
 
-        const char expected_addr[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                        0x00, 0x00, 0x00, 0x01};
+        const char expected_addr[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
 
         auto sin6 = reinterpret_cast<const struct sockaddr_in6*>(sa);
         EXPECT_STREQ((const char*)sin6->sin6_addr.s6_addr, expected_addr);
@@ -265,12 +234,10 @@ TEST(NetStreamTest, BlockingAcceptWrite) {
   addr.sin_family = AF_INET;
   addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0)
-      << strerror(errno);
+  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
   int ntfyfd[2];
   ASSERT_EQ(0, pipe(ntfyfd));
@@ -306,20 +273,17 @@ TEST(NetStreamTest, ReceiveTimeout) {
       .sin_port = htons(0),
       .sin_addr.s_addr = htonl(INADDR_ANY),
   };
-  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0)
-      << strerror(errno);
+  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
   ASSERT_EQ(addrlen, sizeof(addr));
 
   ASSERT_EQ(listen(acptfd, 1), 0) << strerror(errno);
 
   int client_fd;
   ASSERT_GE(client_fd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
-  ASSERT_EQ(connect(client_fd, (const struct sockaddr*)&addr, sizeof(addr)), 0)
-      << strerror(errno);
+  ASSERT_EQ(connect(client_fd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   const int64_t rcv_timeout_us = 1150000;
 
@@ -328,8 +292,7 @@ TEST(NetStreamTest, ReceiveTimeout) {
       .tv_sec = rcv_timeout_us / 1000000,
       .tv_usec = rcv_timeout_us % 1000000,
   };
-  EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)), 0)
-      << strerror(errno);
+  EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)), 0) << strerror(errno);
 
   int server_fd;
   ASSERT_GE(server_fd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
@@ -350,33 +313,27 @@ TEST(NetStreamTest, ReceiveTimeout) {
   // Try to read.  There will be no data so this should eventually timeout.  If
   // the timeout_thread closes the connection, that will also end the wait.
   timespec current_time;
-  ASSERT_EQ(clock_gettime(CLOCK_MONOTONIC, &current_time), 0)
-      << strerror(errno);
-  int64_t start_time_ns =
-      current_time.tv_sec * 1000000000 + current_time.tv_nsec;
+  ASSERT_EQ(clock_gettime(CLOCK_MONOTONIC, &current_time), 0) << strerror(errno);
+  int64_t start_time_ns = current_time.tv_sec * 1000000000 + current_time.tv_nsec;
 
   char buf[16];  // This buffer will never be written into.
   EXPECT_EQ(read(client_fd, buf, sizeof(buf)), -1);
   ASSERT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK) << strerror(errno);
 
-  ASSERT_EQ(clock_gettime(CLOCK_MONOTONIC, &current_time), 0)
-      << strerror(errno);
+  ASSERT_EQ(clock_gettime(CLOCK_MONOTONIC, &current_time), 0) << strerror(errno);
   int64_t end_time_ns = current_time.tv_sec * 1000000000 + current_time.tv_nsec;
 
   int64_t total_ns = end_time_ns - start_time_ns;
   // Check that the actual time waited was within 100ms of the expectation.
-  EXPECT_LT(total_ns, 1000 * (rcv_timeout_us + 100000))
-      << "SO_RCVTIMEO waited too long";
-  EXPECT_GT(total_ns, 1000 * (rcv_timeout_us - 100000))
-      << "SO_RCVTIMEO didn't wait long enough";
+  EXPECT_LT(total_ns, 1000 * (rcv_timeout_us + 100000)) << "SO_RCVTIMEO waited too long";
+  EXPECT_GT(total_ns, 1000 * (rcv_timeout_us - 100000)) << "SO_RCVTIMEO didn't wait long enough";
 
   // Remove the timeout
   tv = {
       .tv_sec = 0,
       .tv_usec = 0,
   };
-  EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)), 0)
-      << strerror(errno);
+  EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)), 0) << strerror(errno);
 
   // This read should never timeout.  timeout_thread should close the connection
   // eventually.
@@ -394,16 +351,13 @@ TEST(NetStreamTest, ReceiveTimeoutSockopts) {
       .tv_sec = 39,
       .tv_usec = 500000,
   };
-  EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &expected_tv,
-                       sizeof(expected_tv)),
-            0)
+  EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &expected_tv, sizeof(expected_tv)), 0)
       << strerror(errno);
 
   // Reading it back should work.
   struct timeval actual_tv;
   socklen_t optlen = sizeof(actual_tv);
-  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &actual_tv, &optlen),
-            0)
+  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &actual_tv, &optlen), 0)
       << strerror(errno);
   EXPECT_EQ(optlen, sizeof(actual_tv));
   EXPECT_EQ(actual_tv.tv_sec, expected_tv.tv_sec);
@@ -414,8 +368,7 @@ TEST(NetStreamTest, ReceiveTimeoutSockopts) {
   memset(&actual_tv2_buffer, 44, sizeof(actual_tv2_buffer));
   optlen = sizeof(actual_tv2_buffer);
   struct timeval* actual_tv2 = (struct timeval*)&actual_tv2_buffer;
-  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, actual_tv2, &optlen),
-            0)
+  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, actual_tv2, &optlen), 0)
       << strerror(errno);
   EXPECT_EQ(optlen, sizeof(struct timeval));
   EXPECT_EQ(actual_tv2->tv_sec, expected_tv.tv_sec);
@@ -435,8 +388,7 @@ TEST(NetStreamTest, ReceiveTimeoutSockopts) {
       << strerror(errno);
   EXPECT_EQ(optlen, sizeof(actual_tv) - 7);
   struct timeval linux_expected_tv = expected_tv;
-  memset(((char*)&linux_expected_tv) + optlen, 0,
-         sizeof(linux_expected_tv) - optlen);
+  memset(((char*)&linux_expected_tv) + optlen, 0, sizeof(linux_expected_tv) - optlen);
   EXPECT_EQ(memcmp(&actual_tv, &linux_expected_tv, sizeof(actual_tv)), 0);
 #else
             -1);
@@ -445,8 +397,7 @@ TEST(NetStreamTest, ReceiveTimeoutSockopts) {
 
   // Setting it without enough space should fail gracefully.
   optlen = sizeof(expected_tv) - 1;  // Not big enough.
-  EXPECT_EQ(
-      setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &expected_tv, optlen), -1);
+  EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &expected_tv, optlen), -1);
   EXPECT_EQ(errno, EINVAL) << strerror(errno);
 
   // Setting it with too much space should work okay.
@@ -455,11 +406,9 @@ TEST(NetStreamTest, ReceiveTimeoutSockopts) {
       .tv_usec = 0,
   };
   optlen = sizeof(expected_tv2) + 1;  // Too big.
-  EXPECT_EQ(
-      setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &expected_tv2, optlen), 0)
+  EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &expected_tv2, optlen), 0)
       << strerror(errno);
-  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &actual_tv, &optlen),
-            0)
+  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &actual_tv, &optlen), 0)
       << strerror(errno);
   EXPECT_EQ(optlen, sizeof(expected_tv2));
   EXPECT_EQ(actual_tv.tv_sec, expected_tv2.tv_sec);
@@ -471,14 +420,12 @@ TEST(NetStreamTest, ReceiveTimeoutSockopts) {
       .tv_usec = 0,
   };
   optlen = sizeof(zero_tv);
-  EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &zero_tv, optlen), 0)
-      << strerror(errno);
+  EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &zero_tv, optlen), 0) << strerror(errno);
 
   // Reading back the disabled timeout should work.
   memset(&actual_tv, 55, sizeof(actual_tv));
   optlen = sizeof(actual_tv);
-  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &actual_tv, &optlen),
-            0)
+  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &actual_tv, &optlen), 0)
       << strerror(errno);
   EXPECT_EQ(optlen, sizeof(actual_tv));
   EXPECT_EQ(actual_tv.tv_sec, zero_tv.tv_sec);
@@ -495,12 +442,10 @@ TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
   addr.sin_family = AF_INET;
   addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0)
-      << strerror(errno);
+  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
   int ntfyfd[2];
   ASSERT_EQ(0, pipe(ntfyfd));
@@ -546,12 +491,10 @@ TEST(NetStreamTest, BlockingAcceptDupWrite) {
   addr.sin_family = AF_INET;
   addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0)
-      << strerror(errno);
+  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
   int ntfyfd[2];
   ASSERT_EQ(0, pipe(ntfyfd));
@@ -590,12 +533,10 @@ TEST(NetStreamTest, NonBlockingAcceptWrite) {
   addr.sin_family = AF_INET;
   addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0)
-      << strerror(errno);
+  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
   int ntfyfd[2];
   ASSERT_EQ(0, pipe(ntfyfd));
@@ -636,12 +577,10 @@ TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
   addr.sin_family = AF_INET;
   addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0)
-      << strerror(errno);
+  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
   int ntfyfd[2];
   ASSERT_EQ(0, pipe(ntfyfd));
@@ -686,12 +625,10 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
   addr.sin_family = AF_INET;
   addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0)
-      << strerror(errno);
+  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
   int ntfyfd[2];
   ASSERT_EQ(0, pipe(ntfyfd));
@@ -708,8 +645,7 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
   ASSERT_EQ(0, fcntl(connfd, F_SETFL, status | O_NONBLOCK));
 
   int ret;
-  EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)&addr, sizeof(addr)),
-            -1);
+  EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)&addr, sizeof(addr)), -1);
   if (ret == -1) {
     ASSERT_EQ(EINPROGRESS, errno) << strerror(errno);
 
@@ -744,12 +680,10 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
   addr.sin_family = AF_INET;
   addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0)
-      << strerror(errno);
+  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
   int ntfyfd[2];
   ASSERT_EQ(0, pipe(ntfyfd));
@@ -766,8 +700,7 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
   ASSERT_EQ(0, fcntl(connfd, F_SETFL, status | O_NONBLOCK));
 
   int ret;
-  EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)&addr, sizeof(addr)),
-            -1);
+  EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)&addr, sizeof(addr)), -1);
   if (ret == -1) {
     ASSERT_EQ(EINPROGRESS, errno) << strerror(errno);
 
@@ -808,12 +741,10 @@ TEST(NetStreamTest, NonBlockingConnectRefused) {
   addr.sin_family = AF_INET;
   addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0)
-      << strerror(errno);
+  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
   // No listen() on acptfd.
 
@@ -824,8 +755,7 @@ TEST(NetStreamTest, NonBlockingConnectRefused) {
   ASSERT_EQ(0, fcntl(connfd, F_SETFL, status | O_NONBLOCK));
 
   int ret;
-  EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)&addr, sizeof(addr)),
-            -1);
+  EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)&addr, sizeof(addr)), -1);
   if (ret == -1) {
     ASSERT_EQ(EINPROGRESS, errno) << strerror(errno);
 
@@ -849,8 +779,7 @@ TEST(NetStreamTest, GetTcpInfo) {
 
   tcp_info info;
   socklen_t info_len = sizeof(tcp_info);
-  ASSERT_GE(getsockopt(connfd, SOL_TCP, TCP_INFO, (void*)&info, &info_len), 0)
-      << strerror(errno);
+  ASSERT_GE(getsockopt(connfd, SOL_TCP, TCP_INFO, (void*)&info, &info_len), 0) << strerror(errno);
   ASSERT_EQ(sizeof(tcp_info), info_len);
 
   ASSERT_EQ(0, close(connfd));
@@ -864,12 +793,10 @@ TEST(NetStreamTest, Shutdown) {
   addr.sin_family = AF_INET;
   addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0)
-      << strerror(errno);
+  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
   int ntfyfd[2];
   ASSERT_EQ(0, pipe(ntfyfd));
@@ -906,27 +833,23 @@ TEST(NetDatagramTest, DatagramSendto) {
   addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-  ASSERT_EQ(bind(recvfd, (const struct sockaddr*)&addr, sizeof(addr)), 0)
-      << strerror(errno);
+  ASSERT_EQ(bind(recvfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(recvfd, (struct sockaddr*)&addr, &addrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(getsockname(recvfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
   int ntfyfd[2];
   ASSERT_EQ(0, pipe(ntfyfd));
 
   std::string out;
-  std::thread thrd(DatagramRead, recvfd, &out, &addr, &addrlen, ntfyfd[1],
-                   kTimeout);
+  std::thread thrd(DatagramRead, recvfd, &out, &addr, &addrlen, ntfyfd[1], kTimeout);
 
   const char* msg = "hello";
 
   int sendfd;
   ASSERT_GE(sendfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
-  ASSERT_EQ(
-      sendto(sendfd, msg, strlen(msg), 0, (struct sockaddr*)&addr, addrlen),
-      (ssize_t)strlen(msg))
+  ASSERT_EQ(sendto(sendfd, msg, strlen(msg), 0, (struct sockaddr*)&addr, addrlen),
+            (ssize_t)strlen(msg))
       << strerror(errno);
   ASSERT_EQ(0, close(sendfd));
 
@@ -950,19 +873,16 @@ TEST(NetDatagramTest, DatagramConnectWrite) {
   addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-  ASSERT_EQ(bind(recvfd, (const struct sockaddr*)&addr, sizeof(addr)), 0)
-      << strerror(errno);
+  ASSERT_EQ(bind(recvfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(recvfd, (struct sockaddr*)&addr, &addrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(getsockname(recvfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
   int ntfyfd[2];
   ASSERT_EQ(0, pipe(ntfyfd));
 
   std::string out;
-  std::thread thrd(DatagramRead, recvfd, &out, &addr, &addrlen, ntfyfd[1],
-                   kTimeout);
+  std::thread thrd(DatagramRead, recvfd, &out, &addr, &addrlen, ntfyfd[1], kTimeout);
 
   const char* msg = "hello";
 
@@ -992,20 +912,18 @@ TEST(NetDatagramTest, DatagramPartialRecv) {
   addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-  ASSERT_EQ(bind(recvfd, (const struct sockaddr*)&addr, sizeof(addr)), 0)
-      << strerror(errno);
+  ASSERT_EQ(bind(recvfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(recvfd, (struct sockaddr*)&addr, &addrlen), 0)
-      << strerror(errno);
+  ASSERT_EQ(getsockname(recvfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
   const char kTestMsg[] = "hello";
   const int kTestMsgSize = sizeof(kTestMsg);
 
   int sendfd;
   ASSERT_GE(sendfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
-  ASSERT_EQ(kTestMsgSize, sendto(sendfd, kTestMsg, kTestMsgSize, 0,
-                                 reinterpret_cast<sockaddr*>(&addr), addrlen));
+  ASSERT_EQ(kTestMsgSize,
+            sendto(sendfd, kTestMsg, kTestMsgSize, 0, reinterpret_cast<sockaddr*>(&addr), addrlen));
 
   char recv_buf[kTestMsgSize];
 
@@ -1022,21 +940,19 @@ TEST(NetDatagramTest, DatagramPartialRecv) {
 
   int recv_result = recvmsg(recvfd, &msg, 0);
   ASSERT_EQ(kPartialReadSize, recv_result);
-  ASSERT_EQ(std::string(kTestMsg, kPartialReadSize),
-            std::string(recv_buf, kPartialReadSize));
+  ASSERT_EQ(std::string(kTestMsg, kPartialReadSize), std::string(recv_buf, kPartialReadSize));
   EXPECT_EQ(MSG_TRUNC, msg.msg_flags);
 
   // Send the second packet.
-  ASSERT_EQ(kTestMsgSize, sendto(sendfd, kTestMsg, kTestMsgSize, 0,
-                                 reinterpret_cast<sockaddr*>(&addr), addrlen));
+  ASSERT_EQ(kTestMsgSize,
+            sendto(sendfd, kTestMsg, kTestMsgSize, 0, reinterpret_cast<sockaddr*>(&addr), addrlen));
 
   // Read the whole packet now.
   recv_buf[0] = 0;
   iov.iov_len = sizeof(recv_buf);
   recv_result = recvmsg(recvfd, &msg, 0);
   ASSERT_EQ(kTestMsgSize, recv_result);
-  ASSERT_EQ(std::string(kTestMsg, kTestMsgSize),
-            std::string(recv_buf, kTestMsgSize));
+  ASSERT_EQ(std::string(kTestMsg, kTestMsgSize), std::string(recv_buf, kTestMsgSize));
   EXPECT_EQ(0, msg.msg_flags);
 
   ASSERT_EQ(0, close(sendfd));
@@ -1059,20 +975,15 @@ TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
   addr.sin_port = htons(0);
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-  ASSERT_EQ(bind(recvfd, reinterpret_cast<const struct sockaddr*>(&addr),
-                 sizeof(addr)),
-            0)
+  ASSERT_EQ(bind(recvfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(
-      getsockname(recvfd, reinterpret_cast<struct sockaddr*>(&addr), &addrlen),
-      0)
+  ASSERT_EQ(getsockname(recvfd, reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
       << strerror(errno);
 #if DEBUG
   char addrstr[INET_ADDRSTRLEN];
-  printf("addr.sin_addr: %s\n",
-         inet_ntop(AF_INET, &addr.sin_addr, addrstr, sizeof(addrstr)));
+  printf("addr.sin_addr: %s\n", inet_ntop(AF_INET, &addr.sin_addr, addrstr, sizeof(addrstr)));
   printf("addr.sin_port: %d\n", ntohs(addr.sin_port));
   printf("addrlen: %d\n", addrlen);
 #endif
@@ -1086,26 +997,23 @@ TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
 
   int sendfd;
   ASSERT_GE(sendfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
-  ASSERT_EQ(sendto(sendfd, msg, strlen(msg), 0,
-                   reinterpret_cast<struct sockaddr*>(&addr), addrlen),
+  ASSERT_EQ(sendto(sendfd, msg, strlen(msg), 0, reinterpret_cast<struct sockaddr*>(&addr), addrlen),
             (ssize_t)strlen(msg))
       << strerror(errno);
 
   struct pollfd fds = {sendfd, POLLIN, 0};
   int nfds = poll(&fds, 1, kTimeout);
-  ASSERT_EQ(1, nfds) << "poll returned: " << nfds
-                     << " errno: " << strerror(errno);
+  ASSERT_EQ(1, nfds) << "poll returned: " << nfds << " errno: " << strerror(errno);
 
   char buf[32];
   struct sockaddr_in peer;
   socklen_t peerlen = sizeof(peer);
-  ASSERT_EQ(recvfrom(sendfd, buf, sizeof(buf), 0,
-                     reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
-            (ssize_t)strlen(msg))
+  ASSERT_EQ(
+      recvfrom(sendfd, buf, sizeof(buf), 0, reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
+      (ssize_t)strlen(msg))
       << strerror(errno);
 #if DEBUG
-  printf("peer.sin_addr[2]: %s\n",
-         inet_ntop(AF_INET, &peer.sin_addr, addrstr, sizeof(addrstr)));
+  printf("peer.sin_addr[2]: %s\n", inet_ntop(AF_INET, &peer.sin_addr, addrstr, sizeof(addrstr)));
   printf("peer.sin_port[2]: %d\n", ntohs(peer.sin_port));
   printf("peerlen[2]: %d\n", peerlen);
 #endif
@@ -1133,20 +1041,15 @@ TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
   addr.sin6_port = htons(0);
   addr.sin6_addr = in6addr_loopback;
 
-  ASSERT_EQ(bind(recvfd, reinterpret_cast<const struct sockaddr*>(&addr),
-                 sizeof(addr)),
-            0)
+  ASSERT_EQ(bind(recvfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
   socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(
-      getsockname(recvfd, reinterpret_cast<struct sockaddr*>(&addr), &addrlen),
-      0)
+  ASSERT_EQ(getsockname(recvfd, reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
       << strerror(errno);
 #if DEBUG
   char addrstr[INET_ADDRSTRLEN];
-  printf("addr.sin6_addr: %s\n",
-         inet_ntop(AF_INET6, &addr.sin6_addr, addrstr, sizeof(addrstr)));
+  printf("addr.sin6_addr: %s\n", inet_ntop(AF_INET6, &addr.sin6_addr, addrstr, sizeof(addrstr)));
   printf("addr.sin6_port: %d\n", ntohs(addr.sin6_port));
   printf("addrlen: %d\n", addrlen);
 #endif
@@ -1160,26 +1063,23 @@ TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
 
   int sendfd;
   ASSERT_GE(sendfd = socket(AF_INET6, SOCK_DGRAM, 0), 0) << strerror(errno);
-  ASSERT_EQ(sendto(sendfd, msg, strlen(msg), 0,
-                   reinterpret_cast<struct sockaddr*>(&addr), addrlen),
+  ASSERT_EQ(sendto(sendfd, msg, strlen(msg), 0, reinterpret_cast<struct sockaddr*>(&addr), addrlen),
             (ssize_t)strlen(msg))
       << strerror(errno);
 
   struct pollfd fds = {sendfd, POLLIN, 0};
   int nfds = poll(&fds, 1, kTimeout);
-  ASSERT_EQ(1, nfds) << "poll returned: " << nfds
-                     << " errno: " << strerror(errno);
+  ASSERT_EQ(1, nfds) << "poll returned: " << nfds << " errno: " << strerror(errno);
 
   char buf[32];
   struct sockaddr_in6 peer;
   socklen_t peerlen = sizeof(peer);
-  ASSERT_EQ(recvfrom(sendfd, buf, sizeof(buf), 0,
-                     reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
-            (ssize_t)strlen(msg))
+  ASSERT_EQ(
+      recvfrom(sendfd, buf, sizeof(buf), 0, reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
+      (ssize_t)strlen(msg))
       << strerror(errno);
 #if DEBUG
-  printf("peer.sin6_addr[2]: %s\n",
-         inet_ntop(AF_INET6, &peer.sin6_addr, addrstr, sizeof(addrstr)));
+  printf("peer.sin6_addr[2]: %s\n", inet_ntop(AF_INET6, &peer.sin6_addr, addrstr, sizeof(addrstr)));
   printf("peer.sin6_port[2]: %d\n", ntohs(peer.sin6_port));
   printf("peerlen[2]: %d\n", peerlen);
 #endif
@@ -1209,36 +1109,26 @@ TEST(NetStreamTest, MultipleListeningSockets) {
   socklen_t addrlen = sizeof(addr);
 
   for (int i = 0; i < kListeningSockets; i++) {
-    ASSERT_GE(listenfd[i] = socket(AF_INET, SOCK_STREAM, 0), 0)
-        << strerror(errno);
+    ASSERT_GE(listenfd[i] = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
 
-    ASSERT_EQ(bind(listenfd[i], reinterpret_cast<const struct sockaddr*>(&addr),
-                   sizeof(addr)),
-              0)
+    ASSERT_EQ(bind(listenfd[i], reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
         << strerror(errno);
 
     ASSERT_EQ(listen(listenfd[i], 10), 0) << strerror(errno);
   }
 
   for (int i = 0; i < kListeningSockets; i++) {
-    ASSERT_EQ(getsockname(listenfd[i],
-                          reinterpret_cast<struct sockaddr*>(&addr), &addrlen),
-              0)
+    ASSERT_EQ(getsockname(listenfd[i], reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
         << strerror(errno);
 #if DEBUG
     char addrstr[INET_ADDRSTRLEN];
-    printf("[%d] %s:%d\n", i,
-           inet_ntop(AF_INET, &addr.sin_addr, addrstr, sizeof(addrstr)),
+    printf("[%d] %s:%d\n", i, inet_ntop(AF_INET, &addr.sin_addr, addrstr, sizeof(addrstr)),
            ntohs(addr.sin_port));
 #endif
 
-    ASSERT_GE(connfd[i] = socket(AF_INET, SOCK_STREAM, 0), 0)
-        << strerror(errno);
+    ASSERT_GE(connfd[i] = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
 
-    ASSERT_EQ(
-        connect(connfd[i], reinterpret_cast<const struct sockaddr*>(&addr),
-                sizeof(addr)),
-        0)
+    ASSERT_EQ(connect(connfd[i], reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
         << strerror(errno);
   }
 

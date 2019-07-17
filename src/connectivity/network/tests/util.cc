@@ -62,8 +62,7 @@ void StreamConnectRead(struct sockaddr_in* addr, std::string* out, int ntfyfd) {
   }
 
   int ret;
-  EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)addr, sizeof(*addr)),
-            0)
+  EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)addr, sizeof(*addr)), 0)
       << strerror(errno);
   if (ret != 0) {
     NotifyFail(ntfyfd);
@@ -94,14 +93,12 @@ void StreamAcceptWrite(int acptfd, const char* msg, int ntfyfd) {
   NotifySuccess(ntfyfd);
 }
 
-void PollSignal(struct sockaddr_in* addr, short events, short* revents,
-                int ntfyfd) {
+void PollSignal(struct sockaddr_in* addr, short events, short* revents, int ntfyfd) {
   int connfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(connfd, 0);
 
   int ret;
-  EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)addr, sizeof(*addr)),
-            0)
+  EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)addr, sizeof(*addr)), 0)
       << strerror(errno);
   if (ret != 0) {
     NotifyFail(ntfyfd);
@@ -122,8 +119,8 @@ void PollSignal(struct sockaddr_in* addr, short events, short* revents,
   NotifySuccess(ntfyfd);
 }
 
-void DatagramRead(int recvfd, std::string* out, struct sockaddr_in* addr,
-                  socklen_t* addrlen, int ntfyfd, int timeout) {
+void DatagramRead(int recvfd, std::string* out, struct sockaddr_in* addr, socklen_t* addrlen,
+                  int ntfyfd, int timeout) {
   struct pollfd fds = {recvfd, POLLIN, 0};
   int nfds;
   EXPECT_EQ(nfds = poll(&fds, 1, timeout), 1) << strerror(errno);
@@ -134,9 +131,7 @@ void DatagramRead(int recvfd, std::string* out, struct sockaddr_in* addr,
 
   char buf[4096];
   int nbytes;
-  EXPECT_GT(nbytes = recvfrom(recvfd, buf, sizeof(buf), 0,
-                              (struct sockaddr*)addr, addrlen),
-            0)
+  EXPECT_GT(nbytes = recvfrom(recvfd, buf, sizeof(buf), 0, (struct sockaddr*)addr, addrlen), 0)
       << strerror(errno);
   if (nbytes < 0) {
     NotifyFail(ntfyfd);
@@ -160,10 +155,9 @@ void DatagramReadWrite(int recvfd, int ntfyfd) {
   struct sockaddr_in peer;
   socklen_t peerlen = sizeof(peer);
   int nbytes;
-  EXPECT_GE(
-      nbytes = recvfrom(recvfd, buf, sizeof(buf), 0,
-                        reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
-      0)
+  EXPECT_GE(nbytes = recvfrom(recvfd, buf, sizeof(buf), 0,
+                              reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
+            0)
       << strerror(errno);
   if (nbytes < 0) {
     NotifyFail(ntfyfd);
@@ -171,15 +165,14 @@ void DatagramReadWrite(int recvfd, int ntfyfd) {
   }
 #if DEBUG
   char addrstr[INET_ADDRSTRLEN];
-  printf("peer.sin_addr: %s\n",
-         inet_ntop(AF_INET, &peer.sin_addr, addrstr, sizeof(addrstr)));
+  printf("peer.sin_addr: %s\n", inet_ntop(AF_INET, &peer.sin_addr, addrstr, sizeof(addrstr)));
   printf("peer.sin_port: %d\n", ntohs(peer.sin_port));
   printf("peerlen: %d\n", peerlen);
 #endif
 
-  EXPECT_GE(nbytes = sendto(recvfd, buf, nbytes, 0,
-                            reinterpret_cast<struct sockaddr*>(&peer), peerlen),
-            0)
+  EXPECT_GE(
+      nbytes = sendto(recvfd, buf, nbytes, 0, reinterpret_cast<struct sockaddr*>(&peer), peerlen),
+      0)
       << strerror(errno);
   if (nbytes < 0) {
     NotifyFail(ntfyfd);
@@ -202,10 +195,9 @@ void DatagramReadWriteV6(int recvfd, int ntfyfd) {
   struct sockaddr_in6 peer;
   socklen_t peerlen = sizeof(peer);
   int nbytes;
-  EXPECT_GE(
-      nbytes = recvfrom(recvfd, buf, sizeof(buf), 0,
-                        reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
-      0)
+  EXPECT_GE(nbytes = recvfrom(recvfd, buf, sizeof(buf), 0,
+                              reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
+            0)
       << strerror(errno);
   if (nbytes < 0) {
     NotifyFail(ntfyfd);
@@ -213,15 +205,14 @@ void DatagramReadWriteV6(int recvfd, int ntfyfd) {
   }
 #if DEBUG
   char addrstr[INET_ADDRSTRLEN];
-  printf("peer.sin6_addr: %s\n",
-         inet_ntop(AF_INET6, &peer.sin6_addr, addrstr, sizeof(addrstr)));
+  printf("peer.sin6_addr: %s\n", inet_ntop(AF_INET6, &peer.sin6_addr, addrstr, sizeof(addrstr)));
   printf("peer.sin6_port: %d\n", ntohs(peer.sin6_port));
   printf("peerlen: %d\n", peerlen);
 #endif
 
-  EXPECT_GE(nbytes = sendto(recvfd, buf, nbytes, 0,
-                            reinterpret_cast<struct sockaddr*>(&peer), peerlen),
-            0)
+  EXPECT_GE(
+      nbytes = sendto(recvfd, buf, nbytes, 0, reinterpret_cast<struct sockaddr*>(&peer), peerlen),
+      0)
       << strerror(errno);
   if (nbytes < 0) {
     NotifyFail(ntfyfd);
