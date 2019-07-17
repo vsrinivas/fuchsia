@@ -561,11 +561,53 @@ async fn use_the_wrong_type_of_storage() {
     let test = RoutingTest::new("a", components, framework_services);
     await!(test.check_use(
         vec!["b"].into(),
-        CheckUse::Storage { type_: fsys::StorageType::Cache, storage_relation: None }
+        CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None }
     ));
     await!(test.check_use(
         vec!["b"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation: None }
+    ));
+}
+
+///   a
+///    \
+///     b
+///
+/// a: offers directory from self at path "/data"
+/// b: uses data storage as /storage, fails to since data storage != "/data" directories
+#[fuchsia_async::run_singlethreaded(test)]
+async fn directories_are_not_storage() {
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![OfferDecl::Directory(OfferDirectoryDecl {
+                    source: OfferDirectorySource::Self_,
+                    source_path: "/data".try_into().unwrap(),
+                    target_path: "/data".try_into().unwrap(),
+                    target: OfferTarget::Child("b".to_string()),
+                })],
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                uses: vec![UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap()))],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let framework_services = Box::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services);
+    await!(test.check_use(
+        vec!["b"].into(),
+        CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None }
     ));
 }
 

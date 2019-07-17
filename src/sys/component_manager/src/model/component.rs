@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex,
-    log::*,
     std::convert::TryInto,
     std::{collections::HashMap, sync::Arc},
 };
@@ -54,7 +53,7 @@ impl Realm {
 
     /// Resolves and populates this component's meta directory handle if it has not been done so
     /// already, and returns a reference to the handle. If this component does not use meta storage
-    /// or if meta storage routing fails, Ok(None) will be returned.
+    /// Ok(None) will be returned.
     pub async fn resolve_meta_dir<'a>(
         &'a self,
         model: &'a Model,
@@ -76,29 +75,20 @@ impl Realm {
         drop(state);
 
         let (meta_client_chan, server_chan) =
-            zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
-        let res = await!(routing::route_and_open_storage_capability(
+            zx::Channel::create().expect("failed to create channel");
+
+        await!(routing::route_and_open_storage_capability(
             &model,
             &meta_use,
             MODE_TYPE_DIRECTORY,
             self.abs_moniker.clone(),
             server_chan
-        ));
-
-        // All other capability types don't cause realm loading or binding to fail when they're set
-        // up incorrectly, so storage capabilities shouldn't either. Log errors here and proceed if
-        // routing and binding fails.
-        match res {
-            Ok(()) => {
-                let mut state = await!(self.state.lock());
-                state.meta_dir = Some(Arc::new(DirectoryProxy::from_channel(
-                    fasync::Channel::from_channel(meta_client_chan).unwrap(),
-                )));
-                return Ok(Some(state.meta_dir.as_ref().unwrap().clone()));
-            }
-            Err(e) => warn!("failed to route and bind to meta storage: {:?}", e),
-        }
-        Ok(None)
+        ))?;
+        let meta_dir = Some(Arc::new(DirectoryProxy::from_channel(
+            fasync::Channel::from_channel(meta_client_chan).unwrap(),
+        )));
+        await!(self.state.lock()).meta_dir = meta_dir.clone();
+        Ok(meta_dir)
     }
 
     /// Adds the dynamic child defined by `child_decl` to the given `collection_name`. Once

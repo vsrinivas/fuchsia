@@ -430,12 +430,15 @@ mod capability_util {
         should_succeed: bool,
     ) {
         let realm = await!(model.look_up_realm(&moniker)).expect("failed to look up realm");
-        let meta_dir = await!(realm.resolve_meta_dir(model)).expect("failed to resolve meta dir");
-        match (meta_dir, should_succeed) {
-            (Some(meta_dir), true) => await!(write_hippo_file_to_directory(&meta_dir, true)),
-            (None, false) => (),
-            (Some(_), false) => panic!("meta dir present when usage was expected to fail"),
-            (None, true) => panic!("meta dir missing when usage was expected to succeed"),
+        let meta_dir_res = await!(realm.resolve_meta_dir(model));
+        match (meta_dir_res, should_succeed) {
+            (Ok(Some(meta_dir)), true) => await!(write_hippo_file_to_directory(&meta_dir, true)),
+            (Err(ModelError::CapabilityDiscoveryError { .. }), false) => (),
+            (Ok(Some(_)), false) => panic!("meta dir present when usage was expected to fail"),
+            (Ok(None), true) => panic!("meta dir missing when usage was expected to succeed"),
+            (Ok(None), false) => panic!("meta dir missing when resolution should return an error"),
+            (Err(_), true) => panic!("meta dir resolution failed usage was expected to succeed"),
+            (Err(_), false) => panic!("unexpected error when attempting meta dir resolution"),
         }
     }
 
