@@ -5,10 +5,10 @@
 #ifndef SRC_UI_LIB_ESCHER_PAPER_PAPER_SHAPE_CACHE_H_
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_SHAPE_CACHE_H_
 
-#include <lib/fit/function.h>
-
 #include <functional>
 #include <vector>
+
+#include <lib/fit/function.h>
 
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/geometry/types.h"
@@ -67,6 +67,8 @@ class PaperShapeCache {
 
   void BeginFrame(BatchGpuUploader* uploader, uint64_t frame_number);
   void EndFrame();
+
+  uint64_t frame_number() const { return frame_number_; }
 
   void SetConfig(const PaperRendererConfig& config);
 

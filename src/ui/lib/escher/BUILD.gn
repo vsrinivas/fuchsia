@@ -305,8 +305,6 @@ source_set("escher") {
     "paper/paper_draw_call_factory.h",
     "paper/paper_drawable.h",
     "paper/paper_drawable_flags.h",
-    "paper/paper_legacy_drawable.cc",
-    "paper/paper_legacy_drawable.h",
     "paper/paper_light.h",
     "paper/paper_material.h",
     "paper/paper_readme.h",

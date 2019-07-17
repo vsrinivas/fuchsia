@@ -15,6 +15,8 @@
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
 #include "garnet/lib/ui/gfx/resources/nodes/view_node.h"
 #include "garnet/lib/ui/gfx/resources/shapes/circle_shape.h"
+#include "garnet/lib/ui/gfx/resources/shapes/mesh_shape.h"
+#include "garnet/lib/ui/gfx/resources/shapes/rectangle_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/rounded_rectangle_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
@@ -114,17 +116,26 @@ void EngineRendererVisitor::Visit(ShapeNode* r) {
     escher_material->set_type(escher::Material::Type::kTranslucent);
   }
 
-  escher::PaperDrawableFlags flags{};
-  escher::mat4 transform(r->transform());
+  escher::PaperTransformStack* transform_stack = renderer_->transform_stack();
+  transform_stack->PushTransform(static_cast<escher::mat4>(r->transform()));
 
+  escher::PaperDrawableFlags flags{};
   if (shape->IsKindOf<RoundedRectangleShape>()) {
     auto rect = static_cast<RoundedRectangleShape*>(shape.get());
-
-    renderer_->DrawRoundedRect(rect->spec(), escher_material, flags, &transform);
+    renderer_->DrawRoundedRect(rect->spec(), escher_material, flags);
+  } else if (shape->IsKindOf<RectangleShape>()) {
+    auto rect = static_cast<RectangleShape*>(shape.get());
+    renderer_->DrawRect(rect->width(), rect->height(), escher_material, flags);
+  } else if (shape->IsKindOf<CircleShape>()) {
+    auto circle = static_cast<CircleShape*>(shape.get());
+    renderer_->DrawCircle(circle->radius(), escher_material, flags);
+  } else if (shape->IsKindOf<MeshShape>()) {
+    auto mesh_shape = static_cast<MeshShape*>(shape.get());
+    renderer_->DrawMesh(mesh_shape->escher_mesh(), escher_material, flags);
   } else {
-    auto escher_object = shape->GenerateRenderObject(transform, escher_material);
-    renderer_->DrawLegacyObject(escher_object, flags);
+    FXL_LOG(ERROR) << "Unsupported shape type encountered.";
   }
+  transform_stack->Pop();
 
   ++draw_call_count_;
 }

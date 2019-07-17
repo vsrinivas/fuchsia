@@ -115,23 +115,26 @@ class PaperRenderer final : public Renderer {
 
   // Invokes DrawInScene() on the drawable object to generate and enqueue the
   // draw-calls that be transformed into Vulkan commands during EndFrame().
-  void Draw(PaperDrawable* drawable, PaperDrawableFlags flags = {}, mat4* matrix = nullptr);
+  void Draw(PaperDrawable* drawable, PaperDrawableFlags flags = {});
 
   // Draw predefined shapes: circles, rectangles, and rounded-rectangles.
   // Generates and enqueues draw-calls that will emit Vulkan commands during
   // EndFrame().
-  void DrawCircle(float radius, const PaperMaterialPtr& material, PaperDrawableFlags flags = {},
-                  mat4* matrix = nullptr);
-  void DrawRect(vec2 min, vec2 max, const PaperMaterialPtr& material, PaperDrawableFlags flags = {},
-                mat4* matrix = nullptr);
+  void DrawCircle(float radius, const PaperMaterialPtr& material, PaperDrawableFlags flags = {});
+  void DrawRect(vec2 min, vec2 max, const PaperMaterialPtr& material,
+                PaperDrawableFlags flags = {});
+
+  // Convenience function for the above DrawRect function that takes in the width/ height
+  // of the rect and centers it at (0,0).
+  void DrawRect(float width, float height, const PaperMaterialPtr& material,
+                PaperDrawableFlags flags = {});
+
   void DrawRoundedRect(const RoundedRectSpec& spec, const PaperMaterialPtr& material,
-                       PaperDrawableFlags flags = {}, mat4* matrix = nullptr);
+                       PaperDrawableFlags flags = {});
   void DrawBoundingBox(const BoundingBox& box, const PaperMaterialPtr& material,
                        PaperDrawableFlags flags = {});
-
-  // Convenient way to draw "legacy" escher::Objects.  Generates and enqueues
-  // draw-calls that will emit Vulkan commands during EndFrame().
-  void DrawLegacyObject(const Object& obj, PaperDrawableFlags flags = {});
+  void DrawMesh(const MeshPtr& mesh, const PaperMaterialPtr& material,
+                PaperDrawableFlags flags = {});
 
   // TODO(ES-203) - We will remove this once PaperDrawCallFactory becomes
   // injectable. We should never have to access this directly from the

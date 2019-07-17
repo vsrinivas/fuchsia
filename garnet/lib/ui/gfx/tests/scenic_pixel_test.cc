@@ -1002,4 +1002,30 @@ TEST_F(ScenicPixelTest, RotationTest) {
   }
 }
 
+// Test to make sure scenic can properly render basic shapes like circles.
+TEST_F(ScenicPixelTest, BasicShapeTest) {
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+  scenic::EntityNode* root_node = &test_session->root_node;
+
+  test_session->SetUpCamera().SetProjection(0);
+
+  const float kRadius = 10;
+
+  scenic::Circle circle_shape(session, kRadius);
+  scenic::Material circle_material(session);
+  circle_material.SetColor(255, 0, 255, 255);
+
+  scenic::ShapeNode circle_node(session);
+  circle_node.SetShape(circle_shape);
+  circle_node.SetMaterial(circle_material);
+  circle_node.SetTranslation(display_width / 2, display_height / 2, -20);
+  root_node->AddChild(circle_node);
+
+  Present(session);
+  scenic::Screenshot screenshot = TakeScreenshot();
+  EXPECT_EQ(screenshot.ColorAt(0.5, 0.5), scenic::Color(255, 0, 255, 255));
+}
+
 }  // namespace

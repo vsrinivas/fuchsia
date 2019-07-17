@@ -26,11 +26,7 @@ struct PaperRendererConfig;
 // PaperDrawable is a pure virtual interface with a single DrawInScene() method
 // that is invoked by PaperRenderer::Draw().  Clients may use pre-existing
 // implementations of PaperDrawable, or roll their own.
-//
-// Currently, PaperLegacyDrawable is the only standard implementation of
-// PaperDrawable.  It allows PaperRenderer to draw "legacy" escher::Objects.
 class PaperDrawable;
-class PaperLegacyDrawable;
 
 // PaperTransformStack is a helper class to be used along with PaperRenderer
 // when rendering hierarchical scenes.  It maintains a stack where each item has

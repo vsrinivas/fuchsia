@@ -34,14 +34,12 @@ class PaperDrawCallFactory final {
                        PaperDrawableFlags flags = {});
   void DrawBoundingBox(const PaperMaterial& material, PaperDrawableFlags flags = {});
 
-  // Generate and enqueue 0 or more draw calls for the mesh/material combo.
-  // The mesh is transformed into world space by the matrix atop the transform
-  // stack.
-  // NOTE: this should probably be private, but it is currently exposed
-  // to allow PaperLegacyDrawable to draw arbitrary meshes (these can't cast
-  // shadows, unfortunately).
-  void EnqueueDrawCalls(const PaperShapeCacheEntry& cache_entry, const PaperMaterial& material,
-                        PaperDrawableFlags flags);
+  // We are currently unable to clip meshes that are already provided to us and not generated
+  // from the PaperShapeCache, and so we render them directly without doing any clipping. It is
+  // possible to clip on the GPU, but this functionality is not available on all hardware, and
+  // performing clipping on the GPU means our existing stencil shadow implementation will no
+  // longer work.
+  void DrawMesh(const MeshPtr& mesh, const PaperMaterial& material, PaperDrawableFlags flags = {});
 
   // TODO(ES203) - We will eventualy not need to do this as we will simply
   // inject PaperRenderer with a version of the PaperDrawCallFactory that
@@ -104,6 +102,12 @@ class PaperDrawCallFactory final {
                   vec3 camera_dir);
   // Cleanup.
   void EndFrame();
+
+  // Generate and enqueue 0 or more draw calls for the mesh/material combo.
+  // The mesh is transformed into world space by the matrix atop the transform
+  // stack.
+  void EnqueueDrawCalls(const PaperShapeCacheEntry& cache_entry, const PaperMaterial& material,
+                        PaperDrawableFlags flags);
 
   // Rather than using a separate Vulkan pipeline for Materials that have no
   // texture (only a color), we use a 1x1 texture with a single white pixel.

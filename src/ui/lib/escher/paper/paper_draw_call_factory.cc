@@ -4,8 +4,6 @@
 
 #include "src/ui/lib/escher/paper/paper_draw_call_factory.h"
 
-#include <glm/gtc/matrix_access.hpp>
-
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/paper/paper_material.h"
 #include "src/ui/lib/escher/paper/paper_render_funcs.h"
@@ -20,6 +18,8 @@
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/util/hasher.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
+
+#include <glm/gtc/matrix_access.hpp>
 
 namespace escher {
 
@@ -116,6 +116,13 @@ void PaperDrawCallFactory::DrawBoundingBox(const PaperMaterial& material,
   const auto& transform = transform_stack_->Top();
   const auto& entry =
       shape_cache_->GetBoxMesh(transform.clip_planes.data(), transform.clip_planes.size());
+  EnqueueDrawCalls(entry, material, flags);
+}
+
+void PaperDrawCallFactory::DrawMesh(const MeshPtr& mesh, const PaperMaterial& material,
+                                    PaperDrawableFlags flags) {
+  FXL_DCHECK(frame_);
+  PaperShapeCacheEntry entry = {shape_cache_->frame_number(), mesh, mesh->num_indices(), 0};
   EnqueueDrawCalls(entry, material, flags);
 }
 

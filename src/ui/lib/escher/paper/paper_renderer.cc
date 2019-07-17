@@ -11,7 +11,6 @@
 #include "src/ui/lib/escher/debug/debug_font.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/geometry/tessellation.h"
-#include "src/ui/lib/escher/paper/paper_legacy_drawable.h"
 #include "src/ui/lib/escher/paper/paper_render_queue_context.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/paper/paper_shader_structs.h"
@@ -302,75 +301,55 @@ void PaperRenderer::BindSceneAndCameraUniforms(uint32_t camera_index) {
   frame_data_->cameras[camera_index].binding.Bind(cmd_buf);
 }
 
-void PaperRenderer::Draw(PaperDrawable* drawable, PaperDrawableFlags flags, mat4* matrix) {
+void PaperRenderer::Draw(PaperDrawable* drawable, PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::Draw");
 
   // For restoring state afterward.
   size_t transform_stack_size = transform_stack_.size();
   size_t num_clip_planes = transform_stack_.num_clip_planes();
-
-  if (matrix) {
-    transform_stack_.PushTransform(*matrix);
-  }
-
   drawable->DrawInScene(frame_data_->scene.get(), &draw_call_factory_, &transform_stack_,
                         frame_data_->frame.get(), flags);
-
   transform_stack_.Clear({transform_stack_size, num_clip_planes});
 }
 
 void PaperRenderer::DrawCircle(float radius, const PaperMaterialPtr& material,
-                               PaperDrawableFlags flags, mat4* matrix) {
+                               PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawCircle");
 
   if (!material)
     return;
-
-  if (!matrix) {
-    draw_call_factory_.DrawCircle(radius, *material.get(), flags);
-  } else {
-    // Roll the radius into the transform to avoid an extra push onto the stack;
-    // see PaperDrawCallFactory::DrawCircle() for details.
-    transform_stack_.PushTransform(glm::scale(*matrix, vec3(radius, radius, radius)));
-    draw_call_factory_.DrawCircle(1.f, *material.get(), flags);
-    transform_stack_.Pop();
-  }
+  draw_call_factory_.DrawCircle(radius, *material.get(), flags);
 }
 
 void PaperRenderer::DrawRect(vec2 min, vec2 max, const PaperMaterialPtr& material,
-                             PaperDrawableFlags flags, mat4* matrix) {
+                             PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawRect");
 
   if (!material)
     return;
+  draw_call_factory_.DrawRect(min, max, *material.get(), flags);
+}
 
-  if (!matrix) {
-    draw_call_factory_.DrawRect(min, max, *material.get(), flags);
-  } else {
-    transform_stack_.PushTransform(*matrix);
-    draw_call_factory_.DrawRect(min, max, *material.get(), flags);
-    transform_stack_.Pop();
-  }
+// Convenience wrapper around the standard DrawRect function.
+void PaperRenderer::DrawRect(float width, float height, const PaperMaterialPtr& material,
+                             PaperDrawableFlags flags) {
+  const vec2 extent(width, height);
+  DrawRect(-0.5f * extent, 0.5f * extent, material, flags);
 }
 
 void PaperRenderer::DrawRoundedRect(const RoundedRectSpec& spec, const PaperMaterialPtr& material,
-                                    PaperDrawableFlags flags, mat4* matrix) {
+                                    PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::DrawRoundedRect");
 
   if (!material)
     return;
-
-  if (!matrix) {
-    draw_call_factory_.DrawRoundedRect(spec, *material.get(), flags);
-  } else {
-    transform_stack_.PushTransform(*matrix);
-    draw_call_factory_.DrawRoundedRect(spec, *material.get(), flags);
-    transform_stack_.Pop();
-  }
+  draw_call_factory_.DrawRoundedRect(spec, *material.get(), flags);
 }
 
 void PaperRenderer::DrawBoundingBox(const BoundingBox& box, const PaperMaterialPtr& material,
                                     PaperDrawableFlags flags) {
+  TRACE_DURATION("gfx", "PaperRenderer::DrawBoundingBox");
+
   if (!material) {
     return;
   }
@@ -386,11 +365,15 @@ void PaperRenderer::DrawBoundingBox(const BoundingBox& box, const PaperMaterialP
   transform_stack_.Pop();
 }
 
-void PaperRenderer::DrawLegacyObject(const Object& obj, PaperDrawableFlags flags) {
-  FXL_DCHECK(frame_data_);
+void PaperRenderer::DrawMesh(const MeshPtr& mesh, const PaperMaterialPtr& material,
+                             PaperDrawableFlags flags) {
+  TRACE_DURATION("gfx", "PaperRenderer::DrawMesh");
 
-  PaperLegacyDrawable drawable(obj);
-  Draw(&drawable, flags);
+  if (!material) {
+    return;
+  }
+
+  draw_call_factory_.DrawMesh(mesh, *material.get(), flags);
 }
 
 void PaperRenderer::InitRenderPassInfo(RenderPassInfo* rp, ResourceRecycler* recycler,
