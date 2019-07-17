@@ -49,11 +49,12 @@ func TestNicName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ifs.mu.Lock()
-	if ifs.mu.name != testDeviceName {
-		t.Errorf("ifs.mu.name = %v, want = %v", ifs.mu.name, testDeviceName)
+	ifs.ns.mu.Lock()
+	name := ifs.ns.nameLocked(ifs.nicid)
+	ifs.ns.mu.Unlock()
+	if name != testDeviceName {
+		t.Fatalf("ifs.mu.name = %v, want = %v", name, testDeviceName)
 	}
-	ifs.mu.Unlock()
 }
 
 func TestNotStartedByDefault(t *testing.T) {
@@ -107,6 +108,10 @@ func TestDhcpConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	ifs.ns.mu.Lock()
+	name := ifs.ns.nameLocked(ifs.nicid)
+	ifs.ns.mu.Unlock()
+
 	ifs.mu.Lock()
 	if ifs.mu.dhcp.Client == nil {
 		t.Error("no dhcp client")
@@ -120,7 +125,7 @@ func TestDhcpConfiguration(t *testing.T) {
 		t.Error("expected dhcp client to be stopped initially")
 	}
 
-	ifs.setDHCPStatusLocked(true)
+	ifs.setDHCPStatusLocked(name, true)
 	ifs.mu.Unlock()
 
 	ifs.eth.Up()
@@ -172,8 +177,21 @@ func TestUniqueFallbackNICNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ifs1.mu.name == ifs2.mu.name {
-		t.Fatalf("got (%+v).Name == (%+v).Name, want non-equal", ifs1, ifs2)
+	ns.mu.Lock()
+	nicInfos := ns.mu.stack.NICInfo()
+	ns.mu.Unlock()
+
+	nicInfo1, ok := nicInfos[ifs1.nicid]
+	if !ok {
+		t.Fatalf("stack.NICInfo()[%d]: %s", ifs1.nicid, tcpip.ErrUnknownNICID)
+	}
+	nicInfo2, ok := nicInfos[ifs2.nicid]
+	if !ok {
+		t.Fatalf("stack.NICInfo()[%d]: %s", ifs2.nicid, tcpip.ErrUnknownNICID)
+	}
+
+	if nicInfo1.Name == nicInfo2.Name {
+		t.Fatalf("got (%+v).Name == (%+v).Name, want non-equal", nicInfo1, nicInfo2)
 	}
 }
 
@@ -188,6 +206,10 @@ func TestStaticIPConfiguration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	ifs.ns.mu.Lock()
+	name := ifs.ns.nameLocked(ifs.nicid)
+	ifs.ns.mu.Unlock()
 
 	if err := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr); err != nil {
 		t.Fatal(err)
@@ -223,7 +245,7 @@ func TestStaticIPConfiguration(t *testing.T) {
 		t.Error("expected dhcp state to remain disabled after restarting interface")
 	}
 
-	ifs.setDHCPStatusLocked(true)
+	ifs.setDHCPStatusLocked(name, true)
 	if !ifs.mu.dhcp.enabled {
 		t.Error("expected dhcp state to become enabled after manually enabling it")
 	}

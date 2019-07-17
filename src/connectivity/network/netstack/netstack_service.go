@@ -78,7 +78,7 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 	if err == tcpip.ErrNoLinkAddress {
 		addr = zeroIpAddr
 	} else if err == tcpip.ErrUnknownNICID {
-		panic(fmt.Sprintf("stack.GetMainNICAddress(_): NIC %d not found", ifs.nicid))
+		panic(fmt.Sprintf("stack.GetMainNICAddress(%d, ...): %s", ifs.nicid, err))
 	} else if err != nil {
 		return netstack.NetInterface2{}, fmt.Errorf("stack.GetMainNICAddress(_): %s", err)
 	}
@@ -121,7 +121,7 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 		Flags:     flags,
 		Features:  ifs.features,
 		Metric:    uint32(ifs.mu.metric),
-		Name:      ifs.mu.name,
+		Name:      ifs.ns.nameLocked(ifs.nicid),
 		Addr:      fidlconv.ToNetIpAddress(addr),
 		Netmask:   fidlconv.ToNetIpAddress(tcpip.Address(mask)),
 		Broadaddr: fidlconv.ToNetIpAddress(tcpip.Address(broadaddr)),
@@ -390,10 +390,10 @@ func (ni *netstackImpl) GetAggregateStats(request io.NodeInterfaceRequest) error
 
 func (ni *netstackImpl) GetStats(nicid uint32) (stats netstack.NetInterfaceStats, err error) {
 	ni.ns.mu.Lock()
-	nicinfo := ni.ns.mu.stack.NICInfo()
+	nicInfo := ni.ns.mu.stack.NICInfo()
 	ni.ns.mu.Unlock()
 
-	if info, ok := nicinfo[tcpip.NICID(nicid)]; ok {
+	if info, ok := nicInfo[tcpip.NICID(nicid)]; ok {
 		return netstack.NetInterfaceStats{
 			Tx: netstack.NetTrafficStats{
 				PktsTotal:  info.Stats.Tx.Packets.Value(),
@@ -427,8 +427,10 @@ func (ni *netstackImpl) SetInterfaceStatus(nicid uint32, enabled bool) error {
 }
 
 func (ni *netstackImpl) SetDhcpClientStatus(nicid uint32, enabled bool) (netstack.NetErr, error) {
+	nicID := tcpip.NICID(nicid)
 	ni.ns.mu.Lock()
-	ifState, ok := ni.ns.mu.ifStates[tcpip.NICID(nicid)]
+	name := ni.ns.nameLocked(nicID)
+	ifState, ok := ni.ns.mu.ifStates[nicID]
 	ni.ns.mu.Unlock()
 
 	if !ok {
@@ -436,7 +438,7 @@ func (ni *netstackImpl) SetDhcpClientStatus(nicid uint32, enabled bool) (netstac
 	}
 
 	ifState.mu.Lock()
-	ifState.setDHCPStatusLocked(enabled)
+	ifState.setDHCPStatusLocked(name, enabled)
 	ifState.mu.Unlock()
 	return netstack.NetErr{Status: netstack.StatusOk, Message: ""}, nil
 }
