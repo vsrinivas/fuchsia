@@ -3,14 +3,14 @@
 
 #include "src/developer/bugreport/bug_reporter.h"
 
+#include <map>
+#include <memory>
+#include <string>
+
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <zircon/errors.h>
-
-#include <map>
-#include <memory>
-#include <string>
 
 #include "src/developer/bugreport/bug_report_schema.h"
 #include "src/developer/bugreport/tests/stub_feedback_data_provider.h"

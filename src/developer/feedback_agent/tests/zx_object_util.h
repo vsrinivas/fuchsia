@@ -4,12 +4,12 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_AGENT_TESTS_ZX_OBJECT_UTIL_H_
 #define SRC_DEVELOPER_FEEDBACK_AGENT_TESTS_ZX_OBJECT_UTIL_H_
 
+#include <string>
+#include <vector>
+
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <zircon/types.h>
-
-#include <string>
-#include <vector>
 
 namespace fuchsia {
 namespace feedback {

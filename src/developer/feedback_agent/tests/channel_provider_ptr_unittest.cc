@@ -3,6 +3,9 @@
 
 #include "src/developer/feedback_agent/channel_provider_ptr.h"
 
+#include <memory>
+#include <string>
+
 #include <lib/async_promise/executor.h>
 #include <lib/fit/single_threaded_executor.h>
 #include <lib/gtest/real_loop_fixture.h>
@@ -10,9 +13,6 @@
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
-
-#include <memory>
-#include <string>
 
 #include "src/developer/feedback_agent/tests/stub_channel_provider.h"
 #include "src/lib/fxl/logging.h"

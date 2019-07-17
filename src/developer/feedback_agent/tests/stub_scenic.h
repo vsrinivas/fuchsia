@@ -4,13 +4,14 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_AGENT_TESTS_STUB_SCENIC_H_
 #define SRC_DEVELOPER_FEEDBACK_AGENT_TESTS_STUB_SCENIC_H_
 
+#include <stdint.h>
+
+#include <vector>
+
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <stdint.h>
-
-#include <vector>
 
 #include "src/lib/fxl/logging.h"
 

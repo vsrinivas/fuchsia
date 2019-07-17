@@ -4,14 +4,15 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_AGENT_DATA_PROVIDER_H_
 #define SRC_DEVELOPER_FEEDBACK_AGENT_DATA_PROVIDER_H_
 
+#include <stdint.h>
+
+#include <memory>
+
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/async_promise/executor.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <stdint.h>
-
-#include <memory>
 
 #include "src/developer/feedback_agent/config.h"
 

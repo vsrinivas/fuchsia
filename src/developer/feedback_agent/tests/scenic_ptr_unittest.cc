@@ -3,6 +3,9 @@
 
 #include "src/developer/feedback_agent/scenic_ptr.h"
 
+#include <memory>
+#include <vector>
+
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async_promise/executor.h>
 #include <lib/fit/single_threaded_executor.h>
@@ -11,9 +14,6 @@
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
-
-#include <memory>
-#include <vector>
 
 #include "src/developer/feedback_agent/tests/stub_scenic.h"
 #include "src/lib/fxl/logging.h"

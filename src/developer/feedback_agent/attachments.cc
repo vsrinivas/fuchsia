@@ -3,8 +3,12 @@
 
 #include "src/developer/feedback_agent/attachments.h"
 
-#include <fuchsia/mem/cpp/fidl.h>
 #include <inttypes.h>
+
+#include <string>
+#include <vector>
+
+#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fit/promise.h>
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/sized_vmo.h>
@@ -14,9 +18,6 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
-
-#include <string>
-#include <vector>
 
 #include "src/developer/feedback_agent/inspect_ptr.h"
 #include "src/developer/feedback_agent/log_listener_ptr.h"

@@ -3,9 +3,9 @@
 
 #include "src/developer/bugreport/client/bug_report_handler.h"
 
-#include <gtest/gtest.h>
-
 #include <fstream>
+
+#include <gtest/gtest.h>
 
 namespace bugreport {
 

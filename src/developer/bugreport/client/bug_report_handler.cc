@@ -3,11 +3,11 @@
 
 #include "src/developer/bugreport/client/bug_report_handler.h"
 
+#include <fstream>
+
 #include <rapidjson/error/en.h>
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/schema.h>
-
-#include <fstream>
 
 #include "src/developer/bugreport/bug_report_schema.h"
 #include "src/lib/fxl/logging.h"

@@ -4,6 +4,9 @@
 #include "src/developer/feedback_agent/annotations.h"
 
 #include <fcntl.h>
+
+#include <string>
+
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
@@ -13,8 +16,6 @@
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
-
-#include <string>
 
 #include "src/developer/feedback_agent/channel_provider_ptr.h"
 #include "src/lib/files/file.h"

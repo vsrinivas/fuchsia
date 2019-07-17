@@ -3,6 +3,12 @@
 
 #include "src/developer/feedback_agent/data_provider.h"
 
+#include <memory>
+#include <ostream>
+#include <set>
+#include <string>
+#include <vector>
+
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -20,12 +26,6 @@
 #include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
-
-#include <memory>
-#include <ostream>
-#include <set>
-#include <string>
-#include <vector>
 
 #include "src/developer/feedback_agent/config.h"
 #include "src/developer/feedback_agent/tests/stub_channel_provider.h"
