@@ -48,6 +48,8 @@ std::map<std::string, std::string> MakeDefaultAnnotations(
       {"version", ReadStringFromFile("/config/build-info/version")},
       // We use ptype to benefit from Chrome's "Process type" handling in the crash server UI.
       {"ptype", program_name},
+      {"osName", "Fuchsia"},
+      {"osVersion", "0.0.0"},
   };
 
   if (feedback_data.has_annotations()) {
