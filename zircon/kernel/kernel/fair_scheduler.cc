@@ -10,6 +10,16 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <list.h>
+#include <platform.h>
+#include <printf.h>
+#include <string.h>
+#include <target.h>
+#include <trace.h>
+
+#include <algorithm>
+#include <new>
+
 #include <kernel/lockdep.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
@@ -18,17 +28,8 @@
 #include <kernel/thread_lock.h>
 #include <ktl/move.h>
 #include <lib/ktrace.h>
-#include <list.h>
-#include <platform.h>
-#include <printf.h>
-#include <string.h>
-#include <target.h>
-#include <trace.h>
 #include <vm/vm.h>
 #include <zircon/types.h>
-
-#include <algorithm>
-#include <new>
 
 using ffl::Expression;
 using ffl::Fixed;
@@ -205,7 +206,7 @@ thread_t* FairScheduler::EvaluateNextThread(SchedTime now, thread_t* current_thr
       return current_thread;
     }
   } else if (!is_active && likely(!is_idle)) {
-    // The current thread is not longer ready, remove its accounting.
+    // The current thread is no longer ready, remove its accounting.
     Remove(current_thread);
   }
 
@@ -318,7 +319,7 @@ void FairScheduler::RescheduleCommon(SchedTime now) {
   // Adjust the rate of the current thread when demand changes. Changes in
   // demand could be due to threads entering or leaving the run queue, or due
   // to weights changing in the current or enqueued threads.
-  if (weight_total_ > SchedWeight{0} && weight_total_ != scheduled_weight_total_) {
+  if (!thread_is_idle(current_thread) && weight_total_ != scheduled_weight_total_) {
     LOCAL_KTRACE_DURATION trace_adjust_rate{"adjust_rate"_stringref};
     scheduled_weight_total_ = weight_total_;
 
@@ -564,7 +565,6 @@ void FairScheduler::Insert(SchedTime now, thread_t* thread) {
     // Factor this task into the run queue.
     weight_total_ += state->weight_;
     DEBUG_ASSERT(weight_total_ > SchedWeight{0});
-    // virtual_time_ -= state->lag_time_ns_ / weight_total_;
 
     UpdateThreadTimeline(thread, Placement::Insertion);
     QueueThread(thread, Placement::Insertion);
@@ -592,7 +592,6 @@ void FairScheduler::Remove(thread_t* thread) {
     state->virtual_finish_time_ = SchedNs(0);
 
     // Factor this task out of the run queue.
-    // virtual_time_ += state->lag_time_ns_ / weight_total_;
     weight_total_ -= state->weight_;
     DEBUG_ASSERT(weight_total_ >= SchedWeight{0});
 
