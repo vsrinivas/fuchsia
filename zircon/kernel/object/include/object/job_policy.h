@@ -25,7 +25,7 @@ typedef uint64_t pol_cookie_t;
 //      { ZX_POL_NEW_FIFO, ZX_POL_ACTION_ALLOW_EXCEPTION },
 //      { ZX_POL_VMAR_WX, ZX_POL_ACTION_KILL }}
 //
-// Timer slack policy defines the type and minimium amount of slack that will be applied to timer
+// Timer slack policy defines the type and minimum amount of slack that will be applied to timer
 // and deadline events.
 class JobPolicy {
  public:

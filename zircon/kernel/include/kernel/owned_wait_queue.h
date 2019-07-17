@@ -289,7 +289,7 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // Returns true if a local reschedule is required, or false otherwise.
   bool WaitersPriorityChanged(int old_prio) TA_REQ(thread_lock) __WARN_UNUSED_RESULT;
 
-  // Updates ownership bookeeping and deals with priority inheritance side
+  // Updates ownership bookkeeping and deals with priority inheritance side
   // effects.  Called by internal code, typically after changes to the
   // contents of the queue have been made which may have an effect of the
   // maximum priority of the set of waiters.
@@ -299,14 +299,14 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   //   or nullptr if this queue should have no owner.
   //
   // |old_prio|
-  //   The priority of this wait queue as recorded by the the caller before
+  //   The priority of this wait queue as recorded by the caller before
   //   they started to make changes to the queue's contents.
   //
   // |accum_cpu_mask|
   //   An optional pointer to a cpu_mask_t.  When non-null, UpdateBookkeeping
   //   will accumulate into this mask the CPUs which have been affected by the
   //   PI side effects of updating this bookkeeping.  When nullptr,
-  //   UpdateBookeeping will automatically update kernel counters and send
+  //   UpdateBookkeeping will automatically update kernel counters and send
   //   IPIs to processors which have been affected by the PI side effects.
   //
   // Returns true if a local reschedule is required, or false otherwise.
