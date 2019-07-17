@@ -9,9 +9,6 @@
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory"
-        ],
-        "system": [
-            "deprecated-data/wlanstack"
         ]
     }
 }
