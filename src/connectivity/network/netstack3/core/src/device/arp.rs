@@ -10,11 +10,11 @@ use std::hash::Hash;
 use std::time::Duration;
 
 use log::{debug, error};
+use net_types::ip::Ipv4Addr;
 use packet::{BufferMut, InnerSerializer, Serializer};
 
 use crate::device::ethernet::EthernetArpDevice;
 use crate::device::DeviceLayerTimerId;
-use crate::ip::Ipv4Addr;
 use crate::wire::arp::{ArpPacket, ArpPacketBuilder, HType, PType};
 use crate::{Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 
@@ -574,15 +574,19 @@ impl<H, P: Hash + Eq> Default for ArpTable<H, P> {
 
 #[cfg(test)]
 mod tests {
-    use packet::{BufferSerializer, ParseBuffer};
+    use net_types::ethernet::Mac;
+    use net_types::ip::{AddrSubnet, Ipv4, Ipv4Addr, Subnet};
+    use packet::{Buf, BufferSerializer, ParseBuffer};
 
     use super::*;
-    use crate::device::ethernet::{set_ip_addr_subnet, EtherType, Mac};
-    use crate::ip::{AddrSubnet, Ipv4Addr, IPV6_MIN_MTU};
-    use crate::testutil::{set_logger_for_test, DummyEventDispatcher, DummyEventDispatcherBuilder};
+    use crate::device::ethernet::{set_ip_addr_subnet, EtherType, EthernetArpDevice};
+    use crate::ip::{send_ip_packet_from_device, IpProto, IPV6_MIN_MTU};
+    use crate::testutil::{
+        self, set_logger_for_test, DummyEventDispatcher, DummyEventDispatcherBuilder,
+    };
     use crate::wire::arp::{peek_arp_types, ArpPacketBuilder};
     use crate::wire::ethernet::EthernetFrame;
-    use crate::{testutil, Subnet};
+    use crate::wire::icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode};
     use crate::{DeviceId, StackState};
 
     const TEST_LOCAL_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
@@ -883,11 +887,6 @@ mod tests {
 
     #[test]
     fn test_address_resolution() {
-        use crate::device::ethernet::EthernetArpDevice;
-        use crate::ip::{send_ip_packet_from_device, IpProto, Ipv4};
-        use crate::wire::icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode};
-        use packet::Buf;
-
         set_logger_for_test();
 
         // We set up two contexts (local and remote) and add them to a

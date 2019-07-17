@@ -190,7 +190,7 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
         let arg_idents = &input.arg_idents;
 
         quote! {
-                trait Ext: crate::ip::#trait_ident {
+                trait Ext: net_types::ip::#trait_ident {
                     // This is a backstop against a bug in our logic; if the
                     // function is somehow called on a type other than Ipv4/Ipv4Addr
                     // or Ipv6/Ipv6Addr, constant evaluation will fail on this
@@ -203,7 +203,7 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
                     fn f #trait_decl;
                 }
 
-                impl<__SpecializeIpDummyTypeParam: crate::ip::#trait_ident> Ext for __SpecializeIpDummyTypeParam {
+                impl<__SpecializeIpDummyTypeParam: net_types::ip::#trait_ident> Ext for __SpecializeIpDummyTypeParam {
                     #![allow(unused_variables)]
                     default fn f #trait_decl {
                         // It's important that we use the constant here to force
@@ -212,7 +212,7 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
                     }
                 }
 
-                impl Ext for crate::ip::#ipv4_type_ident {
+                impl Ext for net_types::ip::#ipv4_type_ident {
                     // Due to the lack of support for attributes on expressions
                     // (see README.md), users often need to do `return x;`
                     // rather than just `x`, which causes Clippy to complain.
@@ -226,7 +226,7 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
                     fn f #trait_decl #ipv4_block
                 }
 
-                impl Ext for crate::ip::#ipv6_type_ident {
+                impl Ext for net_types::ip::#ipv6_type_ident {
                     #[allow(clippy::needless_return, clippy::let_and_return, unused_variables)]
                     fn f #trait_decl #ipv6_block
                 }

@@ -71,11 +71,12 @@ use std::ops::Deref;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
+use net_types::ip::IpAddress;
 use packet::BufferView;
 use specialize_ip_macro::specialize_ip_address;
 use zerocopy::ByteSlice;
 
-use crate::ip::{IpAddress, IpProto};
+use crate::ip::IpProto;
 
 pub(crate) type U16 = zerocopy::U16<NetworkEndian>;
 pub(crate) type U32 = zerocopy::U32<NetworkEndian>;

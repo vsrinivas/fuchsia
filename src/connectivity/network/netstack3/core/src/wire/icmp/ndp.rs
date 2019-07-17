@@ -10,11 +10,11 @@ use std::marker::PhantomData;
 use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
+use net_types::ip::{Ipv6, Ipv6Addr};
 use packet::{EncapsulatingSerializer, Serializer};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::ParseError;
-use crate::ip::{Ipv6, Ipv6Addr};
 use crate::wire::{U16, U32};
 
 use super::{IcmpIpExt, IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
@@ -145,9 +145,9 @@ impl_icmp_message!(Ipv6, Redirect, Redirect, IcmpUnusedCode, Options<B>);
 
 pub(crate) mod options {
     use byteorder::{ByteOrder, NetworkEndian};
+    use net_types::ip::Ipv6Addr;
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
-    use crate::ip::Ipv6Addr;
     use crate::wire::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
     use crate::wire::U32;
 

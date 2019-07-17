@@ -38,22 +38,21 @@ mod ip;
 #[cfg(test)]
 mod testutil;
 mod transport;
-mod types;
 mod wire;
 
 pub use crate::data_structures::{IdMapCollection, IdMapCollectionKey};
-pub use crate::device::{
-    ethernet::Mac, get_ip_addr_subnet, receive_frame, DeviceId, DeviceLayerEventDispatcher,
-};
+pub use crate::device::{get_ip_addr_subnet, receive_frame, DeviceId, DeviceLayerEventDispatcher};
 pub use crate::error::NetstackError;
 pub use crate::ip::{
-    icmp, AddrSubnet, AddrSubnetEither, EntryDest, EntryDestEither, EntryEither, IpAddr,
-    IpLayerEventDispatcher, IpStateBuilder, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither,
+    icmp, EntryDest, EntryDestEither, EntryEither, IpLayerEventDispatcher, IpStateBuilder,
 };
 pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::TransportLayerEventDispatcher;
 
 use std::time;
+
+use net_types::ethernet::Mac;
+use net_types::ip::{AddrSubnetEither, Ipv4Addr, Ipv6Addr, SubnetEither};
 
 use crate::device::{DeviceLayerState, DeviceLayerTimerId};
 use crate::ip::{IpLayerState, IpLayerTimerId};
@@ -364,7 +363,7 @@ pub fn del_device_route<D: EventDispatcher>(
 pub fn get_all_routes<'a, D: EventDispatcher>(
     ctx: &'a Context<D>,
 ) -> impl 'a + Iterator<Item = EntryEither> {
-    let v4_routes = ip::iter_routes::<_, ip::Ipv4Addr>(ctx);
-    let v6_routes = ip::iter_routes::<_, ip::Ipv6Addr>(ctx);
+    let v4_routes = ip::iter_routes::<_, Ipv4Addr>(ctx);
+    let v6_routes = ip::iter_routes::<_, Ipv6Addr>(ctx);
     v4_routes.cloned().map(From::from).chain(v6_routes.cloned().map(From::from))
 }

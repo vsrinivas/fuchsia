@@ -4,10 +4,8 @@
 
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
-use netstack3_core::{
-    AddrSubnetEither, Context, DeviceId, EntryDest, EntryDestEither, EntryEither, IpAddr, Ipv4Addr,
-    Ipv6Addr, SubnetEither,
-};
+use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither};
+use netstack3_core::{Context, DeviceId, EntryDest, EntryDestEither, EntryEither};
 use never::Never;
 use std::convert::TryFrom;
 
@@ -330,12 +328,14 @@ impl ContextFidlCompatible<fidl_net_stack::ForwardingEntry> for EntryEither {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::eventloop::EventLoop;
     use fidl_fuchsia_net as fidl_net;
     use fidl_fuchsia_net_stack as fidl_net_stack;
-    use netstack3_core::{Mac, Subnet};
+    use net_types::ethernet::Mac;
+    use net_types::ip::Subnet;
     use std::convert::TryFrom;
+
+    use super::*;
+    use crate::eventloop::EventLoop;
 
     struct FakeConversionContext {
         binding: u64,

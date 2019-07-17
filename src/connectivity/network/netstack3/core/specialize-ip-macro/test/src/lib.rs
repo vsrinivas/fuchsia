@@ -8,39 +8,40 @@
 /// Module with types that have the same identifiers that `specialize_ip` and
 /// `specialize_ip_macro` attributes looks for. Both of these attributes
 /// look for the `Ipv4`, `Ipv6`, `Ipv4Addr`, and `Ipv6Addr` identifiers
-/// within `crate::ip` so we create the same heirarchy in this test.
+/// within `net_types::ip` so we create the same heirarchy in this test.
 #[cfg(test)]
-pub(crate) mod ip {
-    /// Simple trait with the identifier `Ip` to test that the `specialize_ip`
-    /// attribute specializes function for the various types that implement
-    /// this trait.
-    pub(crate) trait Ip {}
+pub(crate) mod net_types {
+    pub(crate) mod ip {
+        /// Simple trait with the identifier `Ip` to test that the `specialize_ip`
+        /// attribute specializes function for the various types that implement
+        /// this trait.
+        pub(crate) trait Ip {}
 
-    /// Simple trait with the identifier `IpAddress` to test that the
-    /// `specialize_ip_address` attribute specializes function for the various
-    /// types that implement this trait.
-    pub(crate) trait IpAddress {}
+        /// Simple trait with the identifier `IpAddress` to test that the
+        /// `specialize_ip_address` attribute specializes function for the various
+        /// types that implement this trait.
+        pub(crate) trait IpAddress {}
 
-    /// Test type with the identifier `Ipv4` that the `specialize_ip`
-    /// attribute can specialize a function for.
-    pub(crate) struct Ipv4;
-    impl Ip for Ipv4 {}
+        /// Test type with the identifier `Ipv4` that the `specialize_ip`
+        /// attribute can specialize a function for.
+        pub(crate) struct Ipv4;
+        impl Ip for Ipv4 {}
 
-    /// Test type with the identifier `Ipv6` that the `specialize_ip`
-    /// attribute can specialize a function for.
-    pub(crate) struct Ipv6;
-    impl Ip for Ipv6 {}
+        /// Test type with the identifier `Ipv6` that the `specialize_ip`
+        /// attribute can specialize a function for.
+        pub(crate) struct Ipv6;
+        impl Ip for Ipv6 {}
 
-    /// Test type with the identifier `Ipv4Addr` that the `specialize_ip_address`
-    /// attribute can specialize a function for.
-    pub(crate) struct Ipv4Addr;
-    impl IpAddress for Ipv4Addr {}
+        /// Test type with the identifier `Ipv4Addr` that the `specialize_ip_address`
+        /// attribute can specialize a function for.
+        pub(crate) struct Ipv4Addr;
+        impl IpAddress for Ipv4Addr {}
 
-    /// Test type with the identifier `Ipv6Addr` that the `specialize_ip_address`
-    /// attribute can specialize a function for.
-
-    pub(crate) struct Ipv6Addr;
-    impl IpAddress for Ipv6Addr {}
+        /// Test type with the identifier `Ipv6Addr` that the `specialize_ip_address`
+        /// attribute can specialize a function for.
+        pub(crate) struct Ipv6Addr;
+        impl IpAddress for Ipv6Addr {}
+    }
 }
 
 /// Test the specialize_ip_macro macros.
@@ -65,7 +66,10 @@ pub(crate) mod ip {
 ///   - test_multiple_lifetimes_and_additional_type_params_specialized_for_ip_address
 #[cfg(test)]
 mod tests {
-    use crate::ip::*;
+    // This brings net_types into scope so that the generated code can access it
+    // as `net_types` (where it expects it) rather than as `crate::net_types`.
+    use crate::net_types;
+    use crate::net_types::ip::*;
     use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
     trait TraitA {

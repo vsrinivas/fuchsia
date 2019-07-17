@@ -10,6 +10,7 @@ use std::fmt::{self, Debug, Formatter};
 use std::ops::Range;
 
 use log::debug;
+use net_types::ip::{Ipv6, Ipv6Addr};
 use packet::{
     BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
 };
@@ -17,7 +18,7 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 
 use crate::error::{IpParseError, IpParseErrorAction, IpParseResult, ParseError};
 use crate::ip::reassembly::FragmentablePacket;
-use crate::ip::{IpProto, Ipv6, Ipv6Addr, Ipv6ExtHdrType};
+use crate::ip::{IpProto, Ipv6ExtHdrType};
 use crate::wire::icmp::Icmpv6ParameterProblemCode;
 use crate::wire::records::{Records, RecordsRaw};
 use crate::wire::{FromRaw, MaybeParsed, U16};

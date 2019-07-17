@@ -20,6 +20,7 @@ use std::marker::PhantomData;
 use std::mem;
 
 use internet_checksum::Checksum;
+use net_types::ip::Ipv4Addr;
 use packet::{
     BufferView, InnerPacketBuilder, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
 };
@@ -27,7 +28,6 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use self::messages::IgmpMessageType;
 use crate::error::ParseError;
-use crate::ip::Ipv4Addr;
 use crate::wire::U16;
 
 /// Trait specifying serialization behavior for IGMP messages.

@@ -9,9 +9,10 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use log::trace;
+use net_types::ip::{Ip, IpAddress, IpVersion};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
-use crate::ip::{Ip, IpAddress, IpLayerTimerId, IpVersion};
+use crate::ip::IpLayerTimerId;
 use crate::{Context, EventDispatcher, Instant, TimerId};
 
 /// [RFC 791 section 3.2] requires that an IPv4 node be able to forward
@@ -404,7 +405,8 @@ impl<I: Ip, D: EventDispatcher> IpLayerPathMtuCache<I, D> {
 mod tests {
     use super::*;
 
-    use crate::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+    use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+
     use crate::testutil::{
         get_dummy_config, run_for, DummyEventDispatcher, DummyEventDispatcherBuilder,
     };

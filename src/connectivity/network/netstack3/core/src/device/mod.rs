@@ -11,12 +11,13 @@ pub(crate) mod ndp;
 use std::fmt::{self, Debug, Display, Formatter};
 
 use log::debug;
+use net_types::ethernet::Mac;
+use net_types::ip::{AddrSubnet, IpAddress, Ipv4Addr, Ipv6Addr};
+use net_types::MulticastAddr;
 use packet::{BufferMut, Serializer};
 
 use crate::data_structures::{IdMap, IdMapCollectionKey};
-use crate::device::ethernet::{EthernetDeviceState, Mac};
-use crate::ip::{ext, AddrSubnet, IpAddress, Ipv4Addr, Ipv6Addr};
-use crate::types::MulticastAddr;
+use crate::device::ethernet::EthernetDeviceState;
 use crate::{Context, EventDispatcher};
 
 /// An ID identifying a device.
@@ -184,7 +185,7 @@ pub fn receive_frame<D: EventDispatcher, B: BufferMut>(
 }
 
 /// Get the IP address and subnet associated with this device.
-pub fn get_ip_addr_subnet<D: EventDispatcher, A: ext::IpAddress>(
+pub fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
 ) -> Option<AddrSubnet<A>> {
@@ -194,7 +195,7 @@ pub fn get_ip_addr_subnet<D: EventDispatcher, A: ext::IpAddress>(
 }
 
 /// Set the IP address and subnet associated with this device.
-pub fn set_ip_addr_subnet<D: EventDispatcher, A: ext::IpAddress>(
+pub fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
     addr_sub: AddrSubnet<A>,
@@ -208,7 +209,7 @@ pub fn set_ip_addr_subnet<D: EventDispatcher, A: ext::IpAddress>(
 ///
 /// If `device` is already in the multicast group `multicast_addr`,
 /// `join_ip_multicast` does nothing.
-pub(crate) fn join_ip_multicast<D: EventDispatcher, A: ext::IpAddress>(
+pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
     multicast_addr: MulticastAddr<A>,
@@ -224,7 +225,7 @@ pub(crate) fn join_ip_multicast<D: EventDispatcher, A: ext::IpAddress>(
 ///
 /// If `device` is not in the multicast group `multicast_addr`,
 /// `leave_ip_multicast` does nothing.
-pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: ext::IpAddress>(
+pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
     multicast_addr: MulticastAddr<A>,
@@ -237,7 +238,7 @@ pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: ext::IpAddress>(
 }
 
 /// Is `device` part of the IP multicast group `multicast_addr`.
-pub(crate) fn is_in_ip_multicast<D: EventDispatcher, A: ext::IpAddress>(
+pub(crate) fn is_in_ip_multicast<D: EventDispatcher, A: IpAddress>(
     ctx: &Context<D>,
     device: DeviceId,
     multicast_addr: MulticastAddr<A>,

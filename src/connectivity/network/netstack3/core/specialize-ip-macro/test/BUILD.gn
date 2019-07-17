@@ -12,6 +12,7 @@ rustc_library("lib") {
   __unstable_recovery_netstack_only_specialization_bypass = [ "specialization" ]
 
   deps = [
+    "//src/connectivity/lib/net-types",
     "//src/connectivity/network/netstack3/core/specialize-ip-macro",
   ]
 }

@@ -7,11 +7,12 @@
 use std::hash::Hash;
 use std::num::NonZeroU16;
 
+use net_types::ip::{Ip, IpAddress, Ipv4Addr, Ipv6Addr};
 use packet::{BufferMut, BufferSerializer, ParsablePacket, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 use zerocopy::ByteSlice;
 
-use crate::ip::{Ip, IpAddress, IpProto, Ipv4Addr, Ipv6Addr};
+use crate::ip::IpProto;
 use crate::transport::{ConnAddrMap, ListenerAddrMap};
 use crate::wire::udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs};
 use crate::{Context, EventDispatcher, StackState};

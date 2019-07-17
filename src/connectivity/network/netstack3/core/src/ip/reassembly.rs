@@ -38,11 +38,12 @@ use std::time::Duration;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
+use net_types::ip::{Ip, IpAddress, Ipv4Addr, Ipv6Addr};
 use packet::{BufferViewMut, ParsablePacket};
 use specialize_ip_macro::specialize_ip;
 use zerocopy::{ByteSlice, ByteSliceMut};
 
-use crate::ip::{Ip, IpAddress, IpExtByteSlice, IpLayerTimerId, IpPacket, Ipv4Addr, Ipv6Addr};
+use crate::ip::{IpExtByteSlice, IpLayerTimerId, IpPacket};
 use crate::wire::ipv4::{
     IPV4_CHECKSUM_BYTE_RANGE, IPV4_FRAGMENT_DATA_BYTE_RANGE, IPV4_TOTAL_LENGTH_BYTE_RANGE,
 };
@@ -779,18 +780,18 @@ impl Ord for PacketBodyFragment {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use net_types::ip::{IpAddress, Ipv4, Ipv6};
+    use packet::{Buf, BufferSerializer, ParseBuffer, Serializer};
+    use specialize_ip_macro::specialize_ip;
 
-    use crate::ip::{IpAddress, IpProto, Ipv4, Ipv6, Ipv6ExtHdrType};
+    use super::*;
+    use crate::ip::{IpProto, Ipv6ExtHdrType};
     use crate::testutil::{
         get_dummy_config, run_for, trigger_next_timer, DummyEventDispatcher,
         DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
     };
     use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
-    use packet::serialize::{Buf, BufferSerializer, Serializer};
-    use packet::ParseBuffer;
-    use specialize_ip_macro::specialize_ip;
 
     macro_rules! assert_frag_proc_state_need_more {
         ($lhs:expr) => {{

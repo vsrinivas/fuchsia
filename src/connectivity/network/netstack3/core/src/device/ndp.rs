@@ -22,13 +22,14 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use log::debug;
+use net_types::ip::{Ipv6, Ipv6Addr};
+use net_types::MulticastAddress;
 use packet::Serializer;
 use zerocopy::ByteSlice;
 
 use crate::device::ethernet::EthernetNdpDevice;
 use crate::device::{DeviceId, DeviceLayerTimerId};
-use crate::ip::{IpProto, Ipv6, Ipv6Addr};
-use crate::types::MulticastAddress;
+use crate::ip::IpProto;
 use crate::wire::icmp::ndp::{
     self, options::NdpOption, NeighborAdvertisment, NeighborSolicitation, Options,
 };
@@ -564,10 +565,11 @@ where
 
 #[cfg(test)]
 mod tests {
+    use net_types::ethernet::Mac;
     use packet::{Buf, BufferSerializer};
 
     use super::*;
-    use crate::device::ethernet::{EthernetNdpDevice, Mac};
+    use crate::device::ethernet::EthernetNdpDevice;
     use crate::ip::IPV6_MIN_MTU;
     use crate::testutil::{
         self, set_logger_for_test, DummyEventDispatcher, DummyEventDispatcherBuilder, DummyNetwork,
@@ -579,11 +581,11 @@ mod tests {
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
 
     fn local_ip() -> Ipv6Addr {
-        TEST_LOCAL_MAC.to_ipv6_link_local(None)
+        TEST_LOCAL_MAC.to_ipv6_link_local()
     }
 
     fn remote_ip() -> Ipv6Addr {
-        TEST_REMOTE_MAC.to_ipv6_link_local(None)
+        TEST_REMOTE_MAC.to_ipv6_link_local()
     }
 
     #[test]

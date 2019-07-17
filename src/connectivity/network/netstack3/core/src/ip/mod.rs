@@ -21,6 +21,8 @@ pub use self::types::*;
 use log::{debug, trace};
 use std::mem;
 
+use net_types::ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv6, Ipv6Addr, Subnet};
+use net_types::MulticastAddr;
 use packet::{
     Buf, BufferMut, BufferSerializer, ParsablePacket, ParseBufferMut, ParseMetadata, Serializer,
 };
@@ -37,7 +39,6 @@ use crate::ip::reassembly::{
     handle_reassembly_timeout, process_fragment, reassemble_packet, FragmentCacheKeyEither,
     FragmentProcessingState, IpLayerFragmentCache,
 };
-use crate::types::MulticastAddr;
 use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
 use crate::{Context, EventDispatcher, TimerId, TimerIdInner};
 use icmp::{
@@ -408,7 +409,7 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
     // TODO(ghanan): For IPv4 packets, act upon options and for IPv6 packets,
     //               act upon extension headers.
 
-    if I::LOOPBACK_SUBNET.contains(packet.dst_ip()) {
+    if I::LOOPBACK_SUBNET.contains(&packet.dst_ip()) {
         // A packet from outside this host was sent with the destination IP of
         // the loopback address, which is illegal. Loopback traffic is handled
         // explicitly in send_ip_packet.
@@ -850,7 +851,7 @@ where
 {
     trace!("send_ip_packet({}, {})", dst_ip, proto);
     increment_counter!(ctx, "send_ip_packet");
-    if A::Version::LOOPBACK_SUBNET.contains(dst_ip) {
+    if A::Version::LOOPBACK_SUBNET.contains(&dst_ip) {
         increment_counter!(ctx, "send_ip_packet::loopback");
 
         // TODO(joshlf): Currently, we have no way of representing the loopback
@@ -963,8 +964,8 @@ where
     A: IpAddress,
     S: Serializer,
 {
-    assert!(!A::Version::LOOPBACK_SUBNET.contains(src_ip));
-    assert!(!A::Version::LOOPBACK_SUBNET.contains(dst_ip));
+    assert!(!A::Version::LOOPBACK_SUBNET.contains(&src_ip));
+    assert!(!A::Version::LOOPBACK_SUBNET.contains(&dst_ip));
 
     let builder = <A::Version as IpExt>::PacketBuilder::new(src_ip, dst_ip, DEFAULT_TTL, proto);
     let body = body.encapsulate(builder);
@@ -1058,13 +1059,13 @@ mod tests {
     use std::num::NonZeroU16;
 
     use byteorder::{ByteOrder, NetworkEndian};
+    use net_types::ip::{Ipv4Addr, Ipv6Addr};
     use packet::{Buf, ParseBuffer};
     use rand::Rng;
 
     use crate::device::FrameDestination;
     use crate::ip::path_mtu::{get_pmtu, min_mtu};
     use crate::testutil::*;
-    use crate::types::MulticastAddr;
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::icmp::{
         IcmpDestUnreachable, IcmpEchoRequest, IcmpIpExt, IcmpPacketBuilder, IcmpParseArgs,
@@ -1718,7 +1719,7 @@ mod tests {
         let extra_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 100]);
         let extra_mac = Mac::new([13, 14, 15, 16, 17, 18]);
         dispatcher_builder.add_ndp_table_entry(0, extra_ip, extra_mac);
-        dispatcher_builder.add_ndp_table_entry(0, extra_mac.to_ipv6_link_local(None), extra_mac);
+        dispatcher_builder.add_ndp_table_entry(0, extra_mac.to_ipv6_link_local(), extra_mac);
         let mut ctx = dispatcher_builder.build_with(state_builder, DummyEventDispatcher::default());
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;

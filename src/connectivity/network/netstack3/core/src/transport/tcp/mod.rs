@@ -13,9 +13,9 @@ pub(crate) use self::types::*;
 use std::collections::HashMap;
 use std::num::NonZeroU16;
 
+use net_types::ip::{Ip, IpAddress, Ipv4, Ipv6};
 use packet::BufferMut;
 
-use crate::ip::{Ip, IpAddress, Ipv4, Ipv6};
 use crate::wire::tcp::{TcpParseArgs, TcpSegment};
 use crate::{Context, EventDispatcher};
 

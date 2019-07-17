@@ -9,18 +9,16 @@ use std::mem;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use log::trace;
+use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use net_types::MulticastAddress;
 use packet::{BufferMut, BufferSerializer, Serializer, TruncateDirection};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::device::{ndp, DeviceId, FrameDestination};
 use crate::error;
 use crate::ip::path_mtu::{update_pmtu_if_less, update_pmtu_next_lower};
-use crate::ip::{
-    send_icmp_response, send_ip_packet, Ip, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
-    IPV6_MIN_MTU,
-};
+use crate::ip::{send_icmp_response, send_ip_packet, IpProto, IPV6_MIN_MTU};
 use crate::transport::ConnAddrMap;
-use crate::types::MulticastAddress;
 use crate::wire::icmp::{
     peek_message_type, IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpIpExt, IcmpMessage,
     IcmpMessageType, IcmpPacket, IcmpPacketBuilder, IcmpParseArgs, IcmpTimeExceeded,
@@ -964,15 +962,16 @@ fn get_conns<D: EventDispatcher, A: IpAddress>(
 
 #[cfg(test)]
 mod tests {
-    use packet::{Buf, BufferSerializer, Serializer};
-
-    use std::fmt::Debug;
     #[cfg(feature = "udp-icmp-port-unreachable")]
     use std::num::NonZeroU16;
 
+    use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+    use packet::{Buf, BufferSerializer, Serializer};
+    use std::fmt::Debug;
+
     use super::*;
     use crate::device::{DeviceId, FrameDestination};
-    use crate::ip::{receive_ip_packet, Ip, IpExt, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+    use crate::ip::{receive_ip_packet, IpExt};
     use crate::testutil::{
         DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
     };

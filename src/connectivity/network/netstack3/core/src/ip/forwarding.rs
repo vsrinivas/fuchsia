@@ -4,6 +4,8 @@
 
 use std::fmt::{self, Debug, Formatter};
 
+use net_types::ip::{Ip, Subnet};
+
 use crate::device::DeviceId;
 use crate::ip::*;
 
@@ -117,7 +119,7 @@ impl<I: Ip> ForwardingTable<I> {
     /// should be dropped before consulting the forwarding table.
     pub(crate) fn lookup(&self, address: I::Addr) -> Option<Destination<I>> {
         assert!(
-            !I::LOOPBACK_SUBNET.contains(address),
+            !I::LOOPBACK_SUBNET.contains(&address),
             "loopback addresses should be handled before consulting the forwarding table"
         );
 
@@ -134,7 +136,7 @@ impl<I: Ip> ForwardingTable<I> {
         let best_match = self
             .entries
             .iter()
-            .filter(|e| e.subnet.contains(address))
+            .filter(|e| e.subnet.contains(&address))
             .max_by_key(|e| e.subnet.prefix());
 
         match best_match {

@@ -517,11 +517,11 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use std::time::{Duration, Instant};
 
     use never::Never;
 
+    use super::*;
     use crate::ip::gmp::{Action, GmpAction, MemberState};
 
     const DEFAULT_UNSOLICITED_REPORT_INTERVAL: Duration = Duration::from_secs(10);

@@ -7,101 +7,26 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use log::debug;
+use net_types::ethernet::Mac;
+use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use net_types::{BroadcastAddress, MulticastAddr};
 use packet::{Buf, BufferMut, BufferSerializer, EncapsulatingSerializer, Serializer};
 use specialize_ip_macro::specialize_ip_address;
-use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::device::arp::{self, ArpDevice, ArpHardwareType, ArpState};
 use crate::device::{ndp, ndp::NdpState};
 use crate::device::{DeviceId, FrameDestination};
-use crate::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use crate::types::{BroadcastAddress, MulticastAddr, MulticastAddress, UnicastAddress};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 use crate::{Context, EventDispatcher, StackState};
-use std::ops::Deref;
-
-/// A media access control (MAC) address.
-#[derive(Copy, Clone, Eq, PartialEq, Debug, FromBytes, AsBytes, Unaligned)]
-#[repr(transparent)]
-pub struct Mac([u8; 6]);
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
-
-impl Mac {
-    /// The broadcast MAC address.
-    ///
-    /// The broadcast MAC address, FF:FF:FF:FF:FF:FF, indicates that a frame should
-    /// be received by all receivers regardless of their local MAC address.
-    pub(crate) const BROADCAST: Mac = Mac([0xFF; 6]);
-
-    const EUI_MAGIC: [u8; 2] = [0xff, 0xfe];
-
-    /// Construct a new MAC address.
-    pub const fn new(bytes: [u8; 6]) -> Mac {
-        Mac(bytes)
-    }
-
-    /// Get the bytes of the MAC address.
-    pub(crate) fn bytes(self) -> [u8; 6] {
-        self.0
-    }
-
-    /// Return the RFC4291 EUI-64 interface identifier for this MAC address.
-    ///
-    /// `eui_magic` is the two bytes that are inserted between the MAC address
-    /// to form the identifier. If None, the standard 0xfffe will be used.
-    ///
-    // TODO: remove `eui_magic` arg if/once it is unused.
-    pub(crate) fn to_eui64(self, eui_magic: Option<[u8; 2]>) -> [u8; 8] {
-        let mut eui = [0; 8];
-        eui[0..3].copy_from_slice(&self.0[0..3]);
-        eui[3..5].copy_from_slice(&eui_magic.unwrap_or(Self::EUI_MAGIC));
-        eui[5..8].copy_from_slice(&self.0[3..6]);
-        eui[0] ^= 0b0000_0010;
-        eui
-    }
-
-    /// Return the link-local IPv6 address for this MAC address, as per RFC 4862.
-    ///
-    /// `eui_magic` is the two bytes that are inserted between the MAC address
-    /// to form the identifier. If None, the standard 0xfffe will be used.
-    ///
-    /// TODO: remove `eui_magic` arg if/once it is unused.
-    pub(crate) fn to_ipv6_link_local(self, eui_magic: Option<[u8; 2]>) -> Ipv6Addr {
-        let mut ipv6_addr = [0; 16];
-        ipv6_addr[0..2].copy_from_slice(&[0xfe, 0x80]);
-        ipv6_addr[8..16].copy_from_slice(&self.to_eui64(eui_magic));
-        Ipv6Addr::new(ipv6_addr)
-    }
-}
-
-impl UnicastAddress for Mac {
-    fn is_unicast(&self) -> bool {
-        // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
-        self.0[0] & 1 == 0
-    }
-}
-
-impl MulticastAddress for Mac {
-    fn is_multicast(&self) -> bool {
-        // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
-        self.0[0] & 1 == 1
-    }
-}
-
-impl BroadcastAddress for Mac {
-    fn is_broadcast(&self) -> bool {
-        // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
-        *self == Mac::BROADCAST
-    }
-}
 
 impl ndp::LinkLayerAddress for Mac {
     const BYTES_LENGTH: usize = 6;
 
     fn bytes(&self) -> &[u8] {
-        &self.0
+        self.as_ref()
     }
 
     fn from_bytes(bytes: &[u8]) -> Self {
@@ -166,7 +91,7 @@ impl EthernetDeviceState {
         // `to_solicited_node_address` returns a multicast address,
         // so `new` will not return `None`.
         ipv6_multicast_groups.insert(
-            MulticastAddr::new(mac.to_ipv6_link_local(None).to_solicited_node_address()).unwrap(),
+            MulticastAddr::new(mac.to_ipv6_link_local().to_solicited_node_address()).unwrap(),
         );
 
         // TODO(ghanan): Perform NDP's DAD on the link local address BEFORE receiving
@@ -291,41 +216,6 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
     }
 }
 
-impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for Mac {
-    fn from(addr: &'a MulticastAddr<A>) -> Mac {
-        #[specialize_ip_address]
-        fn map_multicast_address<A: IpAddress>(a: &A) -> Mac {
-            // Please refer to RFC7042 for details. especially,
-            // https://tools.ietf.org/html/rfc7042#section-2.1.1
-            // for mapping IPv4 multicast addresses, and
-            // https://tools.ietf.org/html/rfc7042#section-2.3.1
-            // for mapping IPv6 multicast addresses
-            let ip_bytes = a.bytes();
-            let mut mac_bytes = [0; 6];
-            #[ipv4addr]
-            {
-                mac_bytes[0] = 0x01;
-                mac_bytes[1] = 0x00;
-                mac_bytes[2] = 0x5e;
-                mac_bytes[3] = ip_bytes[1] & 0x7f;
-                mac_bytes[4] = ip_bytes[2];
-                mac_bytes[5] = ip_bytes[3];
-            }
-            #[ipv6addr]
-            {
-                mac_bytes[0] = 0x33;
-                mac_bytes[1] = 0x33;
-                mac_bytes[2] = ip_bytes[12];
-                mac_bytes[3] = ip_bytes[13];
-                mac_bytes[4] = ip_bytes[14];
-                mac_bytes[5] = ip_bytes[15];
-            }
-            Mac::new(mac_bytes)
-        }
-        map_multicast_address(addr.deref())
-    }
-}
-
 /// Receive an Ethernet frame from the network.
 pub(crate) fn receive_frame<D: EventDispatcher, B: BufferMut>(
     ctx: &mut Context<D>,
@@ -400,7 +290,7 @@ pub(crate) fn get_ipv6_link_local_addr<D: EventDispatcher>(
     //  verifications as prefix global addresses, we should keep a state machine
     //  about that check and cache the adopted address. For now, we just compose
     //  the link-local from the ethernet MAC.
-    get_device_state(ctx.state(), device_id).mac.to_ipv6_link_local(None)
+    get_device_state(ctx.state(), device_id).mac.to_ipv6_link_local()
 }
 
 /// Set the IP address and subnet associated with this device.
@@ -613,7 +503,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         //  a list of IPv6 addresses.
         match state.ipv6_addr_sub {
             Some(addr_sub) => Some(addr_sub.into_addr()),
-            None => Some(state.mac.to_ipv6_link_local(None)),
+            None => Some(state.mac.to_ipv6_link_local()),
         }
     }
 
@@ -624,7 +514,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
     ) -> bool {
         let state = get_device_state(state, device_id);
         state.ipv6_addr_sub.map_or(false, |addr_sub| addr_sub.into_addr() == *address)
-            || state.mac.to_ipv6_link_local(None) == *address
+            || state.mac.to_ipv6_link_local() == *address
     }
 
     fn send_ipv6_frame_to<D: EventDispatcher, S: Serializer>(
@@ -746,34 +636,6 @@ mod tests {
     use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4};
 
     #[test]
-    fn test_mac_to_eui() {
-        assert_eq!(
-            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_eui64(None),
-            [0x02, 0x1a, 0xaa, 0xff, 0xfe, 0x12, 0x34, 0x56]
-        );
-        assert_eq!(
-            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_eui64(Some([0xfe, 0xfe])),
-            [0x02, 0x1a, 0xaa, 0xfe, 0xfe, 0x12, 0x34, 0x56]
-        );
-    }
-
-    #[test]
-    fn test_slaac() {
-        assert_eq!(
-            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_ipv6_link_local(None),
-            Ipv6Addr::new([
-                0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x1a, 0xaa, 0xff, 0xfe, 0x12, 0x34, 0x56
-            ])
-        );
-        assert_eq!(
-            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_ipv6_link_local(Some([0xfe, 0xfe])),
-            Ipv6Addr::new([
-                0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x1a, 0xaa, 0xfe, 0xfe, 0x12, 0x34, 0x56
-            ])
-        );
-    }
-
-    #[test]
     fn test_mtu() {
         // Test that we send an Ethernet frame whose size is less than the MTU,
         // and that we don't send an Ethernet frame whose size is greater than
@@ -817,28 +679,5 @@ mod tests {
         assert_eq!(0, state.add_pending_frame(ip, vec![255]).unwrap()[0]);
         assert_eq!(1, state.add_pending_frame(ip, vec![255]).unwrap()[0]);
         assert_eq!(2, state.add_pending_frame(ip, vec![255]).unwrap()[0]);
-    }
-
-    #[test]
-    fn test_map_multicast_ip_to_ethernet_mac() {
-        let ipv4 = Ipv4Addr::new([224, 1, 1, 1]);
-        let mac = Mac::from(&MulticastAddr::new(ipv4).unwrap());
-        assert_eq!(mac, Mac::new([0x01, 0x00, 0x5e, 0x1, 0x1, 0x1]));
-        let ipv4 = Ipv4Addr::new([224, 129, 1, 1]);
-        let mac = Mac::from(&MulticastAddr::new(ipv4).unwrap());
-        assert_eq!(mac, Mac::new([0x01, 0x00, 0x5e, 0x1, 0x1, 0x1]));
-        let ipv4 = Ipv4Addr::new([225, 1, 1, 1]);
-        let mac = Mac::from(&MulticastAddr::new(ipv4).unwrap());
-        assert_eq!(mac, Mac::new([0x01, 0x00, 0x5e, 0x1, 0x1, 0x1]));
-
-        let ipv6 = Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3]);
-        let mac = Mac::from(&MulticastAddr::new(ipv6).unwrap());
-        assert_eq!(mac, Mac::new([0x33, 0x33, 0, 0, 0, 3]));
-        let ipv6 = Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3]);
-        let mac = Mac::from(&MulticastAddr::new(ipv6).unwrap());
-        assert_eq!(mac, Mac::new([0x33, 0x33, 0, 0, 0, 3]));
-        let ipv6 = Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 3]);
-        let mac = Mac::from(&MulticastAddr::new(ipv6).unwrap());
-        assert_eq!(mac, Mac::new([0x33, 0x33, 1, 0, 0, 3]));
     }
 }

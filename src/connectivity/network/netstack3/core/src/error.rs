@@ -5,9 +5,9 @@
 //! Custom error types for the netstack.
 
 use failure::Fail;
+use net_types::ip::{Ip, IpAddress};
+use net_types::MulticastAddress;
 
-use crate::ip::{Ip, IpAddress};
-use crate::types::MulticastAddress;
 use crate::wire::icmp::IcmpIpTypes;
 
 /// Results returned from many functions in the netstack.

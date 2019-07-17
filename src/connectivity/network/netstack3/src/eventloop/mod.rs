@@ -109,6 +109,8 @@ use futures::{select, TryFutureExt, TryStreamExt};
 #[cfg(test)]
 use integration_tests::TestEvent;
 use log::{debug, error, info, trace};
+use net_types::ethernet::Mac;
+use net_types::ip::{AddrSubnet, AddrSubnetEither, Subnet, SubnetEither};
 use packet::{Buf, Serializer};
 use std::convert::TryInto;
 use util::{CoreCompatible, FidlCompatible};
@@ -117,10 +119,9 @@ use crate::devices::{BindingId, CommonInfo, DeviceInfo, Devices};
 
 use netstack3_core::{
     add_device_route, del_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout,
-    icmp as core_icmp, receive_frame, set_ip_addr_subnet, AddrSubnet, AddrSubnetEither, Context,
-    DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher,
-    IpLayerEventDispatcher, Mac, NetstackError, StackState, Subnet, SubnetEither, TimerId,
-    TransportLayerEventDispatcher, UdpEventDispatcher,
+    icmp as core_icmp, receive_frame, set_ip_addr_subnet, Context, DeviceId,
+    DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IpLayerEventDispatcher,
+    NetstackError, StackState, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
 };
 
 type IcmpConnectionId = u64;

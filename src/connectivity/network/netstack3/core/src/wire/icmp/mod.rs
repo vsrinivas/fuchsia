@@ -27,12 +27,13 @@ use std::ops::Deref;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
+use net_types::ip::{Ip, IpAddress, Ipv4, Ipv6};
 use never::Never;
 use packet::{BufferView, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::ip::{Ip, IpAddress, IpProto, Ipv4, Ipv6};
+use crate::ip::IpProto;
 use crate::wire::ipv4;
 use crate::wire::records::options::{Options, OptionsImpl};
 use crate::wire::U16;

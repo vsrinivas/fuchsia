@@ -10,13 +10,14 @@ use std::fmt::{self, Debug, Formatter};
 use std::num::NonZeroU16;
 
 use byteorder::{ByteOrder, NetworkEndian};
+use net_types::ip::{Ip, IpAddress};
 use packet::{
     BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::ip::{Ip, IpAddress, IpProto};
+use crate::ip::IpProto;
 use crate::wire::compute_transport_checksum;
 use crate::wire::U16;
 
@@ -301,11 +302,13 @@ impl<B> Debug for UdpPacket<B> {
 
 #[cfg(test)]
 mod tests {
+    use std::num::NonZeroU16;
+
+    use net_types::ip::{Ipv4Addr, Ipv6Addr};
     use packet::{Buf, BufferSerializer, ParseBuffer, Serializer};
 
     use super::*;
     use crate::device::ethernet::EtherType;
-    use crate::ip::{Ipv4Addr, Ipv6Addr};
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::ipv4::{Ipv4Header, Ipv4Packet};
     use crate::wire::ipv6::Ipv6Packet;

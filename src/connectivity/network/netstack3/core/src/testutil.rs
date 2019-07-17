@@ -13,18 +13,17 @@ use std::time::Duration;
 
 use byteorder::{ByteOrder, NativeEndian};
 use log::debug;
+use net_types::ethernet::Mac;
+use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4Addr, Ipv6Addr, Subnet, SubnetEither};
 use packet::{Buf, ParsablePacket, ParseBuffer, Serializer};
 use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
 
-use crate::device::ethernet::{EtherType, Mac};
+use crate::device::ethernet::EtherType;
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::{IpParseResult, ParseError, ParseResult};
 use crate::ip::icmp::IcmpEventDispatcher;
-use crate::ip::{
-    AddrSubnet, Ip, IpAddr, IpAddress, IpExtByteSlice, IpLayerEventDispatcher, IpPacket, IpProto,
-    Ipv4Addr, Ipv6Addr, Subnet, SubnetEither, IPV6_MIN_MTU,
-};
+use crate::ip::{IpExtByteSlice, IpLayerEventDispatcher, IpPacket, IpProto, IPV6_MIN_MTU};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
 use crate::wire::ethernet::EthernetFrame;
@@ -375,8 +374,8 @@ impl DummyEventDispatcherBuilder {
     pub(crate) fn from_config<A: IpAddress>(
         cfg: DummyEventDispatcherConfig<A>,
     ) -> DummyEventDispatcherBuilder {
-        assert!(cfg.subnet.contains(cfg.local_ip));
-        assert!(cfg.subnet.contains(cfg.remote_ip));
+        assert!(cfg.subnet.contains(&cfg.local_ip));
+        assert!(cfg.subnet.contains(&cfg.remote_ip));
 
         let mut builder = DummyEventDispatcherBuilder::default();
         builder.devices.push((cfg.local_mac, Some((cfg.local_ip.into(), cfg.subnet.into()))));
@@ -388,11 +387,7 @@ impl DummyEventDispatcherBuilder {
 
         // even with fixed ipv4 address we can have ipv6 link local addresses
         // pre-cached.
-        builder.ndp_table_entries.push((
-            0,
-            cfg.remote_mac.to_ipv6_link_local(None),
-            cfg.remote_mac,
-        ));
+        builder.ndp_table_entries.push((0, cfg.remote_mac.to_ipv6_link_local(), cfg.remote_mac));
 
         builder.device_routes.push((cfg.subnet.into(), 0));
         builder
@@ -1081,16 +1076,17 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+    use packet::{Buf, BufferSerializer, Serializer};
+    use std::time::Duration;
 
-    use crate::ip::{self, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+    use super::*;
+    use crate::ip;
     use crate::wire::icmp::{
         IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode,
         Icmpv4DestUnreachableCode,
     };
     use crate::TimerIdInner;
-    use packet::{Buf, BufferSerializer, Serializer};
-    use std::time::Duration;
 
     #[test]
     fn test_parse_ethernet_frame() {

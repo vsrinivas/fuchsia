@@ -4,6 +4,7 @@
 
 //! Implementation of IGMP Messages.
 
+use net_types::ip::Ipv4Addr;
 use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -12,7 +13,6 @@ use super::{
     IgmpMessage, IgmpResponseTimeV2, IgmpResponseTimeV3,
 };
 use crate::error::ParseError;
-use crate::ip::Ipv4Addr;
 use crate::wire::igmp::MessageType;
 use crate::wire::records::{LimitedRecords, LimitedRecordsImpl, LimitedRecordsImplLayout};
 use crate::wire::U16;

@@ -8,10 +8,11 @@
 //! by hosts and adjacent routers on IPv4 networks to establish multicast group memberships.
 //! IGMP is an integral part of IP multicast.
 
-use crate::ip::IpAddress;
-use crate::{Context, EventDispatcher};
 use log::trace;
+use net_types::ip::IpAddress;
 use packet::BufferMut;
+
+use crate::{Context, EventDispatcher};
 
 /// Receive an IGMP message in an IP packet.
 pub(crate) fn receive_igmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(

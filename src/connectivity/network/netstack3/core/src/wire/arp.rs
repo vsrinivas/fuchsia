@@ -10,13 +10,14 @@
 use std::fmt::{self, Debug, Formatter};
 use std::mem;
 
+use net_types::ethernet::Mac;
+use net_types::ip::Ipv4Addr;
 use packet::{BufferView, BufferViewMut, InnerPacketBuilder, ParsablePacket, ParseMetadata};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::device::arp::{ArpHardwareType, ArpOp};
-use crate::device::ethernet::{EtherType, Mac};
+use crate::device::ethernet::EtherType;
 use crate::error::{ParseError, ParseResult};
-use crate::ip::Ipv4Addr;
 use crate::wire::U16;
 
 #[cfg(test)]
@@ -363,7 +364,6 @@ mod tests {
     use packet::{FnSerializer, ParseBuffer, Serializer};
 
     use super::*;
-    use crate::ip::Ipv4Addr;
     use crate::wire::ethernet::EthernetFrame;
 
     const TEST_SENDER_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);

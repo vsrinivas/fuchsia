@@ -6,7 +6,7 @@
 //!
 //! This data was obtained by capturing live network traffic.
 
-use crate::device::ethernet::Mac;
+use net_types::ethernet::Mac;
 
 /// IPv4 headers.
 pub(crate) const IPV4_HEADERS: &[&[u8]] = &[
@@ -50,7 +50,7 @@ pub(crate) mod dns_request_v4 {
 
     use std::ops::Range;
 
-    use crate::ip::Ipv4Addr;
+    use net_types::ip::Ipv4Addr;
 
     pub(crate) use super::ETHERNET_DST_MAC;
     pub(crate) use super::ETHERNET_SRC_MAC;
@@ -95,7 +95,8 @@ pub(crate) mod tls_client_hello_v4 {
 
     use std::ops::Range;
 
-    use crate::ip::Ipv4Addr;
+    use net_types::ip::Ipv4Addr;
+
     use crate::transport::tcp::TcpOption;
 
     pub(crate) use super::ETHERNET_DST_MAC;
@@ -214,7 +215,7 @@ pub(crate) mod dns_request_v6 {
 
     use std::ops::Range;
 
-    use crate::ip::Ipv6Addr;
+    use net_types::ip::Ipv6Addr;
 
     pub(crate) use super::ETHERNET_DST_MAC;
     pub(crate) use super::ETHERNET_SRC_MAC;
@@ -265,7 +266,8 @@ pub(crate) mod syn_v6 {
 
     use std::ops::Range;
 
-    use crate::ip::Ipv6Addr;
+    use net_types::ip::Ipv6Addr;
+
     use crate::transport::tcp::TcpOption;
 
     pub(crate) use super::ETHERNET_DST_MAC;
@@ -409,7 +411,7 @@ pub(crate) mod icmp_dest_unreachable {
 }
 
 pub(crate) mod icmp_redirect {
-    use crate::ip::Ipv4Addr;
+    use net_types::ip::Ipv4Addr;
 
     pub(crate) const IP_PACKET_BYTES: &[u8] = &[
         0x45, 0x00, 0x00, 0x38, 0x01, 0x38, 0x00, 0x00, 0xff, 0x01, 0xa5, 0x94, 0x0a, 0x7b, 0x00,

@@ -5,12 +5,13 @@
 //! Parsing and serialization of Ethernet frames.
 
 use byteorder::{ByteOrder, NetworkEndian};
+use net_types::ethernet::Mac;
 use packet::{
     BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-use crate::device::ethernet::{EtherType, Mac};
+use crate::device::ethernet::EtherType;
 use crate::error::{ParseError, ParseResult};
 use crate::wire::{U16, U32};
 

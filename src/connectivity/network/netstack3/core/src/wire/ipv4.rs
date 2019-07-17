@@ -9,6 +9,7 @@ use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
+use net_types::ip::{Ipv4, Ipv4Addr};
 use packet::{
     BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
 };
@@ -16,7 +17,7 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 
 use crate::error::{IpParseError, IpParseResult, ParseError};
 use crate::ip::reassembly::FragmentablePacket;
-use crate::ip::{IpProto, Ipv4, Ipv4Addr, Ipv4Option};
+use crate::ip::{IpProto, Ipv4Option};
 use crate::wire::records::options::{Options, OptionsRaw};
 use crate::wire::U16;
 use crate::wire::{FromRaw, MaybeParsed};
@@ -598,11 +599,13 @@ mod options {
 
 #[cfg(test)]
 mod tests {
+    use net_types::ethernet::Mac;
+    use net_types::ip::Ipv4;
     use packet::{Buf, BufferSerializer, ParseBuffer, Serializer};
 
     use super::*;
-    use crate::device::ethernet::{EtherType, Mac};
-    use crate::ip::{IpExt, Ipv4};
+    use crate::device::ethernet::EtherType;
+    use crate::ip::IpExt;
     use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 
     const DEFAULT_SRC_MAC: Mac = Mac::new([1, 2, 3, 4, 5, 6]);
