@@ -606,15 +606,13 @@ TEST(VmoCloneTestCase, ShrinkGrowParent) {
 }
 
 // Check that non-resizable VMOs cannot get resized.
-void NoResizeHelper(uint32_t flag) {
+TEST(VmoCloneTestCase, NoResize) {
     const size_t len = PAGE_SIZE * 4;
     zx_handle_t parent = ZX_HANDLE_INVALID;
     zx_handle_t vmo = ZX_HANDLE_INVALID;
 
     zx_vmo_create(len, 0, &parent);
-    zx_vmo_create_child(parent,
-        ZX_VMO_CHILD_COPY_ON_WRITE | flag,
-        0, len, &vmo);
+    zx_vmo_create_child(parent, ZX_VMO_CHILD_COPY_ON_WRITE, 0, len, &vmo);
 
     EXPECT_NE(vmo, ZX_HANDLE_INVALID);
 
@@ -644,15 +642,6 @@ void NoResizeHelper(uint32_t flag) {
     status = zx_handle_close(vmo);
     EXPECT_OK(status, "handle_close");
 }
-
-TEST(VmoCloneTestCase, NoResize) {
-    ASSERT_NO_FATAL_FAILURES(NoResizeHelper(0));
-}
-
-TEST(VmoCloneTestCase, LegacyNoResize) {
-    ASSERT_NO_FATAL_FAILURES(NoResizeHelper(2));
-}
-
 
 TEST(VmoCloneTestCase, NoPagerClone) {
     zx::vmo vmo;

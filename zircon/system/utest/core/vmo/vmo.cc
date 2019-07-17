@@ -341,11 +341,11 @@ TEST(VmoTestCase, Resize) {
 }
 
 // Check that non-resizable VMOs cannot get resized.
-void VmoNoResizeHelper(uint32_t flag) {
+TEST(VmoTestCase, NoResize) {
     const size_t len = PAGE_SIZE * 4;
     zx_handle_t vmo = ZX_HANDLE_INVALID;
 
-    zx_vmo_create(len, flag, &vmo);
+    zx_vmo_create(len, 0, &vmo);
 
     EXPECT_NE(vmo, ZX_HANDLE_INVALID);
 
@@ -374,14 +374,6 @@ void VmoNoResizeHelper(uint32_t flag) {
 
     status = zx_handle_close(vmo);
     EXPECT_OK(status, "handle_close");
-}
-
-TEST(VmoTestCase, NoResize) {
-    ASSERT_NO_FATAL_FAILURES(VmoNoResizeHelper(0));
-}
-
-TEST(VmoTestCase, LegacyNoResize) {
-    ASSERT_NO_FATAL_FAILURES(VmoNoResizeHelper(1));
 }
 
 TEST(VmoTestCase, Info) {
