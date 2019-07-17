@@ -5,13 +5,10 @@
 package amberd
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall/zx"
@@ -36,9 +33,8 @@ func Main() {
 
 	var (
 		// TODO(jmatt) replace hard-coded values with something better/more flexible
-		usage = "usage: amber [-k=<path>] [-s=<path>] [-u=<url>]"
+		usage = "usage: amber [-s=<path>]"
 		store = flag.String("s", "/data/amber/store", "The path to the local file store")
-		_     = flag.Bool("a", false, "Automatically update and restart the system as updates become available")
 	)
 
 	flag.CommandLine.Usage = func() {
@@ -59,8 +55,6 @@ func Main() {
 	}
 
 	metrics.Register(ctx)
-
-	readExtraFlags()
 
 	flag.Parse()
 
@@ -139,52 +133,6 @@ func addDefaultSourceConfigs(d *daemon.Daemon, dir string) error {
 		return nil
 	}
 	return fmt.Errorf("error adding default configs: %s", strings.Join(errs, ", "))
-}
-
-var flagsDir = filepath.Join("/system", "data", "amber", "flags")
-
-func readExtraFlags() {
-	d, err := os.Open(flagsDir)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			log.Printf("unexpected error reading %q: %s", flagsDir, err)
-		}
-		return
-	}
-	defer d.Close()
-
-	files, err := d.Readdir(0)
-	if err != nil {
-		log.Printf("error listing flags directory %s", err)
-		return
-	}
-	for _, f := range files {
-		if f.IsDir() || f.Size() == 0 {
-			continue
-		}
-
-		fPath := filepath.Join(d.Name(), f.Name())
-		file, err := os.Open(fPath)
-		if err != nil {
-			log.Printf("flags file %q could not be opened: %s", fPath, err)
-			continue
-		}
-		r := bufio.NewReader(file)
-		for {
-			line, err := r.ReadString('\n')
-			if err != nil && err != io.EOF {
-				log.Printf("flags file %q had read error: %s", fPath, err)
-				break
-			}
-
-			line = strings.TrimSpace(line)
-			os.Args = append(os.Args, line)
-			if err == io.EOF {
-				break
-			}
-		}
-		file.Close()
-	}
 }
 
 // Check if a path exists.

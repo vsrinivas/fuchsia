@@ -77,7 +77,6 @@ group("amber_auto_ota") {
   testonly = true
   public_deps = [
     "//garnet/bin/system-update-checker:auto_update",
-    "//garnet/go/src/amber/ota_config:amber_flags",
   ]
 }
 
