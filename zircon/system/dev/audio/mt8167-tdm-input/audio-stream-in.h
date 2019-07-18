@@ -8,6 +8,7 @@
 #include <optional>
 
 #include <audio-proto/audio-proto.h>
+#include <ddktl/protocol/gpio.h>
 #include <dispatcher-pool/dispatcher-timer.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>

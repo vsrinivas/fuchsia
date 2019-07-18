@@ -61,7 +61,6 @@ zx_status_t Vim::SdInit() {
     sd_dev.mmio_count = countof(sd_mmios);
     sd_dev.irq_list = sd_irqs;
     sd_dev.irq_count = countof(sd_irqs);
-    sd_dev.gpio_count = 0;
     sd_dev.bti_list = sd_btis;
     sd_dev.bti_count = countof(sd_btis);
     sd_dev.metadata_list = sd_metadata;

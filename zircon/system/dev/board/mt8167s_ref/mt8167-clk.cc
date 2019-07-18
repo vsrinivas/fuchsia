@@ -19,10 +19,6 @@ zx_status_t Mt8167::ClkInit() {
   clk_dev.did = PDEV_DID_MEDIATEK_CLK;
   clk_dev.mmio_list = clk_mmios;
   clk_dev.mmio_count = countof(clk_mmios);
-  clk_dev.bti_count = 0;
-  clk_dev.metadata_count = 0;
-  clk_dev.irq_count = 0;
-  clk_dev.gpio_count = 0;
 
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clk_dev);
   if (status != ZX_OK) {

@@ -138,7 +138,6 @@ zx_status_t CompositeDevice::PDevGetDeviceInfo(pdev_device_info_t* out_info) {
         .did = did_,
         .mmio_count = static_cast<uint32_t>(resources_.mmio_count()),
         .irq_count = static_cast<uint32_t>(resources_.irq_count()),
-        .gpio_count = static_cast<uint32_t>(resources_.gpio_count()),
         .clk_count = static_cast<uint32_t>(resources_.clk_count()),
         .bti_count = static_cast<uint32_t>(resources_.bti_count()),
         .smc_count = static_cast<uint32_t>(resources_.smc_count()),

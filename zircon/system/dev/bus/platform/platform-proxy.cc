@@ -20,99 +20,6 @@
 
 namespace platform_bus {
 
-zx_status_t ProxyGpio::GpioConfigIn(uint32_t flags) {
-    rpc_gpio_req_t req = {};
-    rpc_gpio_rsp_t resp = {};
-    req.header.proto_id = ZX_PROTOCOL_GPIO;
-    req.header.op = GPIO_CONFIG_IN;
-    req.index = index_;
-    req.flags = flags;
-
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-}
-
-zx_status_t ProxyGpio::GpioConfigOut(uint8_t initial_value) {
-    rpc_gpio_req_t req = {};
-    rpc_gpio_rsp_t resp = {};
-    req.header.proto_id = ZX_PROTOCOL_GPIO;
-    req.header.op = GPIO_CONFIG_OUT;
-    req.index = index_;
-    req.value = initial_value;
-
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-}
-
-zx_status_t ProxyGpio::GpioSetAltFunction(uint64_t function) {
-    rpc_gpio_req_t req = {};
-    rpc_gpio_rsp_t resp = {};
-    req.header.proto_id = ZX_PROTOCOL_GPIO;
-    req.header.op = GPIO_SET_ALT_FUNCTION;
-    req.index = index_;
-    req.alt_function = function;
-
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-}
-
-zx_status_t ProxyGpio::GpioGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
-    rpc_gpio_req_t req = {};
-    rpc_gpio_rsp_t resp = {};
-    req.header.proto_id = ZX_PROTOCOL_GPIO;
-    req.header.op = GPIO_GET_INTERRUPT;
-    req.index = index_;
-    req.flags = flags;
-
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), nullptr, 0,
-                       out_irq->reset_and_get_address(), 1, nullptr);
-}
-
-zx_status_t ProxyGpio::GpioSetPolarity(uint32_t polarity) {
-    rpc_gpio_req_t req = {};
-    rpc_gpio_rsp_t resp = {};
-    req.header.proto_id = ZX_PROTOCOL_GPIO;
-    req.header.op = GPIO_SET_POLARITY;
-    req.index = index_;
-    req.polarity = polarity;
-
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-}
-
-zx_status_t ProxyGpio::GpioReleaseInterrupt() {
-    rpc_gpio_req_t req = {};
-    rpc_gpio_rsp_t resp = {};
-    req.header.proto_id = ZX_PROTOCOL_GPIO;
-    req.header.op = GPIO_RELEASE_INTERRUPT;
-    req.index = index_;
-
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-}
-
-zx_status_t ProxyGpio::GpioRead(uint8_t* out_value) {
-    rpc_gpio_req_t req = {};
-    rpc_gpio_rsp_t resp = {};
-    req.header.proto_id = ZX_PROTOCOL_GPIO;
-    req.header.op = GPIO_READ;
-    req.index = index_;
-
-    auto status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-
-    if (status != ZX_OK) {
-        return status;
-    }
-    *out_value = resp.value;
-    return ZX_OK;
-}
-
-zx_status_t ProxyGpio::GpioWrite(uint8_t value) {
-    rpc_gpio_req_t req = {};
-    rpc_gpio_rsp_t resp = {};
-    req.header.proto_id = ZX_PROTOCOL_GPIO;
-    req.header.op = GPIO_WRITE;
-    req.index = index_;
-    req.value = value;
-
-    return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-}
-
 zx_status_t ProxyClock::ClockEnable() {
     rpc_clk_req_t req = {};
     rpc_clk_rsp_t resp = {};
@@ -264,19 +171,6 @@ zx_status_t PlatformProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
         proto->ctx = this;
         return ZX_OK;
     }
-    case ZX_PROTOCOL_GPIO: {
-        auto count = gpios_.size();
-        if (count == 0) {
-            return ZX_ERR_NOT_SUPPORTED;
-        } else if (count > 1) {
-            zxlogf(ERROR, "%s: device has more than one GPIO\n", __func__);
-            return ZX_ERR_BAD_STATE;
-        }
-        // Return zeroth GPIO resource.
-        auto* proto = static_cast<gpio_protocol_t*>(out);
-        gpios_[0].GetProtocol(proto);
-        return ZX_OK;
-    }
     case ZX_PROTOCOL_CLOCK: {
         auto count = clocks_.size();
         if (count == 0) {
@@ -414,16 +308,6 @@ zx_status_t PlatformProxy::PDevGetProtocol(uint32_t proto_id, uint32_t index, vo
         return ZX_ERR_INVALID_ARGS;
     }
     *protocol_actual = sizeof(ddk::AnyProtocol);
-
-    // Return the GPIO protocol for the given index.
-    if (proto_id == ZX_PROTOCOL_GPIO) {
-        if (index >= gpios_.size()) {
-            return ZX_ERR_OUT_OF_RANGE;
-        }
-        auto* proto = static_cast<gpio_protocol_t*>(out_protocol);
-        gpios_[index].GetProtocol(proto);
-        return ZX_OK;
-    }
 
     if (proto_id == ZX_PROTOCOL_CLOCK) {
         if (index >= clocks_.size()) {
@@ -577,14 +461,6 @@ zx_status_t PlatformProxy::Init(zx_device_t* parent) {
 
         zxlogf(SPEW, "%s: received IRQ %u (irq %#x handle %#x)\n", name_, i, irq.irq,
                irq.resource.get());
-    }
-
-    for (uint32_t i = 0; i < info.gpio_count; i++) {
-        ProxyGpio gpio(i, this);
-        gpios_.push_back(std::move(gpio), &ac);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
     }
 
     for (uint32_t i = 0; i < info.clk_count; i++) {

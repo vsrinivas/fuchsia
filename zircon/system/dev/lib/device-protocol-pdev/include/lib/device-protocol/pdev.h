@@ -5,7 +5,6 @@
 #pragma once
 
 #include <ddktl/protocol/clock.h>
-#include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/power.h>
 
@@ -43,7 +42,6 @@ public:
         return PDevProtocolClient::GetBti(index, out);
     }
 
-    GpioProtocolClient GetGpio(uint32_t index);
     ClockProtocolClient GetClk(uint32_t index);
     PowerProtocolClient GetPower(uint32_t index);
 };

@@ -14,7 +14,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/protocol/platform/device.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 
 namespace gpio_test {
@@ -98,27 +98,28 @@ zx_status_t GpioTest::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t GpioTest::Init() {
-    ddk::PDevProtocolClient pdev(parent());
-    if (!pdev.is_valid()) {
+    ddk::CompositeProtocolClient composite(parent());
+    if (!composite.is_valid()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    pdev_device_info_t  info;
-    if (pdev.GetDeviceInfo(&info) != ZX_OK) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    gpio_count_ = info.gpio_count;
+    gpio_count_ = composite.GetComponentCount();
 
     fbl::AllocChecker ac;
-    gpios_ = fbl::Array(new (&ac) ddk::GpioProtocolClient[info.gpio_count], info.gpio_count);
+    gpios_ = fbl::Array(new (&ac) ddk::GpioProtocolClient[gpio_count_], gpio_count_);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    for (uint32_t i = 0; i < info.gpio_count; i++) {
-        auto* gpio = &gpios_[i];
-        size_t actual;
-        auto status = pdev.GetProtocol(ZX_PROTOCOL_GPIO, i, gpio, sizeof(*gpio), &actual);
+    zx_device_t* components[gpio_count_];
+    size_t actual;
+    composite.GetComponents(components, gpio_count_, &actual);
+    if (actual != gpio_count_) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    for (uint32_t i = 0; i < gpio_count_; i++) {
+        auto status = device_get_protocol(components[i], ZX_PROTOCOL_GPIO, &gpios_[i]);
         if (status != ZX_OK) {
             return status;
         }
@@ -153,7 +154,7 @@ static constexpr zx_driver_ops_t driver_ops = [](){
 } // namespace gpio_test
 
 ZIRCON_DRIVER_BEGIN(gpio_test, gpio_test::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_GPIO_TEST),

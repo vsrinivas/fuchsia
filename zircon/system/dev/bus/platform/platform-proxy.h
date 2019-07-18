@@ -7,7 +7,6 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/clock.h>
-#include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/sysmem.h>
 #include <ddktl/protocol/platform/device.h>
@@ -20,31 +19,6 @@
 namespace platform_bus {
 
 class PlatformProxy;
-
-class ProxyGpio : public ddk::GpioProtocol<ProxyGpio> {
-public:
-    explicit ProxyGpio(uint32_t index, PlatformProxy* proxy)
-        : index_(index), proxy_(proxy) {}
-
-    // GPIO protocol implementation.
-    zx_status_t GpioConfigIn(uint32_t flags);
-    zx_status_t GpioConfigOut(uint8_t initial_value);
-    zx_status_t GpioSetAltFunction(uint64_t function);
-    zx_status_t GpioRead(uint8_t* out_value);
-    zx_status_t GpioWrite(uint8_t value);
-    zx_status_t GpioGetInterrupt(uint32_t flags, zx::interrupt* out_irq);
-    zx_status_t GpioReleaseInterrupt();
-    zx_status_t GpioSetPolarity(uint32_t polarity);
-
-    void GetProtocol(gpio_protocol_t* proto) {
-        proto->ops = &gpio_protocol_ops_;
-        proto->ctx = this;
-    }
-
-private:
-    uint32_t index_;
-    PlatformProxy* proxy_;
-};
 
 class ProxyClock : public ddk::ClockProtocol<ProxyClock> {
 public:
@@ -170,7 +144,6 @@ private:
 
     fbl::Vector<Mmio> mmios_;
     fbl::Vector<Irq> irqs_;
-    fbl::Vector<ProxyGpio> gpios_;
     fbl::Vector<ProxyClock> clocks_;
     ProxySysmem sysmem_;
     ProxyAmlogicCanvas canvas_;

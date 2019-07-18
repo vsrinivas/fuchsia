@@ -67,15 +67,6 @@ private:
     zx_status_t RpcGetDeviceInfo(pdev_device_info_t* out_info);
     zx_status_t RpcGetMetadata(uint32_t index, uint32_t* out_type, uint8_t* buf, uint32_t buf_size,
                                uint32_t* actual);
-    zx_status_t RpcGpioConfigIn(uint32_t index, uint32_t flags);
-    zx_status_t RpcGpioConfigOut(uint32_t index, uint8_t initial_value);
-    zx_status_t RpcGpioSetAltFunction(uint32_t index, uint64_t function);
-    zx_status_t RpcGpioRead(uint32_t index, uint8_t* out_value);
-    zx_status_t RpcGpioWrite(uint32_t index, uint8_t value);
-    zx_status_t RpcGpioGetInterrupt(uint32_t index, uint32_t flags, zx_handle_t* out_handle,
-                                    uint32_t* out_handle_count);
-    zx_status_t RpcGpioReleaseInterrupt(uint32_t index);
-    zx_status_t RpcGpioSetPolarity(uint32_t index, uint32_t flags);
     zx_status_t RpcClockEnable(uint32_t index);
     zx_status_t RpcClockDisable(uint32_t index);
     zx_status_t RpcClockIsEnabled(uint32_t index, bool* result);

@@ -66,32 +66,6 @@ struct rpc_pdev_metadata_rsp_t {
     uint8_t metadata[PROXY_MAX_METADATA_SIZE];
 };
 
-// ZX_PROTOCOL_GPIO proxy support.
-enum {
-    GPIO_CONFIG_IN,
-    GPIO_CONFIG_OUT,
-    GPIO_SET_ALT_FUNCTION,
-    GPIO_READ,
-    GPIO_WRITE,
-    GPIO_GET_INTERRUPT,
-    GPIO_RELEASE_INTERRUPT,
-    GPIO_SET_POLARITY,
-};
-
-struct rpc_gpio_req_t {
-    platform_proxy_req_t header;
-    uint32_t index;
-    uint32_t flags;
-    uint32_t polarity;
-    uint64_t alt_function;
-    uint8_t value;
-};
-
-struct rpc_gpio_rsp_t {
-    platform_proxy_rsp_t header;
-    uint8_t value;
-};
-
 // ZX_PROTOCOL_CLOCK proxy support.
 enum {
     CLK_ENABLE,

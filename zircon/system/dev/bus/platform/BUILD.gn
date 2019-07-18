@@ -51,8 +51,6 @@ driver("platform-bus.proxy") {
   deps = [
     "$zx/system/banjo/ddk.protocol.amlogiccanvas",
     "$zx/system/banjo/ddk.protocol.clock",
-    "$zx/system/banjo/ddk.protocol.gpio",
-    "$zx/system/banjo/ddk.protocol.gpioimpl",
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.power",

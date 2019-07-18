@@ -32,6 +32,7 @@ test("sgm37603a-test") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/dev/lib/device-protocol-i2c-channel",
     "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/mock-i2c",

@@ -94,8 +94,6 @@ const pbus_dev_t thermal_dev = []() {
   thermal_dev.metadata_count = countof(thermal_metadata);
   thermal_dev.irq_list = thermal_irqs;
   thermal_dev.irq_count = countof(thermal_irqs);
-  thermal_dev.bti_count = 0;
-  thermal_dev.gpio_count = 0;
   return thermal_dev;
 }();
 

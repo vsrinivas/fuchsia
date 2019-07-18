@@ -15,7 +15,6 @@ void PDev::ShowInfo() {
         zxlogf(INFO, "VID:PID:DID         = %04x:%04x:%04x\n", info.vid, info.pid, info.did);
         zxlogf(INFO, "mmio count          = %d\n", info.mmio_count);
         zxlogf(INFO, "irq count           = %d\n", info.irq_count);
-        zxlogf(INFO, "gpio count          = %d\n", info.gpio_count);
         zxlogf(INFO, "clk count           = %d\n", info.clk_count);
         zxlogf(INFO, "bti count           = %d\n", info.bti_count);
     }
@@ -30,16 +29,6 @@ zx_status_t PDev::MapMmio(uint32_t index, std::optional<MmioBuffer>* mmio) {
     }
     return MmioBuffer::Create(pdev_mmio.offset, pdev_mmio.size, zx::vmo(pdev_mmio.vmo),
                               ZX_CACHE_POLICY_UNCACHED_DEVICE, mmio);
-}
-
-GpioProtocolClient PDev::GetGpio(uint32_t index) {
-    gpio_protocol_t gpio;
-    size_t actual;
-    zx_status_t res = GetProtocol(ZX_PROTOCOL_GPIO, index, &gpio, sizeof(gpio), &actual);
-    if (res != ZX_OK || actual != sizeof(gpio)) {
-        return {};
-    }
-    return GpioProtocolClient(&gpio);
 }
 
 PowerProtocolClient PDev::GetPower(uint32_t index) {

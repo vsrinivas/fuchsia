@@ -166,7 +166,6 @@ zx_status_t PlatformDevice::RpcGetDeviceInfo(pdev_device_info_t* out_info) {
         .did = did_,
         .mmio_count = static_cast<uint32_t>(resources_.mmio_count()),
         .irq_count = static_cast<uint32_t>(resources_.irq_count()),
-        .gpio_count = static_cast<uint32_t>(resources_.gpio_count()),
         .clk_count = static_cast<uint32_t>(resources_.clk_count()),
         .bti_count = static_cast<uint32_t>(resources_.bti_count()),
         .smc_count = static_cast<uint32_t>(resources_.smc_count()),
@@ -219,100 +218,6 @@ zx_status_t PlatformDevice::RpcGetMetadata(uint32_t index, uint32_t* out_type, u
     *out_type = metadata.zbi_type;
     *actual = length;
     return ZX_OK;
-}
-
-zx_status_t PlatformDevice::RpcGpioConfigIn(uint32_t index, uint32_t flags) {
-    if (bus_->gpio() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (index >= resources_.gpio_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    return bus_->gpio()->ConfigIn(resources_.gpio(index).gpio, flags);
-}
-
-zx_status_t PlatformDevice::RpcGpioConfigOut(uint32_t index, uint8_t initial_value) {
-    if (bus_->gpio() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (index >= resources_.gpio_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    return bus_->gpio()->ConfigOut(resources_.gpio(index).gpio, initial_value);
-}
-
-zx_status_t PlatformDevice::RpcGpioSetAltFunction(uint32_t index, uint64_t function) {
-    if (bus_->gpio() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (index >= resources_.gpio_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    return bus_->gpio()->SetAltFunction(resources_.gpio(index).gpio, function);
-}
-
-zx_status_t PlatformDevice::RpcGpioRead(uint32_t index, uint8_t* out_value) {
-    if (bus_->gpio() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (index >= resources_.gpio_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    return bus_->gpio()->Read(resources_.gpio(index).gpio, out_value);
-}
-
-zx_status_t PlatformDevice::RpcGpioWrite(uint32_t index, uint8_t value) {
-    if (bus_->gpio() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (index >= resources_.gpio_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    return bus_->gpio()->Write(resources_.gpio(index).gpio, value);
-}
-
-zx_status_t PlatformDevice::RpcGpioGetInterrupt(uint32_t index, uint32_t flags,
-                                                zx_handle_t* out_handle,
-                                                uint32_t* out_handle_count) {
-    if (bus_->gpio() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (index >= resources_.gpio_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    zx::interrupt irq;
-    zx_status_t status = bus_->gpio()->GetInterrupt(resources_.gpio(index).gpio, flags, &irq);
-    if (status == ZX_OK) {
-        *out_handle = irq.release();
-        *out_handle_count = 1;
-    }
-    return status;
-}
-
-zx_status_t PlatformDevice::RpcGpioReleaseInterrupt(uint32_t index) {
-    if (bus_->gpio() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (index >= resources_.gpio_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    return bus_->gpio()->ReleaseInterrupt(resources_.gpio(index).gpio);
-}
-
-zx_status_t PlatformDevice::RpcGpioSetPolarity(uint32_t index, uint32_t flags) {
-    if (bus_->gpio() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (index >= resources_.gpio_count()) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    return bus_->gpio()->SetPolarity(resources_.gpio(index).gpio, flags);
 }
 
 zx_status_t PlatformDevice::RpcClockEnable(uint32_t index) {
@@ -474,47 +379,6 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
         }
         default:
             zxlogf(ERROR, "%s: unknown pdev op %u\n", __func__, req_header->op);
-            return ZX_ERR_INTERNAL;
-        }
-        break;
-    }
-    case ZX_PROTOCOL_GPIO: {
-        auto req = reinterpret_cast<rpc_gpio_req_t*>(&req_buf);
-        if (actual < sizeof(*req)) {
-            zxlogf(ERROR, "%s received %u, expecting %zu (GPIO)\n", __func__, actual, sizeof(*req));
-            return ZX_ERR_INTERNAL;
-        }
-        auto resp = reinterpret_cast<rpc_gpio_rsp_t*>(&resp_buf);
-        resp_len = sizeof(*resp);
-
-        switch (req_header->op) {
-        case GPIO_CONFIG_IN:
-            status = RpcGpioConfigIn(req->index, req->flags);
-            break;
-        case GPIO_CONFIG_OUT:
-            status = RpcGpioConfigOut(req->index, req->value);
-            break;
-        case GPIO_SET_ALT_FUNCTION:
-            status = RpcGpioSetAltFunction(req->index, req->alt_function);
-            break;
-        case GPIO_READ:
-            status = RpcGpioRead(req->index, &resp->value);
-            break;
-        case GPIO_WRITE:
-            status = RpcGpioWrite(req->index, req->value);
-            break;
-        case GPIO_GET_INTERRUPT:
-            status = RpcGpioGetInterrupt(req->index, req->flags, resp_handles,
-                                         &resp_handle_count);
-            break;
-        case GPIO_RELEASE_INTERRUPT:
-            status = RpcGpioReleaseInterrupt(req->index);
-            break;
-        case GPIO_SET_POLARITY:
-            status = RpcGpioSetPolarity(req->index, req->polarity);
-            break;
-        default:
-            zxlogf(ERROR, "%s: unknown GPIO op %u\n", __func__, req_header->op);
             return ZX_ERR_INTERNAL;
         }
         break;

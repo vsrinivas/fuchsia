@@ -23,10 +23,6 @@ struct PbusIrq {
     uint32 mode;
 };
 
-struct PbusGpio {
-    uint32 gpio;
-};
-
 struct PbusClk {
     uint32 clk;
 };
@@ -72,7 +68,6 @@ struct PbusDev {
     uint32 did;
     vector<PbusMmio> mmio;
     vector<PbusIrq> irq;
-    vector<PbusGpio> gpio;
     vector<PbusClk> clk;
     vector<PbusBti> bti;
     vector<PbusSmc> smc;
