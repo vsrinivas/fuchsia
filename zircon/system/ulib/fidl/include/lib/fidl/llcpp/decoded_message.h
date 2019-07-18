@@ -70,6 +70,12 @@ class DecodedMessage final {
     bytes_ = std::move(bytes);
   }
 
+  // Returns ownership of the buffer and handles contained within to the caller.
+  BytePart Release() {
+    fidl::BytePart released_bytes = std::move(bytes_);
+    return released_bytes;
+  }
+
   // Accesses the FIDL message by reinterpreting the buffer pointer.
   // Returns nullptr if there is no message.
   FidlType* message() const { return reinterpret_cast<FidlType*>(bytes_.data()); }

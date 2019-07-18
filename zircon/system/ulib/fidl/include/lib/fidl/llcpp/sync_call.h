@@ -1,0 +1,276 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef LIB_FIDL_LLCPP_SYNC_CALL_H_
+#define LIB_FIDL_LLCPP_SYNC_CALL_H_
+
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <memory>
+
+#include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/decoded_message.h>
+#include <lib/fidl/llcpp/encoded_message.h>
+#include <lib/fidl/llcpp/traits.h>
+
+namespace fidl {
+namespace internal {
+
+// An uninitialized array of |kSize| bytes, guaranteed to follow FIDL alignment.
+template <uint32_t kSize>
+struct AlignedBuffer {
+  AlignedBuffer() {}
+
+  fidl::BytePart view() {
+    return fidl::BytePart(&data[0], kSize);
+  }
+
+ private:
+  FIDL_ALIGNDECL uint8_t data[kSize];
+};
+
+static_assert(alignof(std::max_align_t) % FIDL_ALIGNMENT == 0,
+              "AlignedBuffer should follow FIDL alignment when allocated on the heap.");
+
+// The largest acceptable size for a stack-allocated buffer.
+// Messages which are smaller than/equal to this threshold are stack-allocated,
+// whereas messages greater than this threshold are heap allocated.
+// This constant has therefore a potentially large impact on the behavior of programs built
+// on top of the LLCPP bindings, and modification should be done with great care.
+//
+// July 2019: initial value set at 512 due to Chrome's restriction that the largest stack object
+// tolerated is 512 bytes. For reference, the default stack size on Fuchsia is 256kb.
+constexpr uint32_t kMaxStackAllocSize = 512;
+
+// |ResponseStorage| allocates a buffer either inline or on the heap, depending on the
+// maximum wire-format size of that particular FidlType.
+template <typename FidlType, typename Enabled = void>
+struct ResponseStorage;
+
+// This definition is selected when the size is larger than |kMaxStackAllocSize|.
+template <typename FidlType>
+struct ResponseStorage<FidlType,
+                       std::enable_if_t<(ClampedMessageSize<FidlType>() > kMaxStackAllocSize)>> {
+  constexpr static bool kWillCopyBufferDuringMove = false;
+  constexpr static uint32_t kBufferSize = ClampedMessageSize<FidlType>();
+
+  fidl::BytePart buffer() { return storage->view(); }
+
+  ResponseStorage() = default;
+  ~ResponseStorage() = default;
+
+  ResponseStorage(const ResponseStorage&) = delete;
+  ResponseStorage& operator=(const ResponseStorage&) = delete;
+
+  ResponseStorage(ResponseStorage&&) = default;
+  ResponseStorage& operator=(ResponseStorage&&) = default;
+
+ private:
+  std::unique_ptr<AlignedBuffer<kBufferSize>> storage =
+      std::make_unique<AlignedBuffer<kBufferSize>>();
+};
+
+// This definition is selected when the size is less than or equal to |kMaxStackAllocSize|.
+template <typename FidlType>
+struct ResponseStorage<FidlType,
+                       std::enable_if_t<(ClampedMessageSize<FidlType>() <= kMaxStackAllocSize)>> {
+  constexpr static bool kWillCopyBufferDuringMove = true;
+  constexpr static uint32_t kBufferSize = ClampedMessageSize<FidlType>();
+
+  fidl::BytePart buffer() { return storage.view(); }
+
+  ResponseStorage() = default;
+  ~ResponseStorage() = default;
+
+  ResponseStorage(const ResponseStorage&) = delete;
+  ResponseStorage& operator=(const ResponseStorage&) = delete;
+
+  ResponseStorage(ResponseStorage&&) = default;
+  ResponseStorage& operator=(ResponseStorage&&) = default;
+
+ private:
+  AlignedBuffer<kBufferSize> storage;
+};
+
+// Class representing the result of a one-way FIDL call.
+// status() returns the encoding and transport level status.
+// If status() is not ZX_OK, error() contains a human-readable string for debugging purposes.
+class StatusAndError {
+ public:
+  StatusAndError() = default;
+
+  StatusAndError(const StatusAndError&) = delete;
+  StatusAndError& operator=(const StatusAndError&) = delete;
+
+  [[nodiscard]] zx_status_t status() const { return status_; }
+  [[nodiscard]] const char* error() const { return error_; }
+
+ protected:
+  StatusAndError(StatusAndError&&) = default;
+  StatusAndError& operator=(StatusAndError&&) = default;
+
+  // Initialize ourself from one of EncodeResult, DecodeResult, LinearizeResult, in the case of
+  // error hence there is no message.
+  template <typename SomeResult>
+  void SetFailure(SomeResult failure) {
+    ZX_DEBUG_ASSERT(failure.status != ZX_OK);
+    status_ = failure.status;
+    error_ = failure.error;
+  }
+
+  zx_status_t status_ = ZX_ERR_INTERNAL;
+  const char* error_ = nullptr;
+};
+
+// The base class for response-owning and non-owning SyncCalls.
+//
+// It is meant to support |OwnedSyncCallBase| and |UnownedSyncCallBase|.
+template <typename ResponseType>
+class SyncCallBase : private StatusAndError {
+ public:
+  SyncCallBase(const SyncCallBase&) = delete;
+  SyncCallBase& operator=(const SyncCallBase&) = delete;
+
+  using StatusAndError::status;
+  using StatusAndError::error;
+
+  // Convenience accessor for the FIDL response message pointer.
+  // The returned pointer is never null, unless the object is moved.
+  // Asserts that the call was successful.
+  ResponseType* Unwrap() {
+    ZX_ASSERT(status_ == ZX_OK);
+    return message_.message();
+  }
+
+ protected:
+  SyncCallBase() = default;
+  ~SyncCallBase() = default;
+
+  SyncCallBase(SyncCallBase&& other) = default;
+  SyncCallBase& operator=(SyncCallBase&& other) = default;
+
+  using StatusAndError::SetFailure;
+  using StatusAndError::status_;
+  using StatusAndError::error_;
+
+  // Initialize ourself from the DecodeResult corresponding to the response.
+  void SetResult(fidl::DecodeResult<ResponseType> decode_result) {
+    StatusAndError::status_ = decode_result.status;
+    StatusAndError::error_ = decode_result.error;
+    message_ = std::move(decode_result.message);
+    ZX_ASSERT(StatusAndError::status_ != ZX_OK || message_.is_valid());
+  }
+
+  fidl::DecodedMessage<ResponseType>& decoded_message() { return message_; }
+
+ private:
+  fidl::DecodedMessage<ResponseType> message_;
+};
+
+// Base class representing the result of a two-way FIDL call, with ownership of the response buffer.
+// It is always inherited by generated code performing the call. Do not instantiate manually.
+// Types returned by the managed flavor will inherit from this class.
+//
+// Holds a |DecodedMessage<ResponseType>| in addition to providing status() and error().
+// If status() is ZX_OK, Unwrap() returns a valid decoded message of type ResponseType.
+// Otherwise, error() contains a human-readable string for debugging purposes.
+//
+// Note: this class does not add new members on top of |SyncCallBase|.
+template <typename ResponseType>
+class OwnedSyncCallBase : private SyncCallBase<ResponseType> {
+  using Super = SyncCallBase<ResponseType>;
+  using ResponseStorageType = ResponseStorage<ResponseType>;
+ public:
+  OwnedSyncCallBase(const OwnedSyncCallBase&) = delete;
+  OwnedSyncCallBase& operator=(const OwnedSyncCallBase&) = delete;
+
+  OwnedSyncCallBase(OwnedSyncCallBase&& other) {
+    if (this != &other) {
+      MoveImpl(std::move(other));
+    }
+  }
+
+  OwnedSyncCallBase& operator=(OwnedSyncCallBase&& other) {
+    if (this != &other) {
+      MoveImpl(std::move(other));
+    }
+    return *this;
+  }
+
+  using Super::status;
+  using Super::error;
+  using Super::Unwrap;
+
+ protected:
+  OwnedSyncCallBase() = default;
+  ~OwnedSyncCallBase() {
+    // Before handing over to the member and super class destructor, release the ownership
+    // decoded message has on the storage first, to prevent use-after-free.
+    Super::decoded_message().Reset(fidl::BytePart());
+  }
+
+  fidl::BytePart response_buffer() { return response_storage_.buffer(); }
+
+  using Super::SetFailure;
+
+  // Initialize ourself from the DecodeResult corresponding to the response.
+  // Invariant: the address of the response message must equal to that of our managed buffer.
+  void SetResult(fidl::DecodeResult<ResponseType> decode_result) {
+    ZX_ASSERT(decode_result.message.message() ==
+                  reinterpret_cast<ResponseType*>(response_buffer().data()) ||
+              !decode_result.message.is_valid());
+    Super::SetResult(std::move(decode_result));
+  }
+
+ private:
+  ResponseStorageType response_storage_;
+
+  void MoveImpl(OwnedSyncCallBase&& other) {
+    Super::status_ = other.Super::status_;
+    Super::error_ = other.Super::error_;
+
+    Super::decoded_message().Reset(fidl::BytePart());
+    if constexpr (ResponseStorageType::kWillCopyBufferDuringMove) {
+      // Use the linearizer to update pointers and move handles, in the case of
+      // inlined response buffers.
+      if (other.Super::decoded_message().is_valid()) {
+        // If there are pointers, they need to be patched.
+        // Otherwise, we get away with a memcpy.
+        if constexpr (NeedsEncodeDecode<ResponseType>::value && ResponseType::MaxOutOfLine > 0) {
+          auto result = fidl::Linearize(other.Super::decoded_message().message(),
+                                        response_buffer());
+          (void) other.Super::decoded_message().Release();
+          ZX_DEBUG_ASSERT(result.status == ZX_OK);
+          Super::decoded_message() = std::move(result.message);
+        } else {
+          auto other_bytes = other.Super::decoded_message().Release();
+          response_storage_ = std::move(other.response_storage_);
+          auto our_bytes = response_buffer();
+          our_bytes.set_actual(other_bytes.actual());
+          Super::decoded_message().Reset(std::move(our_bytes));
+        }
+      }
+    } else {
+      // If the response buffer is a unique_ptr, just move the unique_ptr.
+      response_storage_ = std::move(other.response_storage_);
+      Super::decoded_message() = std::move(other.Super::decoded_message());
+    }
+  }
+};
+
+// Class representing the result of a two-way FIDL call, without ownership of the response buffers.
+// It is always inherited by generated code performing the call. Do not instantiate manually.
+// Type returned by the caller-allocating flavor will inherit from this class.
+//
+// Holds a |DecodedMessage<ResponseType>| in addition to providing status() and error().
+// If status() is ZX_OK, Unwrap() returns a valid decoded message of type ResponseType.
+// Otherwise, error() contains a human-readable string for debugging purposes.
+template <typename ResponseType>
+using UnownedSyncCallBase = SyncCallBase<ResponseType>;
+
+}  // namespace internal
+}  // namespace fidl
+
+#endif  // LIB_FIDL_LLCPP_SYNC_CALL_H_

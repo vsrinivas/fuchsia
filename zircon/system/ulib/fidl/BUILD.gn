@@ -62,6 +62,7 @@ library("fidl-llcpp") {
     "lib/fidl/llcpp/coding.h",
     "lib/fidl/llcpp/decoded_message.h",
     "lib/fidl/llcpp/encoded_message.h",
+    "lib/fidl/llcpp/sync_call.h",
     "lib/fidl/llcpp/traits.h",
     "lib/fidl/llcpp/transaction.h",
   ]
