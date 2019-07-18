@@ -34,8 +34,8 @@ enum CBW {
 };
 
 typedef struct wlan_channel {
-    uint8_t primary;
-    uint8_t cbw;          // Channel Bandwidth
+    uint8_t primary;      // Channel index used for the primary channel
+    uint8_t cbw;          // Channel Bandwidth (see `enum CBW` above)
     uint8_t secondary80;  // Channel index corresponding to the center frequency
                           // of the secondary frequency segment
 } wlan_channel_t;

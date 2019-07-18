@@ -34,6 +34,8 @@
  *
  *****************************************************************************/
 
+#include <stdlib.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -41,7 +43,6 @@
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/wlanphyimpl.h>
 #include <lib/device-protocol/pci.h>
-#include <stdlib.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/status.h>
 

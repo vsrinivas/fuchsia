@@ -33,8 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <lib/device-protocol/pci.h>
 #include <stdint.h>
+
+#include <lib/device-protocol/pci.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
