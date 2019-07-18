@@ -12,12 +12,12 @@ use crate::key::{gtk::Gtk, ptk::Ptk};
 use crate::rsna::{
     Dot11VerifiedKeyFrame, NegotiatedProtection, Role, SecAssocStatus, SecAssocUpdate, UpdateSink,
 };
-use crate::state_machine::StateMachine;
 use crate::Error;
 use eapol;
 use failure::{self, bail};
 use log::{error, info};
 use std::collections::HashSet;
+use wlan_common::state_machine::StateMachine;
 use zerocopy::ByteSlice;
 
 #[derive(Debug, PartialEq)]
@@ -186,7 +186,7 @@ impl EssSa {
         info!("establishing ESSSA...");
 
         // PSK allows deriving the PMK without exchanging
-        let pmk = match &self.pmksa.state() {
+        let pmk = match self.pmksa.as_ref() {
             Pmksa::Initialized { method } => match method {
                 auth::Method::Psk(psk) => psk.to_vec(),
             },
@@ -208,7 +208,7 @@ impl EssSa {
     }
 
     fn is_established(&self) -> bool {
-        match (self.ptksa.state(), self.gtksa.state()) {
+        match (self.ptksa.as_ref(), self.gtksa.as_ref()) {
             (Ptksa::Established { .. }, Gtksa::Established { .. }) => true,
             _ => false,
         }
@@ -234,7 +234,7 @@ impl EssSa {
                 });
 
                 self.ptksa.replace_state(|state| state.initialize(pmk));
-                if let Ptksa::Initialized { method } = self.ptksa.mut_state() {
+                if let Ptksa::Initialized { method } = self.ptksa.as_mut() {
                     method.initiate(update_sink, self.key_replay_counter)?;
                 } else {
                     bail!("PTKSA not initialized");
@@ -397,7 +397,7 @@ impl EssSa {
 
         // Forward frame to correct security association.
         // PMKSA must be established before any other security association can be established.
-        match self.pmksa.mut_state() {
+        match self.pmksa.as_mut() {
             Pmksa::Initialized { method } => {
                 return method.on_eapol_key_frame(update_sink, verified_frame);
             }
@@ -407,14 +407,14 @@ impl EssSa {
         // Once PMKSA was established PTKSA and GTKSA can process frames.
         // IEEE Std 802.11-2016, 12.7.2 b.2)
         if raw_frame.key_frame_fields.key_info().key_type() == eapol::KeyType::PAIRWISE {
-            match self.ptksa.mut_state() {
+            match self.ptksa.as_mut() {
                 Ptksa::Uninitialized { .. } => Ok(()),
                 Ptksa::Initialized { method } | Ptksa::Established { method, .. } => {
                     method.on_eapol_key_frame(update_sink, self.key_replay_counter, verified_frame)
                 }
             }
         } else if raw_frame.key_frame_fields.key_info().key_type() == eapol::KeyType::GROUP_SMK {
-            match self.gtksa.mut_state() {
+            match self.gtksa.as_mut() {
                 Gtksa::Uninitialized { .. } => Ok(()),
                 Gtksa::Initialized { method } | Gtksa::Established { method, .. } => match method {
                     Some(method) => method.on_eapol_key_frame(

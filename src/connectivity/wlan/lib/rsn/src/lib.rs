@@ -19,7 +19,6 @@ pub mod key;
 mod key_data;
 mod keywrap;
 pub mod rsna;
-mod state_machine;
 
 use crate::key::exchange::{
     self,

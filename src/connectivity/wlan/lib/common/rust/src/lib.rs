@@ -19,6 +19,7 @@ pub mod mac;
 pub mod mgmt_writer;
 pub mod organization;
 pub mod sequence;
+pub mod state_machine;
 pub mod test_utils;
 pub mod tim;
 pub mod unaligned_view;
