@@ -6,6 +6,7 @@ use {
     fidl::{endpoints::RequestStream, Error as FidlError},
     fidl_fuchsia_bluetooth_snoop::{SnoopMarker, SnoopProxy, SnoopRequestStream},
     fuchsia_async::{Channel, Executor},
+    fuchsia_inspect::{assert_inspect_tree, Inspector},
     fuchsia_zircon as zx,
     std::task::Poll,
 };
@@ -18,13 +19,16 @@ fn setup() -> (
     PacketLogs,
     SubscriptionManager,
     ConcurrentClientRequestFutures,
+    Inspector,
 ) {
+    let inspect = Inspector::new();
     (
         fasync::Executor::new().unwrap(),
         ConcurrentSnooperPacketFutures::new(),
-        PacketLogs::new(10, 10, Duration::new(10, 0)),
+        PacketLogs::new(10, 10, Duration::new(10, 0), inspect.root().create_child("packet_log")),
         SubscriptionManager::new(),
         ConcurrentClientRequestFutures::new(),
+        inspect,
     )
 }
 
@@ -37,7 +41,7 @@ fn test_id_generator() {
 
 #[test]
 fn test_register_new_client() {
-    let (_exec, _snoopers, _logs, _subscribers, mut requests) = setup();
+    let (_exec, _snoopers, _logs, _subscribers, mut requests, _inspect) = setup();
     assert_eq!(requests.len(), 0);
 
     let (_tx, rx) = zx::Channel::create().unwrap();
@@ -67,8 +71,32 @@ fn unwrap_response<T, E>(response: Poll<Result<T, E>>) -> T {
 }
 
 #[test]
+fn test_snoop_config_inspect() {
+    let opt = Opt {
+        log_size_kib: 1,
+        log_time_seconds: 2,
+        max_device_count: 3,
+        truncate_payload: Some(4),
+        verbosity: 5,
+    };
+    let inspect = Inspector::new();
+    let snoop_config_node = inspect.root().create_child("configuration");
+    let config = SnoopConfig::from_opt(opt, snoop_config_node);
+    assert_inspect_tree!(inspect, root: {
+        configuration: {
+            log_size_bytes: 1024u64,
+            log_time: 2u64,
+            max_device_count: 3u64,
+            truncate_payload: "4 bytes",
+            hci_dir: HCI_DEVICE_CLASS_PATH,
+        }
+    });
+    drop(config);
+}
+
+#[test]
 fn test_handle_client_request() {
-    let (mut exec, mut _snoopers, mut logs, mut subscribers, mut requests) = setup();
+    let (mut exec, mut _snoopers, mut logs, mut subscribers, mut requests, _inspect) = setup();
 
     // unrecognized device returns an error to the client
     let (proxy, mut request_stream) = fidl_endpoints();
@@ -132,7 +160,7 @@ fn test_handle_client_request() {
 
 #[test]
 fn test_handle_bad_client_request() {
-    let (_exec, mut _snoopers, mut logs, mut subscribers, mut requests) = setup();
+    let (_exec, mut _snoopers, mut logs, mut subscribers, mut requests, _inspect) = setup();
 
     let id = ClientId(0);
     let err = Some(Err(FidlError::Invalid));

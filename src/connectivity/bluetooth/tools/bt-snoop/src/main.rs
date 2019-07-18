@@ -11,13 +11,14 @@ use {
     fidl_fuchsia_bluetooth_snoop::{SnoopPacket, SnoopRequest, SnoopRequestStream},
     fuchsia_async as fasync,
     fuchsia_bluetooth::bt_fidl_status,
-    fuchsia_component::server::{ServiceFs, ServiceObj},
+    fuchsia_component::server::ServiceFs,
+    fuchsia_inspect as inspect,
     fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_vfs_watcher::{WatchEvent, WatchMessage, Watcher},
     futures::{
         future::{join, ready, Join, Ready},
         select,
-        stream::{Fuse, FuturesUnordered, StreamExt, StreamFuture},
+        stream::{FusedStream, FuturesUnordered, Stream, StreamExt, StreamFuture},
     },
     std::{
         fmt,
@@ -38,7 +39,7 @@ mod subscription_manager;
 mod tests;
 
 /// Root directory of all HCI devices
-static HCI_DEVICE_CLASS_PATH: &str = "/dev/class/bt-hci";
+const HCI_DEVICE_CLASS_PATH: &str = "/dev/class/bt-hci";
 
 /// A `DeviceId` represents the name of a host device within the HCI_DEVICE_CLASS_PATH.
 pub(crate) type DeviceId = String;
@@ -107,6 +108,7 @@ fn handle_hci_device_event(
     match message.event {
         WatchEvent::ADD_FILE | WatchEvent::EXISTING => {
             fx_log_info!("Opening snoop channel for hci device \"{}\"", path.display());
+            println!("Getting vfs event");
             match Snooper::new(path.clone()) {
                 Ok(snooper) => {
                     snoopers.push(snooper.into_future());
@@ -116,6 +118,7 @@ fn handle_hci_device_event(
                     }
                 }
                 Err(e) => {
+                    println!("failed");
                     fx_log_warn!("Failed to open snoop channel for \"{}\": {}", path.display(), e);
                 }
             }
@@ -221,59 +224,134 @@ fn handle_packet(
     packet_logs: &mut PacketLogs,
     truncate_payload: Option<usize>,
 ) {
-    match packet {
-        Some((device, mut packet)) => {
-            fx_vlog!(2, "Received packet from {:?}.", snooper.device_path);
-            if let Some(len) = truncate_payload {
-                packet.payload.truncate(len);
-            }
-            subscribers.notify(&device, &mut packet);
-            packet_logs.log_packet(&device, packet);
-            snoopers.push(snooper.into_future());
+    if let Some((device, mut packet)) = packet {
+        fx_vlog!(2, "Received packet from {:?}.", snooper.device_path);
+        if let Some(len) = truncate_payload {
+            packet.payload.truncate(len);
         }
-        None => {
-            // TODO (belgum):
-            // It's unclear to me what the correct response is in this case. Should we:
-            //                  - bring down and restart the bt-snoop service
-            //                  - remove the snooper for that channel
-            //                  - attempt to reinit snoop stream
-            //                  - clean up logs for that device (very likely not!)
-            let snooper = Snooper::new(snooper.device_path);
-            match snooper {
-                Ok(snooper) => snoopers.push(snooper.into_future()),
-                Err(e) => fx_log_warn!("Attempt to re-open snoop channel failed: {}", e),
-            }
-        }
+        subscribers.notify(&device, &mut packet);
+        packet_logs.log_packet(&device, packet);
+        snoopers.push(snooper.into_future());
+    } else {
+        fx_log_info!("Snoop channel closed for device: {}", snooper.device_name);
     }
 }
 
-type FusedServiceStream = Fuse<ServiceFs<ServiceObj<'static, SnoopRequestStream>>>;
+// type FusedServiceStream = Fuse<ServiceFs<ServiceObj<'static, SnoopRequestStream>>>;
 
-/// Construct the Fused ServiceFs object to handle incoming service requests.
-fn setup_service_fs() -> Result<FusedServiceStream, Error> {
-    let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(|stream: SnoopRequestStream| stream);
-    fs.take_and_serve_directory_handle()?;
-    Ok(fs.fuse())
-}
+// /// Construct the Fused ServiceFs object to handle incoming service requests.
+// fn setup_service_fs() -> Result<FusedServiceStream, Error> {
+// // =======
+// // enum ServiceRequests {
+// //     Snoop(SnoopRequestStream),
+// // >>>>>>> 5b67240f7cd7... [bt][snoop] Export inspect objects
+// }
 
-/// Setup the main loop of execution in a Task and run it.
-fn start(
+struct SnoopConfig {
     log_size_bytes: usize,
     log_time: Duration,
     max_device_count: usize,
     truncate_payload: Option<usize>,
-    hci_dir: File,
-) -> Result<(), Error> {
-    let mut exec = fasync::Executor::new().expect("Could not create executor");
 
-    let mut service_handler = setup_service_fs()?;
+    // Inspect tree
+    _config_inspect: inspect::Node,
+    _log_size_bytes_metric: inspect::UintProperty,
+    _log_time_metric: inspect::UintProperty,
+    _max_device_count_metric: inspect::UintProperty,
+    _truncate_payload_property: inspect::StringProperty,
+    _hci_dir_property: inspect::StringProperty,
+}
+
+impl SnoopConfig {
+    /// Creates a strongly typed `SnoopConfig` out of primitives parsed from the command line
+    fn from_opt(opt: Opt, config_inspect: inspect::Node) -> SnoopConfig {
+        let log_size_bytes = opt.log_size_kib * 1024;
+        let log_time = Duration::from_secs(opt.log_time_seconds);
+        let _log_size_bytes_metric =
+            config_inspect.create_uint("log_size_bytes", log_size_bytes as u64);
+        let _log_time_metric = config_inspect.create_uint("log_time", log_time.as_secs());
+        let _max_device_count_metric =
+            config_inspect.create_uint("max_device_count", opt.max_device_count as u64);
+        let truncate = opt
+            .truncate_payload
+            .as_ref()
+            .map(|n| format!("{} bytes", n))
+            .unwrap_or("No Truncation".to_string());
+        let _truncate_payload_property =
+            config_inspect.create_string("truncate_payload", &truncate);
+        let _hci_dir_property = config_inspect.create_string("hci_dir", HCI_DEVICE_CLASS_PATH);
+
+        SnoopConfig {
+            log_size_bytes,
+            log_time,
+            max_device_count: opt.max_device_count,
+            truncate_payload: opt.truncate_payload,
+            _config_inspect: config_inspect,
+            _log_size_bytes_metric,
+            _log_time_metric,
+            _max_device_count_metric,
+            _truncate_payload_property,
+            _hci_dir_property,
+        }
+    }
+}
+
+#[derive(StructOpt)]
+#[structopt(
+    version = "0.1.0",
+    author = "Fuchsia Bluetooth Team",
+    about = "Log bluetooth snoop packets and provide them to clients."
+)]
+struct Opt {
+    #[structopt(
+        long = "log-size",
+        default_value = "256",
+        help = "Size in KiB of the buffer to store packets in."
+    )]
+    log_size_kib: usize,
+    #[structopt(
+        long = "min-log-time",
+        default_value = "60",
+        help = "Minimum time to store packets in a snoop log in seconds"
+    )]
+    log_time_seconds: u64,
+    #[structopt(
+        long = "max-device-count",
+        default_value = "8",
+        help = "Maximum number of devices for which to store logs."
+    )]
+    max_device_count: usize,
+    #[structopt(
+        long = "max-payload-size",
+        help = "Maximum number of bytes to keep in the payload of incoming packets. \
+                Defaults to no limit"
+    )]
+    truncate_payload: Option<usize>,
+    #[structopt(
+        parse(from_occurrences),
+        short = "v",
+        long = "verbose",
+        help = "Enable verbose log output. Additional occurrences of the flag will \
+                raise verbosity."
+    )]
+    verbosity: u16,
+}
+
+/// Setup the main loop of execution in a Task and run it.
+fn run(
+    config: SnoopConfig,
+    mut exec: fasync::Executor,
+    mut service_handler: impl Unpin + FusedStream + Stream<Item = SnoopRequestStream>,
+    inspect: inspect::Node,
+) -> Result<(), Error> {
     let mut id_gen = IdGenerator::new();
+    let hci_dir = File::open(HCI_DEVICE_CLASS_PATH).expect("Failed to open hci dev directory");
     let mut hci_device_events = Watcher::new(&hci_dir).context("Cannot create device watcher")?;
     let mut client_requests = ConcurrentClientRequestFutures::new();
     let mut subscribers = SubscriptionManager::new();
     let mut snoopers = ConcurrentSnooperPacketFutures::new();
-    let mut packet_logs = PacketLogs::new(max_device_count, log_size_bytes, log_time);
+    let mut packet_logs =
+        PacketLogs::new(config.max_device_count, config.log_size_bytes, config.log_time, inspect);
 
     let main_loop = async {
         fx_vlog!(1, "Capturing snoop packets...");
@@ -283,7 +361,7 @@ fn start(
                 // A new client has connected to one of the exposed services.
                 request_stream = service_handler.select_next_some() => {
                     register_new_client(request_stream, &mut client_requests, id_gen.next());
-                }
+                },
 
                 // A new filesystem event in the hci device watch directory has been received.
                 event = hci_device_events.next() => {
@@ -316,7 +394,7 @@ fn start(
                 // A new snoop packet has been received from an hci device.
                 (packet, snooper) = snoopers.select_next_some() => {
                     handle_packet(packet, snooper, &mut snoopers, &mut subscribers,
-                        &mut packet_logs, truncate_payload);
+                        &mut packet_logs, config.truncate_payload);
                 },
             }
         }
@@ -325,62 +403,39 @@ fn start(
     exec.run_singlethreaded(main_loop)
 }
 
-/// Parse program arguments, call the main loop, and log any unrecoverable errors.
-fn main() {
-    #[derive(StructOpt)]
-    #[structopt(
-        version = "0.1.0",
-        author = "Fuchsia Bluetooth Team",
-        about = "Log bluetooth snoop packets and provide them to clients."
-    )]
-    struct Opt {
-        #[structopt(
-            long = "log-size",
-            default_value = "256",
-            help = "Size in KiB of the buffer to store packets in."
-        )]
-        log_size_kib: usize,
-        #[structopt(
-            long = "min-log-time",
-            default_value = "60",
-            help = "Minimum time to store packets in a snoop log in seconds"
-        )]
-        log_time_seconds: u64,
-        #[structopt(
-            long = "max-device-count",
-            default_value = "8",
-            help = "Maximum number of devices for which to store logs."
-        )]
-        max_device_count: usize,
-        #[structopt(
-            long = "max-payload-size",
-            help = "Maximum number of bytes to keep in the payload of incoming packets. \
-                    Defaults to no limit"
-        )]
-        truncate_payload: Option<usize>,
-        #[structopt(
-            parse(from_occurrences),
-            short = "v",
-            long = "verbose",
-            help = "Enable verbose log output. Additional occurrences of the flag will \
-                    raise verbosity."
-        )]
-        verbosity: u16,
-    }
-    let Opt { log_size_kib, log_time_seconds, max_device_count, truncate_payload, verbosity } =
-        Opt::from_args();
-    let log_size_bytes = log_size_kib * 1024;
-    let log_time = Duration::from_secs(log_time_seconds);
-
+/// Initializes syslog with tags and verbosity
+///
+/// Panics if syslog logger cannot be initialized
+fn init_logging(verbosity: u16) {
     syslog::init_with_tags(&["bt-snoop"]).expect("Can't init logger");
     if verbosity > 0 {
         syslog::set_verbosity(verbosity);
     }
     fx_log_info!("Starting bt-snoop.");
+}
 
-    let hci_dir = File::open(HCI_DEVICE_CLASS_PATH).expect("Failed to open hci dev directory");
+/// Parse program arguments, call the main loop, and log any unrecoverable errors.
+fn main() {
+    let exec = fasync::Executor::new().expect("Could not create executor");
+    let opt = Opt::from_args();
 
-    match start(log_size_bytes, log_time, max_device_count, truncate_payload, hci_dir) {
+    init_logging(opt.verbosity);
+
+    let mut fs = ServiceFs::new();
+
+    let inspector = inspect::Inspector::new();
+    inspector.export(&mut fs);
+
+    let config_inspect = inspector.root().create_child("configuration");
+    let runtime_inspect = inspector.root().create_child("runtime_metrics");
+
+    let config = SnoopConfig::from_opt(opt, config_inspect);
+
+    fs.dir("svc").add_fidl_service(|stream: SnoopRequestStream| stream);
+
+    fs.take_and_serve_directory_handle().expect("serve ServiceFS directory");
+
+    match run(config, exec, fs.fuse(), runtime_inspect) {
         Err(err) => fx_log_err!("Failed with critical error: {:?}", err),
         _ => {}
     };
