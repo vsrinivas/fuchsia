@@ -19,7 +19,6 @@ source_set("fourcc") {
 
 source_set("codec_impl") {
   sources = [
-    "closure_queue.cc",
     "codec_adapter.cc",
     "codec_adapter_events.cc",
     "codec_admission_control.cc",
@@ -39,6 +38,7 @@ source_set("codec_impl") {
     "include/lib/media/codec_impl/codec_packet.h",
   ]
   public_deps = [
+    ":closure_queue",
     ":fourcc",
     "//sdk/fidl/fuchsia.media.drm",
     "//sdk/fidl/fuchsia.mediacodec",
@@ -51,6 +51,20 @@ source_set("codec_impl") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/fidl/cpp",
+  ]
+}
+
+source_set("closure_queue") {
+  sources = [
+    "closure_queue.cc",
+  ]
+  include_dirs = [ "include" ]
+  public = [
+    "include/lib/media/codec_impl/closure_queue.h",
+  ]
+  deps = [
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fbl",
   ]
 }
 
