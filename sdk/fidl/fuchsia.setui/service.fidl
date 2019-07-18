@@ -23,26 +23,26 @@ struct MutationResponse {
     ReturnCode return_code;
 };
 
-// The main interface for UIs to change system settings. Currently, the
-// settings are scoped to the device, but will eventually be scoped to the user
-// as is applicable.
+/// The main interface for UIs to change system settings. Currently, the
+/// settings are scoped to the device, but will eventually be scoped to the user
+/// as is applicable.
 [Discoverable]
 protocol SetUiService {
-    // Begins listening to changes to a given settings object. This may cause the
-    // SetUiService to connect to any applicable device services until all listeners
-    // for a given type are closed.
-    // The service will call the listener with the current state immediately on
-    // initialization.
-    // DEPRECATED: To be removed in favor of Watch
+    /// Begins listening to changes to a given settings object. This may cause the
+    /// SetUiService to connect to any applicable device services until all listeners
+    /// for a given type are closed.
+    /// The service will call the listener with the current state immediately on
+    /// initialization.
+    /// DEPRECATED: To be removed in favor of Watch
     Listen(SettingType settingType, SettingListener listener);
 
-    // Returns immediately on first call. Subsequent calls will be delayed until
-    // there is an updated value available.
+    /// Returns immediately on first call. Subsequent calls will be delayed until
+    /// there is an updated value available.
     [Transitional]
     Watch(SettingType settingType) -> (SettingsObject setting);
 
-    // Sets the value of a given settings object. Returns once operation
-    // has completed.
+    /// Sets the value of a given settings object. Returns once operation
+    /// has completed.
     Update(SettingsObject value) -> (UpdateResponse response);
 
     Mutate(SettingType settingType, Mutation mutation) -> (MutationResponse response);
@@ -51,7 +51,7 @@ protocol SetUiService {
 };
 
 
-// DEPRECATED: To be removed in favor of Watch
+/// DEPRECATED: To be removed in favor of Watch
 protocol SettingListener {
     Notify(SettingsObject object);
 };
