@@ -47,7 +47,6 @@ group("test") {
 testing_deps = [
   ":iwlwifi_sim_trans_ss",
   "//src/lib/fxl/test:gtest_main",
-  "//third_party/googletest:gmock",
 ]
 
 # The dummy code for developer to start a new test.
@@ -97,11 +96,11 @@ executable("pcie_test") {
   ]
 
   defines = testing_defines
-  deps =
-      testing_deps + [
-        # This test is to test PCIe so that we need to include this explicitly.
-        "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:pcie",
-      ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:pcie",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/zxtest",
+  ]
 }
 
 executable("utils_test") {
