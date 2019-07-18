@@ -41,64 +41,93 @@ struct LicenseInitData {
     bytes data;
 };
 
-/// LicenseMessage is for messages originating from the LicenseSession that the
-/// caller must route to the license server.
+/// A message originating from the [`LicenseSession`] that the caller must route
+/// to the license server.
 struct LicenseMessage {
     LicenseMessageType type;
     fuchsia.mem.Buffer message;
 };
 
-/// LicenseServerMessage is for messages originating from the license server
-/// that the caller must provide to the LicenseSession via
-/// `ProcessLicenseServerMessage`.
+/// A message originating from the license server that the caller must provide
+/// to the [`LicenseSession`] via `ProcessLicenseServerMessage`.
 struct LicenseServerMessage {
     fuchsia.mem.Buffer message;
 };
 
 struct KeyInfo {
-    KeyId key_id;
+    fuchsia.media.KeyId key_id;
     KeyStatus status;
 };
 
-table DecryptorParams {
-    /// Requires the decryptor to only output to secure buffers.
-    1: bool require_secure_mode;
-
-    /// Initial format details for the StreamProcessor.
-    2: fuchsia.media.FormatDetails input_details;
-};
-
+/// A protocol for exchanging messages pertaining to the establishment of a
+/// media license and the encryption keys associated with it.
+///
+/// If the client closes the `LicenseSession`, any derived Decryptors will also
+/// be closed as the encryption keys will no longer be maintained.
 protocol LicenseSession {
-    /// Generate a license request for a session based on the `init_data`. When
-    /// the LicenseMessage has been created, the `OnLicenseMessageGenerated`
-    /// event will be triggered with the message to be sent to the license
-    /// server.
-    GenerateLicenseRequest(LicenseInitData init_data);
+    /// Indicates that the [`LicenseSession`] has successfully initialized.
+    ///
+    /// This is always the first message sent by the `LicenseSession`.
+    -> OnReady();
 
-    /// Inititiate the release process for the license session. This will cause
-    /// the CDM to generate a LicenseMessage through the
-    /// `OnLicenseMessageGenerated` event. The client must route that message
-    /// to the license server and the server's response to
-    /// `ProcessLicenseServerMessage`. Once the LicenseSession has received the
-    /// license server's reply, it will close the LicenseSession channel as this
-    /// session will no longer be usable.
+    /// Generates a license request for a session based on the `init_data`.
+    ///
+    /// When the [`LicenseMessage`] has been created, the
+    /// `OnLicenseMessageGenerated` event will be triggered with the message to
+    /// be sent to the license server.
+    ///
+    /// + request `init_data` container-specific data that is used to generate a
+    ///   [`LicenseMessageType.REQUEST`] `LicenseMessage`.
+    /// * error an [`Error`] indicating the reason for failure.
+    GenerateLicenseRequest(LicenseInitData init_data) -> () error Error;
+
+    /// Inititiates the release process for the license session.
+    ///
+    /// This will cause the [`LicenseSession`] to generate a [`LicenseMessage`]
+    /// through the `OnLicenseMessageGenerated` event. The client must route
+    /// that message to the license server and the server's response to
+    /// `ProcessLicenseServerMessage`. Once the `LicenseSession` has received
+    /// the license server's reply, it will close the `LicenseSession` channel
+    /// as this session will no longer be usable.
     GenerateLicenseRelease();
 
-    /// Update the LicenseSession with a message from the license server. All
-    /// responses from license requests, renewals, and releases should be routed
-    /// to the LicenseSession through this method.
-    ProcessLicenseServerMessage(LicenseServerMessage response);
+    /// Updates the [`LicenseSession`] with a message from the license server.
+    ///
+    /// All responses from license requests, renewals, and releases should be
+    /// routed to the `LicenseSession` through this method.
+    ///
+    /// + request `response` a message from the license server to update the
+    ///   state of the `LicenseSession`.
+    /// * error an [`Error`] indicating the reason for failure.
+    ProcessLicenseResponse(LicenseServerMessage response) -> () error Error;
 
-    /// Create a Decryptor StreamProcessor interface to be used to decrypt
-    /// content.
+    /// Creates a Decryptor [`fuchsia.media/StreamProcessor`] to be used to
+    /// decrypt content.
+    ///
+    /// This `decryptor` would be restricted to only having access to the
+    /// keys maintained by this [`LicenseSession`].
+    ///
+    /// + request `params` the parameters with which to create the `decryptor`.
+    /// + request `decryptor` the server endpoint of the
+    ///   `fuchsia.media/StreamProcessor`.
     CreateDecryptor(DecryptorParams params,
                     request<fuchsia.media.StreamProcessor> decryptor);
 
-    /// The LicenseSession has generated a message to be sent to the license
-    /// server. The client is responsible for transporting this message to the
-    /// license server.
+    /// Provides a [`LicenseMessage`] that should be sent to the license server.
+    ///
+    /// The client is responsible for transporting this message to the license
+    /// server.
+    ///
+    /// - response `request` a message from the `LicenseSession` that the client
+    ///   should send to the license server.
     -> OnLicenseMessageGenerated(LicenseMessage request);
 
-    /// The LicenseSession has updated key status information.
+    /// Provides updated key status information.
+    ///
+    /// Some examples on when this might occur would be on license creation,
+    /// expiration, renewal, or load of a persistent license session.
+    ///
+    /// - response `key_info` a list of the [`fuchsia.media/KeyId`]s and their related
+    ///   [`KeyStatus`]es
     -> OnKeysChanged(vector<KeyInfo> key_info);
 };

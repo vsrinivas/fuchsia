@@ -1,0 +1,61 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media.drm;
+
+// TODO(MTWN-394): Convert these protocols to services once available.
+
+/// A service hub providing access to the ClearKey key system. This key system
+/// is defined by the [`W3C Encrypted Media Extensions`]. It uses plain-text
+/// keys to decrypt the source.
+///
+/// If the client closes the `ClearKey` channel, derived
+/// `ContentDecryptionModule`s will remain active.
+///
+/// [`W3C Encrypted Media Extensions`]:
+///   https://www.w3.org/TR/encrypted-media
+[Discoverable]
+protocol ClearKey {
+    /// Creates a new [`ContentDecryptionModule`].
+    ///
+    /// + request `cdm` the server endpoint of the `ContentDecryptionModule`.
+    CreateContentDecryptionModule(request<ContentDecryptionModule> cdm);
+};
+
+/// A service hub providing access to the Widevine key system.
+///
+/// If the client closes the `Widevine` channel, derived
+/// `ContentDecryptionModule`s and `Provision`s will remain active.
+[Discoverable]
+protocol Widevine {
+    /// Creates a new [`ContentDecryptionModule`].
+    ///
+    /// The `ContentDecryptionModule`s created will share their persistent
+    /// state, but will not share active sessions.
+    ///
+    /// + request `cdm` the server endpoint of the `ContentDecryptionModule`.
+    CreateContentDecryptionModule(request<ContentDecryptionModule> cdm);
+
+    /// Creates a new [`Provisioner`].
+    ///
+    /// There can only be one active `Provisioner` for each service instance.
+    ///
+    /// + request `provisioner` the server endpoint of the `Provisioner`.
+    CreateProvisioner(request<Provisioner> provisioner);
+};
+
+/// A service hub providing access to the PlayReady key system.
+///
+/// If the client closes the `PlayReady` channel, derived
+/// `ContentDecryptionModule`s will remain active.
+[Discoverable]
+protocol PlayReady {
+    /// Creates a new [`ContentDecryptionModule`].
+    ///
+    /// The `ContentDecryptionModule`s created will share their persistent
+    /// state, but will not share active sessions.
+    ///
+    /// + request `cdm` the server endpoint of the `ContentDecryptionModule`.
+    CreateContentDecryptionModule(request<ContentDecryptionModule> cdm);
+};

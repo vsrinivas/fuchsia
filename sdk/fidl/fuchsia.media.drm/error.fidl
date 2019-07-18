@@ -1,0 +1,31 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media.drm;
+
+/// Standard error codes for DRM related protocols. The error code names
+/// originate from the [`W3C Encrypted Media Extensions`] specification to cover
+/// common CDM exception cases. CDM implementations might also provide
+/// application specific error codes, so long as they are positive 32 bit
+/// integers and do not overlap with this set.
+///
+/// [`W3C Encrypted Media Extensions`]:
+///   https://www.w3.org/TR/encrypted-media
+enum Error {
+    /// An error that occurs when the client provides invalid parameter data to
+    /// the server, such as an invalid license response message.
+    TYPE = 1;
+    /// An error that occurs when a requested operation is not supported by the
+    /// CDM, such as a license generation request with an unknown initialization
+    /// data type.
+    NOT_SUPPORTED = 2;
+    /// An error that occurs when the CDM is not in a proper state to perform
+    /// the requested operation, such as calling
+    /// [`LicenseSession.GenerateLicenseRequest`] when the [`LicenseSession`]
+    /// has already started the license release process.
+    INVALID_STATE = 3;
+    /// An error that occurs when a requested action would exceed allowable
+    /// limits, such as attempting to load an already opened session. 
+    QUOTA_EXCEEDED = 4;
+};
