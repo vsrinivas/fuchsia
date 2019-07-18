@@ -61,7 +61,7 @@ void main() {
     await scenicDriver.takeScreenshot(dumpName: 'before');
 
     var cmd = 'sessionctl add_mod http://${server.address.address}:8000/';
-    await sl4fDriver.ssh(cmd);
+    await sl4fDriver.ssh.run(cmd);
     await Future.delayed(
         Duration(seconds: 5)); // Wait for video to start playing
 
