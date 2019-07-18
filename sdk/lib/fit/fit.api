@@ -21,5 +21,5 @@
   "pkg/fit/include/lib/fit/thread_safety.h": "cfa029284a499a7e541767ac2873fa40",
   "pkg/fit/include/lib/fit/traits.h": "4ee470499e66ecb6e07ad1a4e02b5acc",
   "pkg/fit/include/lib/fit/utility_internal.h": "26151563163b172e536c63555f81862a",
-  "pkg/fit/include/lib/fit/variant.h": "1f50313950c7f8216b687bc2f0ed7219"
+  "pkg/fit/include/lib/fit/variant.h": "922e7b62b15ef7685543bacfff297c32"
 }

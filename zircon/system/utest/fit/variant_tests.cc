@@ -119,16 +119,23 @@ template <typename T>
 bool copy_move_assign() {
     BEGIN_TEST;
 
+    using b_type = decltype(T::b_value);
+    using c_type = decltype(T::c_value);
+
     typename T::variant x;
     EXPECT_EQ(0, x.index());
     EXPECT_TRUE(T::a_value == x.template get<0>());
 
     x = T::b;
     EXPECT_EQ(1, x.index());
+    EXPECT_TRUE(fit::holds_alternative<b_type>(x));
+    EXPECT_FALSE(fit::holds_alternative<c_type>(x));
     EXPECT_TRUE(T::b_value == x.template get<1>());
 
     x.template emplace<2>(T::c_value);
     EXPECT_EQ(2, x.index());
+    EXPECT_FALSE(fit::holds_alternative<b_type>(x));
+    EXPECT_TRUE(fit::holds_alternative<c_type>(x));
     EXPECT_TRUE(T::c_value == x.template get<2>());
 
     typename T::variant y(T::b);
@@ -154,6 +161,8 @@ bool copy_move_assign() {
 
     x = std::move(x);
     EXPECT_EQ(1, x.index());
+    EXPECT_TRUE(fit::holds_alternative<b_type>(x));
+    EXPECT_FALSE(fit::holds_alternative<c_type>(x));
     EXPECT_TRUE(T::b_value == x.template get<1>());
 
     x = T::a;
@@ -163,6 +172,8 @@ bool copy_move_assign() {
     x = T::c;
     typename T::variant z(std::move(x));
     EXPECT_EQ(2, z.index());
+    EXPECT_FALSE(fit::holds_alternative<b_type>(z));
+    EXPECT_TRUE(fit::holds_alternative<c_type>(z));
     EXPECT_TRUE(T::c_value == z.template get<2>());
 
     END_TEST;

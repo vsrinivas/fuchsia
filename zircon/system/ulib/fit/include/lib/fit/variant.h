@@ -618,6 +618,13 @@ constexpr const auto&& get(const variant<Ts...>&& value) {
     return std::move(value).template get<T>();
 }
 
+// Checks if the variant holds type T. See note above about ADL.
+template <typename T, typename... Ts>
+constexpr bool holds_alternative(const variant<Ts...>& value) {
+    constexpr auto index = ::fit::internal::selected_index<T, variant<Ts...>>::value;
+    return value.index() == index;
+}
+
 // TODO(eieio): Remove once the old ::fit::internal spellings of these types is
 // removed from FIDL.
 namespace internal {
