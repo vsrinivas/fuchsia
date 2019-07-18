@@ -12,7 +12,6 @@
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
 #include "src/ledger/bin/storage/impl/page_db.h"
-#include "src/ledger/bin/storage/impl/piece_tracker.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"

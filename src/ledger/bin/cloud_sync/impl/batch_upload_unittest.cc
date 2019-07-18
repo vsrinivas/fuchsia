@@ -28,7 +28,6 @@ namespace cloud_sync {
 namespace {
 using ::storage::fake::FakeObject;
 using ::storage::fake::FakePiece;
-using ::storage::fake::FakeTokenChecker;
 
 // Fake implementation of storage::Commit.
 // TODO(kerneis): migrate to storage::fake::FakeCommit.

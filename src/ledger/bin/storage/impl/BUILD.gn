@@ -48,6 +48,8 @@ source_set("object_identifier_lib") {
     "object_digest.h",
     "object_identifier_encoding.cc",
     "object_identifier_encoding.h",
+    "object_identifier_factory_impl.cc",
+    "object_identifier_factory_impl.h",
   ]
 
   deps = [
@@ -57,19 +59,6 @@ source_set("object_identifier_lib") {
 
   public_deps = [
     ":object_identifier",
-    "//src/ledger/bin/storage/public",
-  ]
-
-  configs += [ "//src/ledger:ledger_config" ]
-}
-
-source_set("piece_tracker") {
-  sources = [
-    "piece_tracker.cc",
-    "piece_tracker.h",
-  ]
-
-  public_deps = [
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/synchronization:dispatcher_checker",
     "//src/lib/fxl",
@@ -135,7 +124,6 @@ source_set("lib") {
 
   public_deps = [
     ":object_identifier_lib",
-    ":piece_tracker",
     "//peridot/lib/convert",
     "//src/ledger/lib/coroutine",
     "//src/ledger/third_party/bup",
@@ -187,12 +175,12 @@ source_set("unittests") {
     "leveldb_factory_unittest.cc",
     "live_commit_tracker_unittest.cc",
     "object_digest_unittest.cc",
+    "object_identifier_factory_impl_unittest.cc",
     "object_impl_unittest.cc",
     "page_db_empty_impl.cc",
     "page_db_empty_impl.h",
     "page_db_unittest.cc",
     "page_storage_unittest.cc",
-    "piece_tracker_unittest.cc",
     "split_unittest.cc",
   ]
 

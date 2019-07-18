@@ -36,22 +36,5 @@ Status FakeObject::AppendReferences(ObjectReferencesAndPriority* references) con
   return Status::OK;
 }
 
-FakePieceToken::FakePieceToken(ObjectIdentifier identifier)
-    : identifier_(std::move(identifier)), weak_factory_(this) {}
-
-FakeTokenChecker FakePieceToken::GetChecker() {
-  return FakeTokenChecker(weak_factory_.GetWeakPtr());
-}
-
-const ObjectIdentifier& FakePieceToken::GetIdentifier() const { return identifier_; }
-
-FakeTokenChecker::FakeTokenChecker(const fxl::WeakPtr<FakePieceToken>& token) : token_(token) {}
-
-FakeTokenChecker::operator bool() const { return static_cast<bool>(token_); }
-
-bool FakeTokenChecker::TracksToken(const std::unique_ptr<const PieceToken>& token) const {
-  return (token.get() != nullptr) && (token_.get() == token.get());
-}
-
 }  // namespace fake
 }  // namespace storage

@@ -66,7 +66,7 @@ std::string RandomString(rng::Random* random, size_t size);
 // Create a new random commit id.
 CommitId RandomCommitId(rng::Random* random);
 
-// Create a new random object digest.
+// Create a new random, non-inline object digest.
 ObjectDigest RandomObjectDigest(rng::Random* random);
 
 // Create a new random object identifier.

@@ -79,12 +79,32 @@ enum class KeyPriority {
   LAZY,
 };
 
-// The identifier of an object. This contains the digest of the object, as well
-// as the information needed to hide its name and encrypt its content.
+// The identifier of an object. This contains the digest of the object, as well as the information
+// needed to hide its name and encrypt its content, and a token to track live object identifiers.
 class ObjectIdentifier {
  public:
+  // A token that ensures that the associated object remains available as long as the token object
+  // is alive.
+  class Token {
+   public:
+    Token() = default;
+    // Purely virtual to make the class abstract.
+    virtual ~Token() = 0;
+    Token(const Token&) = delete;
+    Token& operator=(const Token&) = delete;
+  };
+
+  // Constructs an empty, untracked object identifier.
   ObjectIdentifier();
+
+  // Constructs an untracked object identifier.
+  // DEPRECATED in favor of an explicit nullptr |token|.
+  // TODO(LE-702): remove once callers have been migrated.
   ObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id, ObjectDigest object_digest);
+
+  // Constructs an object identifier. If |token| is nullptr, the object is untracked.
+  ObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id, ObjectDigest object_digest,
+                   std::shared_ptr<Token> token);
 
   ObjectIdentifier(const ObjectIdentifier&);
   ObjectIdentifier& operator=(const ObjectIdentifier&);
@@ -102,12 +122,24 @@ class ObjectIdentifier {
   uint32_t key_index_;
   uint32_t deletion_scope_id_;
   ObjectDigest object_digest_;
+  std::shared_ptr<Token> token_;
 };
 
 bool operator==(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);
 bool operator!=(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);
 bool operator<(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);
 std::ostream& operator<<(std::ostream& os, const ObjectIdentifier& e);
+
+// A factory interface to build object identifiers.
+class ObjectIdentifierFactory {
+ public:
+  // Creates an object identifier.
+  // This function must called only from the thread that created this |ObjectIdentifierFactory|.
+  // Destruction of the returned identifier must happen on the same thread too, and happen before
+  // the |ObjectIdentifierFactory| instance is destroyed.
+  virtual ObjectIdentifier MakeObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id,
+                                                ObjectDigest object_digest) = 0;
+};
 
 // Object-object references, for garbage collection.
 // For a given object |A|, contains a pair (|B|, |priority|) for every reference

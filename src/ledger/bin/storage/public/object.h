@@ -63,19 +63,6 @@ class Piece {
   FXL_DISALLOW_COPY_AND_ASSIGN(Piece);
 };
 
-// An token that ensures that the associated object remains available as long as
-// the token object is alive.
-class PieceToken {
- public:
-  PieceToken() {}
-  virtual ~PieceToken() {}
-  // Tokens must not be copied to ensure correct tracking.
-  PieceToken(const PieceToken&) = delete;
-  PieceToken& operator=(const PieceToken&) = delete;
-
-  virtual const ObjectIdentifier& GetIdentifier() const = 0;
-};
-
 }  // namespace storage
 
 #endif  // SRC_LEDGER_BIN_STORAGE_PUBLIC_OBJECT_H_
