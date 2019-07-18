@@ -1,5 +1,5 @@
 {
   "fidl/fuchsia.ui.app/view.fidl": "f15ad08213a9a9b35b19ed16bacefb07",
   "fidl/fuchsia.ui.app/view_config.fidl": "5f46f69dfddf91f6446fdabb93fdec48",
-  "fidl/fuchsia.ui.app/view_provider.fidl": "5485e59927db5d6c121830a4925abaaf"
+  "fidl/fuchsia.ui.app/view_provider.fidl": "ef4fca7165f6b2a2619585f4cef1ec74"
 }
