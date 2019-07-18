@@ -94,9 +94,10 @@ struct UpdateColorBufferCmd {
   uint32_t height;
   uint32_t format;
   uint32_t type;
+  uint32_t size_pixels;
 };
 constexpr uint32_t kOP_rcUpdateColorBuffer = 10024;
-constexpr uint32_t kSize_rcUpdateColorBuffer = 36;
+constexpr uint32_t kSize_rcUpdateColorBuffer = 40;
 
 struct FbPostCmd {
   uint32_t op;
@@ -632,6 +633,7 @@ zx_status_t Display::UpdateColorBufferLocked(uint32_t id, zx_paddr_t paddr, uint
   cmd->height = height;
   cmd->format = GL_BGRA_EXT;
   cmd->type = GL_UNSIGNED_BYTE;
+  cmd->size_pixels = static_cast<uint32_t>(size);
 
   auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
   buffer->id = id_;
