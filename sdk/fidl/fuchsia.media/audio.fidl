@@ -8,10 +8,10 @@ library fuchsia.media;
 protocol Audio {
     CreateAudioRenderer(request<AudioRenderer> audio_renderer_request);
 
-    // Create an AudioCapturer which either captures from the current default
-    // audio input device, or loops-back from the current default audio output
-    // device based on value passed for the loopback flag.
-    //
+    /// Create an AudioCapturer which either captures from the current default
+    /// audio input device, or loops-back from the current default audio output
+    /// device based on value passed for the loopback flag.
+    ///
     // TODO(mpuryear): Get rid of the loopback flag ASAP. Routing decisions (and
     // security surrounding routing decisions) should be much more sophisticated
     // than this. This is just a placeholder until we have a design in place.
@@ -28,7 +28,7 @@ protocol Audio {
     SetRoutingPolicy(AudioOutputRoutingPolicy policy);
 };
 
-// Permitted ranges for AudioRenderer and AudioCapturer
+/// Permitted ranges for AudioRenderer and AudioCapturer
 const uint32 MIN_PCM_CHANNEL_COUNT = 1;
 const uint32 MAX_PCM_CHANNEL_COUNT = 8;
 const uint32 MIN_PCM_FRAMES_PER_SECOND = 1000;

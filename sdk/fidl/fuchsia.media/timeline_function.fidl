@@ -4,52 +4,52 @@
 
 library fuchsia.media;
 
-// A TimelineFunction represents a relationship between a subject timeline and a
-// reference timeline with a linear relation.
-//
-// For example, consider a common use case in which reference time is the
-// monotonic clock of a system and subject time is intended presentation time
-// for some media such as a video.
-//
-// `reference_time` is the value of the monotonic clock at the beginning of
-// playback. `subject_time` is 0 assuming playback starts at the beginning of
-// the media. We then choose a `reference_delta` and `subject_delta` so that
-// `subject_delta` / `reference_delta` represents the desired playback rate,
-// e.g. 0/1 for paused and 1/1 for normal playback.
-//
-// ## Formulas
-//
-// With a function we can determine the subject timeline value `s` in terms of
-// reference timeline value `r` with this formula (where `reference_delta` > 0):
-//
-//   s = (r - reference_time) * (subject_delta / reference_delta) + subject_time
-//
-// And similarly we can find the reference timeline value `r` in terms of
-// subject timeline value `s` with this formula (where `subject_delta` > 0):
-//
-//   r = (s - subject_time) * (reference_delta / subject_delta) + referenc_time
-//
-// ## Choosing time values
-//
-// Time values can be arbitrary and our linear relation will of course be the
-// same, but we can use them to represent the bounds of pieces in a piecewise
-// linear relation.
-//
-// For example, if a user performs skip-chapter, we might want to describe
-// this with a TimelineFunction whose `subject_time` is the time to skip to,
-// `reference_time` is now plus some epsilon, and delta ratio is 1/1 for normal
-// playback rate.
+/// A TimelineFunction represents a relationship between a subject timeline and a
+/// reference timeline with a linear relation.
+///
+/// For example, consider a common use case in which reference time is the
+/// monotonic clock of a system and subject time is intended presentation time
+/// for some media such as a video.
+///
+/// `reference_time` is the value of the monotonic clock at the beginning of
+/// playback. `subject_time` is 0 assuming playback starts at the beginning of
+/// the media. We then choose a `reference_delta` and `subject_delta` so that
+/// `subject_delta` / `reference_delta` represents the desired playback rate,
+/// e.g. 0/1 for paused and 1/1 for normal playback.
+///
+/// ## Formulas
+///
+/// With a function we can determine the subject timeline value `s` in terms of
+/// reference timeline value `r` with this formula (where `reference_delta` > 0):
+///
+///   s = (r - reference_time) * (subject_delta / reference_delta) + subject_time
+///
+/// And similarly we can find the reference timeline value `r` in terms of
+/// subject timeline value `s` with this formula (where `subject_delta` > 0):
+///
+///   r = (s - subject_time) * (reference_delta / subject_delta) + referenc_time
+///
+/// ## Choosing time values
+///
+/// Time values can be arbitrary and our linear relation will of course be the
+/// same, but we can use them to represent the bounds of pieces in a piecewise
+/// linear relation.
+///
+/// For example, if a user performs skip-chapter, we might want to describe
+/// this with a TimelineFunction whose `subject_time` is the time to skip to,
+/// `reference_time` is now plus some epsilon, and delta ratio is 1/1 for normal
+/// playback rate.
 struct TimelineFunction {
-    // A value from the subject timeline that correlates to reference_time.
+    /// A value from the subject timeline that correlates to reference_time.
     int64 subject_time = 0;
 
-    // A value from the reference timeline that correlates to subject_time.
+    /// A value from the reference timeline that correlates to subject_time.
     int64 reference_time = 0;
 
-    // The change in the subject timeline corresponding to reference_delta.
+    /// The change in the subject timeline corresponding to reference_delta.
     uint32 subject_delta = 0;
 
-    // The change in the reference timeline corresponding to subject_delta.
-    // Cannot be zero.
+    /// The change in the reference timeline corresponding to subject_delta.
+    /// Cannot be zero.
     uint32 reference_delta = 1;
 };
