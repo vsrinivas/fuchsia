@@ -4,19 +4,19 @@
 
 library fuchsia.sys2;
 
-// A moniker encodes the relationship between two component instances that
-// exist in the component instance tree at runtime.
-//
-// To understand this better, consider two component instances labeled "A"
-// and "B" that are both children of a component instance labeled "P".
-//
-// At runtime, when "B" requests a service from "A" through a channel
-// established by the component manager, the component manager may provide
-// "A" with a moniker that encodes "B's" identity relative to "A" itself.
-// The moniker's encoded value describes the directed path to traverse from
-// "A" (the moniker's origin) to "B" (the moniker's referent), passing
-// through "P" (their common ancestor).
+/// A moniker encodes the relationship between two component instances that
+/// exist in the component instance tree at runtime.
+///
+/// To understand this better, consider two component instances labeled "A"
+/// and "B" that are both children of a component instance labeled "P".
+///
+/// At runtime, when "B" requests a service from "A" through a channel
+/// established by the component manager, the component manager may provide
+/// "A" with a moniker that encodes "B's" identity relative to "A" itself.
+/// The moniker's encoded value describes the directed path to traverse from
+/// "A" (the moniker's origin) to "B" (the moniker's referent), passing
+/// through "P" (their common ancestor).
 struct Moniker {
-    // An opaque representation of the moniker's relation.
+    /// An opaque representation of the moniker's relation.
     string:MAX_MONIKER_LENGTH encoded_value;
 };

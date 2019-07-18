@@ -7,90 +7,90 @@ library fuchsia.sys2;
 using fuchsia.data;
 using fuchsia.io;
 
-// An interface for running components.
-//
-// This interface is implemented by components that provide an execution
-// environment for running particular classes of programs.  For example,
-// the Dart virtual machine exposes a service with this interface to run
-// Dart programs.
-//
-// To specify the runner needed to run your component, set the "runner_url"
-// property in your component's manifest.
-//
-// Note: The component manager is the only intended direct client of this
-// interface.
+/// An interface for running components.
+///
+/// This interface is implemented by components that provide an execution
+/// environment for running particular classes of programs.  For example,
+/// the Dart virtual machine exposes a service with this interface to run
+/// Dart programs.
+///
+/// To specify the runner needed to run your component, set the "runner_url"
+/// property in your component's manifest.
+///
+/// Note: The component manager is the only intended direct client of this
+/// interface.
 [Discoverable]
 protocol ComponentRunner {
-    // Starts running a new component instance described by `start_info`.
-    //
-    // The caller of this method takes responsibility for binding client
-    // connections and controlling the lifetime of the newly started
-    // component instance through the requested `controller`.
+    /// Starts running a new component instance described by `start_info`.
+    ///
+    /// The caller of this method takes responsibility for binding client
+    /// connections and controlling the lifetime of the newly started
+    /// component instance through the requested `controller`.
     Start(ComponentStartInfo start_info,
           request<ComponentController> controller);
 };
 
-// Parameters for starting a new component instance.
+/// Parameters for starting a new component instance.
 table ComponentStartInfo {
-    // The resolved URL of the component.
-    // This is the canonical URL obtained by the component resolver after
-    // after following redirects and resolving relative paths.
+    /// The resolved URL of the component.
+    /// This is the canonical URL obtained by the component resolver after
+    /// after following redirects and resolving relative paths.
     1: string resolved_url;
 
-    // The component's program declaration.
-    // This information originates from `ComponentDecl.program`.
+    /// The component's program declaration.
+    /// This information originates from `ComponentDecl.program`.
     2: fuchsia.data.Dictionary program;
 
-    // The namespace to provide to the component instance.
+    /// The namespace to provide to the component instance.
     3: ComponentNamespace ns;
 
-    // The directory this component serves.
+    /// The directory this component serves.
     4: request<fuchsia.io.Directory> outgoing_dir;
 
-    // The directory served by the runner to present runtime information about
-    // the component.
+    /// The directory served by the runner to present runtime information about
+    /// the component.
     5: request<fuchsia.io.Directory> runtime_dir;
 };
 
-// An interface for binding client connections and controlling the lifetime
-// of a component instance started using `ComponentRunner.Start()`.
-//
-// Closing the client endpoint of the controller interface implicitly stops the
-// controlled component instance exactly as if `Stop()` had been called.
-//
-// When the controlled component instance terminates or becomes inaccessible
-// for any reason, the server invokes `OnEpitaph()` and closes its endpoint
-// of the controller interface.
-//
-// EPITAPH
-//
-// This interface uses a FIDL epitaph to indicate that the controller
-// component instance has terminated and to describe its final disposition.
-//
-// The following epitaph status codes have particular significance:
-//
-// - `ZX_OK`: The component instance was successfully terminated in response
-//   to `Stop()` and its runtime resources have been fully released.
-// - `ZX_ERR_UNAVAILABLE`: The runner was unable to start the component
-//   instance.  e.g. The runner could not retrieve the component's assets.
-// - `ERR_COMPONENT_DIED`: The component instance was started but
-//   subsequently terminated unexpectedly.
-//
-// Other status codes (e.g. `ZX_ERR_PEER_CLOSED`) may indicate a failure
-// of the component runner itself.  The component manager may respond to such
-// failures by terminating the component runner's job to ensure system
-// stability.
+/// An interface for binding client connections and controlling the lifetime
+/// of a component instance started using `ComponentRunner.Start()`.
+///
+/// Closing the client endpoint of the controller interface implicitly stops the
+/// controlled component instance exactly as if `Stop()` had been called.
+///
+/// When the controlled component instance terminates or becomes inaccessible
+/// for any reason, the server invokes `OnEpitaph()` and closes its endpoint
+/// of the controller interface.
+///
+/// EPITAPH
+///
+/// This interface uses a FIDL epitaph to indicate that the controller
+/// component instance has terminated and to describe its final disposition.
+///
+/// The following epitaph status codes have particular significance:
+///
+/// - `ZX_OK`: The component instance was successfully terminated in response
+///   to `Stop()` and its runtime resources have been fully released.
+/// - `ZX_ERR_UNAVAILABLE`: The runner was unable to start the component
+///   instance.  e.g. The runner could not retrieve the component's assets.
+/// - `ERR_COMPONENT_DIED`: The component instance was started but
+///   subsequently terminated unexpectedly.
+///
+/// Other status codes (e.g. `ZX_ERR_PEER_CLOSED`) may indicate a failure
+/// of the component runner itself.  The component manager may respond to such
+/// failures by terminating the component runner's job to ensure system
+/// stability.
 protocol ComponentController {
-    // Stops the controlled component instance.
-    //
-    // After stopping the component instance, the server should report
-    // an epitaph then close its endpoint of the controller interface.
+    /// Stops the controlled component instance.
+    ///
+    /// After stopping the component instance, the server should report
+    /// an epitaph then close its endpoint of the controller interface.
     Stop();
 
-    // Binds a client to the component instance's `exports` directory
-    // if it has one.  If the instance does not offer exports, then the
-    // controller should close the `exports` interface request.
-    //
-    // The `client_moniker` identifies the client to the component instance.
+    /// Binds a client to the component instance's `exports` directory
+    /// if it has one.  If the instance does not offer exports, then the
+    /// controller should close the `exports` interface request.
+    ///
+    /// The `client_moniker` identifies the client to the component instance.
     Bind(Moniker client_moniker, request<fuchsia.io.Directory> exports);
 };

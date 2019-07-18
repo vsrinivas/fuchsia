@@ -6,14 +6,14 @@ library fuchsia.sys2;
 
 using fuchsia.io;
 
-// A package is a signed collection of immutable files.
-//
-// This object provides access to a package's content and relevant metadata.
+/// A package is a signed collection of immutable files.
+///
+/// This object provides access to a package's content and relevant metadata.
 table Package {
-    // The URL of the package itself.
+    /// The URL of the package itself.
     1: string package_url;
 
-    // The package's content directory.
+    /// The package's content directory.
     2: fuchsia.io.Directory package_dir;
 
     // TODO(CP-154): Add more metadata for the package such as its

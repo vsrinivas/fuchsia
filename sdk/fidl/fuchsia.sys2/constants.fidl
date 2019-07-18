@@ -12,5 +12,5 @@ const uint32 MAX_PATH_LENGTH = 1024;
 const uint32 MAX_URL_LENGTH = 4096;
 const uint32 MAX_MONIKER_LENGTH = 4096;
 
-// Error produced when a component terminates unexpected.
+/// Error produced when a component terminates unexpected.
 const int32 ERR_COMPONENT_DIED = 1;
