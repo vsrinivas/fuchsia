@@ -292,13 +292,13 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
 
   switch (supported_modes[mode].bits) {
     case 10:
-      adap_info.format = IMAGE_FORMAT_AM_RAW10;
+      adap_info.format = MIPI_IMAGE_FORMAT_AM_RAW10;
       break;
     case 12:
-      adap_info.format = IMAGE_FORMAT_AM_RAW12;
+      adap_info.format = MIPI_IMAGE_FORMAT_AM_RAW12;
       break;
     default:
-      adap_info.format = IMAGE_FORMAT_AM_RAW10;
+      adap_info.format = MIPI_IMAGE_FORMAT_AM_RAW10;
       break;
   }
 

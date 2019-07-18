@@ -18,7 +18,7 @@ struct MipiInfo {
 };
 
 /// Values for Image Formats.
-enum ImageFormat : uint32 {
+enum MipiImageFormat : uint32 {
     AM_RAW6 = 0x1;
     AM_RAW7 = 0x2;
     AM_RAW8 = 0x3;
@@ -44,7 +44,7 @@ enum MipiPath : uint32 {
 
 struct MipiAdapInfo {
     ddk.protocol.camerasensor.ImageResolution resolution;
-    ImageFormat format;
+    MipiImageFormat format;
     MipiModes mode;
     MipiPath path;
 };

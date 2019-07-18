@@ -37,22 +37,22 @@ constexpr uint32_t kDdrModeSize = 48 * kSize1Mb;
 uint32_t AmlMipiDevice::AdapGetDepth(const mipi_adap_info_t* info) {
   uint32_t depth = 0;
   switch (info->format) {
-    case IMAGE_FORMAT_AM_RAW6:
+    case MIPI_IMAGE_FORMAT_AM_RAW6:
       depth = 6;
       break;
-    case IMAGE_FORMAT_AM_RAW7:
+    case MIPI_IMAGE_FORMAT_AM_RAW7:
       depth = 7;
       break;
-    case IMAGE_FORMAT_AM_RAW8:
+    case MIPI_IMAGE_FORMAT_AM_RAW8:
       depth = 8;
       break;
-    case IMAGE_FORMAT_AM_RAW10:
+    case MIPI_IMAGE_FORMAT_AM_RAW10:
       depth = 10;
       break;
-    case IMAGE_FORMAT_AM_RAW12:
+    case MIPI_IMAGE_FORMAT_AM_RAW12:
       depth = 12;
       break;
-    case IMAGE_FORMAT_AM_RAW14:
+    case MIPI_IMAGE_FORMAT_AM_RAW14:
       depth = 14;
       break;
     default:
