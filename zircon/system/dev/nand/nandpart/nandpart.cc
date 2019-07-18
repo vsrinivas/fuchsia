@@ -37,7 +37,7 @@ struct PrivateStorage {
     uint32_t offset;
 };
 
-using NandPartOp = nand::UnownedOperation<PrivateStorage>;
+using NandPartOp = nand::BorrowedOperation<PrivateStorage>;
 
 // Shim for calling sub-partition's callback.
 void CompletionCallback(void* cookie, zx_status_t status, nand_operation_t* nand_op) {

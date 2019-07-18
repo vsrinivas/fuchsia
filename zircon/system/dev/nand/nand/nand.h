@@ -20,7 +20,7 @@
 
 namespace nand {
 
-using Transaction = nand::UnownedOperation<>;
+using Transaction = nand::BorrowedOperation<>;
 
 class NandDevice;
 using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Unbindable>;
@@ -81,7 +81,7 @@ private:
     thrd_t worker_thread_;
 
     fbl::Mutex lock_;
-    nand::UnownedOperationQueue<> txn_queue_ TA_GUARDED(lock_);
+    nand::BorrowedOperationQueue<> txn_queue_ TA_GUARDED(lock_);
     fbl::ConditionVariable worker_event_ TA_GUARDED(lock_);
     bool shutdown_ TA_GUARDED(lock_) = false;
 };

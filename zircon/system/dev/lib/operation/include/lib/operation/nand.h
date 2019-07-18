@@ -4,9 +4,8 @@
 
 #pragma once
 
-#include <lib/operation/operation.h>
-
 #include <ddk/protocol/nand.h>
+#include <lib/operation/operation.h>
 
 // namespace nand is used because this library will inevitably move to
 // dev/lib/nand. In an effort to reduce dependencies (make doesn't support
@@ -20,7 +19,7 @@ namespace nand {
 // capabilites to interact with a nand_op buffer which is used to traverse the
 // nand stack. On deletion, it will automatically free itself.
 //
-// nand::UnownedOperation provides an unowned variant of nand::Operation. It adds
+// nand::BorrowedOperation provides an unowned variant of nand::Operation. It adds
 // functionality to store and call a complete callback which isn't present in
 // nand::Operation.  In addition, it will call the completion on destruction if it
 // wasn't already triggered.
@@ -28,9 +27,9 @@ namespace nand {
 // nand::OperationPool provides pooling functionality for nand::Operation reuse.
 //
 // nand::OperationQueue provides a queue interface for tracking nand::Operation and
-// nand::UnownedOperation objects.
+// nand::BorrowedOperation objects.
 //
-// Available methods for both Operation and UnownedOperation include:
+// Available methods for both Operation and BorrowedOperation include:
 //
 //   nand_operation_t* operation(); // accessor for inner type.
 //
@@ -38,7 +37,7 @@ namespace nand {
 //   // ownership to another driver.
 //   nand_operation_t* take();
 //
-// Available to Operation and UnownedOperation if they templatize of Storage:
+// Available to Operation and BorrowedOperation if they templatize of Storage:
 //
 //   Storage* private_storage(); // accessor for private storage.
 //
@@ -46,7 +45,7 @@ namespace nand {
 //
 //   void Release(); // Frees the inner type.
 //
-// Available to UnownedOperation:
+// Available to BorrowedOperation:
 //
 //   void Complete(zx_status_t); // Completes the operation.
 //
@@ -71,12 +70,12 @@ namespace nand {
 // public:
 //     <...>
 // private:
-//     nand::UnownedOperationQueue<> operations_;
+//     nand::BorrowedOperationQueue<> operations_;
 //     const size_t parent_op_size_;
 // };
 //
 // void Driver::NandQueue(nand_operation_t* op, nand_queue_callback completion_cb, void* cookie) {
-//     operations_.push(nand::UnownedOperation<>(op, cb, parent_req_size_));
+//     operations_.push(nand::BorrowedOperation<>(op, cb, parent_req_size_));
 // }
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -87,7 +86,7 @@ namespace nand {
 //     size_t count_metric;
 // }
 //
-// using NandOperation = nand::UnownedOperation<PrivateStorage>;
+// using NandOperation = nand::BorrowedOperation<PrivateStorage>;
 //
 // void Driver::NandQueue(nand_operation_t* op, nand_queue_callback completion_cb, void* cookie) {
 //     NandOperation nand_op(op, cb, parent_req_size_));
@@ -98,64 +97,60 @@ namespace nand {
 // }
 //
 struct OperationTraits {
-    using OperationType = nand_operation_t;
+  using OperationType = nand_operation_t;
 
-    static OperationType* Alloc(size_t op_size) {
-        fbl::AllocChecker ac;
-        fbl::unique_ptr<uint8_t[]> raw;
-        if constexpr (alignof(OperationType) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
-            raw = fbl::unique_ptr<uint8_t[]>(
-                new (static_cast<std::align_val_t>(alignof(OperationType)), &ac) uint8_t[op_size]);
-        } else {
-            raw = fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[op_size]);
-        }
-        if (!ac.check()) {
-            return nullptr;
-        }
-        return reinterpret_cast<OperationType*>(raw.release());
+  static OperationType* Alloc(size_t op_size) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> raw;
+    if constexpr (alignof(OperationType) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
+      raw = fbl::unique_ptr<uint8_t[]>(
+          new (static_cast<std::align_val_t>(alignof(OperationType)), &ac) uint8_t[op_size]);
+    } else {
+      raw = fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[op_size]);
     }
+    if (!ac.check()) {
+      return nullptr;
+    }
+    return reinterpret_cast<OperationType*>(raw.release());
+  }
 
-    static void Free(OperationType* op) {
-        delete[] reinterpret_cast<uint8_t*>(op);
-    }
+  static void Free(OperationType* op) { delete[] reinterpret_cast<uint8_t*>(op); }
 };
 
 struct CallbackTraits {
-    using CallbackType = void(void*, zx_status_t, nand_operation_t*);
+  using CallbackType = void(void*, zx_status_t, nand_operation_t*);
 
-    static std::tuple<zx_status_t> AutoCompleteArgs() {
-        return std::make_tuple(ZX_ERR_INTERNAL);
-    }
+  static std::tuple<zx_status_t> AutoCompleteArgs() { return std::make_tuple(ZX_ERR_INTERNAL); }
 
-    static void Callback(CallbackType* callback, void* cookie, nand_operation_t* op,
-                         zx_status_t status) {
-        callback(cookie, status, op);
-    }
+  static void Callback(CallbackType* callback, void* cookie, nand_operation_t* op,
+                       zx_status_t status) {
+    callback(cookie, status, op);
+  }
 };
 
 template <typename Storage = void>
 class Operation : public operation::Operation<Operation<Storage>, OperationTraits, Storage> {
-public:
-    using BaseClass = operation::Operation<Operation<Storage>, OperationTraits, Storage>;
-    using BaseClass::BaseClass;
+ public:
+  using BaseClass = operation::Operation<Operation<Storage>, OperationTraits, Storage>;
+  using BaseClass::BaseClass;
 };
 
 template <typename Storage = void>
-class UnownedOperation : public operation::BorrowedOperation<UnownedOperation<Storage>,
-                                                             OperationTraits, CallbackTraits,
-                                                             Storage> {
-public:
-    using BaseClass = operation::BorrowedOperation<UnownedOperation<Storage>, OperationTraits,
-                                                   CallbackTraits, Storage>;
-    using BaseClass::BaseClass;
+class BorrowedOperation
+    : public operation::BorrowedOperation<BorrowedOperation<Storage>, OperationTraits,
+                                          CallbackTraits, Storage> {
+ public:
+  using BaseClass = operation::BorrowedOperation<BorrowedOperation<Storage>, OperationTraits,
+                                                 CallbackTraits, Storage>;
+  using BaseClass::BaseClass;
 };
 
 template <typename Storage = void>
 using OperationQueue = operation::OperationQueue<Operation<Storage>, OperationTraits, Storage>;
 
 template <typename Storage = void>
-using UnownedOperationQueue = operation::BorrowedOperationQueue<UnownedOperation<Storage>,
-                                                                OperationTraits, CallbackTraits,
-                                                                Storage>;
+using BorrowedOperationQueue =
+    operation::BorrowedOperationQueue<BorrowedOperation<Storage>, OperationTraits, CallbackTraits,
+                                      Storage>;
 
-} // namespace nand
+}  // namespace nand
