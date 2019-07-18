@@ -11,10 +11,25 @@ library("inet6") {
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
+    ":netifc-discover",
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-ethernet:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
+  ]
+}
+
+library("netifc-discover") {
+  sources = [
+    "netifc-discover.c",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+
+  deps = [
+    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-hardware-ethernet:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
   ]
 }

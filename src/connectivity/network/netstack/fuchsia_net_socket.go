@@ -122,7 +122,7 @@ func (sp *socketProviderImpl) GetAddrInfo(node *string, service *string, hints *
 	switch {
 	case node == nil || *node == "":
 		addrs = append(addrs, "\x00\x00\x00\x00")
-	case *node == "localhost" || *node == sp.ns.getNodeName():
+	case *node == "localhost" || *node == sp.ns.getDeviceName():
 		switch hints.Family {
 		case C.AF_UNSPEC:
 			addrs = append(addrs, ipv4Loopback, ipv6Loopback)

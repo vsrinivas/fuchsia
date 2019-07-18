@@ -302,6 +302,9 @@ int fdio_assign_reserved(int fd, fdio_t* io);
 // then -1 is returned and errno is set to EINVAL, otherwise |fd| is returned.
 int fdio_release_reserved(int fd);
 
+// Connect to a service named |name| in /svc.
+zx_status_t fdio_service_connect_by_name(const char name[], zx::channel* out);
+
 __END_CDECLS
 
 #endif  // ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_H_

@@ -7,6 +7,7 @@
 #include <fbl/string_printf.h>
 #include <fs/remote-dir.h>
 #include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/fshost/c/fidl.h>
 #include <fuchsia/net/llcpp/fidl.h>
@@ -255,6 +256,7 @@ int main(int argc, char** argv) {
   zx::channel virtcon_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 5)));
   zx::channel miscsvc_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 6)));
   zx::channel bootsvc_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 7)));
+  zx::channel device_name_provider_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 8)));
 
   zx_status_t status = outgoing.ServeFromStartupInfo();
   if (status != ZX_OK) {
@@ -313,6 +315,7 @@ int main(int argc, char** argv) {
   publish_services(outgoing.svc_dir(), miscsvc_services, zx::unowned_channel(miscsvc_svc));
   publish_services(outgoing.svc_dir(), bootsvc_services, zx::unowned_channel(bootsvc_svc));
   publish_services(outgoing.svc_dir(), devmgr_services, zx::unowned_channel(devmgr_proxy_channel));
+  publish_service(outgoing.svc_dir(), fuchsia_device_NameProvider_Name, zx::unowned_channel(device_name_provider_svc));
 
   if (virtcon_proxy_channel.is_valid()) {
     publish_proxy_service(outgoing.svc_dir(), fuchsia_virtualconsole_SessionManager_Name,

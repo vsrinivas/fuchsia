@@ -21,7 +21,7 @@ import (
 	"netstack/filter"
 	"netstack/link/eth"
 
-	"fidl/fuchsia/devicesettings"
+	"fidl/fuchsia/device"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
@@ -81,18 +81,18 @@ func Main() {
 		syslog.Fatalf("ethernet: %s", err)
 	}
 
-	req, ds, err := devicesettings.NewDeviceSettingsManagerInterfaceRequest()
+	req, np, err := device.NewNameProviderInterfaceRequest()
 	if err != nil {
-		syslog.Fatalf("could not connect to device settings service: %s", err)
+		syslog.Fatalf("could not connect to device name provider service: %s", err)
 	}
 
 	ctx.ConnectToEnvService(req)
 
 	ns := &Netstack{
-		arena:          arena,
-		dnsClient:      dns.NewClient(stk),
-		deviceSettings: ds,
-		sniff:          *sniff,
+		arena:        arena,
+		dnsClient:    dns.NewClient(stk),
+		nameProvider: np,
+		sniff:        *sniff,
 	}
 	ns.mu.ifStates = make(map[tcpip.NICID]*ifState)
 	ns.mu.stack = stk

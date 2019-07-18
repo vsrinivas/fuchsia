@@ -1,0 +1,16 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.device;
+
+using zx;
+
+const string DEFAULT_DEVICE_NAME = "fuchsia";
+
+/// Interface for getting device names.
+[Discoverable]
+protocol NameProvider {
+    /// Return the name of this Fuchsia device.
+    GetDeviceName() -> (string name) error zx.status;
+};

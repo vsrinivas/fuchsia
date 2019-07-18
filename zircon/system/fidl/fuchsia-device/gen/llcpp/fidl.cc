@@ -1841,6 +1841,239 @@ void Controller::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::De
 }
 
 
+::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result::NameProvider_GetDeviceName_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result::~NameProvider_GetDeviceName_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~NameProvider_GetDeviceName_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result::MoveImpl_(NameProvider_GetDeviceName_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result, response_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result, err_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result) == ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result::PrimarySize);
+}
+
+
+NameProvider_GetDeviceName_Response& ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) NameProvider_GetDeviceName_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+namespace {
+
+[[maybe_unused]]
+constexpr uint64_t kNameProvider_GetDeviceName_Ordinal = 0x980ac2500000000lu;
+extern "C" const fidl_type_t fuchsia_device_NameProviderGetDeviceNameResponseTable;
+
+}  // namespace
+template <>
+NameProvider::ResultOf::GetDeviceName_Impl<NameProvider::GetDeviceNameResponse>::GetDeviceName_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceNameRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetDeviceNameRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetDeviceNameRequest));
+  ::fidl::DecodedMessage<GetDeviceNameRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      NameProvider::InPlace::GetDeviceName(std::move(_client_end), Super::response_buffer()));
+}
+
+NameProvider::ResultOf::GetDeviceName NameProvider::SyncClient::GetDeviceName() {
+  return ResultOf::GetDeviceName(zx::unowned_channel(this->channel_));
+}
+
+NameProvider::ResultOf::GetDeviceName NameProvider::Call::GetDeviceName(zx::unowned_channel _client_end) {
+  return ResultOf::GetDeviceName(std::move(_client_end));
+}
+
+template <>
+NameProvider::UnownedResultOf::GetDeviceName_Impl<NameProvider::GetDeviceNameResponse>::GetDeviceName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetDeviceNameRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetDeviceNameRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetDeviceNameRequest));
+  ::fidl::DecodedMessage<GetDeviceNameRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      NameProvider::InPlace::GetDeviceName(std::move(_client_end), std::move(_response_buffer)));
+}
+
+NameProvider::UnownedResultOf::GetDeviceName NameProvider::SyncClient::GetDeviceName(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetDeviceName(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+NameProvider::UnownedResultOf::GetDeviceName NameProvider::Call::GetDeviceName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetDeviceName(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<NameProvider::GetDeviceNameResponse> NameProvider::SyncClient::GetDeviceName_Deprecated(::fidl::BytePart _response_buffer, NameProvider_GetDeviceName_Result* out_result) {
+  return NameProvider::Call::GetDeviceName_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_result);
+}
+
+::fidl::DecodeResult<NameProvider::GetDeviceNameResponse> NameProvider::Call::GetDeviceName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NameProvider_GetDeviceName_Result* out_result) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetDeviceNameRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  auto& _request = *reinterpret_cast<GetDeviceNameRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kNameProvider_GetDeviceName_Ordinal;
+  _request_buffer.set_actual(sizeof(GetDeviceNameRequest));
+  ::fidl::DecodedMessage<GetDeviceNameRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<GetDeviceNameResponse>(_encode_request_result.status, _encode_request_result.error);
+  }
+  auto _call_result = ::fidl::Call<GetDeviceNameRequest, GetDeviceNameResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<GetDeviceNameResponse>(_call_result.status, _call_result.error);
+  }
+  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
+  if (_decode_result.status != ZX_OK) {
+    return _decode_result;
+  }
+  auto& _response = *_decode_result.message.message();
+  *out_result = std::move(_response.result);
+  return _decode_result;
+}
+
+::fidl::DecodeResult<NameProvider::GetDeviceNameResponse> NameProvider::InPlace::GetDeviceName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetDeviceNameRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetDeviceNameRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kNameProvider_GetDeviceName_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<NameProvider::GetDeviceNameResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetDeviceNameRequest, GetDeviceNameResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<NameProvider::GetDeviceNameResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+bool NameProvider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kNameProvider_GetDeviceName_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<GetDeviceNameRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetDeviceName(
+        Interface::GetDeviceNameCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool NameProvider::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(NameProvider_GetDeviceName_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceNameResponse>();
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  GetDeviceNameResponse _response = {};
+  _response._hdr.ordinal = kNameProvider_GetDeviceName_Ordinal;
+  _response.result = std::move(result);
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(::fidl::BytePart _buffer, NameProvider_GetDeviceName_Result result) {
+  if (_buffer.capacity() < GetDeviceNameResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  GetDeviceNameResponse _response = {};
+  _response._hdr.ordinal = kNameProvider_GetDeviceName_Ordinal;
+  _response.result = std::move(result);
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(::fidl::DecodedMessage<GetDeviceNameResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kNameProvider_GetDeviceName_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+const char DEFAULT_DEVICE_NAME[] = "fuchsia";
+
 }  // namespace device
 }  // namespace fuchsia
 }  // namespace llcpp

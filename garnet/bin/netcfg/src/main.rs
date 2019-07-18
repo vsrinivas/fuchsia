@@ -5,7 +5,6 @@
 #![deny(warnings)]
 #![feature(async_await, await_macro)]
 
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs;
 use std::os::unix::io::AsRawFd;
@@ -19,10 +18,9 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon::DurationNum;
 use futures::lock::Mutex;
-use futures::{future::try_join4, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{future::try_join3, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use serde_derive::Deserialize;
 
-mod device_id;
 mod dns_policy_service;
 mod interface;
 mod matchers;
@@ -42,7 +40,6 @@ pub struct FilterConfig {
 
 #[derive(Debug, Deserialize)]
 struct Config {
-    pub device_name: Option<String>,
     pub dns_config: DnsConfig,
     #[serde(deserialize_with = "matchers::InterfaceSpec::parse_as_tuples")]
     pub rules: Vec<matchers::InterfaceSpec>,
@@ -60,19 +57,6 @@ impl Config {
         Ok(config)
     }
 }
-
-fn derive_device_name(interfaces: Vec<fidl_fuchsia_netstack::NetInterface>) -> Option<String> {
-    interfaces
-        .iter()
-        .filter(|iface| {
-            fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::from_bits_truncate(iface.features)
-                .is_physical()
-        })
-        .min_by(|a, b| a.id.cmp(&b.id))
-        .map(|iface| device_id::device_id(&iface.hwaddr))
-}
-
-static DEVICE_NAME_KEY: &str = "DeviceName";
 
 // We use Compare-And-Swap (CAS) protocol to update filter rules. $get_rules returns the current
 // generation number. $update_rules will send it with new rules to make sure we are updating the
@@ -119,12 +103,8 @@ fn main() -> Result<(), failure::Error> {
     fuchsia_syslog::init_with_tags(&["netcfg"])?;
     fx_log_info!("Started");
 
-    let Config {
-        device_name,
-        dns_config: DnsConfig { servers },
-        rules: default_config_rules,
-        filter_config,
-    } = Config::load("/pkg/data/default.json")?;
+    let Config { dns_config: DnsConfig { servers }, rules: default_config_rules, filter_config } =
+        Config::load("/pkg/data/default.json")?;
 
     let mut persisted_interface_config =
         interface::FileBackedConfig::load(&"/data/net_interfaces.cfg.json")?;
@@ -135,9 +115,6 @@ fn main() -> Result<(), failure::Error> {
         .context("could not connect to netstack")?;
     let resolver_admin = connect_to_service::<fidl_fuchsia_netstack::ResolverAdminMarker>()
         .context("could not connect to resolver admin")?;
-    let device_settings_manager =
-        connect_to_service::<fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker>()
-            .context("could not connect to device settings manager")?;
     let filter = connect_to_service::<fidl_fuchsia_net_filter::FilterMarker>()
         .context("could not connect to filter")?;
 
@@ -159,7 +136,7 @@ fn main() -> Result<(), failure::Error> {
                     .map_err(|e| failure::format_err!("could not parse nat rules: {:?}", e))?;
             cas_filter_rules!(filter, get_rdr_rules, update_rdr_rules, rdr_rules);
         }
-        Ok(())
+        Ok::<(), failure::Error>(())
     };
 
     let mut servers = servers
@@ -171,31 +148,6 @@ fn main() -> Result<(), failure::Error> {
     let () = resolver_admin
         .set_name_servers(&mut servers.iter_mut())
         .context("could not set name servers")?;
-
-    let default_device_name = device_name.as_ref().map(Cow::Borrowed).map(Ok);
-
-    let mut device_name_stream = futures::stream::iter(default_device_name).chain(
-        netstack.take_event_stream().try_filter_map(
-            |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-                futures::future::ok(derive_device_name(interfaces).map(Cow::Owned))
-            },
-        ),
-    );
-
-    let device_name = async {
-        match await!(device_name_stream.try_next())
-            .context("netstack event stream ended before providing interfaces")?
-        {
-            Some(device_name) => {
-                let success =
-                    await!(device_settings_manager.set_string(DEVICE_NAME_KEY, &device_name))?;
-                Ok(success)
-            }
-            None => {
-                Err(failure::err_msg("netstack event stream ended before providing interfaces"))
-            }
-        }
-    };
 
     // Interface metrics are used to sort the route table. An interface with a
     // lower metric is favored over one with a higher metric.
@@ -350,8 +302,7 @@ fn main() -> Result<(), failure::Error> {
         });
     fs.take_and_serve_directory_handle()?;
 
-    let (_success, (), (), ()) = executor.run_singlethreaded(try_join4(
-        device_name,
+    let ((), (), ()) = executor.run_singlethreaded(try_join3(
         filter_setup,
         ethernet_device,
         fs.collect().map(Ok),

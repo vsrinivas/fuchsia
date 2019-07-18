@@ -109,6 +109,7 @@ source_set("source_set") {
     "//src/lib/fxl",
     "//src/lib/inet",
     "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-device",
     "//zircon/public/fidl/fuchsia-net",
     "//zircon/public/lib/fit",
   ]
@@ -227,6 +228,7 @@ test_package("mdns_netemul_tests") {
   deps = [
     ":mdns_netemul_test_agent",
     ":netemul_empty_binaries",
+    "//src/connectivity/network/tests:device_name_provider",
   ]
 
   meta = [

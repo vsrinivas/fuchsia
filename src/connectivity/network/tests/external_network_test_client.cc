@@ -6,10 +6,20 @@
 // addresses.
 
 #include <arpa/inet.h>
+#include <sys/utsname.h>
 
 #include "gtest/gtest.h"
 
 namespace {
+
+// This is the expected derived device name for the mac address
+// aa:bb:cc:dd:ee:ff, specified in meta/netstack_external_network_test.cmx
+// (see facets.fuchsia.netemul.networks.endpoints[0].mac).
+//
+// Since this only used on Fuchsia, it is conditionally compiled.
+#if defined(__Fuchsia__)
+const char kDerivedDeviceName[] = "train-cache-uncle-chill";
+#endif
 
 TEST(ExternalNetworkTest, ConnectToNonRoutableINET) {
   int s;
@@ -58,6 +68,22 @@ TEST(ExternalNetworkTest, ConnectToNonRoutableINET6) {
 #endif
 
   ASSERT_EQ(close(s), 0) << strerror(errno);
+}
+
+TEST(ExternalNetworkTest, GetHostName) {
+  char hostname[HOST_NAME_MAX];
+  EXPECT_GE(gethostname(hostname, sizeof(hostname)), 0) << strerror(errno);
+#if defined(__Fuchsia__)
+  ASSERT_STREQ(hostname, kDerivedDeviceName);
+#endif
+}
+
+TEST(ExternalNetworkTest, Uname) {
+  utsname uts;
+  EXPECT_EQ(uname(&uts), 0) << strerror(errno);
+#if defined(__Fuchsia__)
+  ASSERT_STREQ(uts.nodename, kDerivedDeviceName);
+#endif
 }
 
 }  // namespace

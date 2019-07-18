@@ -21,6 +21,7 @@ executable("devcoordinator") {
     "../fshost",
     "$zx/system/core/miscsvc",
     "$zx/system/core/netsvc",
+    "$zx/system/core/netsvc:device-name-provider",
     "$zx/system/core/svchost",
     "$zx/system/core/virtcon:virtual-console",
     "$zx/system/core/pwrbtn-monitor",

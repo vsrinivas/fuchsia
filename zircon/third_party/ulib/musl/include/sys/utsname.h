@@ -6,10 +6,11 @@ extern "C" {
 #endif
 
 #include <features.h>
+#include <limits.h>
 
 struct utsname {
     char sysname[65];
-    char nodename[65];
+    char nodename[HOST_NAME_MAX];
     char release[65];
     char version[65];
     char machine[65];

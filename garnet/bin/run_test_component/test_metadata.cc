@@ -4,6 +4,7 @@
 
 #include "garnet/bin/run_test_component/test_metadata.h"
 
+#include <fuchsia/device/cpp/fidl.h>
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
@@ -25,6 +26,7 @@ constexpr char kInjectedServices[] = "injected-services";
 constexpr char kSystemServices[] = "system-services";
 
 const std::unordered_set<std::string> kAllowedSystemServices = {
+    fuchsia::device::NameProvider::Name_,
     fuchsia::net::Connectivity::Name_,
     fuchsia::net::NameLookup::Name_,
     fuchsia::net::SocketProvider::Name_,

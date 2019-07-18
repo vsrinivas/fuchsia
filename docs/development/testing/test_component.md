@@ -112,6 +112,7 @@ enable this workaround you need to allow some system services:
 "facets": {
   "fuchsia.test": {
     "system-services": [
+      "fuchsia.device.NameProvider",
       "fuchsia.net.Connectivity",
       "fuchsia.net.SocketProvider",
       "fuchsia.net.stack.Stack",

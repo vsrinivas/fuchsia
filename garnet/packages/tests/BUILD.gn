@@ -581,6 +581,7 @@ group("netstack") {
     "//src/connectivity/network/netstack/tests:netstack_manual_tests",
     "//src/connectivity/network/netstack/util:netstack_util_test($host_toolchain)",
     "//src/connectivity/network/tests:netstack_bsdsocket_c_api_test($host_toolchain)",
+    "//src/connectivity/network/tests:device_name_provider",
     "//src/connectivity/network/tests:netstack_c_api_tests",
     "//src/connectivity/network/tests:netstack_external_network_test_client($host_toolchain)",
   ]

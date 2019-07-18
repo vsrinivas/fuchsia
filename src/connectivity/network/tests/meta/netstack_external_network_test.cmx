@@ -7,8 +7,12 @@
                 "services": {
                     "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.device.NameProvider": "fuchsia-pkg://fuchsia.com/device_name_provider#meta/device_name_provider.cmx",
                     "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
                 },
+                "devices": [
+                  "external_network_endpoint"
+                ],
                 "setup": [
                     {
                         "arguments": [
@@ -28,7 +32,8 @@
                 {
                     "endpoints": [
                         {
-                            "name": "external_network_endpoint"
+                            "name": "external_network_endpoint",
+                            "mac": "aa:bb:cc:dd:ee:ff"
                         }
                     ],
                     "name": "external_network"

@@ -12,7 +12,7 @@ __BEGIN_CDECLS
 
 // setup networking
 // if interface != NULL, only use the given topological path for networking
-int netifc_open(const char* interface, bool quiet);
+int netifc_open(const char* interface);
 
 // process inbound packet(s)
 int netifc_poll(void);

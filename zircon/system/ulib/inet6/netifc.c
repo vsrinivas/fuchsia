@@ -11,8 +11,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <threads.h>
+#include <unistd.h>
 
 #include "eth-client.h"
 
@@ -25,6 +25,7 @@
 
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
+#include <inet6/netifc-discover.h>
 
 #include <lib/fdio/io.h>
 #include <lib/fdio/fd.h>
@@ -61,12 +62,10 @@ static int rxc;
 #endif
 
 static mtx_t eth_lock = MTX_INIT;
-static zx_handle_t netsvc = ZX_HANDLE_INVALID;
-static eth_client_t* eth;
-static uint8_t netmac[6];
-static size_t netmtu;
-
-static bool netifc_open_quiet = false;
+static zx_handle_t g_netsvc = ZX_HANDLE_INVALID;
+static eth_client_t* g_eth;
+static uint8_t g_netmac[6];
+static size_t g_netmtu;
 
 static zx_handle_t iovmo;
 static void* iobuf;
@@ -150,7 +149,7 @@ static zx_status_t eth_get_buffer_locked(size_t sz, void** data, eth_buffer_t** 
     }
     if (eth_buffers == NULL) {
         while (1) {
-            eth_complete_tx(eth, NULL, tx_complete);
+            eth_complete_tx(g_eth, NULL, tx_complete);
             if (eth_buffers != NULL) {
                 break;
             }
@@ -160,7 +159,7 @@ static zx_status_t eth_get_buffer_locked(size_t sz, void** data, eth_buffer_t** 
             zx_status_t status;
             zx_signals_t signals;
             mtx_unlock(&eth_lock);
-            status = zx_object_wait_one(eth->tx_fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
+            status = zx_object_wait_one(g_eth->tx_fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
                                         ZX_TIME_INFINITE, &signals);
             mtx_lock(&eth_lock);
             if (status < 0) {
@@ -206,7 +205,7 @@ zx_status_t eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
     }
 #endif
 
-    if (eth == NULL) {
+    if (g_eth == NULL) {
         printf("eth_fifo_send: not connected\n");
         eth_put_buffer_locked(ethbuf, ETH_BUFFER_CLIENT);
         status = ZX_ERR_ADDRESS_UNREACHABLE;
@@ -214,7 +213,7 @@ zx_status_t eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
     }
 
     ethbuf->state = ETH_BUFFER_TX;
-    status = eth_queue_tx(eth, ethbuf, ethbuf->data + skip, len, 0);
+    status = eth_queue_tx(g_eth, ethbuf, ethbuf->data + skip, len, 0);
     if (status < 0) {
         printf("eth_fifo_send: queue tx failed: %d\n", status);
         eth_put_buffer_locked(ethbuf, ETH_BUFFER_TX);
@@ -250,69 +249,17 @@ int netifc_timer_expired(void) {
 }
 
 void netifc_get_info(uint8_t* addr, uint16_t* mtu) {
-    memcpy(addr, netmac, 6);
-    *mtu = netmtu;
+    memcpy(addr, g_netmac, 6);
+    *mtu = g_netmtu;
 }
 
-static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* cookie) {
-    if (event != WATCH_EVENT_ADD_FILE) {
-        return ZX_OK;
-    }
-
-    if (!netifc_open_quiet) {
-        printf("netifc: ? /dev/class/ethernet/%s\n", fn);
-    }
-
+int netifc_open(const char* interface) {
+    zx_status_t status = ZX_ERR_INTERNAL;
     mtx_lock(&eth_lock);
-    int fd;
-    if ((fd = openat(dirfd, fn, O_RDWR)) < 0) {
-        goto finish;
+    // TODO: parameterize netsvc ethdir as well?
+    if (netifc_discover("/dev/class/ethernet", interface, &g_netsvc, g_netmac)) {
+      goto fail_close_svc;
     }
-
-    zx_status_t status = fdio_get_service_handle(fd, &netsvc);
-    if (status != ZX_OK) {
-        goto fail_close_svc;
-    }
-
-    // If an interface was specified, check the topological path of this device and reject it if it
-    // doesn't match.
-    if (cookie != NULL) {
-        const char* interface = cookie;
-        char buf[1024];
-        zx_status_t call_status;
-        size_t actual_len;
-        status = fuchsia_device_ControllerGetTopologicalPath(netsvc, &call_status,
-                                                             buf, sizeof(buf) - 1, &actual_len);
-        if (status == ZX_OK) {
-            status = call_status;
-        }
-        if (status != ZX_OK) {
-            goto fail_close_svc;
-        }
-        buf[actual_len] = 0;
-
-        const char* topo_path = buf;
-        // Skip the instance sigil if it's present in either the topological path or the given
-        // interface path.
-        if (topo_path[0] == '@') topo_path++;
-        if (interface[0] == '@') interface++;
-
-        if (strncmp(topo_path, interface, sizeof(buf))) {
-            goto fail_close_svc;
-        }
-    }
-
-    fuchsia_hardware_ethernet_Info info;
-    if (fuchsia_hardware_ethernet_DeviceGetInfo(netsvc, &info) != ZX_OK) {
-        goto fail_close_svc;
-    }
-    if (info.features & (fuchsia_hardware_ethernet_INFO_FEATURE_WLAN |
-                         fuchsia_hardware_ethernet_INFO_FEATURE_SYNTH)) {
-        // Don't run netsvc for wireless or synthetic network devices
-        goto fail_close_svc;
-    }
-    memcpy(netmac, info.mac.octets, sizeof(netmac));
-    netmtu = info.mtu;
 
     // we only do this the very first time
     if (eth_buffer_base == NULL) {
@@ -338,8 +285,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
             iovmo = ZX_HANDLE_INVALID;
             goto fail_close_svc;
         }
-        if (!netifc_open_quiet)
-            printf("netifc: create %zu eth buffers\n", eth_buffer_count);
+        printf("netifc: create %zu eth buffers\n", eth_buffer_count);
         // assign data chunks to ethbufs
         for (unsigned n = 0; n < eth_buffer_count; n++) {
             eth_buffer_base[n].magic = ETH_BUFFER_MAGIC;
@@ -350,20 +296,20 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
         }
     }
 
-    status = eth_create(netsvc, iovmo, iobuf, &eth);
+    status = eth_create(g_netsvc, iovmo, iobuf, &g_eth);
     if (status < 0) {
         printf("eth_create() failed: %d\n", status);
         goto fail_close_svc;
     }
 
     zx_status_t call_status = ZX_OK;
-    status = fuchsia_hardware_ethernet_DeviceStart(netsvc, &call_status);
+    status = fuchsia_hardware_ethernet_DeviceStart(g_netsvc, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {
         printf("netifc: ethernet_impl_start(): %d, %d\n", status, call_status);
         goto fail_destroy_client;
     }
 
-    ip6_init(netmac, netifc_open_quiet);
+    ip6_init(g_netmac, false);
 
     // enqueue rx buffers
     for (unsigned n = 0; n < NET_BUFFERS; n++) {
@@ -373,53 +319,37 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
             printf("netifc: only queued %u buffers (desired: %u)\n", n, NET_BUFFERS);
             break;
         }
-        eth_queue_rx(eth, ethbuf, ethbuf->data, NET_BUFFERSZ, 0);
+        eth_queue_rx(g_eth, ethbuf, ethbuf->data, NET_BUFFERSZ, 0);
     }
 
-    mtx_unlock(&eth_lock);
-    if (!netifc_open_quiet)
-        printf("netsvc: using /dev/class/ethernet/%s\n", fn);
-
-    // stop polling
-    return ZX_ERR_STOP;
-
-fail_destroy_client:
-    eth_destroy(eth);
-    eth = NULL;
-fail_close_svc:
-    zx_handle_close(netsvc);
-    netsvc = ZX_HANDLE_INVALID;
-finish:
     mtx_unlock(&eth_lock);
     return ZX_OK;
-}
 
-int netifc_open(const char* interface, bool quiet) {
-    netifc_open_quiet = quiet;
-
-    int dirfd;
-    if ((dirfd = open("/dev/class/ethernet", O_DIRECTORY|O_RDONLY)) < 0) {
-        return -1;
+fail_destroy_client:
+    eth_destroy(g_eth);
+    g_eth = NULL;
+fail_close_svc:
+    zx_handle_close(g_netsvc);
+    g_netsvc = ZX_HANDLE_INVALID;
+    mtx_unlock(&eth_lock);
+    if (status) {
+      return status;
+    } else if (call_status) {
+      return call_status;
+    } else {
+      return -1;
     }
-
-    zx_status_t status =
-        fdio_watch_directory(dirfd, netifc_open_cb, ZX_TIME_INFINITE, (void*)interface);
-    close(dirfd);
-
-    // callback returns STOP if it finds and successfully
-    // opens a network interface
-    return (status == ZX_ERR_STOP) ? 0 : -1;
 }
 
 void netifc_close(void) {
     mtx_lock(&eth_lock);
-    if (netsvc != ZX_HANDLE_INVALID) {
-        zx_handle_close(netsvc);
-        netsvc = ZX_HANDLE_INVALID;
+    if (g_netsvc != ZX_HANDLE_INVALID) {
+        zx_handle_close(g_netsvc);
+        g_netsvc = ZX_HANDLE_INVALID;
     }
-    if (eth != NULL) {
-        eth_destroy(eth);
-        eth = NULL;
+    if (g_eth != NULL) {
+        eth_destroy(g_eth);
+        g_eth = NULL;
     }
     unsigned count = 0;
     for (unsigned n = 0; n < eth_buffer_count; n++) {
@@ -450,14 +380,14 @@ static void rx_complete(void* ctx, void* cookie, size_t len, uint32_t flags) {
     eth_buffer_t* ethbuf = cookie;
     check_ethbuf(ethbuf, ETH_BUFFER_RX);
     netifc_recv(ethbuf->data, len);
-    eth_queue_rx(eth, ethbuf, ethbuf->data, NET_BUFFERSZ, 0);
+    eth_queue_rx(g_eth, ethbuf, ethbuf->data, NET_BUFFERSZ, 0);
 }
 
 int netifc_poll(void) {
     for (;;) {
         // Handle any completed rx packets
         zx_status_t status;
-        if ((status = eth_complete_rx(eth, NULL, rx_complete)) < 0) {
+        if ((status = eth_complete_rx(g_eth, NULL, rx_complete)) < 0) {
             printf("netifc: eth rx failed: %d\n", status);
             return -1;
         }
@@ -477,11 +407,10 @@ int netifc_poll(void) {
         } else {
             deadline = ZX_TIME_INFINITE;
         }
-        status = eth_wait_rx(eth, deadline);
+        status = eth_wait_rx(g_eth, deadline);
         if ((status < 0) && (status != ZX_ERR_TIMED_OUT)) {
             printf("netifc: eth rx wait failed: %d\n", status);
             return -1;
         }
     }
 }
-

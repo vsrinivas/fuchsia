@@ -35,44 +35,6 @@ namespace fio = ::llcpp::fuchsia::io;
 namespace fnet = ::llcpp::fuchsia::net;
 namespace fsocket = ::llcpp::fuchsia::posix::socket;
 
-static zx_status_t get_service_handle(const char path[], zx::channel* out) {
-    static zx_handle_t service_root;
-
-    {
-        static std::once_flag once;
-        static zx_status_t status;
-        std::call_once(once, [&]() {
-            zx::channel c0, c1;
-            status = zx::channel::create(0, &c0, &c1);
-            if (status != ZX_OK) {
-                return;
-            }
-            // TODO(abarth): Use "/svc/" once that actually works.
-            status = fdio_service_connect("/svc/.", c0.release());
-            if (status != ZX_OK) {
-                return;
-            }
-            service_root = c1.release();
-        });
-        if (status != ZX_OK) {
-            return status;
-        }
-    }
-
-    zx::channel c0, c1;
-    zx_status_t status = zx::channel::create(0, &c0, &c1);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    status = fdio_service_connect_at(service_root, path, c0.release());
-    if (status != ZX_OK) {
-        return status;
-    }
-    *out = std::move(c1);
-    return ZX_OK;
-}
-
 __EXPORT
 int socket(int domain, int type, int protocol) {
     static fsocket::Provider::SyncClient* provider;
@@ -82,7 +44,7 @@ int socket(int domain, int type, int protocol) {
         static zx_status_t status;
         std::call_once(once, [&]() {
             zx::channel out;
-            status = get_service_handle(fsocket::Provider::Name_, &out);
+            status = fdio_service_connect_by_name(fsocket::Provider::Name_, &out);
             if (status != ZX_OK) {
                 return;
             }
@@ -404,7 +366,7 @@ int getaddrinfo(const char* __restrict node, const char* __restrict service,
         static zx_status_t status;
         std::call_once(once, [&]() {
             zx::channel out;
-            status = get_service_handle(fnet::SocketProvider::Name_, &out);
+            status = fdio_service_connect_by_name(fnet::SocketProvider::Name_, &out);
             if (status != ZX_OK) {
                 return;
             }

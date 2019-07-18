@@ -4,7 +4,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.devicesettings.DeviceSettingsManager",
+            "fuchsia.device.NameProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",

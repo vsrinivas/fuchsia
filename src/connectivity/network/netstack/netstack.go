@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall/zx"
 
 	"syslog"
 
@@ -23,7 +24,7 @@ import (
 	"netstack/routes"
 	"netstack/util"
 
-	"fidl/fuchsia/devicesettings"
+	"fidl/fuchsia/device"
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
@@ -39,9 +40,6 @@ import (
 )
 
 const (
-	deviceSettingsManagerNodenameKey = "DeviceName"
-	defaultNodename                  = "fuchsia-unset-device-name"
-
 	defaultInterfaceMetric routes.Metric = 100
 
 	metricNotSet routes.Metric = 0
@@ -71,8 +69,8 @@ var ipv6LoopbackBytes = func() [16]byte {
 type Netstack struct {
 	arena *eth.Arena
 
-	deviceSettings *devicesettings.DeviceSettingsManagerInterface
-	dnsClient      *dns.Client
+	nameProvider *device.NameProviderInterface
+	dnsClient    *dns.Client
 
 	mu struct {
 		sync.Mutex
@@ -570,41 +568,29 @@ func (ns *Netstack) getdnsServers() []tcpip.Address {
 	return out
 }
 
-var deviceSettingsErrorLogged uint32 = 0
+var nameProviderErrorLogged uint32 = 0
 
-func (ns *Netstack) getNodeName() string {
-	nodename, status, err := ns.deviceSettings.GetString(deviceSettingsManagerNodenameKey)
+func (ns *Netstack) getDeviceName() string {
+	result, err := ns.nameProvider.GetDeviceName()
 	if err != nil {
-		if atomic.CompareAndSwapUint32(&deviceSettingsErrorLogged, 0, 1) {
-			syslog.Warnf("getNodeName: error accessing device settings: %s", err)
+		if atomic.CompareAndSwapUint32(&nameProviderErrorLogged, 0, 1) {
+			syslog.Warnf("getDeviceName: error accessing device name provider: %s", err)
 		}
-		return defaultNodename
+		return device.DefaultDeviceName
 	}
 
-	if status != devicesettings.StatusOk {
-		var reportStatus string
-		switch status {
-		case devicesettings.StatusErrNotSet:
-			reportStatus = "key not set"
-		case devicesettings.StatusErrInvalidSetting:
-			reportStatus = "invalid setting"
-		case devicesettings.StatusErrRead:
-			reportStatus = "error reading key"
-		case devicesettings.StatusErrIncorrectType:
-			reportStatus = "value type was incorrect"
-		case devicesettings.StatusErrUnknown:
-			reportStatus = "unknown"
-		default:
-			reportStatus = fmt.Sprintf("unknown status code: %d", status)
+	switch tag := result.Which(); tag {
+	case device.NameProviderGetDeviceNameResultResponse:
+		atomic.StoreUint32(&nameProviderErrorLogged, 0)
+		return result.Response.Name
+	case device.NameProviderGetDeviceNameResultErr:
+		if atomic.CompareAndSwapUint32(&nameProviderErrorLogged, 0, 1) {
+			syslog.Warnf("getDeviceName: nameProvider.GetdeviceName() = %s", zx.Status(result.Err))
 		}
-		if atomic.CompareAndSwapUint32(&deviceSettingsErrorLogged, 0, 1) {
-			syslog.Warnf("getNodeName: device settings error: %s", reportStatus)
-		}
-		return defaultNodename
+		return device.DefaultDeviceName
+	default:
+		panic(fmt.Sprintf("unknown tag: GetDeviceName().Which() = %d", tag))
 	}
-
-	atomic.StoreUint32(&deviceSettingsErrorLogged, 0)
-	return nodename
 }
 
 // TODO(stijlist): figure out a way to make it impossible to accidentally

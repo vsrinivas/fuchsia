@@ -4,6 +4,7 @@
 
 #include "src/connectivity/network/mdns/service/mdns_service_impl.h"
 
+#include <fuchsia/device/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -19,7 +20,6 @@
 namespace mdns {
 namespace {
 
-static const std::string kUnsetHostName = "fuchsia-unset-device-name";
 static constexpr zx::duration kReadyPollingInterval = zx::sec(1);
 
 std::string GetHostName() {
@@ -30,7 +30,7 @@ std::string GetHostName() {
 
   if (result < 0) {
     FXL_LOG(ERROR) << "gethostname failed, " << strerror(errno);
-    host_name = kUnsetHostName;
+    host_name = fuchsia::device::DEFAULT_DEVICE_NAME;
   } else {
     host_name = host_name_buffer;
   }
@@ -59,7 +59,7 @@ MdnsServiceImpl::~MdnsServiceImpl() {}
 void MdnsServiceImpl::Start() {
   std::string host_name = GetHostName();
 
-  if (host_name == kUnsetHostName) {
+  if (host_name == fuchsia::device::DEFAULT_DEVICE_NAME) {
     // Host name not set. Try again soon.
     async::PostDelayedTask(
         async_get_default_dispatcher(), [this]() { Start(); }, kReadyPollingInterval);

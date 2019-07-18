@@ -870,7 +870,7 @@ func (ios *iostate) Ioctl(req int16, in []uint8) (int16, []uint8, error) {
 		return 0, lastIfInfo.info[requestedIndex].Marshal(), nil
 
 	case ioctlNetcGetNodename:
-		return 0, append([]byte(ios.ns.getNodeName()), 0), nil
+		return 0, append([]byte(ios.ns.getDeviceName()), 0), nil
 
 	default:
 		return 0, nil, fmt.Errorf("opIoctl req=0x%x, in=%x", req, in)

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
+#include <mutex>
 #include <string.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
@@ -17,6 +18,7 @@
 
 namespace fio = ::llcpp::fuchsia::io;
 namespace fsocket = ::llcpp::fuchsia::posix::socket;
+namespace fdevice = ::llcpp::fuchsia::device;
 
 #define ZXDEBUG 0
 
@@ -33,11 +35,11 @@ static_assert(fio::VMO_FLAG_WRITE == ZX_VM_PERM_WRITE, "Vmar / Vmo flags should 
 static_assert(fio::VMO_FLAG_EXEC == ZX_VM_PERM_EXECUTE, "Vmar / Vmo flags should be aligned");
 
 static_assert(ZX_USER_SIGNAL_0 == (1 << POLL_SHIFT), "");
-static_assert((POLLIN << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_READABLE, "");
-static_assert((POLLPRI << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_OOB, "");
-static_assert((POLLOUT << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_WRITABLE, "");
-static_assert((POLLERR << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_ERROR, "");
-static_assert((POLLHUP << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_HANGUP, "");
+static_assert((POLLIN << POLL_SHIFT) == fdevice::DEVICE_SIGNAL_READABLE, "");
+static_assert((POLLPRI << POLL_SHIFT) == fdevice::DEVICE_SIGNAL_OOB, "");
+static_assert((POLLOUT << POLL_SHIFT) == fdevice::DEVICE_SIGNAL_WRITABLE, "");
+static_assert((POLLERR << POLL_SHIFT) == fdevice::DEVICE_SIGNAL_ERROR, "");
+static_assert((POLLHUP << POLL_SHIFT) == fdevice::DEVICE_SIGNAL_HANGUP, "");
 
 // The |mode| argument used for |fuchsia.io.Directory/Open| calls.
 #define FDIO_CONNECT_MODE ((uint32_t)0755)
@@ -81,6 +83,44 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
     uint32_t flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
     return fio::Directory::Call::Open_Deprecated(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
                                       fidl::StringView(length, path), std::move(request));
+}
+
+zx_status_t fdio_service_connect_by_name(const char name[], zx::channel* out) {
+    static zx_handle_t service_root;
+
+    {
+        static std::once_flag once;
+        static zx_status_t status;
+        std::call_once(once, [&]() {
+            zx::channel c0, c1;
+            status = zx::channel::create(0, &c0, &c1);
+            if (status != ZX_OK) {
+                return;
+            }
+            // TODO(abarth): Use "/svc/" once that actually works.
+            status = fdio_service_connect("/svc/.", c0.release());
+            if (status != ZX_OK) {
+                return;
+            }
+            service_root = c1.release();
+        });
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+
+    zx::channel c0, c1;
+    zx_status_t status = zx::channel::create(0, &c0, &c1);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = fdio_service_connect_at(service_root, name, c0.release());
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out = std::move(c1);
+    return ZX_OK;
 }
 
 __EXPORT

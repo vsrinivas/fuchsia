@@ -1,0 +1,12 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.device.NameProvider": "fuchsia-pkg://fuchsia.com/device_name_provider#meta/device_name_provider.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/name_provider_no_sandbox_access_test"
+    }
+}

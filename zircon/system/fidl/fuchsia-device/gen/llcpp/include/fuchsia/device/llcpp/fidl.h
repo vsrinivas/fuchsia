@@ -21,6 +21,9 @@ namespace fuchsia {
 namespace device {
 
 class Controller;
+struct NameProvider_GetDeviceName_Response;
+struct NameProvider_GetDeviceName_Result;
+class NameProvider;
 
 extern "C" const fidl_type_t fuchsia_device_ControllerBindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindResponseTable;
@@ -1115,6 +1118,263 @@ class Controller final {
 
 };
 
+extern "C" const fidl_type_t fuchsia_device_NameProvider_GetDeviceName_ResponseTable;
+
+struct NameProvider_GetDeviceName_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_device_NameProvider_GetDeviceName_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 4294967295;
+
+  ::fidl::StringView name{};
+};
+
+extern "C" const fidl_type_t fuchsia_device_NameProvider_GetDeviceName_ResultTable;
+
+struct NameProvider_GetDeviceName_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  NameProvider_GetDeviceName_Result();
+  ~NameProvider_GetDeviceName_Result();
+
+  NameProvider_GetDeviceName_Result(NameProvider_GetDeviceName_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  NameProvider_GetDeviceName_Result& operator=(NameProvider_GetDeviceName_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  NameProvider_GetDeviceName_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, NameProvider_GetDeviceName_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, NameProvider_GetDeviceName_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  NameProvider_GetDeviceName_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_device_NameProvider_GetDeviceName_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 4294967295;
+
+ private:
+  void Destroy();
+  void MoveImpl_(NameProvider_GetDeviceName_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    NameProvider_GetDeviceName_Response response_;
+    int32_t err_;
+  };
+};
+
+extern "C" const fidl_type_t fuchsia_device_NameProviderGetDeviceNameResponseTable;
+
+// Interface for getting device names.
+class NameProvider final {
+ public:
+  static constexpr char Name_[] = "fuchsia.device.NameProvider";
+
+  struct GetDeviceNameResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    NameProvider_GetDeviceName_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_NameProviderGetDeviceNameResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 4294967295;
+  };
+  using GetDeviceNameRequest = ::fidl::AnyZeroArgMessage;
+
+
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    template <typename ResponseType>
+    class GetDeviceName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetDeviceName_Impl(zx::unowned_channel _client_end);
+      ~GetDeviceName_Impl() = default;
+      GetDeviceName_Impl(GetDeviceName_Impl&& other) = default;
+      GetDeviceName_Impl& operator=(GetDeviceName_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using GetDeviceName = GetDeviceName_Impl<GetDeviceNameResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    template <typename ResponseType>
+    class GetDeviceName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetDeviceName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetDeviceName_Impl() = default;
+      GetDeviceName_Impl(GetDeviceName_Impl&& other) = default;
+      GetDeviceName_Impl& operator=(GetDeviceName_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using GetDeviceName = GetDeviceName_Impl<GetDeviceNameResponse>;
+  };
+
+  class SyncClient final {
+   public:
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Return the name of this Fuchsia device.
+    ResultOf::GetDeviceName GetDeviceName();
+
+    // Return the name of this Fuchsia device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetDeviceName GetDeviceName(::fidl::BytePart _response_buffer);
+
+
+    // Return the name of this Fuchsia device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetDeviceNameResponse> GetDeviceName_Deprecated(::fidl::BytePart _response_buffer, NameProvider_GetDeviceName_Result* out_result);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    // Return the name of this Fuchsia device.
+    static ResultOf::GetDeviceName GetDeviceName(zx::unowned_channel _client_end);
+
+    // Return the name of this Fuchsia device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetDeviceName GetDeviceName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+
+    // Return the name of this Fuchsia device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetDeviceNameResponse> GetDeviceName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NameProvider_GetDeviceName_Result* out_result);
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+   public:
+
+    // Return the name of this Fuchsia device.
+    static ::fidl::DecodeResult<GetDeviceNameResponse> GetDeviceName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = NameProvider;
+    using _Base = ::fidl::CompleterBase;
+
+    class GetDeviceNameCompleterBase : public _Base {
+     public:
+      void Reply(NameProvider_GetDeviceName_Result result);
+      void Reply(::fidl::BytePart _buffer, NameProvider_GetDeviceName_Result result);
+      void Reply(::fidl::DecodedMessage<GetDeviceNameResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetDeviceNameCompleter = ::fidl::Completer<GetDeviceNameCompleterBase>;
+
+    virtual void GetDeviceName(GetDeviceNameCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+};
+
 // Maximum length for a driver path
 constexpr uint64_t MAX_DRIVER_PATH_LEN = 1024u;
 
@@ -1147,6 +1407,8 @@ constexpr uint32_t DEVICE_SIGNAL_HANGUP = 268435456u;
 // Signal that will be active on a device event handle if the device has encountered an error.
 // This is primarily used by the PTY support.
 constexpr uint32_t DEVICE_SIGNAL_ERROR = 134217728u;
+
+extern const char DEFAULT_DEVICE_NAME[];
 
 }  // namespace device
 }  // namespace fuchsia
@@ -1270,5 +1532,23 @@ struct IsFidlMessage<::llcpp::fuchsia::device::Controller::RunCompatibilityTests
 static_assert(sizeof(::llcpp::fuchsia::device::Controller::RunCompatibilityTestsResponse)
     == ::llcpp::fuchsia::device::Controller::RunCompatibilityTestsResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::Controller::RunCompatibilityTestsResponse, status) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response>);
+static_assert(offsetof(::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response, name) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response) == ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::NameProvider::GetDeviceNameResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::NameProvider::GetDeviceNameResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::NameProvider::GetDeviceNameResponse)
+    == ::llcpp::fuchsia::device::NameProvider::GetDeviceNameResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::NameProvider::GetDeviceNameResponse, result) == 16);
 
 }  // namespace fidl

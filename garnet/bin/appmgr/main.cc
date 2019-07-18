@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/boot/cpp/fidl.h>
+#include <fuchsia/device/cpp/fidl.h>
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/paver/cpp/fidl.h>
@@ -22,6 +23,7 @@ namespace {
 std::vector<std::string> RootRealmServices() {
   return std::vector<std::string>{
       fuchsia::boot::FactoryItems::Name_,
+      fuchsia::device::NameProvider::Name_,
       fuchsia::device::manager::Administrator::Name_,
       fuchsia::device::manager::DebugDumper::Name_,
       fuchsia::kernel::DebugBroker::Name_,

@@ -7,7 +7,6 @@ import("$zx/public/gn/config/product_parameters.gni")
 executable("netsvc") {
   sources = [
     "debuglog.cc",
-    "device_id.cc",
     "netsvc.cc",
   ]
   if (enable_netsvc_debugging_features) {
@@ -16,7 +15,9 @@ executable("netsvc") {
     sources += [ "debug-command-disabled.cc" ]
   }
   deps = [
+    ":args",
     ":netsvc_common",
+    "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-ethernet:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
@@ -29,6 +30,27 @@ executable("netsvc") {
   data_deps = [
     # netsvc launches /boot/bin/sh for netruncmd.
     "$zx/third_party/uapp/dash",
+  ]
+}
+
+executable("device-name-provider") {
+  sources = [
+    "device-name-provider.cc",
+  ]
+  deps = [
+    ":args",
+    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/svc",
+    "$zx/system/ulib/inet6:netifc-discover",
+  ]
+}
+
+source_set("args") {
+  sources = [
+    "args.cc",
   ]
 }
 
@@ -71,6 +93,7 @@ source_set("netsvc_common") {
 test("netsvc-test") {
   output_name = "netsvc-test"
   sources = [
+    "test/args-test.cc",
     "test/file-api-test.cc",
     "test/paver-test.cc",
     "test/payload-streamer-test.cc",
@@ -78,6 +101,7 @@ test("netsvc-test") {
   ]
   include_dirs = [ "." ]
   deps = [
+    ":args",
     ":netsvc_common",
     "$zx/system/fidl/fuchsia-sysinfo:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",

@@ -15,6 +15,13 @@
                         "inherit_services": false,
                         "name": "remote",
                         "services": {
+                            "fuchsia.device.NameProvider": {
+                                "arguments": [
+                                    "--nodename",
+                                    "mdns-test-device-remote"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/device_name_provider#meta/device_name_provider.cmx"
+                            },
                             "fuchsia.devicesettings.DeviceSettingsManager": {
                                 "arguments": [
                                     "-s",
@@ -42,6 +49,13 @@
                 ],
                 "name": "local",
                 "services": {
+                    "fuchsia.device.NameProvider": {
+                        "arguments": [
+                            "--nodename",
+                            "mdns-test-device-local"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/device_name_provider#meta/device_name_provider.cmx"
+                    },
                     "fuchsia.devicesettings.DeviceSettingsManager": {
                         "arguments": [
                             "-s",
