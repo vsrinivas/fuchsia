@@ -566,38 +566,6 @@ void FormatCharPointer(FormatNode* node, const Type* char_type, const FormatOpti
                         options, eval_context, std::move(cb));
 }
 
-// Formats an array with a known length. This is for non-char arrays (which are special-cased in
-// FormatCharArrayNode).
-void FormatArray(FormatNode* node, int elt_count, const FormatOptions& options,
-                 fxl::RefPtr<EvalContext> eval_context) {
-  node->set_description_kind(FormatNode::kArray);
-
-  // Arrays should have known non-zero sizes.
-  FXL_DCHECK(elt_count >= 0);
-  int print_count = std::min(static_cast<int>(options.max_array_size), elt_count);
-
-  std::vector<ExprValue> items;
-  Err err = ResolveArray(eval_context, node->value(), 0, print_count, &items);
-  if (err.has_error()) {
-    node->set_err(err);
-    return;
-  }
-
-  for (size_t i = 0; i < items.size(); i++) {
-    auto item_node =
-        std::make_unique<FormatNode>(fxl::StringPrintf("[%zu]", i), std::move(items[i]));
-    item_node->set_child_kind(FormatNode::kArrayItem);
-    node->children().push_back(std::move(item_node));
-  }
-
-  if (static_cast<uint32_t>(elt_count) > items.size()) {
-    // Add "..." annotation to show some things were clipped.
-    //
-    // We may want to put a flag on the node that it was clipped.
-    node->children().push_back(std::make_unique<FormatNode>("..."));
-  }
-}
-
 // Attempts to format arrays, char arrays, and char pointers. Because these are many different types
 // this is handled by a separate helper function.
 //
@@ -641,7 +609,7 @@ bool TryFormatArrayOrString(FormatNode* node, const Type* type, const FormatOpti
       }
       FormatCharArrayNode(node, value_type, node->value().data().data(), length, true, truncated);
     } else {
-      FormatArray(node, array->num_elts(), options, eval_context);
+      FormatArrayNode(node, node->value(), array->num_elts(), options, eval_context, std::move(cb));
     }
     return true;
   }
@@ -921,6 +889,45 @@ void FormatCharPointerNode(FormatNode* node, uint64_t ptr, const Type* char_type
                                   FormatCharArrayNode(weak_node.get(), char_type, &data[0],
                                                       data.size(), false, new_truncated);
                                 });
+}
+
+void FormatArrayNode(FormatNode* node, const ExprValue& value, int elt_count,
+                     const FormatOptions& options, fxl::RefPtr<EvalContext> eval_context,
+                     fit::deferred_callback cb) {
+  node->set_description_kind(FormatNode::kArray);
+
+  // Arrays should have known non-zero sizes.
+  FXL_DCHECK(elt_count >= 0);
+  int print_count = std::min(static_cast<int>(options.max_array_size), elt_count);
+
+  // TODO(brettw) "FitCallbackToStdFunction(fit::callback<>" can be removed whtn ResolveArray takes
+  // a fit::callback.
+  ResolveArray(eval_context, value, 0, print_count,
+               FitCallbackToStdFunction(fit::callback<void(const Err&, std::vector<ExprValue>)>(
+                   [weak_node = node->GetWeakPtr(), elt_count, cb = std::move(cb)](
+                       const Err& err, std::vector<ExprValue> items) mutable {
+                     if (!weak_node)
+                       return;
+                     FormatNode* node = weak_node.get();
+
+                     if (err.has_error())
+                       return node->SetDescribedError(err);
+
+                     for (size_t i = 0; i < items.size(); i++) {
+                       auto item_node = std::make_unique<FormatNode>(fxl::StringPrintf("[%zu]", i),
+                                                                     std::move(items[i]));
+                       item_node->set_child_kind(FormatNode::kArrayItem);
+                       node->children().push_back(std::move(item_node));
+                     }
+
+                     if (static_cast<uint32_t>(elt_count) > items.size()) {
+                       // Add "..." annotation to show some things were clipped.
+                       //
+                       // TODO(brettW) We may want to put a flag on the node that it was clipped,
+                       // and also indicate the number of clipped elements.
+                       node->children().push_back(std::make_unique<FormatNode>("..."));
+                     }
+                   })));
 }
 
 }  // namespace zxdb

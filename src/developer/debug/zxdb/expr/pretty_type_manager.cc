@@ -4,9 +4,11 @@
 
 #include "src/developer/debug/zxdb/expr/pretty_type_manager.h"
 
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/developer/debug/zxdb/expr/pretty_string.h"
 #include "src/developer/debug/zxdb/expr/pretty_type.h"
+#include "src/developer/debug/zxdb/expr/pretty_vector.h"
 
 namespace zxdb {
 
@@ -25,6 +27,9 @@ PrettyType* PrettyTypeManager::GetForType(const Type* type) const {
     } else if (type_name == "alloc::string::String") {
       static PrettyRustString pretty_rust_string;
       return &pretty_rust_string;
+    } else if (StringBeginsWith(type_name, "alloc::vec::Vec<")) {
+      static PrettyRustVec pretty_rust_vec;
+      return &pretty_rust_vec;
     }
   } else {
     // Assume C/C++ for everything else.
@@ -39,6 +44,10 @@ PrettyType* PrettyTypeManager::GetForType(const Type* type) const {
     } else if (type_name == "std::__2::basic_string_view<char, std::__2::char_traits<char> >") {
       static PrettyStdStringView pretty_std_string_view;
       return &pretty_std_string_view;
+    } else if (StringBeginsWith(type_name, "std::__2::vector<") &&
+               !StringBeginsWith(type_name, "std::__2::vector<bool,")) {
+      static PrettyStdVector pretty_std_vector;
+      return &pretty_std_vector;
     }
   }
 

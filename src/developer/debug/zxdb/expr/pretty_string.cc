@@ -7,7 +7,6 @@
 #include "src/developer/debug/zxdb/expr/format.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/developer/debug/zxdb/expr/format_options.h"
-#include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 
@@ -109,23 +108,6 @@ void FormatStdStringMemory(const std::vector<uint8_t>& mem, FormatNode* node,
   }
 }
 
-// Extracts a 64-bit structure member with the given name(s). Pass one name to extract a single
-// member, pass a sequence of names to recursively extract values from nested structs.
-Err Extract64BitMember(fxl::RefPtr<EvalContext> context, const ExprValue& value,
-                       std::initializer_list<std::string> names, uint64_t* extracted) {
-  ExprValue cur = value;
-  for (const std::string& name : names) {
-    ParsedIdentifier id(IdentifierQualification::kRelative, ParsedIdentifierComponent(name));
-    ExprValue expr_value;
-    if (Err err = ResolveMember(context, cur, id, &expr_value); err.has_error())
-      return err;
-
-    cur = std::move(expr_value);
-  }
-
-  return cur.PromoteTo64(extracted);
-}
-
 }  // namespace
 
 // C++ std::string ---------------------------------------------------------------------------------
@@ -170,7 +152,7 @@ void PrettyStdStringView::Format(FormatNode* node, const FormatOptions& options,
                                  fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
   node->set_type("std::string_view");
 
-  // datar
+  // data
   uint64_t data;
   if (Err err = Extract64BitMember(context, node->value(), {"__data"}, &data); err.has_error())
     return node->SetDescribedError(err);

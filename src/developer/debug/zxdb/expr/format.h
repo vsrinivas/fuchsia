@@ -60,6 +60,15 @@ void FormatCharPointerNode(FormatNode* node, uint64_t ptr, const Type* char_type
                            std::optional<uint32_t> length, const FormatOptions& options,
                            fxl::RefPtr<EvalContext> eval_context, fit::deferred_callback cb);
 
+// Formats an array with a known length. This is for non-char arrays (which are special-cased in
+// FormatCharArrayNode).
+//
+// The value is given rather than being extracted from the node so it can be different. It can be
+// either an Array symbol type or a pointer.
+void FormatArrayNode(FormatNode* node, const ExprValue& value, int elt_count,
+                     const FormatOptions& options, fxl::RefPtr<EvalContext> eval_context,
+                     fit::deferred_callback cb);
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FORMAT_H_
