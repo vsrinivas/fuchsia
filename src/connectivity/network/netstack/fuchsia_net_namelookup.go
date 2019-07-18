@@ -13,6 +13,8 @@ import (
 	"netstack/dns"
 
 	fidlnet "fidl/fuchsia/net"
+
+	"github.com/google/netstack/tcpip"
 )
 
 type nameLookupImpl struct {
@@ -23,19 +25,29 @@ var _ fidlnet.NameLookup = (*nameLookupImpl)(nil)
 
 func (sp *nameLookupImpl) LookupIp(hostname string, options fidlnet.LookupIpOptions) (fidlnet.NameLookupLookupIpResult, error) {
 	var result fidlnet.NameLookupLookupIpResult
-
-	ips, err := sp.dnsClient.LookupIP(hostname)
-	if err != nil {
-		syslog.ErrorTf("DNS", "lookup failed with internal error: %s", err)
-		result.SetErr(fidlnet.LookupErrorInternalError)
-		return result, nil
-	}
-	if len(ips) == 0 {
-		result.SetErr(fidlnet.LookupErrorNotFound)
-		return result, nil
-	}
-
 	var response fidlnet.NameLookupLookupIpResponse
+
+	var ips []tcpip.Address
+
+	if hostname == "localhost" {
+		ips = []tcpip.Address{
+			ipv4Loopback,
+			ipv6Loopback,
+		}
+	} else {
+		var err error
+		ips, err = sp.dnsClient.LookupIP(hostname)
+		if err != nil {
+			syslog.ErrorTf("DNS", "lookup failed with internal error: %s", err)
+			result.SetErr(fidlnet.LookupErrorInternalError)
+			return result, nil
+		}
+		if len(ips) == 0 {
+			result.SetErr(fidlnet.LookupErrorNotFound)
+			return result, nil
+		}
+	}
+
 	for _, ip := range ips {
 		// TODO(wesleyac): Consider handling IPv4-mapped addresses as IPv4 addresses
 		if ip4 := ip.To4(); ip4 != "" && (options&fidlnet.LookupIpOptionsV4Addrs) != 0 {

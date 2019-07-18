@@ -56,6 +56,17 @@ const (
 	zeroIpMask tcpip.AddressMask = "\xff\xff\xff\xff"
 )
 
+var ipv4LoopbackBytes = func() [4]byte {
+	var b [4]uint8
+	copy(b[:], ipv4Loopback)
+	return b
+}()
+var ipv6LoopbackBytes = func() [16]byte {
+	var b [16]uint8
+	copy(b[:], ipv6Loopback)
+	return b
+}()
+
 // A Netstack tracks all of the running state of the network stack.
 type Netstack struct {
 	arena *eth.Arena
