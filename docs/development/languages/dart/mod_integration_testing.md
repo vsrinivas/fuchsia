@@ -204,7 +204,9 @@ The component manifest for our tests is
                 "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
             },
             "system-services": [
-                "fuchsia.net.SocketProvider"
+                "fuchsia.net.NameLookup",
+                "fuchsia.net.SocketProvider",
+                "fuchsia.posix.socket.Provider"
             ]
         }
     },
@@ -216,7 +218,9 @@ The component manifest for our tests is
             "shell"
         ],
         "services": [
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Environment"
         ]
     }
