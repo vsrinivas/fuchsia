@@ -143,22 +143,24 @@ static inline constexpr CodecVerb LP_SET_VERB(uint16_t payload) {
 }
 
 enum class CodecParam : uint8_t {
-  VENDOR_ID = 0x00,                 // Section 7.3.4.1
-  REVISION_ID = 0x02,               // Section 7.3.4.2
-  SUBORDINATE_NODE_COUNT = 0x04,    // Section 7.3.4.3
-  FUNCTION_GROUP_TYPE = 0x05,       // Section 7.3.4.4
-  AFG_CAPS = 0x08,                  // Section 7.3.4.5
-  AW_CAPS = 0x09,                   // Section 7.3.4.6
-  SUPPORTED_PCM_SIZE_RATE = 0x0a,   // Section 7.3.4.7
+  // clang-format off
+  VENDOR_ID                = 0x00,  // Section 7.3.4.1
+  REVISION_ID              = 0x02,  // Section 7.3.4.2
+  SUBORDINATE_NODE_COUNT   = 0x04,  // Section 7.3.4.3
+  FUNCTION_GROUP_TYPE      = 0x05,  // Section 7.3.4.4
+  AFG_CAPS                 = 0x08,  // Section 7.3.4.5
+  AW_CAPS                  = 0x09,  // Section 7.3.4.6
+  SUPPORTED_PCM_SIZE_RATE  = 0x0a,  // Section 7.3.4.7
   SUPPORTED_STREAM_FORMATS = 0x0b,  // Section 7.3.4.8
-  PIN_CAPS = 0x0c,                  // Section 7.3.4.9
-  INPUT_AMP_CAPS = 0x0d,            // Section 7.3.4.10
-  OUTPUT_AMP_CAPS = 0x12,           // Section 7.3.4.10
-  CONNECTION_LIST_LEN = 0x0e,       // Section 7.3.4.11
-  SUPPORTED_PWR_STATES = 0x0f,      // Section 7.3.4.12
-  PROCESSING_CAPS = 0x10,           // Section 7.3.4.13
-  GPIO_COUNT = 0x11,                // Section 7.3.4.14
-  VOLUME_KNOB_CAPS = 0x13,          // Section 7.3.4.15
+  PIN_CAPS                 = 0x0c,  // Section 7.3.4.9
+  INPUT_AMP_CAPS           = 0x0d,  // Section 7.3.4.10
+  OUTPUT_AMP_CAPS          = 0x12,  // Section 7.3.4.10
+  CONNECTION_LIST_LEN      = 0x0e,  // Section 7.3.4.11
+  SUPPORTED_PWR_STATES     = 0x0f,  // Section 7.3.4.12
+  PROCESSING_CAPS          = 0x10,  // Section 7.3.4.13
+  GPIO_COUNT               = 0x11,  // Section 7.3.4.14
+  VOLUME_KNOB_CAPS         = 0x13,  // Section 7.3.4.15
+  // clang-format on
 };
 
 static inline constexpr CodecParam AMP_CAPS(bool is_input) {
@@ -238,102 +240,110 @@ static inline constexpr CodecVerb EXECUTE_PIN_SENSE(bool right_chan = false) {
 
 constexpr CodecVerb EXECUTE_FUNCTION_RESET = SP_SET_VERB<0xFF>(0);  // Section 7.3.3.33
 
-constexpr CodecVerb GET_CONNECTION_SELECT_CONTROL = SP_GET_VERB<0x01>();  // Section 7.3.3.2
-constexpr CodecVerb GET_PROCESSING_STATE = SP_GET_VERB<0x03>();           // Section 7.3.3.4
-constexpr CodecVerb GET_COEFFICIENT_INDEX = LP_GET_VERB<0x05>();          // Section 7.3.3.5
-constexpr CodecVerb GET_PROCESSING_COEFFICIENT = LP_GET_VERB<0x04>();     // Section 7.3.3.6
-constexpr CodecVerb GET_CONVERTER_FORMAT = LP_GET_VERB<0x02>();           // Section 7.3.3.8
-constexpr CodecVerb GET_DIGITAL_CONV_CONTROL = SP_GET_VERB<0x0D>();       // Section 7.3.3.9
-constexpr CodecVerb GET_POWER_STATE = SP_GET_VERB<0x05>();                // Section 7.3.3.10
-constexpr CodecVerb GET_CONVERTER_STREAM_CHAN = SP_GET_VERB<0x06>();      // Section 7.3.3.11
-constexpr CodecVerb GET_INPUT_CONV_SDI_SELECT = SP_GET_VERB<0x04>();      // Section 7.3.3.12
-constexpr CodecVerb GET_PIN_WIDGET_CTRL = SP_GET_VERB<0x07>();            // Section 7.3.3.13
-constexpr CodecVerb GET_UNSOLICITED_RESP_CTRL = SP_GET_VERB<0x08>();      // Section 7.3.3.14
-constexpr CodecVerb GET_PIN_SENSE = SP_GET_VERB<0x09>();                  // Section 7.3.3.15
-constexpr CodecVerb GET_EAPD_BTL_ENABLE = SP_GET_VERB<0x0C>();            // Section 7.3.3.16
-constexpr CodecVerb GET_GPI_DATA = SP_GET_VERB<0x10>();                   // Section 7.3.3.17
-constexpr CodecVerb GET_GPI_WAKE_ENB_MASK = SP_GET_VERB<0x11>();          // Section 7.3.3.18
-constexpr CodecVerb GET_GPI_UNSOLICITED_ENB_MASK = SP_GET_VERB<0x12>();   // Section 7.3.3.19
-constexpr CodecVerb GET_GPI_STICKY_MASK = SP_GET_VERB<0x13>();            // Section 7.3.3.20
-constexpr CodecVerb GET_GPO_DATA = SP_GET_VERB<0x14>();                   // Section 7.3.3.21
-constexpr CodecVerb GET_GPIO_DATA = SP_GET_VERB<0x15>();                  // Section 7.3.3.22
-constexpr CodecVerb GET_GPIO_ENB_MASK = SP_GET_VERB<0x16>();              // Section 7.3.3.23
-constexpr CodecVerb GET_GPIO_DIR = SP_GET_VERB<0x17>();                   // Section 7.3.3.24
-constexpr CodecVerb GET_GPIO_WAKE_ENB_MASK = SP_GET_VERB<0x18>();         // Section 7.3.3.25
-constexpr CodecVerb GET_GPIO_UNSOLICITED_ENB_MASK = SP_GET_VERB<0x19>();  // Section 7.3.3.26
-constexpr CodecVerb GET_GPIO_STICKY_MASK = SP_GET_VERB<0x1a>();           // Section 7.3.3.27
-constexpr CodecVerb GET_BEEP_GENERATION = SP_GET_VERB<0x0a>();            // Section 7.3.3.28
-constexpr CodecVerb GET_VOLUME_KNOB = SP_GET_VERB<0x0f>();                // Section 7.3.3.29
-constexpr CodecVerb GET_IMPLEMENTATION_ID = SP_GET_VERB<0x20>();          // Section 7.3.3.30
-constexpr CodecVerb GET_CONFIG_DEFAULT = SP_GET_VERB<0x1c>();             // Section 7.3.3.31
-constexpr CodecVerb GET_STRIPE_CONTROL = SP_GET_VERB<0x24>();             // Section 7.3.3.32
-constexpr CodecVerb GET_EDID_LIKE_DATA = SP_GET_VERB<0x2F>();             // Section 7.3.3.34
-constexpr CodecVerb GET_CONV_CHANNEL_COUNT = SP_GET_VERB<0x2d>();         // Section 7.3.3.35
-constexpr CodecVerb GET_DIP_SIZE = SP_GET_VERB<0x2e>();                   // Section 7.3.3.36
-constexpr CodecVerb GET_DIP_INDEX = SP_GET_VERB<0x30>();                  // Section 7.3.3.37
-constexpr CodecVerb GET_DIP_DATA = SP_GET_VERB<0x31>();                   // Section 7.3.3.38
-constexpr CodecVerb GET_DIP_XMIT_CTRL = SP_GET_VERB<0x32>();              // Section 7.3.3.39
-constexpr CodecVerb GET_CP_CONTROL = SP_GET_VERB<0x33>();                 // Section 7.3.3.40
-constexpr CodecVerb GET_ASP_CHAN_MAPPING = SP_GET_VERB<0x34>();           // Section 7.3.3.41
+// clang-format off
+constexpr CodecVerb GET_CONNECTION_SELECT_CONTROL = SP_GET_VERB<0x01>(); // Section 7.3.3.2
+constexpr CodecVerb GET_PROCESSING_STATE          = SP_GET_VERB<0x03>(); // Section 7.3.3.4
+constexpr CodecVerb GET_COEFFICIENT_INDEX         = LP_GET_VERB<0x05>(); // Section 7.3.3.5
+constexpr CodecVerb GET_PROCESSING_COEFFICIENT    = LP_GET_VERB<0x04>(); // Section 7.3.3.6
+constexpr CodecVerb GET_CONVERTER_FORMAT          = LP_GET_VERB<0x02>(); // Section 7.3.3.8
+constexpr CodecVerb GET_DIGITAL_CONV_CONTROL      = SP_GET_VERB<0x0D>(); // Section 7.3.3.9
+constexpr CodecVerb GET_POWER_STATE               = SP_GET_VERB<0x05>(); // Section 7.3.3.10
+constexpr CodecVerb GET_CONVERTER_STREAM_CHAN     = SP_GET_VERB<0x06>(); // Section 7.3.3.11
+constexpr CodecVerb GET_INPUT_CONV_SDI_SELECT     = SP_GET_VERB<0x04>(); // Section 7.3.3.12
+constexpr CodecVerb GET_PIN_WIDGET_CTRL           = SP_GET_VERB<0x07>(); // Section 7.3.3.13
+constexpr CodecVerb GET_UNSOLICITED_RESP_CTRL     = SP_GET_VERB<0x08>(); // Section 7.3.3.14
+constexpr CodecVerb GET_PIN_SENSE                 = SP_GET_VERB<0x09>(); // Section 7.3.3.15
+constexpr CodecVerb GET_EAPD_BTL_ENABLE           = SP_GET_VERB<0x0C>(); // Section 7.3.3.16
+constexpr CodecVerb GET_GPI_DATA                  = SP_GET_VERB<0x10>(); // Section 7.3.3.17
+constexpr CodecVerb GET_GPI_WAKE_ENB_MASK         = SP_GET_VERB<0x11>(); // Section 7.3.3.18
+constexpr CodecVerb GET_GPI_UNSOLICITED_ENB_MASK  = SP_GET_VERB<0x12>(); // Section 7.3.3.19
+constexpr CodecVerb GET_GPI_STICKY_MASK           = SP_GET_VERB<0x13>(); // Section 7.3.3.20
+constexpr CodecVerb GET_GPO_DATA                  = SP_GET_VERB<0x14>(); // Section 7.3.3.21
+constexpr CodecVerb GET_GPIO_DATA                 = SP_GET_VERB<0x15>(); // Section 7.3.3.22
+constexpr CodecVerb GET_GPIO_ENB_MASK             = SP_GET_VERB<0x16>(); // Section 7.3.3.23
+constexpr CodecVerb GET_GPIO_DIR                  = SP_GET_VERB<0x17>(); // Section 7.3.3.24
+constexpr CodecVerb GET_GPIO_WAKE_ENB_MASK        = SP_GET_VERB<0x18>(); // Section 7.3.3.25
+constexpr CodecVerb GET_GPIO_UNSOLICITED_ENB_MASK = SP_GET_VERB<0x19>(); // Section 7.3.3.26
+constexpr CodecVerb GET_GPIO_STICKY_MASK          = SP_GET_VERB<0x1a>(); // Section 7.3.3.27
+constexpr CodecVerb GET_BEEP_GENERATION           = SP_GET_VERB<0x0a>(); // Section 7.3.3.28
+constexpr CodecVerb GET_VOLUME_KNOB               = SP_GET_VERB<0x0f>(); // Section 7.3.3.29
+constexpr CodecVerb GET_IMPLEMENTATION_ID         = SP_GET_VERB<0x20>(); // Section 7.3.3.30
+constexpr CodecVerb GET_CONFIG_DEFAULT            = SP_GET_VERB<0x1c>(); // Section 7.3.3.31
+constexpr CodecVerb GET_STRIPE_CONTROL            = SP_GET_VERB<0x24>(); // Section 7.3.3.32
+constexpr CodecVerb GET_EDID_LIKE_DATA            = SP_GET_VERB<0x2F>(); // Section 7.3.3.34
+constexpr CodecVerb GET_CONV_CHANNEL_COUNT        = SP_GET_VERB<0x2d>(); // Section 7.3.3.35
+constexpr CodecVerb GET_DIP_SIZE                  = SP_GET_VERB<0x2e>(); // Section 7.3.3.36
+constexpr CodecVerb GET_DIP_INDEX                 = SP_GET_VERB<0x30>(); // Section 7.3.3.37
+constexpr CodecVerb GET_DIP_DATA                  = SP_GET_VERB<0x31>(); // Section 7.3.3.38
+constexpr CodecVerb GET_DIP_XMIT_CTRL             = SP_GET_VERB<0x32>(); // Section 7.3.3.39
+constexpr CodecVerb GET_CP_CONTROL                = SP_GET_VERB<0x33>(); // Section 7.3.3.40
+constexpr CodecVerb GET_ASP_CHAN_MAPPING          = SP_GET_VERB<0x34>(); // Section 7.3.3.41
+// clang-format on
 
 #define MAKE_SET_CMD(_name, _SLP, _val_type, _id) \
   static inline constexpr CodecVerb _name(_val_type val) { return _SLP##_SET_VERB<_id>(val); }
 
-MAKE_SET_CMD(SET_CONNECTION_SELECT_CONTROL, SP, uint8_t, 0x01)  // Section 7.3.3.2
-MAKE_SET_CMD(SET_PROCESSING_STATE, SP, uint8_t, 0x03)           // Section 7.3.3.4
-MAKE_SET_CMD(SET_COEFFICIENT_INDEX, LP, uint16_t, 0x05)         // Section 7.3.3.5
-MAKE_SET_CMD(SET_PROCESSING_COEFFICIENT, LP, uint16_t, 0x04)    // Section 7.3.3.6
-MAKE_SET_CMD(SET_AMPLIFIER_GAIN_MUTE, LP, uint16_t, 0x03)       // Section 7.3.3.7
-MAKE_SET_CMD(SET_CONVERTER_FORMAT, LP, uint16_t, 0x02)          // Section 7.3.3.8
-MAKE_SET_CMD(SET_DIGITAL_CONV_CONTROL_1, SP, uint8_t, 0x0D)     // Section 7.3.3.9
-MAKE_SET_CMD(SET_DIGITAL_CONV_CONTROL_2, SP, uint8_t, 0x0E)     // Section 7.3.3.9
-MAKE_SET_CMD(SET_DIGITAL_CONV_CONTROL_3, SP, uint8_t, 0x3E)     // Section 7.3.3.9
-MAKE_SET_CMD(SET_DIGITAL_CONV_CONTROL_4, SP, uint8_t, 0x3F)     // Section 7.3.3.9
-MAKE_SET_CMD(SET_POWER_STATE, SP, uint8_t, 0x05)                // Section 7.3.3.10
-MAKE_SET_CMD(SET_INPUT_CONV_SDI_SELECT, SP, uint8_t, 0x04)      // Section 7.3.3.12
-MAKE_SET_CMD(SET_EAPD_BTL_ENABLE, SP, uint8_t, 0x0C)            // Section 7.3.3.16
-MAKE_SET_CMD(SET_GPI_DATA, SP, uint8_t, 0x10)                   // Section 7.3.3.17
-MAKE_SET_CMD(SET_GPI_WAKE_ENB_MASK, SP, uint8_t, 0x11)          // Section 7.3.3.18
-MAKE_SET_CMD(SET_GPI_UNSOLICITED_ENB_MASK, SP, uint8_t, 0x12)   // Section 7.3.3.19
-MAKE_SET_CMD(SET_GPI_STICKY_MASK, SP, uint8_t, 0x13)            // Section 7.3.3.20
-MAKE_SET_CMD(SET_GPO_DATA, SP, uint8_t, 0x14)                   // Section 7.3.3.21
-MAKE_SET_CMD(SET_GPIO_DATA, SP, uint8_t, 0x15)                  // Section 7.3.3.22
-MAKE_SET_CMD(SET_GPIO_ENB_MASK, SP, uint8_t, 0x16)              // Section 7.3.3.23
-MAKE_SET_CMD(SET_GPIO_DIR, SP, uint8_t, 0x17)                   // Section 7.3.3.24
-MAKE_SET_CMD(SET_GPIO_WAKE_ENB_MASK, SP, uint8_t, 0x18)         // Section 7.3.3.25
-MAKE_SET_CMD(SET_GPIO_UNSOLICITED_ENB_MASK, SP, uint8_t, 0x19)  // Section 7.3.3.26
-MAKE_SET_CMD(SET_GPIO_STICKY_MASK, SP, uint8_t, 0x1a)           // Section 7.3.3.27
-MAKE_SET_CMD(SET_BEEP_GENERATION, SP, uint8_t, 0x0a)            // Section 7.3.3.28
-MAKE_SET_CMD(SET_VOLUME_KNOB, SP, uint8_t, 0x0f)                // Section 7.3.3.29
-MAKE_SET_CMD(SET_IMPLEMENTATION_ID_1, SP, uint8_t, 0x20)        // Section 7.3.3.30
-MAKE_SET_CMD(SET_IMPLEMENTATION_ID_2, SP, uint8_t, 0x21)        // Section 7.3.3.30
-MAKE_SET_CMD(SET_IMPLEMENTATION_ID_3, SP, uint8_t, 0x22)        // Section 7.3.3.30
-MAKE_SET_CMD(SET_IMPLEMENTATION_ID_4, SP, uint8_t, 0x23)        // Section 7.3.3.30
-MAKE_SET_CMD(SET_CONFIG_DEFAULT_1, SP, uint8_t, 0x1c)           // Section 7.3.3.31
-MAKE_SET_CMD(SET_CONFIG_DEFAULT_2, SP, uint8_t, 0x1d)           // Section 7.3.3.31
-MAKE_SET_CMD(SET_CONFIG_DEFAULT_3, SP, uint8_t, 0x1e)           // Section 7.3.3.31
-MAKE_SET_CMD(SET_CONFIG_DEFAULT_4, SP, uint8_t, 0x1f)           // Section 7.3.3.31
-MAKE_SET_CMD(SET_STRIPE_CONTROL, SP, uint8_t, 0x24)             // Section 7.3.3.32
-MAKE_SET_CMD(SET_CONV_CHANNEL_COUNT, SP, uint8_t, 0x2d)         // Section 7.3.3.35
-MAKE_SET_CMD(SET_DIP_INDEX, SP, uint8_t, 0x30)                  // Section 7.3.3.37
-MAKE_SET_CMD(SET_DIP_DATA, SP, uint8_t, 0x31)                   // Section 7.3.3.38
-MAKE_SET_CMD(SET_DIP_XMIT_CTRL, SP, uint8_t, 0x32)              // Section 7.3.3.39
-MAKE_SET_CMD(SET_CP_CONTROL, SP, uint8_t, 0x33)                 // Section 7.3.3.40
-MAKE_SET_CMD(SET_ASP_CHAN_MAPPING, SP, uint8_t, 0x34)           // Section 7.3.3.41
+// clang-format off
+MAKE_SET_CMD(SET_CONNECTION_SELECT_CONTROL, SP, uint8_t,  0x01) // Section 7.3.3.2
+MAKE_SET_CMD(SET_PROCESSING_STATE,          SP, uint8_t,  0x03) // Section 7.3.3.4
+MAKE_SET_CMD(SET_COEFFICIENT_INDEX,         LP, uint16_t, 0x05) // Section 7.3.3.5
+MAKE_SET_CMD(SET_PROCESSING_COEFFICIENT,    LP, uint16_t, 0x04) // Section 7.3.3.6
+MAKE_SET_CMD(SET_AMPLIFIER_GAIN_MUTE,       LP, uint16_t, 0x03) // Section 7.3.3.7
+MAKE_SET_CMD(SET_CONVERTER_FORMAT,          LP, uint16_t, 0x02) // Section 7.3.3.8
+MAKE_SET_CMD(SET_DIGITAL_CONV_CONTROL_1,    SP, uint8_t,  0x0D) // Section 7.3.3.9
+MAKE_SET_CMD(SET_DIGITAL_CONV_CONTROL_2,    SP, uint8_t,  0x0E) // Section 7.3.3.9
+MAKE_SET_CMD(SET_DIGITAL_CONV_CONTROL_3,    SP, uint8_t,  0x3E) // Section 7.3.3.9
+MAKE_SET_CMD(SET_DIGITAL_CONV_CONTROL_4,    SP, uint8_t,  0x3F) // Section 7.3.3.9
+MAKE_SET_CMD(SET_POWER_STATE,               SP, uint8_t,  0x05) // Section 7.3.3.10
+MAKE_SET_CMD(SET_INPUT_CONV_SDI_SELECT,     SP, uint8_t,  0x04) // Section 7.3.3.12
+MAKE_SET_CMD(SET_EAPD_BTL_ENABLE,           SP, uint8_t,  0x0C) // Section 7.3.3.16
+MAKE_SET_CMD(SET_GPI_DATA,                  SP, uint8_t,  0x10) // Section 7.3.3.17
+MAKE_SET_CMD(SET_GPI_WAKE_ENB_MASK,         SP, uint8_t,  0x11) // Section 7.3.3.18
+MAKE_SET_CMD(SET_GPI_UNSOLICITED_ENB_MASK,  SP, uint8_t,  0x12) // Section 7.3.3.19
+MAKE_SET_CMD(SET_GPI_STICKY_MASK,           SP, uint8_t,  0x13) // Section 7.3.3.20
+MAKE_SET_CMD(SET_GPO_DATA,                  SP, uint8_t,  0x14) // Section 7.3.3.21
+MAKE_SET_CMD(SET_GPIO_DATA,                 SP, uint8_t,  0x15) // Section 7.3.3.22
+MAKE_SET_CMD(SET_GPIO_ENB_MASK,             SP, uint8_t,  0x16) // Section 7.3.3.23
+MAKE_SET_CMD(SET_GPIO_DIR,                  SP, uint8_t,  0x17) // Section 7.3.3.24
+MAKE_SET_CMD(SET_GPIO_WAKE_ENB_MASK,        SP, uint8_t,  0x18) // Section 7.3.3.25
+MAKE_SET_CMD(SET_GPIO_UNSOLICITED_ENB_MASK, SP, uint8_t,  0x19) // Section 7.3.3.26
+MAKE_SET_CMD(SET_GPIO_STICKY_MASK,          SP, uint8_t,  0x1a) // Section 7.3.3.27
+MAKE_SET_CMD(SET_BEEP_GENERATION,           SP, uint8_t,  0x0a) // Section 7.3.3.28
+MAKE_SET_CMD(SET_VOLUME_KNOB,               SP, uint8_t,  0x0f) // Section 7.3.3.29
+MAKE_SET_CMD(SET_IMPLEMENTATION_ID_1,       SP, uint8_t,  0x20) // Section 7.3.3.30
+MAKE_SET_CMD(SET_IMPLEMENTATION_ID_2,       SP, uint8_t,  0x21) // Section 7.3.3.30
+MAKE_SET_CMD(SET_IMPLEMENTATION_ID_3,       SP, uint8_t,  0x22) // Section 7.3.3.30
+MAKE_SET_CMD(SET_IMPLEMENTATION_ID_4,       SP, uint8_t,  0x23) // Section 7.3.3.30
+MAKE_SET_CMD(SET_CONFIG_DEFAULT_1,          SP, uint8_t,  0x1c) // Section 7.3.3.31
+MAKE_SET_CMD(SET_CONFIG_DEFAULT_2,          SP, uint8_t,  0x1d) // Section 7.3.3.31
+MAKE_SET_CMD(SET_CONFIG_DEFAULT_3,          SP, uint8_t,  0x1e) // Section 7.3.3.31
+MAKE_SET_CMD(SET_CONFIG_DEFAULT_4,          SP, uint8_t,  0x1f) // Section 7.3.3.31
+MAKE_SET_CMD(SET_STRIPE_CONTROL,            SP, uint8_t,  0x24) // Section 7.3.3.32
+MAKE_SET_CMD(SET_CONV_CHANNEL_COUNT,        SP, uint8_t,  0x2d) // Section 7.3.3.35
+MAKE_SET_CMD(SET_DIP_INDEX,                 SP, uint8_t,  0x30) // Section 7.3.3.37
+MAKE_SET_CMD(SET_DIP_DATA,                  SP, uint8_t,  0x31) // Section 7.3.3.38
+MAKE_SET_CMD(SET_DIP_XMIT_CTRL,             SP, uint8_t,  0x32) // Section 7.3.3.39
+MAKE_SET_CMD(SET_CP_CONTROL,                SP, uint8_t,  0x33) // Section 7.3.3.40
+MAKE_SET_CMD(SET_ASP_CHAN_MAPPING,          SP, uint8_t,  0x34) // Section 7.3.3.41
+// clang-format on
 
 #undef MAKE_SET_CMD
 
 // Constants used for power states.  See sections 7.3.3.10 and 7.3.4.12
-constexpr uint8_t HDA_PS_D0 = 0;
-constexpr uint8_t HDA_PS_D1 = 1;
-constexpr uint8_t HDA_PS_D2 = 2;
-constexpr uint8_t HDA_PS_D3HOT = 3;
+// clang-format off
+constexpr uint8_t HDA_PS_D0     = 0;
+constexpr uint8_t HDA_PS_D1     = 1;
+constexpr uint8_t HDA_PS_D2     = 2;
+constexpr uint8_t HDA_PS_D3HOT  = 3;
 constexpr uint8_t HDA_PS_D3COLD = 4;
+// clang-format on
 
 // Constants used for EAPD/BTL control.  See sections 7.3.3.16
+// clang-format off
 constexpr uint8_t EAPD_BTL_BALANCED_OUT = 0x01u;
-constexpr uint8_t EAPD_BTL_POWER_AMP = 0x02u;
-constexpr uint8_t EAPD_BTL_LR_SWAP = 0x04u;
+constexpr uint8_t EAPD_BTL_POWER_AMP    = 0x02u;
+constexpr uint8_t EAPD_BTL_LR_SWAP      = 0x04u;
+// clang-format on
 
 }  // namespace intel_hda
 }  // namespace audio

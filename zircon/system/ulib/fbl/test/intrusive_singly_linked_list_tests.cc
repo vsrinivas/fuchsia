@@ -23,6 +23,7 @@ struct OtherListTraits {
 template <typename PtrType>
 class SLLTraits {
 public:
+// clang-format off
     using TestObjBaseType         = TestObjBase;
 
     using ContainerType           = SinglyLinkedList<PtrType>;
@@ -45,6 +46,7 @@ public:
     using TaggedType1 = TaggedSinglyLinkedList<PtrType, Tag1>;
     using TaggedType2 = TaggedSinglyLinkedList<PtrType, Tag2>;
     using TaggedType3 = TaggedSinglyLinkedList<PtrType, Tag3>;
+// clang-format on
 };
 
 // Just a sanity check so we know our metaprogramming nonsense is
@@ -61,6 +63,7 @@ using SUPDDTE = DEFINE_TEST_THUNK(Sequence, SLL, StdUniquePtrDefaultDeleter);
 using SUPCDTE = DEFINE_TEST_THUNK(Sequence, SLL, StdUniquePtrCustomDeleter);
 using RPTE    = DEFINE_TEST_THUNK(Sequence, SLL, RefPtr);
 
+// clang-format off
 BEGIN_TEST_CASE(single_linked_list_tests)
 //////////////////////////////////////////
 // General container specific tests.
@@ -280,6 +283,7 @@ RUN_NAMED_TEST("ReplaceIfMove (std::uptr<Del>)",            SUPCDTE::ReplaceIfMo
 RUN_NAMED_TEST("ReplaceIfMove (RefPtr)",                    RPTE::ReplaceIfMoveTest)
 
 END_TEST_CASE(single_linked_list_tests)
+// clang-format on
 
 }  // namespace intrusive_containers
 }  // namespace tests

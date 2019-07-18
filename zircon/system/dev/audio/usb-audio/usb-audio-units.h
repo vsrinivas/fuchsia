@@ -27,6 +27,7 @@ class AudioUnit : public fbl::WAVLTreeContainable<fbl::RefPtr<AudioUnit>>,
   public:
     static constexpr uint32_t kInvalidID = 0xFFFFFFFF;
 
+    // clang-format off
     enum class Type : uint8_t {
         InputTerminal  = USB_AUDIO_AC_INPUT_TERMINAL,
         OutputTerminal = USB_AUDIO_AC_OUTPUT_TERMINAL,
@@ -36,6 +37,7 @@ class AudioUnit : public fbl::WAVLTreeContainable<fbl::RefPtr<AudioUnit>>,
         ProcessingUnit = USB_AUDIO_AC_PROCESSING_UNIT,
         ExtensionUnit  = USB_AUDIO_AC_EXTENSION_UNIT,
     };
+    // clang-format on
 
     static fbl::RefPtr<AudioUnit> Create(const DescriptorListMemory::Iterator& iter, uint8_t iid);
 

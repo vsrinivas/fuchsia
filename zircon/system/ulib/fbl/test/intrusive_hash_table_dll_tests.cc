@@ -63,6 +63,7 @@ private:
 template <typename PtrType>
 class HTDLLTraits {
 public:
+// clang-format off
     using ObjType = typename ::fbl::internal::ContainerPtrTraits<PtrType>::ValueType;
 
     using ContainerType           = HashTable<size_t, PtrType, DoublyLinkedList<PtrType>>;
@@ -98,8 +99,10 @@ public:
     using TaggedType1 = HashTable<size_t, PtrType, TaggedDoublyLinkedList<PtrType, Tag1>>;
     using TaggedType2 = HashTable<size_t, PtrType, TaggedDoublyLinkedList<PtrType, Tag2>>;
     using TaggedType3 = HashTable<size_t, PtrType, TaggedDoublyLinkedList<PtrType, Tag3>>;
+// clang-format on
 };
 
+// clang-format off
 DEFINE_TEST_OBJECTS(HTDLL);
 using UMTE    = DEFINE_TEST_THUNK(Associative, HTDLL, Unmanaged);
 using UPTE    = DEFINE_TEST_THUNK(Associative, HTDLL, UniquePtr);
@@ -262,6 +265,7 @@ RUN_NAMED_TEST("InsertOrReplace (std::uptr)",              SUPDDTE::InsertOrRepl
 RUN_NAMED_TEST("InsertOrReplace (std::uptr<Del>)",         SUPCDTE::InsertOrReplaceTest)
 RUN_NAMED_TEST("InsertOrReplace (RefPtr)",                 RPTE::InsertOrReplaceTest)
 END_TEST_CASE(hashtable_dll_tests)
+// clang-format on
 
 }  // namespace intrusive_containers
 }  // namespace tests

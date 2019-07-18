@@ -202,68 +202,70 @@ static zx_status_t ParseAudioWidgetType(AudioWidgetStatePtr& ptr, const CodecRes
     return ZX_OK;
 }
 
+// clang-format off
 static const IntelHDACodec::CommandListEntry<AudioWidgetState> FETCH_AUDIO_INPUT_CAPS[] = {
-    { GET_PARAM(CodecParam::SUPPORTED_PCM_SIZE_RATE),  ParseAWPcmSizeRate },
-    { GET_PARAM(CodecParam::SUPPORTED_STREAM_FORMATS), ParseAWPcmFormats },
-    { GET_PARAM(CodecParam::INPUT_AMP_CAPS),           ParseAWInputAmpCaps },
-    { GET_PARAM(CodecParam::CONNECTION_LIST_LEN),      ParseAWConnectionListLen },
-    { GET_PARAM(CodecParam::PROCESSING_CAPS),          ParseAWProcessingCaps },
-    { GET_CONVERTER_STREAM_CHAN,                       ParseAWStreamChan },
+  { GET_PARAM(CodecParam::SUPPORTED_PCM_SIZE_RATE),  ParseAWPcmSizeRate },
+  { GET_PARAM(CodecParam::SUPPORTED_STREAM_FORMATS), ParseAWPcmFormats },
+  { GET_PARAM(CodecParam::INPUT_AMP_CAPS),           ParseAWInputAmpCaps },
+  { GET_PARAM(CodecParam::CONNECTION_LIST_LEN),      ParseAWConnectionListLen },
+  { GET_PARAM(CodecParam::PROCESSING_CAPS),          ParseAWProcessingCaps },
+  { GET_CONVERTER_STREAM_CHAN,                       ParseAWStreamChan },
 };
 
 static const IntelHDACodec::CommandListEntry<AudioWidgetState> FETCH_AUDIO_OUTPUT_CAPS[] = {
-    { GET_PARAM(CodecParam::SUPPORTED_PCM_SIZE_RATE),  ParseAWPcmSizeRate },
-    { GET_PARAM(CodecParam::SUPPORTED_STREAM_FORMATS), ParseAWPcmFormats },
-    { GET_PARAM(CodecParam::OUTPUT_AMP_CAPS),          ParseAWOutputAmpCaps },
-    { GET_PARAM(CodecParam::PROCESSING_CAPS),          ParseAWProcessingCaps },
-    { GET_CONVERTER_STREAM_CHAN,                       ParseAWStreamChan },
+  { GET_PARAM(CodecParam::SUPPORTED_PCM_SIZE_RATE),  ParseAWPcmSizeRate },
+  { GET_PARAM(CodecParam::SUPPORTED_STREAM_FORMATS), ParseAWPcmFormats },
+  { GET_PARAM(CodecParam::OUTPUT_AMP_CAPS),          ParseAWOutputAmpCaps },
+  { GET_PARAM(CodecParam::PROCESSING_CAPS),          ParseAWProcessingCaps },
+  { GET_CONVERTER_STREAM_CHAN,                       ParseAWStreamChan },
 };
 
 static const IntelHDACodec::CommandListEntry<AudioWidgetState> FETCH_DIGITAL_PIN_COMPLEX_CAPS[] = {
-    { GET_PARAM(CodecParam::PIN_CAPS),             ParseAWPinCaps },
-    { GET_PARAM(CodecParam::OUTPUT_AMP_CAPS),      ParseAWOutputAmpCaps },
-    { GET_PARAM(CodecParam::CONNECTION_LIST_LEN),  ParseAWConnectionListLen },
-    { GET_PARAM(CodecParam::PROCESSING_CAPS),      ParseAWProcessingCaps },
-    { GET_CONFIG_DEFAULT,                          ParseAWConfigDefaults },
-    { GET_PIN_WIDGET_CTRL,                         ParseAWPinWidgetCtrl },
+  { GET_PARAM(CodecParam::PIN_CAPS),             ParseAWPinCaps },
+  { GET_PARAM(CodecParam::OUTPUT_AMP_CAPS),      ParseAWOutputAmpCaps },
+  { GET_PARAM(CodecParam::CONNECTION_LIST_LEN),  ParseAWConnectionListLen },
+  { GET_PARAM(CodecParam::PROCESSING_CAPS),      ParseAWProcessingCaps },
+  { GET_CONFIG_DEFAULT,                          ParseAWConfigDefaults },
+  { GET_PIN_WIDGET_CTRL,                         ParseAWPinWidgetCtrl },
 };
 
 static const IntelHDACodec::CommandListEntry<AudioWidgetState>
 FETCH_NON_DIGITAL_PIN_COMPLEX_CAPS[] = {
-    { GET_PARAM(CodecParam::PIN_CAPS),             ParseAWPinCaps },
-    { GET_PARAM(CodecParam::INPUT_AMP_CAPS),       ParseAWInputAmpCaps },
-    { GET_PARAM(CodecParam::OUTPUT_AMP_CAPS),      ParseAWOutputAmpCaps },
-    { GET_PARAM(CodecParam::CONNECTION_LIST_LEN),  ParseAWConnectionListLen },
-    { GET_PARAM(CodecParam::PROCESSING_CAPS),      ParseAWProcessingCaps },
-    { GET_CONFIG_DEFAULT,                          ParseAWConfigDefaults },
-    { GET_PIN_WIDGET_CTRL,                         ParseAWPinWidgetCtrl },
+  { GET_PARAM(CodecParam::PIN_CAPS),             ParseAWPinCaps },
+  { GET_PARAM(CodecParam::INPUT_AMP_CAPS),       ParseAWInputAmpCaps },
+  { GET_PARAM(CodecParam::OUTPUT_AMP_CAPS),      ParseAWOutputAmpCaps },
+  { GET_PARAM(CodecParam::CONNECTION_LIST_LEN),  ParseAWConnectionListLen },
+  { GET_PARAM(CodecParam::PROCESSING_CAPS),      ParseAWProcessingCaps },
+  { GET_CONFIG_DEFAULT,                          ParseAWConfigDefaults },
+  { GET_PIN_WIDGET_CTRL,                         ParseAWPinWidgetCtrl },
 };
 
 static const IntelHDACodec::CommandListEntry<AudioWidgetState> FETCH_MIXER_CAPS[] = {
-    { GET_PARAM(CodecParam::INPUT_AMP_CAPS),       ParseAWInputAmpCaps },
-    { GET_PARAM(CodecParam::OUTPUT_AMP_CAPS),      ParseAWOutputAmpCaps },
-    { GET_PARAM(CodecParam::CONNECTION_LIST_LEN),  ParseAWConnectionListLen },
+  { GET_PARAM(CodecParam::INPUT_AMP_CAPS),       ParseAWInputAmpCaps },
+  { GET_PARAM(CodecParam::OUTPUT_AMP_CAPS),      ParseAWOutputAmpCaps },
+  { GET_PARAM(CodecParam::CONNECTION_LIST_LEN),  ParseAWConnectionListLen },
 };
 
 static const IntelHDACodec::CommandListEntry<AudioWidgetState> FETCH_SELECTOR_CAPS[] = {
-    { GET_PARAM(CodecParam::INPUT_AMP_CAPS),       ParseAWInputAmpCaps },
-    { GET_PARAM(CodecParam::OUTPUT_AMP_CAPS),      ParseAWOutputAmpCaps },
-    { GET_PARAM(CodecParam::CONNECTION_LIST_LEN),  ParseAWConnectionListLen },
-    { GET_PARAM(CodecParam::PROCESSING_CAPS),      ParseAWProcessingCaps },
+  { GET_PARAM(CodecParam::INPUT_AMP_CAPS),       ParseAWInputAmpCaps },
+  { GET_PARAM(CodecParam::OUTPUT_AMP_CAPS),      ParseAWOutputAmpCaps },
+  { GET_PARAM(CodecParam::CONNECTION_LIST_LEN),  ParseAWConnectionListLen },
+  { GET_PARAM(CodecParam::PROCESSING_CAPS),      ParseAWProcessingCaps },
 };
 
 static const IntelHDACodec::CommandListEntry<AudioWidgetState> FETCH_POWER_CAPS[] = {
-    { GET_PARAM(CodecParam::CONNECTION_LIST_LEN),  ParseAWConnectionListLen },
+  { GET_PARAM(CodecParam::CONNECTION_LIST_LEN),  ParseAWConnectionListLen },
 };
 
 static const IntelHDACodec::CommandListEntry<AudioWidgetState> FETCH_VOLUME_KNOB_CAPS[] = {
-    { GET_PARAM(CodecParam::CONNECTION_LIST_LEN),  ParseAWConnectionListLen },
-    { GET_PARAM(CodecParam::VOLUME_KNOB_CAPS),     ParseAWVolumeKnobCaps },
+  { GET_PARAM(CodecParam::CONNECTION_LIST_LEN),  ParseAWConnectionListLen },
+  { GET_PARAM(CodecParam::VOLUME_KNOB_CAPS),     ParseAWVolumeKnobCaps },
 };
 
 static const IntelHDACodec::CommandListEntry<AudioWidgetStatePtr> FETCH_WIDGET_TYPE[] = {
-    { GET_PARAM(CodecParam::AW_CAPS), ParseAudioWidgetType },
+  { GET_PARAM(CodecParam::AW_CAPS), ParseAudioWidgetType },
 };
+// clang-format on
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -334,14 +336,16 @@ static zx_status_t ParseAFGWidgetCount(AudioFunctionGroupState& afg, const Codec
 }
 
 static const IntelHDACodec::CommandListEntry<AudioFunctionGroupState> FETCH_AFG_PROPERTIES[] {
-    { GET_PARAM(CodecParam::AFG_CAPS),                 ParseAFGCaps },
-    { GET_PARAM(CodecParam::SUPPORTED_PCM_SIZE_RATE),  ParseAFGPcmSizeRate },
-    { GET_PARAM(CodecParam::SUPPORTED_STREAM_FORMATS), ParseAFGPcmFormats },
-    { GET_PARAM(CodecParam::INPUT_AMP_CAPS),           ParseAFGInputAmpCaps },
-    { GET_PARAM(CodecParam::OUTPUT_AMP_CAPS),          ParseAFGOutputAmpCaps },
-    { GET_PARAM(CodecParam::GPIO_COUNT),               ParseAFGGPIOCount },
-    { GET_IMPLEMENTATION_ID,                           ParseAFGImplId },
-    { GET_PARAM(CodecParam::SUBORDINATE_NODE_COUNT),   ParseAFGWidgetCount },
+// clang-format off
+  { GET_PARAM(CodecParam::AFG_CAPS),                 ParseAFGCaps },
+  { GET_PARAM(CodecParam::SUPPORTED_PCM_SIZE_RATE),  ParseAFGPcmSizeRate },
+  { GET_PARAM(CodecParam::SUPPORTED_STREAM_FORMATS), ParseAFGPcmFormats },
+  { GET_PARAM(CodecParam::INPUT_AMP_CAPS),           ParseAFGInputAmpCaps },
+  { GET_PARAM(CodecParam::OUTPUT_AMP_CAPS),          ParseAFGOutputAmpCaps },
+  { GET_PARAM(CodecParam::GPIO_COUNT),               ParseAFGGPIOCount },
+  { GET_IMPLEMENTATION_ID,                           ParseAFGImplId },
+  { GET_PARAM(CodecParam::SUBORDINATE_NODE_COUNT),   ParseAFGWidgetCount },
+// clang-format on
 };
 
 static zx_status_t ParseFnGroupType(FunctionGroupStatePtr& ptr, const CodecResponse& resp) {
@@ -432,9 +436,11 @@ static zx_status_t ParseFnGroupCount(CodecState& codec, const CodecResponse& res
 }
 
 static const IntelHDACodec::CommandListEntry<CodecState> FETCH_CODEC_ROOT_COMMANDS[] = {
-    { GET_PARAM(CodecParam::VENDOR_ID),              ParseVendorID },
-    { GET_PARAM(CodecParam::REVISION_ID),            ParseRevisionID },
-    { GET_PARAM(CodecParam::SUBORDINATE_NODE_COUNT), ParseFnGroupCount },
+// clang-format off
+  { GET_PARAM(CodecParam::VENDOR_ID),              ParseVendorID },
+  { GET_PARAM(CodecParam::REVISION_ID),            ParseRevisionID },
+  { GET_PARAM(CodecParam::SUBORDINATE_NODE_COUNT), ParseFnGroupCount },
+// clang-format on
 };
 
 zx_status_t IntelHDACodec::Enumerate() {

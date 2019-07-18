@@ -131,6 +131,7 @@ class UsbAudioStreamInterface :
               interface_hdr_(interface_hdr),
               class_hdr_(class_hdr) {}
 
+        // clang-format off
         const char* log_prefix()     const { return parent_->log_prefix(); }
         uint8_t     iid()            const { return interface_hdr_->bInterfaceNumber; }
         uint8_t     alt_id()         const { return interface_hdr_->bAlternateSetting; }
@@ -143,6 +144,7 @@ class UsbAudioStreamInterface :
         uint8_t     ch_count()       const { return fmt_desc_->bNrChannels; }
         uint8_t     bit_resolution() const { return fmt_desc_->bBitResolution; }
         uint8_t     subframe_bytes() const { return fmt_desc_->bSubFrameSize; }
+        // clang-format on
 
         // Min/Max continuous frame rates.  Valid *only* after initialize has
         // been successfully called, and *only* if frame_rate_cnt() == 0.

@@ -254,6 +254,7 @@ static void ihda_dump_flags(uint32_t flags,
 }
 
 static const flag_lut_entry_t POWER_STATE_FLAGS[] = {
+    // clang-format off
     { IHDA_PWR_STATE_EPSS,     "EPSS" },
     { IHDA_PWR_STATE_CLKSTOP,  "CLKSTOP" },
     { IHDA_PWR_STATE_S3D3COLD, "S3D3COLD" },
@@ -262,9 +263,11 @@ static const flag_lut_entry_t POWER_STATE_FLAGS[] = {
     { IHDA_PWR_STATE_D2,       "D2" },
     { IHDA_PWR_STATE_D1,       "D1" },
     { IHDA_PWR_STATE_D0,       "D0" },
+    // clang-format on
 };
 
 static const flag_lut_entry_t PCM_RATE_FLAGS[] = {
+    // clang-format off
     { IHDA_PCM_RATE_384000, "384000" },
     { IHDA_PCM_RATE_192000, "192000" },
     { IHDA_PCM_RATE_176400, "176400" },
@@ -277,23 +280,29 @@ static const flag_lut_entry_t PCM_RATE_FLAGS[] = {
     { IHDA_PCM_RATE_16000,   "16000" },
     { IHDA_PCM_RATE_11025,   "11025" },
     { IHDA_PCM_RATE_8000,     "8000" },
+    // clang-format on
 };
 
 static const flag_lut_entry_t PCM_SIZE_FLAGS[] = {
+    // clang-format off
     { IHDA_PCM_SIZE_32BITS, "32" },
     { IHDA_PCM_SIZE_24BITS, "24" },
     { IHDA_PCM_SIZE_20BITS, "20" },
     { IHDA_PCM_SIZE_16BITS, "16" },
     { IHDA_PCM_SIZE_8BITS,   "8" },
+    // clang-format on
 };
 
 static const flag_lut_entry_t PCM_FMT_FLAGS[] = {
+    // clang-format off
     { IHDA_PCM_FORMAT_AC3,     "AC3" },
     { IHDA_PCM_FORMAT_FLOAT32, "FLOAT32" },
     { IHDA_PCM_FORMAT_PCM,     "PCM" },
+    // clang-format on
 };
 
 static const flag_lut_entry_t AW_CAPS_FLAGS[] = {
+    // clang-format off
     { AudioWidgetCaps::FLAG_AMP_PARAM_OVERRIDE, "AmpParamOverride" },
     { AudioWidgetCaps::FLAG_FORMAT_OVERRIDE,    "FormatOverride" },
     { AudioWidgetCaps::FLAG_STRIPE_SUPPORTED,   "StripingSupported" },
@@ -302,9 +311,11 @@ static const flag_lut_entry_t AW_CAPS_FLAGS[] = {
     { AudioWidgetCaps::FLAG_DIGITAL,            "Digital" },
     { AudioWidgetCaps::FLAG_CAN_LR_SWAP,        "CanSwapLR" },
     { AudioWidgetCaps::FLAG_HAS_CONTENT_PROT,   "HasContentProtection" },
+    // clang-format on
 };
 
 static const flag_lut_entry_t PIN_CAPS_FLAGS[] = {
+    // clang-format off
     { AW_PIN_CAPS_FLAG_CAN_IMPEDANCE_SENSE,  "ImpedanceSense" },
     { AW_PIN_CAPS_FLAG_TRIGGER_REQUIRED,     "TrigReq" },
     { AW_PIN_CAPS_FLAG_CAN_PRESENCE_DETECT,  "PresDetect" },
@@ -321,6 +332,7 @@ static const flag_lut_entry_t PIN_CAPS_FLAGS[] = {
     { AW_PIN_CAPS_FLAG_CAN_EAPD,             "EAPD" },
     { AW_PIN_CAPS_FLAG_DISPLAY_PORT,         "DisplayPort" },
     { AW_PIN_CAPS_FLAG_HIGH_BIT_RATE,        "HighBitRate" },
+    // clang-format on
 };
 
 #define DUMP_FLAGS(flags, table, suffix, no_flags_text) \

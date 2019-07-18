@@ -31,6 +31,7 @@ class AudioPath : public fbl::DoublyLinkedListable<fbl::unique_ptr<AudioPath>> {
         return *stream_terminal_;
     }
 
+    // clang-format off
     bool  has_gain() const { return feature_unit_ && feature_unit_->has_vol(); }
     bool  has_agc()  const { return feature_unit_ && feature_unit_->has_agc(); }
     bool  has_mute() const { return feature_unit_ && feature_unit_->has_mute(); }
@@ -40,6 +41,7 @@ class AudioPath : public fbl::DoublyLinkedListable<fbl::unique_ptr<AudioPath>> {
     float gain_res() const { return feature_unit_ ? feature_unit_->vol_res_db() : 0.0f; }
     bool  cur_agc()  const { return feature_unit_ ? feature_unit_->agc_cur() : false; }
     bool  cur_mute() const { return feature_unit_ ? feature_unit_->mute_cur() : false; }
+    // clang-format on
 
     float SetGain(const usb_protocol_t& proto, float db) {
         return feature_unit_ ? feature_unit_->SetVol(proto, db) : 0.0f;

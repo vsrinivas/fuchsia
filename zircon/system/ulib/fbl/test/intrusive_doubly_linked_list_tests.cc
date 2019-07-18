@@ -23,6 +23,7 @@ struct OtherListTraits {
 template <typename PtrType>
 class DLLTraits {
 public:
+// clang-format off
     using TestObjBaseType         = TestObjBase;
 
     using ContainerType           = DoublyLinkedList<PtrType>;
@@ -45,6 +46,7 @@ public:
     using TaggedType1 = TaggedDoublyLinkedList<PtrType, Tag1>;
     using TaggedType2 = TaggedDoublyLinkedList<PtrType, Tag2>;
     using TaggedType3 = TaggedDoublyLinkedList<PtrType, Tag3>;
+// clang-format on
 };
 
 // Just a sanity check so we know our metaprogramming nonsense is
@@ -54,6 +56,7 @@ static_assert(std::is_same_v<typename DLLTraits<int*>::TaggedContainableBaseClas
                                         typename DLLTraits<int*>::Tag2,
                                         typename DLLTraits<int*>::Tag3>>);
 
+// clang-format off
 DEFINE_TEST_OBJECTS(DLL);
 using UMTE    = DEFINE_TEST_THUNK(Sequence, DLL, Unmanaged);
 using UPTE    = DEFINE_TEST_THUNK(Sequence, DLL, UniquePtr);
@@ -274,6 +277,7 @@ RUN_NAMED_TEST("ReplaceMove (std::uptr<Del>)",      SUPCDTE::ReplaceMoveTest)
 RUN_NAMED_TEST("ReplaceMove (RefPtr)",              RPTE::ReplaceMoveTest)
 
 END_TEST_CASE(double_linked_list_tests)
+// clang-format on
 
 }  // namespace intrusive_containers
 }  // namespace tests

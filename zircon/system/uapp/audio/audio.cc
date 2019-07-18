@@ -46,48 +46,50 @@ enum class Command {
 };
 
 void usage(const char* prog_name) {
-    printf("usage:\n");
-    printf("%s [options] <cmd> <cmd params>\n", prog_name);
-    printf("\nOptions\n");
-    printf("  When options are specified, they must occur before the command and command\n"
-           "  arguments.  Valid options include...\n"
-           "  -d <device id>   : Dev node id for the audio device to use.  Defaults to 0.\n"
-           "  -t <device type> : The type of device to open, either input or output.  Ignored if\n"
-           "                     the command given is direction specific (play, record, etc).\n"
-           "                     Otherwise, defaults to output.\n"
-           "  -r <frame rate>  : Frame rate to use.  Defaults to 48000 Hz\n"
-           "  -b <bits/sample> : Bits per sample to use.  Defaults to 16\n"
-           "  -c <channels>    : Channels to use.  Defaults to 2\n");
-    printf("\nValid command are\n");
-    printf("info   : Fetches capability and status info for the specified stream\n");
-    printf("mute   : Mute the specified stream\n");
-    printf("unmute : Unmute the specified stream\n");
-    printf("agc    : Params : (on|off)\n");
-    printf("         Enable or disable AGC for the specified input stream.\n");
-    printf("gain   : Params : <db_gain>\n");
-    printf("         Set the gain of the stream to the specified level\n");
-    printf("pmon   : Params : [<duration>]\n"
-           "         Monitor the plug state of the specified stream for the\n"
-           "         specified amount of time.  Duration defaults to %.1fs and is\n"
-           "         floored at %u mSec\n",
-           DEFAULT_PLUG_MONITOR_DURATION,
-           static_cast<int>(MIN_PLUG_MONITOR_DURATION * 1000));
-    printf("tone   : Params : [<freq>] [<duration>]\n"
-           "         Play a sinusoidal tone of the specified frequency for the\n"
-           "         specified duration.  Frequency is clamped on the range\n"
-           "         [%.1f, %.1f] Hz.  Duration is given in seconds and floored\n"
-           "         at %d mSec.  Default is %.1f Hz for %.1f seconds\n",
-            MIN_TONE_FREQ,
-            MAX_TONE_FREQ,
-            static_cast<int>(MIN_TONE_DURATION * 1000),
-            DEFAULT_TONE_FREQ,
-            DEFAULT_TONE_DURATION);
-    printf("play   : Params : <file>\n");
-    printf("         Play the specified WAV file on the selected output.\n");
-    printf("record : Params : <file> [duration]\n"
-           "         Record to the specified WAV file from the selected input.\n"
-           "         Duration defaults to %.1f seconds if unspecified.\n",
-           DEFAULT_RECORD_DURATION);
+  // clang-format off
+  printf("usage:\n");
+  printf("%s [options] <cmd> <cmd params>\n", prog_name);
+  printf("\nOptions\n");
+  printf("  When options are specified, they must occur before the command and command\n"
+         "  arguments.  Valid options include...\n"
+         "  -d <device id>   : Dev node id for the audio device to use.  Defaults to 0.\n"
+         "  -t <device type> : The type of device to open, either input or output.  Ignored if\n"
+         "                     the command given is direction specific (play, record, etc).\n"
+         "                     Otherwise, defaults to output.\n"
+         "  -r <frame rate>  : Frame rate to use.  Defaults to 48000 Hz\n"
+         "  -b <bits/sample> : Bits per sample to use.  Defaults to 16\n"
+         "  -c <channels>    : Channels to use.  Defaults to 2\n");
+  printf("\nValid command are\n");
+  printf("info   : Fetches capability and status info for the specified stream\n");
+  printf("mute   : Mute the specified stream\n");
+  printf("unmute : Unmute the specified stream\n");
+  printf("agc    : Params : (on|off)\n");
+  printf("         Enable or disable AGC for the specified input stream.\n");
+  printf("gain   : Params : <db_gain>\n");
+  printf("         Set the gain of the stream to the specified level\n");
+  printf("pmon   : Params : [<duration>]\n"
+         "         Monitor the plug state of the specified stream for the\n"
+         "         specified amount of time.  Duration defaults to %.1fs and is\n"
+         "         floored at %u mSec\n",
+         DEFAULT_PLUG_MONITOR_DURATION,
+         static_cast<int>(MIN_PLUG_MONITOR_DURATION * 1000));
+  printf("tone   : Params : [<freq>] [<duration>]\n"
+         "         Play a sinusoidal tone of the specified frequency for the\n"
+         "         specified duration.  Frequency is clamped on the range\n"
+         "         [%.1f, %.1f] Hz.  Duration is given in seconds and floored\n"
+         "         at %d mSec.  Default is %.1f Hz for %.1f seconds\n",
+          MIN_TONE_FREQ,
+          MAX_TONE_FREQ,
+          static_cast<int>(MIN_TONE_DURATION * 1000),
+          DEFAULT_TONE_FREQ,
+          DEFAULT_TONE_DURATION);
+  printf("play   : Params : <file>\n");
+  printf("         Play the specified WAV file on the selected output.\n");
+  printf("record : Params : <file> [duration]\n"
+         "         Record to the specified WAV file from the selected input.\n"
+         "         Duration defaults to %.1f seconds if unspecified.\n",
+         DEFAULT_RECORD_DURATION);
+  // clang-format on
 }
 
 void dump_format_range(size_t ndx, const audio_stream_format_range_t& range) {
@@ -282,10 +284,12 @@ int main(int argc, const char** argv) {
         const char* tag;
         uint32_t*   val;
     } UINT_OPTIONS[] = {
-        { .name = "-d", .tag = "device ID",   .val = &dev_id },
-        { .name = "-r", .tag = "frame rate",  .val = &frame_rate },
-        { .name = "-b", .tag = "bits/sample", .val = &bits_per_sample },
-        { .name = "-c", .tag = "channels",    .val = &channels },
+    // clang-format off
+    { .name = "-d", .tag = "device ID",   .val = &dev_id },
+    { .name = "-r", .tag = "frame rate",  .val = &frame_rate },
+    { .name = "-b", .tag = "bits/sample", .val = &bits_per_sample },
+    { .name = "-c", .tag = "channels",    .val = &channels },
+    // clang-format on
     };
 
     static const struct {
@@ -294,15 +298,17 @@ int main(int argc, const char** argv) {
         bool force_out;
         bool force_in;
     } COMMANDS[] = {
-        { "info",   Command::INFO,          false, false },
-        { "mute",   Command::MUTE,          false, false },
-        { "unmute", Command::UNMUTE,        false, false },
-        { "agc",    Command::AGC,           false, true  },
-        { "gain",   Command::GAIN,          false, false },
-        { "pmon",   Command::PLUG_MONITOR,  false, false },
-        { "tone",   Command::TONE,          true,  false },
-        { "play",   Command::PLAY,          true,  false },
-        { "record", Command::RECORD,        false, true  },
+    // clang-format off
+    { "info",   Command::INFO,          false, false },
+    { "mute",   Command::MUTE,          false, false },
+    { "unmute", Command::UNMUTE,        false, false },
+    { "agc",    Command::AGC,           false, true  },
+    { "gain",   Command::GAIN,          false, false },
+    { "pmon",   Command::PLUG_MONITOR,  false, false },
+    { "tone",   Command::TONE,          true,  false },
+    { "play",   Command::PLAY,          true,  false },
+    { "record", Command::RECORD,        false, true  },
+    // clang-format on
     };
 
     while (arg < argc) {

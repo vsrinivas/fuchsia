@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef INTEL_HDA_UTILS_STATUS_H_
+#define INTEL_HDA_UTILS_STATUS_H_
 
 #include <fbl/string.h>
 #include <zircon/types.h>
@@ -67,3 +68,5 @@ inline Status OkStatus() { return Status(); }
 Status PrependMessage(const fbl::String& prefix, const Status& status);
 
 }  // namespace audio::intel_hda
+
+#endif  // INTEL_HDA_UTILS_STATUS_H_

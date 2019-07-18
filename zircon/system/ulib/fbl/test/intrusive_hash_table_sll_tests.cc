@@ -63,6 +63,7 @@ private:
 template <typename PtrType>
 class HTSLLTraits {
 public:
+// clang-format off
     using ObjType = typename ::fbl::internal::ContainerPtrTraits<PtrType>::ValueType;
 
     using ContainerType           = HashTable<size_t, PtrType>;
@@ -98,8 +99,10 @@ public:
     using TaggedType1 = TaggedHashTable<size_t, PtrType, Tag1>;
     using TaggedType2 = TaggedHashTable<size_t, PtrType, Tag2>;
     using TaggedType3 = TaggedHashTable<size_t, PtrType, Tag3>;
+// clang-format on
 };
 
+// clang-format off
 DEFINE_TEST_OBJECTS(HTSLL);
 using UMTE    = DEFINE_TEST_THUNK(Associative, HTSLL, Unmanaged);
 using UPTE    = DEFINE_TEST_THUNK(Associative, HTSLL, UniquePtr);
@@ -266,6 +269,7 @@ RUN_NAMED_TEST("InsertOrReplace (std::uptr)",      SUPDDTE::InsertOrReplaceTest)
 RUN_NAMED_TEST("InsertOrReplace (std::uptr<Del>)", SUPCDTE::InsertOrReplaceTest)
 RUN_NAMED_TEST("InsertOrReplace (RefPtr)",         RPTE::InsertOrReplaceTest)
 END_TEST_CASE(hashtable_sll_tests)
+// clang-format on
 
 }  // namespace intrusive_containers
 }  // namespace tests

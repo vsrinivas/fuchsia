@@ -56,6 +56,7 @@ private:
 template <typename PtrType>
 class WAVLTraits {
 public:
+// clang-format off
     using KeyType                 = size_t;
     using TestObjBaseType         = KeyedTestObjBase<KeyType>;
 
@@ -82,7 +83,7 @@ public:
     using TaggedType1 = TaggedWAVLTree<KeyType, PtrType, Tag1>;
     using TaggedType2 = TaggedWAVLTree<KeyType, PtrType, Tag2>;
     using TaggedType3 = TaggedWAVLTree<KeyType, PtrType, Tag3>;
-
+// clang-format on
 };
 
 // Just a sanity check so we know our metaprogramming nonsense is
@@ -93,12 +94,14 @@ static_assert(std::is_same_v<typename WAVLTraits<int*>::TaggedContainableBaseCla
                                         typename WAVLTraits<int*>::Tag3>>);
 
 // Generate all of the standard tests.
+// clang-format off
 DEFINE_TEST_OBJECTS(WAVL);
 using UMTE    = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, Unmanaged);
 using UPTE    = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, UniquePtr);
 using SUPDDTE = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, StdUniquePtrDefaultDeleter);
 using SUPCDTE = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, StdUniquePtrCustomDeleter);
 using RPTE    = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, RefPtr);
+// clang-format on
 
 // WAVLBalanceTestObserver
 //
@@ -443,6 +446,7 @@ static bool WAVLBalanceTest() {
     END_TEST;
 }
 
+// clang-format off
 BEGIN_TEST_CASE(wavl_tree_tests)
 //////////////////////////////////////////
 // General container specific tests.
@@ -627,6 +631,7 @@ RUN_NAMED_TEST("LowerBound (RefPtr)",                      RPTE::LowerBoundTest)
 RUN_NAMED_TEST_MEDIUM("BalanceTest", WAVLBalanceTest)
 
 END_TEST_CASE(wavl_tree_tests)
+// clang-format on
 
 }  // namespace intrusive_containers
 }  // namespace tests

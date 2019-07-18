@@ -32,6 +32,7 @@ __END_CDECLS
 namespace audio {
 namespace usb {
 
+// clang-format off
 enum class Direction { Unknown, Input, Output };
 enum class EndpointSyncType : uint8_t {
     None     = USB_ENDPOINT_NO_SYNCHRONIZATION,
@@ -39,6 +40,7 @@ enum class EndpointSyncType : uint8_t {
     Adaptive = USB_ENDPOINT_ADAPTIVE,
     Sync     = USB_ENDPOINT_SYNCHRONOUS,
 };
+// clang-format on
 
 fbl::Array<uint8_t> FetchStringDescriptor(const usb_protocol_t& usb,
                                           uint8_t desc_id,

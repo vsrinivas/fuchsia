@@ -605,6 +605,7 @@ DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(StaticCountedUnmanagedTestTraits<NullLock>
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(StaticCountedUniquePtrTestTraits<NullLock>::AllocTraits, 1);
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(StaticCountedRefPtrTestTraits<NullLock>::AllocTraits, 1);
 
+// clang-format off
 BEGIN_TEST_CASE(slab_allocator_tests)
 RUN_NAMED_TEST("Unmanaged Single Slab (mutex)", (slab_test<UnmanagedTestTraits<MutexLock>, 1>))
 RUN_NAMED_TEST("Unmanaged Multi Slab  (mutex)", (slab_test<UnmanagedTestTraits<MutexLock>>))
@@ -637,55 +638,56 @@ RUN_NAMED_TEST("Static Unmanaged (unlock)", (static_slab_test<StaticUnmanagedTes
 RUN_NAMED_TEST("Static UniquePtr (unlock)", (static_slab_test<StaticUniquePtrTestTraits<NullLock>>))
 RUN_NAMED_TEST("Static RefPtr    (unlock)", (static_slab_test<StaticRefPtrTestTraits<NullLock>>))
 
-RUN_NAMED_TEST("Counted Unmanaged Single Slab (mutex)",(slab_test
-    <UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::INSTANCED, true>, 1>))
-RUN_NAMED_TEST("Counted Unmanaged Multi Slab  (mutex)", (slab_test
-    <UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::INSTANCED, true>>))
-RUN_NAMED_TEST("Counted UniquePtr Single Slab (mutex)", (slab_test
-    <UniquePtrTestTraits<MutexLock, true>, 1>))
-RUN_NAMED_TEST("Counted UniquePtr Multi Slab  (mutex)", (slab_test
-    <UniquePtrTestTraits<MutexLock, true>>))
-RUN_NAMED_TEST("Counted RefPtr Single Slab    (mutex)", (slab_test
-    <RefPtrTestTraits<MutexLock, true>, 1>))
-RUN_NAMED_TEST("Counted RefPtr Multi Slab     (mutex)", (slab_test
-    <RefPtrTestTraits<MutexLock, true>>))
+RUN_NAMED_TEST("Counted Unmanaged Single Slab (mutex)",
+    (slab_test <UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::INSTANCED, true>, 1>))
+RUN_NAMED_TEST("Counted Unmanaged Multi Slab  (mutex)",
+    (slab_test <UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::INSTANCED, true>>))
+RUN_NAMED_TEST("Counted UniquePtr Single Slab (mutex)",
+    (slab_test <UniquePtrTestTraits<MutexLock, true>, 1>))
+RUN_NAMED_TEST("Counted UniquePtr Multi Slab  (mutex)",
+    (slab_test <UniquePtrTestTraits<MutexLock, true>>))
+RUN_NAMED_TEST("Counted RefPtr Single Slab    (mutex)",
+    (slab_test <RefPtrTestTraits<MutexLock, true>, 1>))
+RUN_NAMED_TEST("Counted RefPtr Multi Slab     (mutex)",
+    (slab_test <RefPtrTestTraits<MutexLock, true>>))
 
-RUN_NAMED_TEST("Counted Unmanaged Single Slab (unlock)", (slab_test
-    <UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::INSTANCED, true>, 1>))
-RUN_NAMED_TEST("Counted Unmanaged Multi Slab  (unlock)", (slab_test
-    <UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::INSTANCED, true>>))
-RUN_NAMED_TEST("Counted UniquePtr Single Slab (unlock)", (slab_test
-    <UniquePtrTestTraits<NullLock, true>, 1>))
-RUN_NAMED_TEST("Counted UniquePtr Multi Slab  (unlock)", (slab_test
-    <UniquePtrTestTraits<NullLock, true>>))
-RUN_NAMED_TEST("Counted RefPtr Single Slab    (unlock)", (slab_test
-    <RefPtrTestTraits<NullLock, true>, 1>))
-RUN_NAMED_TEST("Counted RefPtr Multi Slab     (unlock)", (slab_test
-    <RefPtrTestTraits<NullLock, true>>))
+RUN_NAMED_TEST("Counted Unmanaged Single Slab (unlock)",
+    (slab_test <UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::INSTANCED, true>, 1>))
+RUN_NAMED_TEST("Counted Unmanaged Multi Slab  (unlock)",
+    (slab_test <UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::INSTANCED, true>>))
+RUN_NAMED_TEST("Counted UniquePtr Single Slab (unlock)",
+    (slab_test <UniquePtrTestTraits<NullLock, true>, 1>))
+RUN_NAMED_TEST("Counted UniquePtr Multi Slab  (unlock)",
+    (slab_test <UniquePtrTestTraits<NullLock, true>>))
+RUN_NAMED_TEST("Counted RefPtr Single Slab    (unlock)",
+    (slab_test <RefPtrTestTraits<NullLock, true>, 1>))
+RUN_NAMED_TEST("Counted RefPtr Multi Slab     (unlock)",
+    (slab_test <RefPtrTestTraits<NullLock, true>>))
 
-RUN_NAMED_TEST("Counted Manual Delete Unmanaged (mutex)", (slab_test
-    <UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::MANUAL_DELETE, true>>))
-RUN_NAMED_TEST("Counted Manual Delete Unmanaged (unlock)", (slab_test
-    <UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::MANUAL_DELETE, true>>))
+RUN_NAMED_TEST("Counted Manual Delete Unmanaged (mutex)",
+    (slab_test <UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::MANUAL_DELETE, true>>))
+RUN_NAMED_TEST("Counted Manual Delete Unmanaged (unlock)",
+    (slab_test <UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::MANUAL_DELETE, true>>))
 
-RUN_NAMED_TEST("Counted Static Unmanaged (unlock)", (static_slab_test
-    <StaticUnmanagedTestTraits<NullLock, true>>))
-RUN_NAMED_TEST("Counted Static UniquePtr (unlock)", (static_slab_test
-    <StaticUniquePtrTestTraits<NullLock, true>>))
-RUN_NAMED_TEST("Counted Static RefPtr    (unlock)", (static_slab_test
-    <StaticRefPtrTestTraits<NullLock, true>>))
+RUN_NAMED_TEST("Counted Static Unmanaged (unlock)",
+    (static_slab_test <StaticUnmanagedTestTraits<NullLock, true>>))
+RUN_NAMED_TEST("Counted Static UniquePtr (unlock)",
+    (static_slab_test <StaticUniquePtrTestTraits<NullLock, true>>))
+RUN_NAMED_TEST("Counted Static RefPtr    (unlock)",
+    (static_slab_test <StaticRefPtrTestTraits<NullLock, true>>))
 
-RUN_NAMED_TEST("Counted Static Unmanaged (mutex)", (static_slab_test
-    <StaticUnmanagedTestTraits<MutexLock, true>>))
-RUN_NAMED_TEST("Counted Static UniquePtr (mutex)", (static_slab_test
-    <StaticUniquePtrTestTraits<MutexLock, true>>))
-RUN_NAMED_TEST("Counted Static RefPtr    (mutex)", (static_slab_test
-    <StaticRefPtrTestTraits<MutexLock, true>>))
+RUN_NAMED_TEST("Counted Static Unmanaged (mutex)",
+    (static_slab_test <StaticUnmanagedTestTraits<MutexLock, true>>))
+RUN_NAMED_TEST("Counted Static UniquePtr (mutex)",
+    (static_slab_test <StaticUniquePtrTestTraits<MutexLock, true>>))
+RUN_NAMED_TEST("Counted Static RefPtr    (mutex)",
+    (static_slab_test <StaticRefPtrTestTraits<MutexLock, true>>))
 
-RUN_NAMED_TEST("Counted Static Unmanaged (unlock)", (static_slab_test
-    <StaticUnmanagedTestTraits<NullLock, true>>))
-RUN_NAMED_TEST("Counted Static UniquePtr (unlock)", (static_slab_test
-    <StaticUniquePtrTestTraits<NullLock, true>>))
-RUN_NAMED_TEST("Counted Static RefPtr    (unlock)", (static_slab_test
-    <StaticRefPtrTestTraits<NullLock, true>>))
+RUN_NAMED_TEST("Counted Static Unmanaged (unlock)",
+    (static_slab_test <StaticUnmanagedTestTraits<NullLock, true>>))
+RUN_NAMED_TEST("Counted Static UniquePtr (unlock)",
+    (static_slab_test <StaticUniquePtrTestTraits<NullLock, true>>))
+RUN_NAMED_TEST("Counted Static RefPtr    (unlock)",
+    (static_slab_test <StaticRefPtrTestTraits<NullLock, true>>))
 END_TEST_CASE(slab_allocator_tests)
+// clang-format on
