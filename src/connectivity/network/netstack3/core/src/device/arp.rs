@@ -771,7 +771,7 @@ mod tests {
 
     #[test]
     fn test_exhaust_retries_arp_request() {
-        //To fully test max retries of APR request, NUM_ARP_REQUEST should be
+        // To fully test max retries of APR request, NUM_ARP_REQUEST should be
         // set >= DEFAULT_ARP_REQUEST_MAX_TRIES.
         const NUM_ARP_REQUESTS: usize = DEFAULT_ARP_REQUEST_MAX_TRIES + 1;
         let (mut ctx, device_id) = set_up_simple_test_environment();

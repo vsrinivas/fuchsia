@@ -110,6 +110,9 @@ impl<I: Ip> ForwardingTable<I> {
     /// If multiple entries match `address` or any intermediate IP address, the
     /// entry with the longest prefix will be chosen.
     ///
+    /// The unspecified address (0.0.0.0 in IPv4 and :: in IPv6) are not
+    /// routable and will return None even if they have been added to the table.
+    ///
     /// # Panics
     ///
     /// `lookup` asserts that `address` is not in the loopback interface.
@@ -123,9 +126,13 @@ impl<I: Ip> ForwardingTable<I> {
             "loopback addresses should be handled before consulting the forwarding table"
         );
 
-        let dst = self.lookup_helper(address);
-        trace!("lookup({}) -> {:?}", address, dst);
-        dst
+        if !address.is_unspecified() {
+            let dst = self.lookup_helper(address);
+            trace!("lookup({}) -> {:?}", address, dst);
+            dst
+        } else {
+            None
+        }
     }
 
     pub(crate) fn iter_routes(&self) -> std::slice::Iter<Entry<I::Addr>> {

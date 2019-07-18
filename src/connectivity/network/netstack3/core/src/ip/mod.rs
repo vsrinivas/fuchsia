@@ -2248,4 +2248,34 @@ mod tests {
     fn test_joining_leaving_ipv6_multicast_groups() {
         test_joining_leaving_ip_multicast_group::<Ipv6>();
     }
+
+    #[test]
+    #[should_panic]
+    fn test_lookup_table_ipv4_loopback_panic() {
+        test_lookup_table_address(get_dummy_config::<Ipv4Addr>(), Ipv4::LOOPBACK_ADDRESS);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_lookup_table_ipv6_loopback_panic() {
+        test_lookup_table_address(get_dummy_config::<Ipv6Addr>(), Ipv6::LOOPBACK_ADDRESS);
+    }
+
+    #[test]
+    fn test_lookup_table_ipv4_unspecified() {
+        assert!(test_lookup_table_address(get_dummy_config::<Ipv4Addr>(), Ipv4::UNSPECIFIED_ADDRESS).is_none());
+    }
+
+    #[test]
+    fn test_lookup_table_ipv6_unspecified() {
+        assert!(test_lookup_table_address(get_dummy_config::<Ipv6Addr>(), Ipv6::UNSPECIFIED_ADDRESS).is_none());
+    }
+
+    fn test_lookup_table_address<A: IpAddress>(
+        cfg: DummyEventDispatcherConfig<A>, ip_address: A,
+    ) -> Option<Destination<A::Version>> {
+        let mut ctx = DummyEventDispatcherBuilder::from_config(cfg.clone())
+            .build::<DummyEventDispatcher>();
+        lookup_route(&ctx.state().ip, ip_address)
+    }
 }
