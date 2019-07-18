@@ -41,3 +41,7 @@ provide session management, component lifecycle management and state management.
     Modules and Agents, as well as service and state coordination between them.
     It leverages Session and Story Shells to manage the visual composition of
     these components.
+
+### Read More
+
+* [Configuring Modular](guide/config.md)

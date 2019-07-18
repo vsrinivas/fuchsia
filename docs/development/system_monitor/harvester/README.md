@@ -15,4 +15,5 @@ Various kinds of data are collected by the Harvester
 
 - [CPU Samples](cpu_samples.md)
 - [Memory Samples](memory_samples.md)
+- [Task Samples](task_samples.md)
 - [Component Introspection](component_introspection.md)

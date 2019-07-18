@@ -467,7 +467,7 @@ A Kernel Object Identifier.
 
 [Ledger](/src/ledger/docs/README.md) is a distributed storage system for
 Fuchsia. Applications use Ledger either directly or through state
-synchronization primitives exposed by the Modular framework that are based on
+synchronization primitives exposed by the [Modular](the-book/modular/overview.md) framework that are based on
 Ledger under-the-hood.
 
 #### **LK**

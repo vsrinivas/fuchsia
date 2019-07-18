@@ -31,14 +31,14 @@ declare_args() {
   # include those labels in this variable.
   universe_package_labels = []
 
-  # [Zircon GN build arguments](../../../zircon/docs/gen/build_arguments.md).
+  # [Zircon GN build arguments](../../zircon/docs/gen/build_arguments.md).
   # This is included in the default value of [`zircon_args`](#zircon_args) so
   # you can set this to add things there without wiping out the defaults.
   # When you set `zircon_args` directly, then this has no effect at all.
   # Arguments you set here override any arguments in the default
   # `zircon_args`.  There is no way to append to a value from the defaults.
   # Note that for just setting simple (string-only) values in Zircon GN's
-  # [`variants`](../../../zircon/docs/gen/build_arguments.md#variants), the
+  # [`variants`](../../zircon/docs/gen/build_arguments.md#variants), the
   # default [`zircon_args`](#zircon_args) uses a `variants` value derived from
   # [`select_variant`](#select_variant) so for simple cases there is no need
   # to explicitly set Zircon's `variants` here.
@@ -73,7 +73,7 @@ foreach(selector, select_variant) {
 
 # Separate block because zircon_* declared above are used in the default.
 declare_args() {
-  # [Zircon GN build arguments](../../../zircon/docs/gen/build_arguments.md).
+  # [Zircon GN build arguments](../../zircon/docs/gen/build_arguments.md).
   # The default passes through GOMA settings and
   # [`select_variant`](#select_variant) shorthand selectors.
   # **Only set this if you want to wipe out all the defaults that
