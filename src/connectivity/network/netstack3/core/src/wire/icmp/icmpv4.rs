@@ -236,7 +236,7 @@ impl_icmp_message!(
 
 #[cfg(test)]
 mod tests {
-    use packet::{ParseBuffer, Serializer};
+    use packet::{InnerPacketBuilder, ParseBuffer, Serializer};
     use std::fmt::Debug;
 
     use super::*;
@@ -251,6 +251,7 @@ mod tests {
     ) -> Vec<u8> {
         icmp.message_body
             .bytes()
+            .into_serializer()
             .encapsulate(icmp.builder(src_ip, dst_ip))
             .encapsulate(builder)
             .serialize_outer()

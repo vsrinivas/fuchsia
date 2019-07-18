@@ -11,7 +11,7 @@ use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use net_types::ip::{Ipv6, Ipv6Addr};
-use packet::{EncapsulatingSerializer, Serializer};
+use packet::{Nested, Serializer};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::ParseError;
@@ -279,7 +279,7 @@ pub(crate) mod options {
 
 #[cfg(test)]
 mod tests {
-    use packet::{ParsablePacket, ParseBuffer};
+    use packet::{InnerPacketBuilder, ParsablePacket, ParseBuffer};
 
     use super::*;
     use crate::ip;
@@ -311,6 +311,7 @@ mod tests {
             }
         }
         let serialized = OptionsSerializer::<_>::new(collected.iter())
+            .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
                 dst_ip,
@@ -341,6 +342,7 @@ mod tests {
         assert_eq!(icmp.ndp_options().iter().count(), 0);
 
         let serialized = []
+            .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
                 dst_ip,
@@ -390,6 +392,7 @@ mod tests {
         }
 
         let serialized = OptionsSerializer::<_>::new(collected.iter())
+            .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
                 dst_ip,

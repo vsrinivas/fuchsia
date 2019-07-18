@@ -10,7 +10,7 @@ use log::debug;
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{BroadcastAddress, MulticastAddr, MulticastAddress, UnicastAddress};
-use packet::{Buf, BufferMut, BufferSerializer, EncapsulatingSerializer, Serializer};
+use packet::{Buf, BufferMut, BufferSerializer, Nested, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 
 use crate::device::arp::{self, ArpDevice, ArpHardwareType, ArpState};
@@ -206,7 +206,7 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
                     A::Version::ETHER_TYPE,
                 )),
             )
-            .map_err(|ser| ser.into_serializer().into_serializer()),
+            .map_err(|ser| ser.into_inner().into_inner()),
         Err(local_addr) => {
             let state = get_device_state_mut(ctx.state_mut(), device_id);
             let dropped = state.add_pending_frame(
@@ -215,7 +215,7 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
                     &body
                         .with_mtu(mtu as usize)
                         .serialize_outer()
-                        .map_err(|ser| ser.1.into_serializer())?,
+                        .map_err(|ser| ser.1.into_inner())?,
                 )
                 .to_vec(),
             );
@@ -444,7 +444,7 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
                 DeviceId::new_ethernet(device_id),
                 body.encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Arp)),
             )
-            .map_err(EncapsulatingSerializer::into_serializer)
+            .map_err(Nested::into_inner)
     }
 
     fn get_arp_state<D: EventDispatcher>(
@@ -540,7 +540,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
                 DeviceId::new_ethernet(device_id),
                 body.encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Ipv6)),
             )
-            .map_err(EncapsulatingSerializer::into_serializer)
+            .map_err(Nested::into_inner)
     }
 
     fn send_ipv6_frame<D: EventDispatcher, S: Serializer>(

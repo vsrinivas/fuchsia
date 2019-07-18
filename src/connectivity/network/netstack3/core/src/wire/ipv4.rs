@@ -11,7 +11,8 @@ use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
 use net_types::ip::{Ipv4, Ipv4Addr};
 use packet::{
-    BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
+    BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
+    SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
@@ -497,23 +498,11 @@ impl Ipv4PacketBuilder {
 }
 
 impl PacketBuilder for Ipv4PacketBuilder {
-    fn header_len(&self) -> usize {
-        IPV4_MIN_HDR_LEN
+    fn constraints(&self) -> PacketConstraints {
+        PacketConstraints::new(IPV4_MIN_HDR_LEN, 0, 0, (1 << 16) - 1 - IPV4_MIN_HDR_LEN)
     }
 
-    fn min_body_len(&self) -> usize {
-        0
-    }
-
-    fn max_body_len(&self) -> usize {
-        (1 << 16) - 1 - self.header_len()
-    }
-
-    fn footer_len(&self) -> usize {
-        0
-    }
-
-    fn serialize(self, mut buffer: SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer) {
         let (mut header, body, _) = buffer.parts();
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         let mut header = &mut header;
@@ -601,7 +590,7 @@ mod options {
 mod tests {
     use net_types::ethernet::Mac;
     use net_types::ip::Ipv4;
-    use packet::{Buf, BufferSerializer, ParseBuffer, Serializer};
+    use packet::{Buf, BufferSerializer, InnerPacketBuilder, ParseBuffer, Serializer};
 
     use super::*;
     use crate::device::ethernet::EtherType;
@@ -638,6 +627,7 @@ mod tests {
 
         let buffer = packet
             .body()
+            .into_serializer()
             .encapsulate(packet.builder())
             .encapsulate(frame.builder())
             .serialize_outer()
@@ -670,6 +660,7 @@ mod tests {
 
         let buffer = packet
             .body()
+            .into_serializer()
             .encapsulate(packet.builder())
             .encapsulate(frame.builder())
             .serialize_outer()
@@ -788,8 +779,11 @@ mod tests {
         builder.mf_flag(true);
         builder.fragment_offset(0x0607);
 
-        let mut buf =
-            (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9]).encapsulate(builder).serialize_outer().unwrap();
+        let mut buf = (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9])
+            .into_serializer()
+            .encapsulate(builder)
+            .serialize_outer()
+            .unwrap();
         assert_eq!(
             buf.as_ref(),
             [

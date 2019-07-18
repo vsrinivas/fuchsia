@@ -7,7 +7,7 @@
 //! This module contains end-to-end and other high-level benchmarks for the
 //! netstack.
 
-use packet::{Buf, Serializer};
+use packet::{Buf, InnerPacketBuilder, Serializer};
 use std::time::{Duration, Instant};
 
 use crate::device::ethernet::EtherType;
@@ -95,6 +95,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     );
     let mut body = vec![0; frame_size - (ETHERNET_HDR_LEN_NO_TAG + IPV4_MIN_HDR_LEN)];
     let mut buf = body
+        .into_serializer()
         .encapsulate(Ipv4PacketBuilder::new(
             // Use the remote IP as the destination so that we decide to
             // forward.

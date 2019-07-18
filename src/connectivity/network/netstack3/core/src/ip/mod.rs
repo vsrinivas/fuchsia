@@ -1004,10 +1004,9 @@ where
     if let Some(mtu) = mtu {
         let body = body.with_mtu(mtu as usize);
         crate::device::send_ip_frame(ctx, device, next_hop, body)
-            .map_err(|ser| ser.into_serializer().into_serializer())
+            .map_err(|ser| ser.into_inner().into_inner())
     } else {
-        crate::device::send_ip_frame(ctx, device, next_hop, body)
-            .map_err(|ser| ser.into_serializer())
+        crate::device::send_ip_frame(ctx, device, next_hop, body).map_err(|ser| ser.into_inner())
     }
 }
 

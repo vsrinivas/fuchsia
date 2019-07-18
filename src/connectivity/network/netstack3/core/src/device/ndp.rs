@@ -24,7 +24,7 @@ use std::time::Duration;
 use log::debug;
 use net_types::ip::{Ipv6, Ipv6Addr};
 use net_types::MulticastAddress;
-use packet::Serializer;
+use packet::{InnerPacketBuilder, Serializer};
 use zerocopy::ByteSlice;
 
 use crate::device::ethernet::EthernetNdpDevice;
@@ -392,6 +392,7 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
     let src_ll = ND::get_link_layer_addr(ctx.state(), device_id);
     let options = [NdpOption::TargetLinkLayerAddress(src_ll.bytes())];
     let body = ndp::OptionsSerializer::<_>::new(options.iter())
+        .into_serializer()
         .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
             device_addr,
             dst_ip,
@@ -420,6 +421,7 @@ fn send_ndp_packet<D: EventDispatcher, ND: NdpDevice, B: ByteSlice, M>(
         device_id,
         link_addr,
         ndp::OptionsSerializer::<_>::new(options.iter())
+            .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, B, M>::new(
                 src_ip,
                 dst_ip,

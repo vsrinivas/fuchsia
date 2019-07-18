@@ -12,7 +12,8 @@ use std::ops::Range;
 use log::debug;
 use net_types::ip::{Ipv6, Ipv6Addr};
 use packet::{
-    BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
+    BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
+    SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
@@ -649,24 +650,12 @@ impl Ipv6PacketBuilder {
 }
 
 impl PacketBuilder for Ipv6PacketBuilder {
-    fn header_len(&self) -> usize {
+    fn constraints(&self) -> PacketConstraints {
         // TODO(joshlf): Update when we support serializing extension headers
-        IPV6_FIXED_HDR_LEN
+        PacketConstraints::new(IPV6_FIXED_HDR_LEN, 0, 0, (1 << 16) - 1)
     }
 
-    fn min_body_len(&self) -> usize {
-        0
-    }
-
-    fn max_body_len(&self) -> usize {
-        (1 << 16) - 1
-    }
-
-    fn footer_len(&self) -> usize {
-        0
-    }
-
-    fn serialize(self, mut buffer: SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer) {
         let (mut header, body, _) = buffer.parts();
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         let mut header = &mut header;
@@ -701,7 +690,7 @@ mod tests {
     use std::ops::Deref;
 
     use byteorder::{ByteOrder, NetworkEndian};
-    use packet::{Buf, BufferSerializer, ParseBuffer, Serializer};
+    use packet::{Buf, BufferSerializer, InnerPacketBuilder, ParseBuffer, Serializer};
 
     use super::ext_hdrs::*;
     use super::*;
@@ -735,6 +724,7 @@ mod tests {
 
         let buffer = packet
             .body()
+            .into_serializer()
             .encapsulate(packet.builder())
             .encapsulate(frame.builder())
             .serialize_outer()
@@ -763,6 +753,7 @@ mod tests {
 
         let buffer = packet
             .body()
+            .into_serializer()
             .encapsulate(packet.builder())
             .encapsulate(frame.builder())
             .serialize_outer()
@@ -1131,8 +1122,11 @@ mod tests {
         builder.ds(0x12);
         builder.ecn(3);
         builder.flowlabel(0x10405);
-        let mut buf =
-            (&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).encapsulate(builder).serialize_outer().unwrap();
+        let mut buf = (&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+            .into_serializer()
+            .encapsulate(builder)
+            .serialize_outer()
+            .unwrap();
         // assert that we get the literal bytes we expected
         assert_eq!(
             buf.as_ref(),

@@ -22,7 +22,8 @@ use std::mem;
 use internet_checksum::Checksum;
 use net_types::ip::Ipv4Addr;
 use packet::{
-    BufferView, InnerPacketBuilder, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
+    BufferView, InnerPacketBuilder, PacketBuilder, PacketConstraints, ParsablePacket,
+    ParseMetadata, SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -45,7 +46,7 @@ pub(crate) trait MessageType<B> {
     ///
     /// These are the bytes immediately following the checksum bytes in an IGMP
     /// message. Most IGMP messages' `FixedHeader` is an IPv4 address.
-    type FixedHeader: Sized + Clone + FromBytes + AsBytes + Unaligned + Debug;
+    type FixedHeader: Sized + Copy + Clone + FromBytes + AsBytes + Unaligned + Debug;
 
     /// The variable-length body for the message type.
     type VariableBody: Sized;
@@ -143,7 +144,7 @@ impl<B, M: MessageType<B>> IgmpPacketBuilder<B, M> {
 }
 
 impl<B, M: MessageType<B>> IgmpPacketBuilder<B, M> {
-    fn serialize_headers(self, mut headers_buff: &mut [u8], body: &[u8]) {
+    fn serialize_headers(&self, mut headers_buff: &mut [u8], body: &[u8]) {
         use packet::BufferViewMut;
         let mut bytes = &mut headers_buff;
         // SECURITY: Use _zero constructors to ensure we zero memory to prevent
@@ -169,29 +170,22 @@ impl<B, M: MessageType<B, VariableBody = ()>> InnerPacketBuilder for IgmpPacketB
         mem::size_of::<HeaderPrefix>() + mem::size_of::<M::FixedHeader>()
     }
 
-    fn serialize(self, buffer: &mut [u8]) {
+    fn serialize(&self, buffer: &mut [u8]) {
         self.serialize_headers(buffer, &[]);
     }
 }
 
 impl<B, M: MessageType<B>> PacketBuilder for IgmpPacketBuilder<B, M> {
-    fn header_len(&self) -> usize {
-        mem::size_of::<M::FixedHeader>() + mem::size_of::<HeaderPrefix>()
+    fn constraints(&self) -> PacketConstraints {
+        PacketConstraints::new(
+            mem::size_of::<M::FixedHeader>() + mem::size_of::<HeaderPrefix>(),
+            0,
+            0,
+            core::usize::MAX,
+        )
     }
 
-    fn min_body_len(&self) -> usize {
-        0
-    }
-
-    fn max_body_len(&self) -> usize {
-        std::usize::MAX
-    }
-
-    fn footer_len(&self) -> usize {
-        0
-    }
-
-    fn serialize(self, mut buffer: SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer) {
         let (prefix, message_body, _) = buffer.parts();
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         self.serialize_headers(prefix, message_body);

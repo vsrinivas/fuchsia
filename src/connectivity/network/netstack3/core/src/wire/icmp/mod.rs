@@ -29,7 +29,9 @@ use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv6};
 use never::Never;
-use packet::{BufferView, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer};
+use packet::{
+    BufferView, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata, SerializeBuffer,
+};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
@@ -559,17 +561,10 @@ impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacketBuilder<I, B
 impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B>> PacketBuilder
     for IcmpPacketBuilder<I, B, M>
 {
-    fn header_len(&self) -> usize {
-        mem::size_of::<Header>() + mem::size_of::<M>()
-    }
-
-    fn min_body_len(&self) -> usize {
-        0
-    }
-
-    fn max_body_len(&self) -> usize {
-        // This is to make sure the body length doesn't overflow the 32-bit
-        // length field in the pseudo-header used for calculating the checksum.
+    fn constraints(&self) -> PacketConstraints {
+        // The maximum body length constraint to make sure the body length
+        // doesn't overflow the 32-bit length field in the pseudo-header used
+        // for calculating the checksum.
         //
         // Note that, for messages that don't take bodies, it's important that
         // we don't just set this to 0. Trying to serialize a body in a message
@@ -579,14 +574,15 @@ impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B>> PacketBuilder
         // Instead, we assert in serialize. Eventually, we will hopefully figure
         // out a way to implement InnerPacketBuilder (rather than PacketBuilder)
         // for these message types, and this won't be an issue anymore.
-        std::u32::MAX as usize
+        PacketConstraints::new(
+            mem::size_of::<Header>() + mem::size_of::<M>(),
+            0,
+            0,
+            core::u32::MAX as usize,
+        )
     }
 
-    fn footer_len(&self) -> usize {
-        0
-    }
-
-    fn serialize(self, mut buffer: SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer) {
         use packet::BufferViewMut;
 
         let (mut prefix, message_body, _) = buffer.parts();

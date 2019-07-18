@@ -435,9 +435,9 @@ where
     /// `serialize_records` expects that `buffer` has enough bytes to serialize
     /// the contained records (as obtained from `records_bytes_len`, otherwise
     /// it's considered a violation of the API contract and the call will panic.
-    fn serialize_records(self, buffer: &mut [u8]) {
+    fn serialize_records(&self, buffer: &mut [u8]) {
         let mut b = &mut &mut buffer[..];
-        for r in self.records {
+        for r in self.records.clone() {
             // SECURITY: Take a zeroed buffer from b to prevent leaking
             // information from packets previously stored in this buffer.
             S::serialize(b.take_front_zero(S::record_length(r)).unwrap(), r);
@@ -454,7 +454,7 @@ where
         self.records_bytes_len()
     }
 
-    fn serialize(self, buffer: &mut [u8]) {
+    fn serialize(&self, buffer: &mut [u8]) {
         self.serialize_records(buffer)
     }
 }
@@ -1634,7 +1634,7 @@ pub(crate) mod options {
                 .collect::<Vec<<DummyOptionsImpl as OptionsSerializerImpl>::Option>>();
             let ser = OptionsSerializer::<DummyOptionsImpl, _, _>::new(collected.iter());
 
-            let serialized = ser.serialize_outer().unwrap().as_ref().to_vec();
+            let serialized = ser.into_serializer().serialize_outer().unwrap().as_ref().to_vec();
 
             assert_eq!(serialized, bytes);
         }
@@ -1657,7 +1657,7 @@ pub(crate) mod options {
                 .collect::<Vec<<DummyNdpOptionsImpl as OptionsSerializerImpl>::Option>>();
             let ser = OptionsSerializer::<DummyNdpOptionsImpl, _, _>::new(collected.iter());
 
-            let serialized = ser.serialize_outer().unwrap().as_ref().to_vec();
+            let serialized = ser.into_serializer().serialize_outer().unwrap().as_ref().to_vec();
 
             assert_eq!(serialized, bytes);
         }

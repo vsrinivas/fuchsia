@@ -911,11 +911,11 @@ fn receive_icmp_echo_reply<D: EventDispatcher, I: Ip, B: ByteSlice>(
 /// `send_icmp_echo_request` panics if `conn` is not associated with a
 /// connection for this IP version.
 #[specialize_ip]
-pub fn send_icmp_echo_request<D: EventDispatcher, I: Ip>(
+pub fn send_icmp_echo_request<D: EventDispatcher, I: Ip, B: BufferMut>(
     ctx: &mut Context<D>,
     conn: &D::IcmpConn,
     seq_num: u16,
-    body: &[u8],
+    body: B,
 ) {
     let conns = get_conns::<_, I::Addr>(ctx.state_mut());
     let IcmpAddr { remote_addr, icmp_id } =
@@ -934,7 +934,12 @@ pub fn send_icmp_echo_request<D: EventDispatcher, I: Ip>(
     //  to a local address and sending this request out will be done
     //  differently.
     crate::ip::send_ip_packet(ctx, remote_addr, proto, |a| {
-        body.encapsulate(IcmpPacketBuilder::<I, &[u8], _>::new(a, remote_addr, IcmpUnusedCode, req))
+        BufferSerializer::new_vec(body).encapsulate(IcmpPacketBuilder::<I, &[u8], _>::new(
+            a,
+            remote_addr,
+            IcmpUnusedCode,
+            req,
+        ))
     });
 }
 
@@ -1286,7 +1291,12 @@ mod tests {
 
         let echo_body = vec![1, 2, 3, 4];
 
-        send_icmp_echo_request::<_, I>(net.context("alice"), &conn, 7, &echo_body);
+        send_icmp_echo_request::<_, I, _>(
+            net.context("alice"),
+            &conn,
+            7,
+            Buf::new(echo_body.clone(), ..),
+        );
 
         net.run_until_idle().unwrap();
         assert_eq!(

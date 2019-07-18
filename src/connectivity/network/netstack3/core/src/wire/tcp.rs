@@ -11,7 +11,8 @@ use std::num::NonZeroU16;
 use byteorder::{ByteOrder, NetworkEndian};
 use net_types::ip::IpAddress;
 use packet::{
-    BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
+    BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
+    SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -402,23 +403,11 @@ impl<A: IpAddress> TcpSegmentBuilder<A> {
 }
 
 impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
-    fn header_len(&self) -> usize {
-        TCP_MIN_HDR_LEN
+    fn constraints(&self) -> PacketConstraints {
+        PacketConstraints::new(TCP_MIN_HDR_LEN, 0, 0, core::usize::MAX)
     }
 
-    fn min_body_len(&self) -> usize {
-        0
-    }
-
-    fn max_body_len(&self) -> usize {
-        std::usize::MAX
-    }
-
-    fn footer_len(&self) -> usize {
-        0
-    }
-
-    fn serialize(self, mut buffer: SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer) {
         let (mut header, body, _) = buffer.parts();
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         let mut header = &mut header;
@@ -552,7 +541,7 @@ impl<B> Debug for TcpSegment<B> {
 #[cfg(test)]
 mod tests {
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6Addr};
-    use packet::{Buf, BufferSerializer, ParseBuffer, Serializer};
+    use packet::{Buf, BufferSerializer, InnerPacketBuilder, ParseBuffer, Serializer};
     use std::num::NonZeroU16;
 
     use super::*;
@@ -750,8 +739,11 @@ mod tests {
         builder.rst(true);
         builder.syn(true);
 
-        let mut buf =
-            (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9]).encapsulate(builder).serialize_outer().unwrap();
+        let mut buf = (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9])
+            .into_serializer()
+            .encapsulate(builder)
+            .serialize_outer()
+            .unwrap();
         // assert that we get the literal bytes we expected
         assert_eq!(
             buf.as_ref(),
@@ -918,11 +910,15 @@ mod tests {
             None,
             0,
         );
-        let mut buf = vec![0; builder.header_len() + TCP_BODY.len()];
-        buf[builder.header_len()..].copy_from_slice(TCP_BODY);
+        let header_len = builder.constraints().header_len();
+        let mut buf = vec![0; header_len + TCP_BODY.len()];
+        buf[header_len..].copy_from_slice(TCP_BODY);
 
         b.iter(|| {
-            black_box(black_box((&mut buf[..]).encapsulate(builder.clone())).serialize_outer());
+            black_box(
+                black_box((&mut buf[..]).into_serializer().encapsulate(builder.clone()))
+                    .serialize_outer(),
+            );
         })
     }
 

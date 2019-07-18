@@ -506,15 +506,14 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for IgmpPacket<B> {
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Debug;
+
+    use packet::{InnerPacketBuilder, ParseBuffer, Serializer};
+
     use super::super::IgmpMessage;
     use super::*;
-
-    use packet::serialize::Serializer;
-    use packet::ParseBuffer;
-
     use crate::testutil::set_logger_for_test;
     use crate::wire::igmp::testdata::*;
-    use std::fmt::Debug;
 
     const ALL_BUFFERS: [&'static [u8]; 6] = [
         igmp_router_queries::v2::QUERY,
@@ -529,6 +528,7 @@ mod tests {
         igmp: &IgmpMessage<B, M>,
     ) -> Vec<u8> {
         M::body_bytes(&igmp.body)
+            .into_serializer()
             .encapsulate(igmp.builder())
             .serialize_outer()
             .unwrap()
@@ -701,7 +701,6 @@ mod tests {
     fn assert_message_length<Message: for<'a> MessageType<&'a [u8], VariableBody = ()>>(
         mut ground_truth: &[u8],
     ) {
-        use packet::serialize::InnerPacketBuilder;
         let ground_truth_len = ground_truth.len();
         let igmp = ground_truth.parse_with::<_, IgmpMessage<&[u8], Message>>(()).unwrap();
         let builder_len = igmp.builder().bytes_len();

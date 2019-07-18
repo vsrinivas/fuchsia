@@ -12,7 +12,8 @@ use std::num::NonZeroU16;
 use byteorder::{ByteOrder, NetworkEndian};
 use net_types::ip::{Ip, IpAddress};
 use packet::{
-    BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
+    BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
+    SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -213,32 +214,25 @@ impl<A: IpAddress> UdpPacketBuilder<A> {
 }
 
 impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
-    fn header_len(&self) -> usize {
-        HEADER_BYTES
+    fn constraints(&self) -> PacketConstraints {
+        PacketConstraints::new(
+            HEADER_BYTES,
+            0,
+            0,
+            if A::Version::VERSION.is_v4() {
+                (1 << 16) - 1
+            } else {
+                // IPv6 supports jumbograms, so a UDP packet may be greater than
+                // 2^16 bytes. In this case, the size doesn't fit in the 16-bit
+                // length field in the header, and so the length field is set to
+                // zero. That means that, from this packet's perspective,
+                // there's no effective limit on the body size.
+                core::usize::MAX
+            },
+        )
     }
 
-    fn min_body_len(&self) -> usize {
-        0
-    }
-
-    fn max_body_len(&self) -> usize {
-        if A::Version::VERSION.is_v4() {
-            (1 << 16) - 1
-        } else {
-            // IPv6 supports jumbograms, so a UDP packet may be greater than
-            // 2^16 bytes. In this case, the size doesn't fit in the 16-bit
-            // length field in the header, and so the length field is set to
-            // zero. That means that, from this packet's perspective, there's no
-            // effective limit on the body size.
-            std::usize::MAX
-        }
-    }
-
-    fn footer_len(&self) -> usize {
-        0
-    }
-
-    fn serialize(self, mut buffer: SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer) {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 
         let (mut header, body, _) = buffer.parts();
@@ -303,7 +297,7 @@ impl<B> Debug for UdpPacket<B> {
 #[cfg(test)]
 mod tests {
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6Addr};
-    use packet::{Buf, BufferSerializer, ParseBuffer, Serializer};
+    use packet::{Buf, BufferSerializer, InnerPacketBuilder, ParseBuffer, Serializer};
     use std::num::NonZeroU16;
 
     use super::*;
@@ -356,6 +350,7 @@ mod tests {
 
         let buffer = udp_packet
             .body()
+            .into_serializer()
             .encapsulate(udp_packet.builder(ip_packet.src_ip(), ip_packet.dst_ip()))
             .encapsulate(ip_packet.builder())
             .encapsulate(frame.builder())
@@ -393,6 +388,7 @@ mod tests {
 
         let buffer = datagram
             .body()
+            .into_serializer()
             .encapsulate(datagram.builder(packet.src_ip(), packet.dst_ip()))
             .encapsulate(packet.builder())
             .encapsulate(frame.builder())
@@ -427,6 +423,7 @@ mod tests {
     #[test]
     fn test_serialize() {
         let mut buf = (&[])
+            .into_serializer()
             .encapsulate(UdpPacketBuilder::new(
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4,
@@ -529,13 +526,14 @@ mod tests {
     #[should_panic]
     fn test_serialize_fail_header_too_short() {
         UdpPacketBuilder::new(TEST_SRC_IPV4, TEST_DST_IPV4, None, NonZeroU16::new(1).unwrap())
-            .serialize(SerializeBuffer::new(&mut [0; 7][..], ..));
+            .serialize(&mut SerializeBuffer::new(&mut [0; 7][..], ..));
     }
 
     #[test]
     #[should_panic]
     fn test_serialize_fail_packet_too_long_ipv4() {
         (&[0; (1 << 16) - HEADER_BYTES][..])
+            .into_serializer()
             .encapsulate(UdpPacketBuilder::new(
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4,
@@ -600,11 +598,15 @@ mod tests {
             None,
             NonZeroU16::new(UDP_DST_PORT).unwrap(),
         );
-        let mut buf = vec![0; builder.header_len() + UDP_BODY.len()];
-        buf[builder.header_len()..].copy_from_slice(UDP_BODY);
+        let header_len = builder.constraints().header_len();
+        let mut buf = vec![0; header_len + UDP_BODY.len()];
+        buf[header_len..].copy_from_slice(UDP_BODY);
 
         b.iter(|| {
-            black_box(black_box((&mut buf[..]).encapsulate(builder.clone())).serialize_outer());
+            black_box(
+                black_box((&mut buf[..]).into_serializer().encapsulate(builder.clone()))
+                    .serialize_outer(),
+            );
         })
     }
 

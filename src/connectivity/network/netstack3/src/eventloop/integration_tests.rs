@@ -543,7 +543,7 @@ async fn test_ping() {
     for seq in 1..=4 {
         debug!("sending ping seq {}", seq);
         // send ping request:
-        core_icmp::send_icmp_echo_request::<_, Ipv4>(t.ctx(0), &CONN_ID, seq, &ping_bod);
+        core_icmp::send_icmp_echo_request::<_, Ipv4, _>(t.ctx(0), &CONN_ID, seq, Buf::new(ping_bod.to_vec(), ..));
 
         // wait until the response comes along:
         let (rsp_id, rsp_seq, rsp_bod) = await!(t.run_until(recv.next())).unwrap().unwrap();

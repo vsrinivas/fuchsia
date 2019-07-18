@@ -753,11 +753,11 @@ pub trait BufferMut: Buffer + ParseBufferMut {
 
     /// Serializes a packet in the buffer.
     ///
-    /// `serialize` serializes the packet described in `builder` into the
-    /// buffer. The body of the buffer is used as the body of the packet, and
-    /// the prefix and suffix of the buffer are used to serialize the packet's
-    /// header and footer. This is a low-level function: you probably want the
-    /// [`Serializer`] trait instead.
+    /// `serialize` serializes the packet with constraints `c` described in
+    /// `builder` into the buffer. The body of the buffer is used as the body of
+    /// the packet, and the prefix and suffix of the buffer are used to
+    /// serialize the packet's header and footer. This is a low-level function:
+    /// you probably want the [`Serializer`] trait instead.
     ///
     /// If `builder` has a minimum body size which is larger than the current
     /// body, the body is first grown to the right (towards the end of the
@@ -770,14 +770,17 @@ pub trait BufferMut: Buffer + ParseBufferMut {
     ///
     /// # Panics
     ///
-    /// `serialize` panics if there are not enough prefix or suffix bytes to
-    /// serialize the packet. In particular, `b.serialize(buffer)` panics if
-    /// either of the following hold:
-    /// - `b.prefix_len() < buffer.header_bytes()`
-    /// - `b.len() + b.suffix_len() < buffer.min_body_bytes() +
-    ///   buffer.footer_bytes()`
-    fn serialize<B: PacketBuilder>(&mut self, builder: B) {
-        if self.len() < builder.min_body_len() {
+    /// `serialize` assumes that `c` came from `builder`. If it didn't, then
+    /// `builder.serialize()` may be called with arguments that cause
+    /// unspecified behavior, possibly including panicking.
+    ///
+    /// `serialize` also panics if there are not enough prefix or suffix bytes
+    /// to serialize the packet. In particular, `b.serialize(c, builder)` panics
+    /// if either of the following hold:
+    /// - `b.prefix_len() < c.header_len()`
+    /// - `b.len() + b.suffix_len() < c.min_body_bytes() + c.footer_len()`
+    fn serialize<B: PacketBuilder>(&mut self, c: PacketConstraints, builder: B) {
+        if self.len() < c.min_body_len() {
             // The body isn't large enough to satisfy the minimum body length
             // requirement, so we add padding.
 
@@ -785,7 +788,7 @@ pub trait BufferMut: Buffer + ParseBufferMut {
             // leaking information from packets previously stored in this
             // buffer.
             let len = self.len();
-            self.grow_back_zero(builder.min_body_len() - len);
+            self.grow_back_zero(c.min_body_len() - len);
         }
 
         let body_len = self.len();
@@ -793,16 +796,16 @@ pub trait BufferMut: Buffer + ParseBufferMut {
         // under the same conditions that these assertions will fail), but they
         // provide nicer error messages for debugging.
         debug_assert!(
-            self.prefix_len() >= builder.header_len(),
+            self.prefix_len() >= c.header_len(),
             "prefix ({} bytes) too small to serialize header ({} bytes)",
             self.prefix_len(),
-            builder.header_len()
+            c.header_len()
         );
         debug_assert!(
-            self.suffix_len() >= builder.footer_len(),
+            self.suffix_len() >= c.footer_len(),
             "suffix ({} bytes) too small to serialize footer ({} bytes)",
             self.suffix_len(),
-            builder.footer_len()
+            c.footer_len()
         );
         // SECURITY: _zero here is technically unnecessary since it's
         // PacketBuilder::serialize's responsibility to zero/initialize the
@@ -810,11 +813,11 @@ pub trait BufferMut: Buffer + ParseBufferMut {
         // PacketBuilder::serialize implementations. If this becomes a
         // performance issue, we can revisit it, but the optimizer will probably
         // take care of it for us.
-        self.grow_front_zero(builder.header_len());
-        self.grow_back_zero(builder.footer_len());
+        self.grow_front_zero(c.header_len());
+        self.grow_back_zero(c.footer_len());
 
-        let body = builder.header_len()..(builder.header_len() + body_len);
-        builder.serialize(SerializeBuffer { buf: self.as_mut(), body });
+        let body = c.header_len()..(c.header_len() + body_len);
+        builder.serialize(&mut SerializeBuffer { buf: self.as_mut(), body });
     }
 }
 

@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use log::{debug, error};
 use net_types::ip::Ipv4Addr;
-use packet::{BufferMut, InnerSerializer, Serializer};
+use packet::{BufferMut, InnerPacketBuilder, Serializer};
 
 use crate::device::ethernet::EthernetArpDevice;
 use crate::device::DeviceLayerTimerId;
@@ -19,7 +19,7 @@ use crate::wire::arp::{ArpPacket, ArpPacketBuilder, HType, PType};
 use crate::{Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 
 /// The type of an ARP operation.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[allow(missing_docs)]
 #[repr(u16)]
 pub(crate) enum ArpOp {
@@ -192,7 +192,8 @@ fn handle_timeout_inner<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<
                         // address we are sending the packet to.
                         AD::BROADCAST,
                         ip_addr,
-                    ),
+                    )
+                    .into_serializer(),
                 );
             }
         }
@@ -334,20 +335,19 @@ pub(crate) fn receive_arp_packet<
     if addressed_to_me && packet.operation() == ArpOp::Request {
         let self_hw_addr = AD::get_hardware_addr(ctx.state(), device_id);
         increment_counter!(ctx, "arp::rx_request");
+        // TODO(joshlf): Reuse incoming buffer once that's supported.
         AD::send_arp_frame(
             ctx,
             device_id,
             packet.sender_hardware_address(),
-            InnerSerializer::new_vec(
-                ArpPacketBuilder::new(
-                    ArpOp::Response,
-                    self_hw_addr,
-                    packet.target_protocol_address(),
-                    packet.sender_hardware_address(),
-                    packet.sender_protocol_address(),
-                ),
-                buffer,
-            ),
+            ArpPacketBuilder::new(
+                ArpOp::Response,
+                self_hw_addr,
+                packet.target_protocol_address(),
+                packet.sender_hardware_address(),
+                packet.sender_protocol_address(),
+            )
+            .into_serializer(),
         );
     }
 }
@@ -447,7 +447,8 @@ fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
                 // address we are sending the packet to.
                 AD::BROADCAST,
                 lookup_addr,
-            ),
+            )
+            .into_serializer(),
         );
 
         let id = ArpTimerId::new_request_retry_timer_id(device_id, lookup_addr.addr());
@@ -605,6 +606,7 @@ mod tests {
         target_mac: Mac,
     ) {
         let mut buf = ArpPacketBuilder::new(op, sender_mac, sender_ipv4, target_mac, target_ipv4)
+            .into_serializer()
             .serialize_outer()
             .unwrap();
         let (hw, proto) = peek_arp_types(buf.as_ref()).unwrap();

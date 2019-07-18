@@ -7,7 +7,8 @@
 use byteorder::{ByteOrder, NetworkEndian};
 use net_types::ethernet::Mac;
 use packet::{
-    BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
+    BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
+    SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -190,23 +191,16 @@ impl EthernetFrameBuilder {
 // these to compute dynamically.
 
 impl PacketBuilder for EthernetFrameBuilder {
-    fn header_len(&self) -> usize {
-        ETHERNET_HDR_LEN_NO_TAG
+    fn constraints(&self) -> PacketConstraints {
+        PacketConstraints::new(
+            ETHERNET_HDR_LEN_NO_TAG,
+            0,
+            ETHERNET_MIN_BODY_LEN_NO_TAG,
+            core::usize::MAX,
+        )
     }
 
-    fn min_body_len(&self) -> usize {
-        ETHERNET_MIN_BODY_LEN_NO_TAG
-    }
-
-    fn max_body_len(&self) -> usize {
-        std::usize::MAX
-    }
-
-    fn footer_len(&self) -> usize {
-        0
-    }
-
-    fn serialize(self, mut buffer: SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer) {
         // NOTE: EtherType values of 1500 and below are used to indicate the
         // length of the body in bytes. We don't need to validate this because
         // the EtherType enum has no variants with values in that range.
@@ -240,7 +234,9 @@ impl PacketBuilder for EthernetFrameBuilder {
 
 #[cfg(test)]
 mod tests {
-    use packet::{Buf, BufferSerializer, ParseBuffer, SerializeBuffer, Serializer};
+    use packet::{
+        Buf, BufferSerializer, InnerPacketBuilder, ParseBuffer, SerializeBuffer, Serializer,
+    };
 
     use super::*;
 
@@ -337,6 +333,7 @@ mod tests {
     #[test]
     fn test_serialize() {
         let buf = (&new_serialize_buf()[..])
+            .into_serializer()
             .encapsulate(EthernetFrameBuilder::new(
                 DEFAULT_DST_MAC,
                 DEFAULT_SRC_MAC,
@@ -413,7 +410,7 @@ mod tests {
     fn test_serialize_panic() {
         // create with a body which is below the minimum length
         let mut buf = [0u8; ETHERNET_MIN_FRAME_LEN];
-        let buffer = SerializeBuffer::new(
+        let mut buffer = SerializeBuffer::new(
             &mut buf[..],
             (ETHERNET_MIN_FRAME_LEN - (ETHERNET_MIN_BODY_LEN_WITH_TAG - 1))..,
         );
@@ -422,6 +419,6 @@ mod tests {
             Mac::new([6, 7, 8, 9, 10, 11]),
             EtherType::Arp,
         )
-        .serialize(buffer);
+        .serialize(&mut buffer);
     }
 }
