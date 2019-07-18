@@ -272,9 +272,20 @@ thread_t* thread_create_idle_thread(uint cpu_num);
 void thread_set_name(const char* name);
 void thread_set_priority(thread_t* t, int priority);
 void thread_set_user_callback(thread_t* t, thread_user_callback_t cb);
+
+// Creates a thread with |name| that will execute |entry| at |priority|. |arg|
+// will be passed to |entry| when executed, the return value of |entry| will be
+// passed to thread_exit().
+// This call allocates a thread and places it in the global thread list. This
+// memory will be freed by either thread_join() or thread_detach(), one of these
+// MUST be called.
+// The thread will not be scheduled until thread_resume() is called.
 thread_t* thread_create(const char* name, thread_start_routine entry, void* arg, int priority);
+
 thread_t* thread_create_etc(thread_t* t, const char* name, thread_start_routine entry, void* arg,
                             int priority, thread_trampoline_routine alt_trampoline);
+
+// Called to mark a thread as schedulable.
 void thread_resume(thread_t*);
 zx_status_t thread_suspend(thread_t*);
 void thread_signal_policy_exception(void);
@@ -288,9 +299,14 @@ void thread_set_cpu_affinity(thread_t* t, cpu_mask_t mask);
 // migrates the current thread to the CPU identified by target_cpu
 void thread_migrate_to_cpu(cpu_num_t target_cpuid);
 
+// Marks a thread as detached, in this state its memory will be released once
+// execution is done.
 zx_status_t thread_detach(thread_t* t);
-zx_status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline);
 zx_status_t thread_detach_and_resume(thread_t* t);
+
+// Waits |deadline| time for a thread to complete execution then releases its memory.
+zx_status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline);
+
 zx_status_t thread_set_real_time(thread_t* t);
 
 // scheduler routines to be used by regular kernel code

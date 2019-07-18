@@ -199,10 +199,32 @@ static void topology_cpu_init(void) {
         continue;
       }
     }
-    // the cpu booted
-    //
-    // bootstrap thread is now responsible for freeing its stack
   }
+
+  // Create a thread that checks that the secondary processors actually
+  // started. Since the secondary cpus are defined in the bootloader by humans
+  // it is possible they don't match the hardware.
+  constexpr auto check_cpus_booted = [](void*) -> int {
+    // We wait for secondary cpus to start up.
+    thread_sleep_relative(ZX_SEC(5));
+
+    // Check that all cpus in the topology are now online.
+    const auto online_mask = mp_get_online_mask();
+    for (auto* node : system_topology::GetSystemTopology().processors()) {
+      const auto& processor = node->entity.processor;
+      for (int i = 0; i < processor.logical_id_count; i++) {
+        const auto logical_id = node->entity.processor.logical_ids[i];
+        if ((cpu_num_to_mask(logical_id) & online_mask) == 0) {
+          printf("ERROR: CPU %d did not start!\n", logical_id);
+        }
+      }
+    }
+    return 0;
+  };
+
+  auto* warning_thread = thread_create("platform-cpu-boot-check-thread", check_cpus_booted,
+                                       nullptr, DEFAULT_PRIORITY);
+  thread_detach_and_resume(warning_thread);
 }
 
 static inline bool is_zbi_container(void* addr) {
