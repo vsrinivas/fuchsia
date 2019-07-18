@@ -7,17 +7,17 @@ library fuchsia.ui.policy;
 using fuchsia.ui.gfx;
 using fuchsia.ui.views;
 
-// The Presenter service provides a way for applications to ask that a view be
-// added to a view tree, leaving any window management concerns up to the
-// discretion of the presenter implementation.
+/// The Presenter service provides a way for applications to ask that a view be
+/// added to a view tree, leaving any window management concerns up to the
+/// discretion of the presenter implementation.
 [Discoverable]
 protocol Presenter {
-    // Request that the View's contents be displayed on the screen as a
-    // `Presentation`.
+    /// Request that the View's contents be displayed on the screen as a
+    /// `Presentation`.
     PresentView(fuchsia.ui.views.ViewHolderToken view_holder_token, request<Presentation>? presentation_request);
 
-    // Sets new default renderer params and forces them on for the duration of the
-    // presenter's lifetime. Only applies to any subsequent calls to Present().
-    // Used for testing.
+    /// Sets new default renderer params and forces them on for the duration of the
+    /// presenter's lifetime. Only applies to any subsequent calls to Present().
+    /// Used for testing.
     HACK_SetRendererParams(bool enable_clipping, vector<fuchsia.ui.gfx.RendererParam> params);
 };
