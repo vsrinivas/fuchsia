@@ -336,6 +336,14 @@ static bool TestCreateResourceSlice() {
 
 
 #if defined(__x86_64__)
+
+static inline void outb(uint16_t port, uint8_t data) {
+    __asm__ __volatile__("outb %1, %0"
+                         :
+                         : "dN"(port),
+                           "a"(data));
+}
+
 static bool test_ioports(void) {
     BEGIN_TEST;
     // On x86 create an ioport resource and attempt to have the privilege bits
@@ -348,6 +356,25 @@ static bool test_ioports(void) {
                                    io_size, io_name, sizeof(io_name), &io),
               ZX_OK);
     EXPECT_EQ(zx_ioports_request(io.get(), io_base, io_size), ZX_OK);
+
+    EXPECT_EQ(zx_ioports_release(io.get(), io_base, io_size), ZX_OK);
+
+    zx::resource one_io;
+    char one_io_name[] = "one";
+    ASSERT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_IOPORT, 0x80,
+                                   1, one_io_name, strlen(one_io_name), &one_io),
+              ZX_OK);
+    // Ask for the wrong port. Should fail.
+    EXPECT_EQ(zx_ioports_request(one_io.get(), io_base, io_size), ZX_ERR_OUT_OF_RANGE);
+    // Lets get the right one.
+    EXPECT_EQ(zx_ioports_request(one_io.get(), 0x80, 1), ZX_OK);
+
+    outb(/*port=*/0x80, /*data=*/1);  // If we failed to get the port, this will #GP.
+
+    // Try to release the wrong one.
+    EXPECT_EQ(zx_ioports_release(one_io.get(), io_base, io_size), ZX_ERR_OUT_OF_RANGE);
+
+    EXPECT_EQ(zx_ioports_release(one_io.get(), 0x80, 1), ZX_OK);
 
     END_TEST;
 }

@@ -252,11 +252,29 @@ zx_status_t sys_ioports_request(zx_handle_t hrsrc, uint16_t io_addr, uint32_t le
 
   return IoBitmap::GetCurrent().SetIoBitmap(io_addr, len, 1);
 }
+
+// zx_status_t zx_ioports_release
+zx_status_t sys_ioports_release(zx_handle_t hrsrc, uint16_t io_addr, uint32_t len) {
+    zx_status_t status;
+    if ((status = validate_resource_ioport(hrsrc, io_addr, len)) != ZX_OK) {
+        return status;
+    }
+
+    LTRACEF("addr 0x%x len 0x%x\n", io_addr, len);
+
+    return IoBitmap::GetCurrent().SetIoBitmap(io_addr, len, /*enable=*/false);
+}
+
 #else
 // zx_status_t zx_ioports_request
 zx_status_t sys_ioports_request(zx_handle_t hrsrc, uint16_t io_addr, uint32_t len) {
   // doesn't make sense on non-x86
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+// zx_status_t zx_ioports_release
+zx_status_t sys_ioports_release(zx_handle_t hrsrc, uint16_t io_addr, uint32_t len) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 #endif
 

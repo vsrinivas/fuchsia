@@ -996,6 +996,9 @@ protocol Api {
     [rights="resource must have resource kind ZX_RSRC_KIND_IOPORT."]
     ioports_request(handle<resource> resource, uint16 io_addr, uint32 len) -> (zx.status status);
 
+    [rights="resource must have resource kind ZX_RSRC_KIND_IOPORT."]
+    ioports_release(handle<resource> resource, uint16 io_addr, uint32 len) -> (zx.status status);
+
     [rights="bti must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP.",
      argtype="out handle_acquire"]
     vmo_create_contiguous(handle<bti> bti, usize size, uint32 alignment_log2) ->
