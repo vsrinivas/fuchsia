@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
-
-#include <memory>
-#include <string>
-#include <vector>
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/engine.h"
@@ -88,12 +88,7 @@ using MultiSessionHitTestTest = ::gtest::TestLoopFixture;
 //
 // Where "V" represents the view boundary and "r" is the extent
 // of the rectangle.
-#if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
 TEST_F(SingleSessionHitTestTest, ViewClippingHitTest) {
-#else
-TEST_F(SingleSessionHitTestTest, DISABLED_ViewClippingHitTest) {
-#endif
-
   constexpr float display_width = 1024;
   constexpr float display_height = 768;
 
@@ -214,11 +209,7 @@ TEST_F(SingleSessionHitTestTest, DISABLED_ViewClippingHitTest) {
 // c         pppppppp        c
 // c                         c
 // ccccccccccccccccccccccccccc
-#if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
 TEST_F(MultiSessionHitTestTest, ChildBiggerThanParentTest) {
-#else
-TEST_F(MultiSessionHitTestTest, DISABLED_ChildBiggerThanParentTest) {
-#endif
   constexpr float display_width = 1024;
   constexpr float display_height = 768;
 
@@ -367,11 +358,7 @@ TEST_F(MultiSessionHitTestTest, DISABLED_ChildBiggerThanParentTest) {
 // p             pc              c
 // p             pc              c
 // pppppppppppppppcccccccccccccccc
-#if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
 TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
-#else
-TEST_F(MultiSessionHitTestTest, DISABLED_ChildCompletelyClipped) {
-#endif
   constexpr float display_width = 1024;
   constexpr float display_height = 768;
 

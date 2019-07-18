@@ -26,14 +26,6 @@ Node::IntersectionInfo ViewNode::GetIntersection(
     const escher::ray4& ray, const IntersectionInfo& parent_intersection) const {
   FXL_DCHECK(parent_intersection.continue_with_children);
   IntersectionInfo result;
-#if !SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
-  // Explicitly set to true, since views do not clip while the
-  // above macro is false.
-  result.continue_with_children = true;
-  result.interval = parent_intersection.interval;
-  return result;
-#endif  // SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
-
   View* view = GetView();
   if (view) {
     ViewHolder* holder = view->view_holder();

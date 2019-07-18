@@ -681,11 +681,7 @@ TEST_F(ScenicPixelTest, Opacity) {
   }
 }
 
-#if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
 TEST_F(ScenicPixelTest, ViewBoundClipping) {
-#else
-TEST_F(ScenicPixelTest, DISABLED_ViewBoundClipping) {
-#endif
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
@@ -771,11 +767,7 @@ TEST_F(ScenicPixelTest, DISABLED_ViewBoundClipping) {
 // at (0,0) in the xy plane) which means the test would fail if the bounds were
 // not being updated properly to the correct world-space location by the
 // transform stack before rendering.
-#if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
 TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
-#else
-TEST_F(ScenicPixelTest, DISABLED_ViewBoundClippingWithTransforms) {
-#endif
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;

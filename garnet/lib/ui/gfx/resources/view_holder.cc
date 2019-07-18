@@ -80,15 +80,12 @@ escher::BoundingBox ViewHolder::GetWorldBoundingBox() const {
 void ViewHolder::SetViewProperties(fuchsia::ui::gfx::ViewProperties props) {
   if (!fidl::Equals(props, view_properties_)) {
     view_properties_ = std::move(props);
-#if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
     // This code transforms the bounding box given to the view holder
     // into a set of clipping planes on the transform node that will
     // then be applied to all children of this view holder. This is
     // to ensure that all geometry gets clipped to the view bounds and
     // does not extend past its allowed extent.
     SetClipPlanesFromBBox(GetLocalBoundingBox());
-#endif  // SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
-
     SendViewPropertiesChangedEvent();
   }
 }

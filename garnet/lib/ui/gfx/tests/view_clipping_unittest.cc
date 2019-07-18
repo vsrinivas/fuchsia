@@ -62,11 +62,7 @@ static constexpr float kHeight = 768;
 // is properly having its bounds set by the
 // "SetViewPropertiesCmd" and if the correct clipping
 // planes are being generated as a result.
-#if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
 VK_TEST_F(ViewClippingTest, ClipSettingTest) {
-#else
-VK_TEST_F(ViewClippingTest, DISABLED_ClipSettingTest) {
-#endif
   uint32_t scene_id = 5;
   uint32_t view_id = 15;
   uint32_t view_holder_id = 30;
@@ -118,11 +114,7 @@ VK_TEST_F(ViewClippingTest, DISABLED_ClipSettingTest) {
 // is properly having its bounds set by the
 // "SetViewPropertiesCmd" and if the correct clipping
 // planes are being generated as a result.
-#if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
 VK_TEST_F(ViewClippingTest, InsetsTest) {
-#else
-VK_TEST_F(ViewClippingTest, DISABLED_InsetsTest) {
-#endif
   uint32_t scene_id = 5;
   uint32_t view_id = 15;
   uint32_t view_holder_id = 30;
@@ -162,11 +154,7 @@ VK_TEST_F(ViewClippingTest, DISABLED_InsetsTest) {
 
 // Run a single test case on a view that's added to a ViewHolder after its
 // properties are set to make sure that it still clips.
-#if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
 VK_TEST_F(ViewClippingTest, ClipSettingBeforeViewCreationTest) {
-#else
-VK_TEST_F(ViewClippingTest, DISABLED_ClipSettingBeforeViewCreationTest) {
-#endif
   uint32_t scene_id = 5;
   uint32_t view_id = 15;
   uint32_t view_holder_id = 30;
@@ -207,11 +195,7 @@ VK_TEST_F(ViewClippingTest, DISABLED_ClipSettingBeforeViewCreationTest) {
 // This test is used to check that meshes get clipped properly
 // by their view holder's clip planes when the EngineRendererVisitor
 // traverses the scene.
-#if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
 VK_TEST_F(ViewClippingTest, SceneTraversal) {
-#else
-VK_TEST_F(ViewClippingTest, DISABLED_SceneTraversal) {
-#endif
   auto escher = escher::test::GetEscher()->GetWeakPtr();
 
   uint32_t scene_id = 5;

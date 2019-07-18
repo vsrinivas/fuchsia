@@ -1420,13 +1420,6 @@ Include the vulkan validation layers in scenic.
 
 **Current value (from the default):** `true`
 
-From //garnet/bin/ui/BUILD.gn:38
-
-### scenic_enforce_view_bound_clipping
-Turns on view bound clipping for all of Scenic.
-
-**Current value (from the default):** `true`
-
 From //garnet/lib/ui/gfx/BUILD.gn:14
 
 ### scenic_ignore_vsync

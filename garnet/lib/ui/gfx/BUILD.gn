@@ -9,9 +9,6 @@ declare_args() {
 
   # Draws the current frame number in the top-left corner.
   scenic_display_frame_number = false
-
-  # Turns on view bound clipping for all of Scenic.
-  scenic_enforce_view_bound_clipping = true
 }
 
 config("common_include_dirs") {
@@ -29,9 +26,7 @@ config("swapchain") {
 }
 
 config("feature_flags") {
-  defines = [
-    "SCENIC_ENFORCE_VIEW_BOUND_CLIPPING=$scenic_enforce_view_bound_clipping",
-  ]
+  defines = []
 }
 
 source_set("common_gfx_config_source_set") {
