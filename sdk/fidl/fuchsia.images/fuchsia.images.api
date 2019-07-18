@@ -1,6 +1,6 @@
 {
   "fidl/fuchsia.images/encoded_image.fidl": "f812fe10be541c2bc9d538fc914409e8",
-  "fidl/fuchsia.images/image_info.fidl": "e47b03ee6ccc9335536a73c47531e0b9",
+  "fidl/fuchsia.images/image_info.fidl": "c32757cfc05ed9e3b9850a8936ca27c7",
   "fidl/fuchsia.images/image_pipe.fidl": "e3829c11a8d022e64b60740e0a6367c7",
   "fidl/fuchsia.images/memory_type.fidl": "a764e2ae560b1a4c798ac1d6e5666eaf",
   "fidl/fuchsia.images/presentation_info.fidl": "fe146bda36e7db4f9605bf1886088ab8"

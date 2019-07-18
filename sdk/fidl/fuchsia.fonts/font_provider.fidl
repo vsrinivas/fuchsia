@@ -47,7 +47,7 @@ struct Request {
     /// For example, 5 is normal.
     uint32 width = 5;
 
-    Slant slant = UPRIGHT;
+    Slant slant = Slant.UPRIGHT;
 
     /// BCP47 language tags in order of preference. See
     /// https://tools.ietf.org/html/bcp47 .
@@ -62,7 +62,7 @@ struct Request {
     /// Fallback group preference. Caller can leave this field set to NONE. In
     /// that case the font provider will use fallback group of the specified font
     /// family.
-    FallbackGroup fallback_group = NONE;
+    FallbackGroup fallback_group = FallbackGroup.NONE;
 
     uint32 flags = 0;
 };

@@ -95,10 +95,10 @@ struct Request {
     handle<eventpair>? event;
 
     // The cache behavior for the request.
-    CacheMode cache_mode = DEFAULT;
+    CacheMode cache_mode = CacheMode.DEFAULT;
 
     // The response body mode.
-    ResponseBodyMode response_body_mode = BUFFER;
+    ResponseBodyMode response_body_mode = ResponseBodyMode.BUFFER;
 };
 
 // A description of the redirect the server requested.

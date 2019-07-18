@@ -45,7 +45,7 @@
   "fidl/fuchsia.modular/story/story_state.fidl": "cdf09da81629d13a398c6670a7ab20c7",
   "fidl/fuchsia.modular/story/story_visibility_state.fidl": "2af3047bf28be5662d44d8def9414ab4",
   "fidl/fuchsia.modular/surface/container.fidl": "97bf1471126aa6e8d24252a03a0f0bba",
-  "fidl/fuchsia.modular/surface/surface.fidl": "e0befd792387cec914be731d1a45909a",
+  "fidl/fuchsia.modular/surface/surface.fidl": "cf97cfd08e410532c79b74b3ad716604",
   "fidl/fuchsia.modular/user_intelligence/intelligence_services.fidl": "40a23436471efab289ea54b660b34511",
   "fidl/fuchsia.modular/user_intelligence/scope.fidl": "91d4f5fffd186773a1c98dd23a8c3c5b",
   "fidl/fuchsia.modular/user_intelligence/user_intelligence_provider.fidl": "f59e0441861a4624b91d48096e986489"

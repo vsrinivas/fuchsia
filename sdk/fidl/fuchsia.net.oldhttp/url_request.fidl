@@ -57,8 +57,8 @@ struct URLRequest {
   bool auto_follow_redirects = false;
 
   // The cache behavior for the request.
-  CacheMode cache_mode = DEFAULT;
+  CacheMode cache_mode = CacheMode.DEFAULT;
 
   // The response body mode.
-  ResponseBodyMode response_body_mode = STREAM;
+  ResponseBodyMode response_body_mode = ResponseBodyMode.STREAM;
 };

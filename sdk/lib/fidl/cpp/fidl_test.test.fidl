@@ -121,8 +121,7 @@ enum SampleEnum {
 struct VariousDefaults {
     int64 int64_with_default = 5;
     string string_with_default = "stuff";
-    // TODO(FIDL-486): This works, but is a happy accident.
-    SampleEnum enum_with_default = MEMBER_B;
+    SampleEnum enum_with_default = SampleEnum.MEMBER_B;
     bool bool_with_default = true;
 };
 

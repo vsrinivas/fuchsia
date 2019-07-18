@@ -35,13 +35,13 @@ enum AxisScale {
 struct Axis {
     Range range;
     int32 resolution = 1;
-    AxisScale scale = LINEAR;
+    AxisScale scale = AxisScale.LINEAR;
 };
 
 struct AxisF {
     RangeF range;
     float32 resolution = 1.0;
-    AxisScale scale = LINEAR;
+    AxisScale scale = AxisScale.LINEAR;
 };
 
 // `MediaButtonsDescriptor` describes the media buttons.
