@@ -17,25 +17,25 @@ enum ValueType : uint8 {
     text = 2;
 };
 
-// Manager interface used to manage settings
+/// Manager interface used to manage settings
 [Discoverable]
 protocol DeviceSettingsManager {
     GetInteger(string key) -> (int64 val, Status s);
 
     GetString(string key) -> (string val, Status s);
 
-    // Returns false on database error and true on success.
+    /// Returns false on database error and true on success.
     SetInteger(string key, int64 val) -> (bool result);
 
-    // Returns false on database error and true on success.
+    /// Returns false on database error and true on success.
     SetString(string key, string val) -> (bool result);
 
-    // Register a watcher to be called when a setting changes
-    // Returns Status::ok, Status::errInvalidSetting or Status::errUnknown
+    /// Register a watcher to be called when a setting changes
+    /// Returns Status::ok, Status::errInvalidSetting or Status::errUnknown
     Watch(string key, DeviceSettingsWatcher watcher) -> (Status s);
 };
 
-// A watcher for device settings changes
+/// A watcher for device settings changes
 protocol DeviceSettingsWatcher {
     OnChangeSettings(ValueType type);
 };
