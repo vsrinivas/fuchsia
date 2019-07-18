@@ -406,7 +406,7 @@ module_suggester is not AOT compiled in debug builds
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/626773ebf0f970280fa77deef260a360d1fdb1d7/runtime/dart/dart_component.gni#51)
+From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/6189998fb04d5f503d9674b072aa9efe6af88dcd/runtime/dart/dart_component.gni#51)
 
 ### dart_component_kind
 Allow for deduping the VM between standalone, flutter_runner and dart_runner.
@@ -465,7 +465,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/626773ebf0f970280fa77deef260a360d1fdb1d7/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/6189998fb04d5f503d9674b072aa9efe6af88dcd/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -473,7 +473,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/626773ebf0f970280fa77deef260a360d1fdb1d7/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/6189998fb04d5f503d9674b072aa9efe6af88dcd/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -523,7 +523,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/626773ebf0f970280fa77deef260a360d1fdb1d7/runtime/dart/dart_component.gni#41)
+From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/6189998fb04d5f503d9674b072aa9efe6af88dcd/runtime/dart/dart_component.gni#41)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -752,19 +752,26 @@ package and deduplicated by blobfs.
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/626773ebf0f970280fa77deef260a360d1fdb1d7/runtime/dart/dart_component.gni#27)
+From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/6189998fb04d5f503d9674b072aa9efe6af88dcd/runtime/dart/dart_component.gni#27)
 
 ### flutter_default_app
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/626773ebf0f970280fa77deef260a360d1fdb1d7/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/6189998fb04d5f503d9674b072aa9efe6af88dcd/runtime/dart/dart_component.gni#12)
+
+### flutter_enable_skshaper
+Whether to use the Skia text shaper module
+
+**Current value (from the default):** `false`
+
+From //third_party/flutter/common/config.gni:22
 
 ### flutter_profile
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/626773ebf0f970280fa77deef260a360d1fdb1d7/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/6189998fb04d5f503d9674b072aa9efe6af88dcd/runtime/dart/dart_component.gni#32)
 
 ### flutter_runtime_mode
 The runtime mode ("debug", "profile", or "release")
@@ -778,19 +785,19 @@ Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/626773ebf0f970280fa77deef260a360d1fdb1d7/runtime/dart/dart_component.gni#38)
+From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/6189998fb04d5f503d9674b072aa9efe6af88dcd/runtime/dart/dart_component.gni#38)
 
 ### flutter_use_fontconfig
 
 **Current value (from the default):** `false`
 
-From //third_party/flutter/third_party/txt/BUILD.gn:16
+From //third_party/flutter/third_party/txt/BUILD.gn:18
 
 ### framework_packages
 
 **Current value (from the default):** `["collection", "flutter", "meta", "typed_data", "vector_math"]`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/626773ebf0f970280fa77deef260a360d1fdb1d7/runtime/flutter_runner/prebuilt_framework.gni#8)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/6189998fb04d5f503d9674b072aa9efe6af88dcd/runtime/flutter_runner/prebuilt_framework.gni#8)
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -955,17 +962,17 @@ List of kernel command line arguments to bake into the boot image.
 See also //zircon/docs/kernel_cmdline.md and
 [`devmgr_config`](#devmgr_config).
 
-**Current value for `target_cpu = "arm64"`:** `["bootsvc.next=bin/component_manager,fuchsia-boot:///#meta/root.cm,--use-builtin-process-launcher"]`
+**Current value for `target_cpu = "arm64"`:** `["dummy=arg"]`
 
-From //products/bringup.gni:13
+From //products/bringup.gni:12
 
 **Overridden from the default:** `[]`
 
 From //build/images/BUILD.gn:478
 
-**Current value for `target_cpu = "x64"`:** `["bootsvc.next=bin/component_manager,fuchsia-boot:///#meta/root.cm,--use-builtin-process-launcher"]`
+**Current value for `target_cpu = "x64"`:** `["dummy=arg"]`
 
-From //products/bringup.gni:13
+From //products/bringup.gni:12
 
 **Overridden from the default:** `[]`
 
@@ -1340,13 +1347,13 @@ From //build/dart/dart.gni:9
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/626773ebf0f970280fa77deef260a360d1fdb1d7/runtime/flutter_runner/prebuilt_framework.gni#7)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/6189998fb04d5f503d9674b072aa9efe6af88dcd/runtime/flutter_runner/prebuilt_framework.gni#7)
 
 ### prebuilt_framework_path
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/626773ebf0f970280fa77deef260a360d1fdb1d7/runtime/flutter_runner/prebuilt_framework.gni#6)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/6189998fb04d5f503d9674b072aa9efe6af88dcd/runtime/flutter_runner/prebuilt_framework.gni#6)
 
 ### prebuilt_libvulkan_arm_path
 
@@ -1420,7 +1427,7 @@ Include the vulkan validation layers in scenic.
 
 **Current value (from the default):** `true`
 
-From //garnet/lib/ui/gfx/BUILD.gn:14
+From //garnet/bin/ui/BUILD.gn:38
 
 ### scenic_ignore_vsync
 
@@ -1589,31 +1596,31 @@ From //build/images/BUILD.gn:47
 
 **Current value (from the default):** `""`
 
-From //third_party/skia/BUILD.gn:43
+From //third_party/skia/BUILD.gn:46
 
 ### skia_compile_processors
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:53
+From //third_party/skia/BUILD.gn:59
 
 ### skia_enable_atlas_text
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:68
+From //third_party/skia/BUILD.gn:79
 
 ### skia_enable_ccpr
 
 **Current value (from the default):** `true`
 
-From //third_party/skia/BUILD.gn:44
+From //third_party/skia/BUILD.gn:47
 
 ### skia_enable_discrete_gpu
 
 **Current value (from the default):** `true`
 
-From //third_party/skia/BUILD.gn:46
+From //third_party/skia/BUILD.gn:49
 
 ### skia_enable_flutter_defines
 
@@ -1637,43 +1644,43 @@ From //third_party/skia/BUILD.gn:17
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:73
+From //third_party/skia/BUILD.gn:84
 
 ### skia_enable_fontmgr_custom
 
 **Current value (from the default):** `true`
 
-From //third_party/skia/BUILD.gn:71
+From //third_party/skia/BUILD.gn:82
 
 ### skia_enable_fontmgr_custom_empty
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:72
+From //third_party/skia/BUILD.gn:83
 
 ### skia_enable_fontmgr_empty
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:69
+From //third_party/skia/BUILD.gn:80
 
 ### skia_enable_fontmgr_fuchsia
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:74
+From //third_party/skia/BUILD.gn:85
 
 ### skia_enable_fontmgr_win
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:75
+From //third_party/skia/BUILD.gn:86
 
 ### skia_enable_fontmgr_win_gdi
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:76
+From //third_party/skia/BUILD.gn:87
 
 ### skia_enable_gpu
 
@@ -1685,7 +1692,7 @@ From //third_party/skia/gn/skia.gni:11
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:45
+From //third_party/skia/BUILD.gn:48
 
 ### skia_enable_particles
 
@@ -1701,7 +1708,7 @@ From //.gn:25
 
 **Overridden from the default:** `true`
 
-From //third_party/skia/BUILD.gn:47
+From //third_party/skia/BUILD.gn:50
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1709,7 +1716,7 @@ From //.gn:25
 
 **Overridden from the default:** `true`
 
-From //third_party/skia/BUILD.gn:47
+From //third_party/skia/BUILD.gn:50
 
 ### skia_enable_skottie
 
@@ -1721,7 +1728,7 @@ From //third_party/skia/modules/skottie/BUILD.gn:9
 
 **Current value (from the default):** `true`
 
-From //third_party/skia/BUILD.gn:49
+From //third_party/skia/BUILD.gn:52
 
 ### skia_enable_skshaper
 
@@ -1729,17 +1736,23 @@ From //third_party/skia/BUILD.gn:49
 
 From //third_party/skia/modules/skshaper/BUILD.gn:9
 
+### skia_enable_sksl_interpreter
+
+**Current value (from the default):** `false`
+
+From //third_party/skia/BUILD.gn:53
+
 ### skia_enable_skvm_jit
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:50
+From //third_party/skia/BUILD.gn:55
 
 ### skia_enable_spirv_validation
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:48
+From //third_party/skia/BUILD.gn:51
 
 ### skia_enable_tools
 
@@ -1751,43 +1764,43 @@ From //third_party/skia/gn/skia.gni:12
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:51
+From //third_party/skia/BUILD.gn:57
 
 ### skia_generate_workarounds
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:54
+From //third_party/skia/BUILD.gn:60
 
 ### skia_gl_standard
 
 **Current value (from the default):** `""`
 
-From //third_party/skia/BUILD.gn:83
+From //third_party/skia/BUILD.gn:94
 
 ### skia_include_multiframe_procs
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:63
+From //third_party/skia/BUILD.gn:69
 
 ### skia_lex
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:55
+From //third_party/skia/BUILD.gn:61
 
 ### skia_llvm_lib
 
 **Current value (from the default):** `"LLVM"`
 
-From //third_party/skia/BUILD.gn:60
+From //third_party/skia/BUILD.gn:66
 
 ### skia_llvm_path
 
 **Current value (from the default):** `""`
 
-From //third_party/skia/BUILD.gn:59
+From //third_party/skia/BUILD.gn:65
 
 ### skia_pdf_subset_harfbuzz
 TODO: set skia_pdf_subset_harfbuzz to skia_use_harfbuzz.
@@ -1800,25 +1813,31 @@ From //third_party/skia/gn/skia.gni:18
 
 **Current value (from the default):** `""`
 
-From //third_party/skia/BUILD.gn:52
+From //third_party/skia/BUILD.gn:58
 
 ### skia_skqp_global_error_tolerance
 
 **Current value (from the default):** `0`
 
-From //third_party/skia/BUILD.gn:57
+From //third_party/skia/BUILD.gn:63
 
 ### skia_tools_require_resources
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:62
+From //third_party/skia/BUILD.gn:68
 
 ### skia_use_angle
 
 **Current value (from the default):** `false`
 
 From //third_party/skia/BUILD.gn:21
+
+### skia_use_dawn
+
+**Current value (from the default):** `false`
+
+From //third_party/skia/BUILD.gn:39
 
 ### skia_use_dng_sdk
 
@@ -1828,7 +1847,7 @@ From //.gn:26
 
 **Overridden from the default:** `true`
 
-From //third_party/skia/BUILD.gn:66
+From //third_party/skia/BUILD.gn:77
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1836,7 +1855,7 @@ From //.gn:26
 
 **Overridden from the default:** `true`
 
-From //third_party/skia/BUILD.gn:66
+From //third_party/skia/BUILD.gn:77
 
 ### skia_use_egl
 
@@ -1926,7 +1945,7 @@ From //third_party/skia/gn/skia.gni:13
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:39
+From //third_party/skia/BUILD.gn:40
 
 ### skia_use_libjpeg_turbo
 
@@ -1990,7 +2009,7 @@ From //.gn:30
 
 **Overridden from the default:** `true`
 
-From //third_party/skia/BUILD.gn:67
+From //third_party/skia/BUILD.gn:78
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1998,13 +2017,13 @@ From //.gn:30
 
 **Overridden from the default:** `true`
 
-From //third_party/skia/BUILD.gn:67
+From //third_party/skia/BUILD.gn:78
 
 ### skia_use_vulkan
 
 **Current value (from the default):** `false`
 
-From //third_party/skia/BUILD.gn:91
+From //third_party/skia/BUILD.gn:102
 
 ### skia_use_wuffs
 
@@ -2020,7 +2039,7 @@ From //.gn:31
 
 **Overridden from the default:** `true`
 
-From //third_party/skia/BUILD.gn:40
+From //third_party/skia/BUILD.gn:41
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -2028,13 +2047,13 @@ From //.gn:31
 
 **Overridden from the default:** `true`
 
-From //third_party/skia/BUILD.gn:40
+From //third_party/skia/BUILD.gn:41
 
 ### skia_use_xps
 
 **Current value (from the default):** `true`
 
-From //third_party/skia/BUILD.gn:41
+From //third_party/skia/BUILD.gn:42
 
 ### skia_use_zlib
 
