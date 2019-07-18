@@ -1022,7 +1022,7 @@ where
     // TODO: IGMP packets need RouterAlert option, we should add this
     // option once we can serialize options in Ipv4 packets.
     let body = body.encapsulate(builder);
-    crate::device::send_ip_frame(ctx, device, dst_ip, body).map_err(|ser| ser.into_serializer())
+    crate::device::send_ip_frame(ctx, device, dst_ip, body).map_err(|ser| ser.into_inner())
 }
 
 /// Send an ICMP response to a remote host.
@@ -2263,19 +2263,28 @@ mod tests {
 
     #[test]
     fn test_lookup_table_ipv4_unspecified() {
-        assert!(test_lookup_table_address(get_dummy_config::<Ipv4Addr>(), Ipv4::UNSPECIFIED_ADDRESS).is_none());
+        assert!(test_lookup_table_address(
+            get_dummy_config::<Ipv4Addr>(),
+            Ipv4::UNSPECIFIED_ADDRESS
+        )
+        .is_none());
     }
 
     #[test]
     fn test_lookup_table_ipv6_unspecified() {
-        assert!(test_lookup_table_address(get_dummy_config::<Ipv6Addr>(), Ipv6::UNSPECIFIED_ADDRESS).is_none());
+        assert!(test_lookup_table_address(
+            get_dummy_config::<Ipv6Addr>(),
+            Ipv6::UNSPECIFIED_ADDRESS
+        )
+        .is_none());
     }
 
     fn test_lookup_table_address<A: IpAddress>(
-        cfg: DummyEventDispatcherConfig<A>, ip_address: A,
+        cfg: DummyEventDispatcherConfig<A>,
+        ip_address: A,
     ) -> Option<Destination<A::Version>> {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(cfg.clone())
-            .build::<DummyEventDispatcher>();
+        let mut ctx =
+            DummyEventDispatcherBuilder::from_config(cfg.clone()).build::<DummyEventDispatcher>();
         lookup_route(&ctx.state().ip, ip_address)
     }
 }

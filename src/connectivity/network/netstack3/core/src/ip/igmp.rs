@@ -15,7 +15,7 @@ use failure::Fail;
 use log::{debug, error};
 use net_types::ip::{IpAddress, Ipv4Addr};
 use net_types::MulticastAddr;
-use packet::{serialize::Buf, BufferMut};
+use packet::{Buf, BufferMut, InnerPacketBuilder};
 use specialize_ip_macro::specialize_ip_address;
 use zerocopy::ByteSlice;
 
@@ -198,7 +198,7 @@ where
         None => return Err(IgmpError::NoIpAddress { device }),
     };
     let body = IgmpPacketBuilder::<B, M>::new_with_resp_time(group_addr.get(), max_resp_time);
-    crate::ip::send_igmp_packet(ctx, device, src_ip, dst_ip.get(), body)
+    crate::ip::send_igmp_packet(ctx, device, src_ip, dst_ip.get(), body.into_serializer())
         .map_err(|_| IgmpError::SendFailure { addr: *group_addr })
 }
 
@@ -448,7 +448,7 @@ mod tests {
 
     use net_types::ethernet::Mac;
     use net_types::ip::AddrSubnet;
-    use packet::serialize::{Buf, SerializeConstraints, Serializer};
+    use packet::serialize::{Buf, NestedPacketBuilder, Serializer};
 
     use crate::device::ethernet::*;
     use crate::device::DeviceId;
@@ -521,9 +521,7 @@ mod tests {
             GROUP_ADDR,
             resp_time.try_into().unwrap(),
         );
-        let mut buff = ser
-            .serialize(SerializeConstraints { prefix_len: 0, min_body_len: 8, suffix_len: 0 })
-            .unwrap();
+        let mut buff = ser.into_serializer().serialize_vec(().with_min_body_len(8)).unwrap();
         receive_igmp_packet(ctx, device, ROUTER_ADDR, MY_ADDR, buff);
     }
 
@@ -536,17 +534,13 @@ mod tests {
             Ipv4Addr::new([0, 0, 0, 0]),
             resp_time.try_into().unwrap(),
         );
-        let mut buff = ser
-            .serialize(SerializeConstraints { prefix_len: 0, min_body_len: 8, suffix_len: 0 })
-            .unwrap();
+        let mut buff = ser.into_serializer().serialize_vec(().with_min_body_len(8)).unwrap();
         receive_igmp_packet(ctx, device, ROUTER_ADDR, MY_ADDR, buff);
     }
 
     fn receive_igmp_report<D: EventDispatcher>(ctx: &mut Context<D>, device: DeviceId) {
         let ser = IgmpPacketBuilder::<Buf<[u8; 8]>, IgmpMembershipReportV2>::new(GROUP_ADDR);
-        let mut buff = ser
-            .serialize(SerializeConstraints { prefix_len: 0, min_body_len: 8, suffix_len: 0 })
-            .unwrap();
+        let mut buff = ser.into_serializer().serialize_vec(().with_min_body_len(8)).unwrap();
         receive_igmp_packet(ctx, device, OTHER_HOST_ADDR, MY_ADDR, buff);
     }
 
