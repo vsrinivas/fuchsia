@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BREAKPOINT_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BREAKPOINT_H_
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/breakpoint_observer.h"
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
@@ -37,7 +38,7 @@ class Breakpoint : public ClientObject {
   // breakpoint object in the callback, get a weak pointer.
   virtual BreakpointSettings GetSettings() const = 0;
   virtual void SetSettings(const BreakpointSettings& settings,
-                           std::function<void(const Err&)> callback) = 0;
+                           fit::callback<void(const Err&)> callback) = 0;
 
   // Returns true if this is an internal breakpoint. Internal breakpoints are
   // used to implement other operations and are never exposed to the user.

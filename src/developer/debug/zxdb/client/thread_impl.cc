@@ -48,7 +48,7 @@ debug_ipc::ThreadRecord::BlockedReason ThreadImpl::GetBlockedReason() const {
   return blocked_reason_;
 }
 
-void ThreadImpl::Pause(std::function<void()> on_paused) {
+void ThreadImpl::Pause(fit::callback<void()> on_paused) {
   // The frames may have been requested when the thread was running which
   // will have marked them "empty but complete." When a pause happens the
   // frames will become available so we want subsequent requests to request
@@ -60,7 +60,7 @@ void ThreadImpl::Pause(std::function<void()> on_paused) {
   request.thread_koid = koid_;
   session()->remote_api()->Pause(
       request, [weak_thread = weak_factory_.GetWeakPtr(), on_paused = std::move(on_paused)](
-                   const Err& err, debug_ipc::PauseReply reply) {
+                   const Err& err, debug_ipc::PauseReply reply) mutable {
         if (!err.has_error() && weak_thread) {
           // Save the new metadata.
           if (reply.threads.size() == 1 && reply.threads[0].thread_koid == weak_thread->koid_) {
@@ -133,7 +133,7 @@ void ThreadImpl::Continue() {
 }
 
 void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
-                              std::function<void(const Err&)> on_continue) {
+                              fit::callback<void(const Err&)> on_continue) {
   ThreadController* controller_ptr = controller.get();
 
   // Add it first so that its presence will be noted by anything its
@@ -141,7 +141,7 @@ void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
   controllers_.push_back(std::move(controller));
 
   controller_ptr->InitWithThread(
-      this, [this, controller_ptr, on_continue = std::move(on_continue)](const Err& err) {
+      this, [this, controller_ptr, on_continue = std::move(on_continue)](const Err& err) mutable {
         if (err.has_error()) {
           controller_ptr->Log("InitWithThread failed.");
           NotifyControllerDone(controller_ptr);  // Remove the controller.
@@ -153,7 +153,7 @@ void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
       });
 }
 
-void ThreadImpl::JumpTo(uint64_t new_address, std::function<void(const Err&)> cb) {
+void ThreadImpl::JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) {
   // The register to set.
   debug_ipc::WriteRegistersRequest request;
   request.process_koid = process_->GetKoid();
@@ -174,7 +174,7 @@ void ThreadImpl::JumpTo(uint64_t new_address, std::function<void(const Err&)> cb
   // optionally request a stack backtrace and include that in the reply.
   session()->remote_api()->WriteRegisters(
       request, [thread = weak_factory_.GetWeakPtr(), cb = std::move(cb)](
-                   const Err& err, debug_ipc::WriteRegistersReply reply) {
+                   const Err& err, debug_ipc::WriteRegistersReply reply) mutable {
         if (err.has_error()) {
           cb(err);  // Transport error.
         } else if (reply.status != 0) {
@@ -215,19 +215,19 @@ const Stack& ThreadImpl::GetStack() const { return stack_; }
 Stack& ThreadImpl::GetStack() { return stack_; }
 
 void ThreadImpl::ReadRegisters(std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
-                               std::function<void(const Err&, const RegisterSet&)> callback) {
+                               fit::callback<void(const Err&, const RegisterSet&)> cb) {
   debug_ipc::ReadRegistersRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
   request.categories = std::move(cats_to_get);
 
   session()->remote_api()->ReadRegisters(
-      request, [thread = weak_factory_.GetWeakPtr(), callback](
-                   const Err& err, debug_ipc::ReadRegistersReply reply) {
+      request, [thread = weak_factory_.GetWeakPtr(), cb = std::move(cb)](
+                   const Err& err, debug_ipc::ReadRegistersReply reply) mutable {
         thread->registers_ =
             std::make_unique<RegisterSet>(thread->session()->arch(), std::move(reply.categories));
-        if (callback)
-          callback(err, *thread->registers_.get());
+        if (cb)
+          cb(err, *thread->registers_.get());
       });
 }
 
@@ -337,14 +337,14 @@ void ThreadImpl::OnException(debug_ipc::NotifyException::Type type,
   }
 }
 
-void ThreadImpl::SyncFramesForStack(std::function<void(const Err&)> callback) {
+void ThreadImpl::SyncFramesForStack(fit::callback<void(const Err&)> callback) {
   debug_ipc::ThreadStatusRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
 
   session()->remote_api()->ThreadStatus(
       request, [callback = std::move(callback), thread = weak_factory_.GetWeakPtr()](
-                   const Err& err, debug_ipc::ThreadStatusReply reply) {
+                   const Err& err, debug_ipc::ThreadStatusReply reply) mutable {
         if (err.has_error()) {
           callback(err);
           return;

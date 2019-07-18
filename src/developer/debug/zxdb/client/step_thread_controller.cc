@@ -26,7 +26,7 @@ StepThreadController::StepThreadController(AddressRanges ranges)
 
 StepThreadController::~StepThreadController() = default;
 
-void StepThreadController::InitWithThread(Thread* thread, std::function<void(const Err&)> cb) {
+void StepThreadController::InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) {
   set_thread(thread);
 
   const Stack& stack = thread->GetStack();

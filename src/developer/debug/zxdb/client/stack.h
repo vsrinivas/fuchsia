@@ -9,6 +9,7 @@
 #include <optional>
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/lib/fxl/macros.h"
@@ -56,7 +57,7 @@ class Stack {
     //
     // The callback should be issued with an error if the object is destroyed
     // during processing.
-    virtual void SyncFramesForStack(std::function<void(const Err&)> callback) = 0;
+    virtual void SyncFramesForStack(fit::callback<void(const Err&)> callback) = 0;
 
     // Constructs a Frame implementation for the given IPC stack frame and
     // location. The location must be an input since inline frame expansion

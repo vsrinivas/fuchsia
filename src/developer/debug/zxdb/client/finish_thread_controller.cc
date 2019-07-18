@@ -90,7 +90,7 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
   return step_over_controller_->OnThreadStop(stop_type, hit_breakpoints);
 }
 
-void FinishThreadController::InitWithThread(Thread* thread, std::function<void(const Err&)> cb) {
+void FinishThreadController::InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) {
   set_thread(thread);
 
   if (finish_physical_controller_) {
@@ -144,7 +144,7 @@ ThreadController::ContinueOp FinishThreadController::GetContinueOp() {
   return step_over_controller_->GetContinueOp();
 }
 
-bool FinishThreadController::CreateInlineStepOverController(std::function<void(const Err&)> cb) {
+bool FinishThreadController::CreateInlineStepOverController(fit::callback<void(const Err&)> cb) {
   Stack& stack = thread()->GetStack();
   if (!stack[0]->IsInline()) {
     // The stack changed in an unexpected way and a newer physical frame

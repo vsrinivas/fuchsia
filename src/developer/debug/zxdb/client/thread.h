@@ -11,6 +11,7 @@
 #include <functional>
 #include <string>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
@@ -62,7 +63,7 @@ class Thread : public ClientObject {
   // issuing the on_paused callback. But this is best effort and not
   // guaranteed: both because there's a timeout for the synchronous suspending
   // and because a different continue message could race with the reply.
-  virtual void Pause(std::function<void()> on_paused) = 0;
+  virtual void Pause(fit::callback<void()> on_paused) = 0;
 
   // Resumes only this thread.
   virtual void Continue() = 0;
@@ -83,7 +84,7 @@ class Thread : public ClientObject {
   // On failure the ThreadController will be removed and the thread will not
   // be continued.
   virtual void ContinueWith(std::unique_ptr<ThreadController> controller,
-                            std::function<void(const Err&)> on_continue) = 0;
+                            fit::callback<void(const Err&)> on_continue) = 0;
 
   // Sets the thread's IP to the given location. This requires that the thread
   // be stopped. It will not resume the thread.
@@ -95,7 +96,7 @@ class Thread : public ClientObject {
   // pick up the new location (if any) because the requests will be ordered.
   // But because the jump request may fail, the caller isn't guaranteed what
   // location will be resumed from unless it waits for the callback.
-  virtual void JumpTo(uint64_t new_address, std::function<void(const Err&)> cb) = 0;
+  virtual void JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) = 0;
 
   // Notification from a ThreadController that it has completed its job. The
   // thread controller should be removed from this thread and deleted.
@@ -113,7 +114,7 @@ class Thread : public ClientObject {
   // The returned structures are architecture independent, but the contents
   // will be dependent on the architecture the target is running on.
   virtual void ReadRegisters(std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
-                             std::function<void(const Err&, const RegisterSet&)>) = 0;
+                             fit::callback<void(const Err&, const RegisterSet&)>) = 0;
 
   // Provides the setting schema for this object.
   static fxl::RefPtr<SettingSchema> GetSchema();

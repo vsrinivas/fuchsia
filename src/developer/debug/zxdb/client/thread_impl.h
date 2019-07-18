@@ -28,17 +28,17 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   const std::string& GetName() const override;
   debug_ipc::ThreadRecord::State GetState() const override;
   debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const override;
-  void Pause(std::function<void()> on_paused) override;
+  void Pause(fit::callback<void()> on_paused) override;
   void Continue() override;
   void ContinueWith(std::unique_ptr<ThreadController> controller,
-                    std::function<void(const Err&)> on_continue) override;
-  void JumpTo(uint64_t new_address, std::function<void(const Err&)> cb) override;
+                    fit::callback<void(const Err&)> on_continue) override;
+  void JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) override;
   void NotifyControllerDone(ThreadController* controller) override;
   void StepInstruction() override;
   const Stack& GetStack() const override;
   Stack& GetStack() override;
   void ReadRegisters(std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
-                     std::function<void(const Err&, const RegisterSet&)>) override;
+                     fit::callback<void(const Err&, const RegisterSet&)>) override;
 
   // NOTE: If the registers are not up to date, the set can be null.
   const RegisterSet* registers() const { return registers_.get(); }
@@ -59,7 +59,7 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
 
  private:
   // Stack::Delegate implementation.
-  void SyncFramesForStack(std::function<void(const Err&)> callback) override;
+  void SyncFramesForStack(fit::callback<void(const Err&)> callback) override;
   std::unique_ptr<Frame> MakeFrameForStack(const debug_ipc::StackFrame& input,
                                            Location location) override;
   Location GetSymbolizedLocationForStackFrame(const debug_ipc::StackFrame& input) override;

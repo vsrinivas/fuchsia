@@ -61,7 +61,7 @@ FinishPhysicalFrameThreadController::StopOp FinishPhysicalFrameThreadController:
 }
 
 void FinishPhysicalFrameThreadController::InitWithThread(Thread* thread,
-                                                         std::function<void(const Err&)> cb) {
+                                                         fit::callback<void(const Err&)> cb) {
   set_thread(thread);
 
   Stack& stack = thread->GetStack();

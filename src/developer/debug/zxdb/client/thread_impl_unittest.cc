@@ -8,8 +8,8 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
-#include "src/developer/debug/zxdb/client/thread_controller.h"
 #include "src/developer/debug/zxdb/client/test_thread_observer.h"
+#include "src/developer/debug/zxdb/client/thread_controller.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 
@@ -28,7 +28,7 @@ class ContinueThreadController : public ThreadController {
   ~ContinueThreadController() override = default;
 
   // ThreadController implementation.
-  void InitWithThread(Thread* thread, std::function<void(const Err&)> cb) override {
+  void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) override {
     set_thread(thread);
     cb(Err());
   }
@@ -51,7 +51,7 @@ class UnexpectedThreadController : public ThreadController {
   ~UnexpectedThreadController() override = default;
 
   // ThreadController implementation.
-  void InitWithThread(Thread* thread, std::function<void(const Err&)> cb) override {
+  void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) override {
     set_thread(thread);
     cb(Err());
   }

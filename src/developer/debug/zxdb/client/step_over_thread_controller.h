@@ -51,12 +51,12 @@ class StepOverThreadController : public ThreadController {
   // then destroy the controller and indirectly the callback object).
   //
   // When empty (the default), all subframes will be continued.
-  void set_subframe_should_stop_callback(std::function<bool(const Frame*)> cb) {
+  void set_subframe_should_stop_callback(fit::function<bool(const Frame*)> cb) {
     subframe_should_stop_callback_ = std::move(cb);
   }
 
   // ThreadController implementation.
-  void InitWithThread(Thread* thread, std::function<void(const Err&)> cb) override;
+  void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) override;
   ContinueOp GetContinueOp() override;
   StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
                       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
@@ -67,7 +67,7 @@ class StepOverThreadController : public ThreadController {
 
   // When non-null indicates callback to check for stopping in subframes. See
   // the setter above.
-  std::function<bool(const Frame*)> subframe_should_stop_callback_;
+  fit::function<bool(const Frame*)> subframe_should_stop_callback_;
 
   // When construction_mode_ == kSourceLine, this represents the line
   // information of the line we're stepping over.

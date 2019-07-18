@@ -39,26 +39,28 @@ class MockThread : public Thread, public Stack::Delegate {
   debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const override {
     return debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
   }
-  void Pause(std::function<void()> on_paused) override {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [on_paused]() { on_paused(); });
+  void Pause(fit::callback<void()> on_paused) override {
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [on_paused = std::move(on_paused)]() mutable { on_paused(); });
   }
   void Continue() override {}
   void ContinueWith(std::unique_ptr<ThreadController> controller,
-                    std::function<void(const Err&)> on_continue) override {}
-  void JumpTo(uint64_t new_address, std::function<void(const Err&)> cb) override {}
+                    fit::callback<void(const Err&)> on_continue) override {}
+  void JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) override {}
   void NotifyControllerDone(ThreadController* controller) override {}
   void StepInstruction() override {}
   const Stack& GetStack() const override { return stack_; }
   Stack& GetStack() override { return stack_; }
   void ReadRegisters(std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
-                     std::function<void(const Err&, const RegisterSet&)> cb) override {
+                     fit::callback<void(const Err&, const RegisterSet&)> cb) override {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [registers = register_contents_, cb]() { cb(Err(), registers); });
+        FROM_HERE,
+        [registers = register_contents_, cb = std::move(cb)]() mutable { cb(Err(), registers); });
   }
 
  private:
   // Stack::Delegate implementation.
-  void SyncFramesForStack(std::function<void(const Err&)> callback) override {
+  void SyncFramesForStack(fit::callback<void(const Err&)> callback) override {
     FXL_NOTREACHED();  // All frames are available.
   }
   std::unique_ptr<Frame> MakeFrameForStack(const debug_ipc::StackFrame& input,

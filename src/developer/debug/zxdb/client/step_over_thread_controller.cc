@@ -28,7 +28,7 @@ StepOverThreadController::StepOverThreadController(AddressRanges range)
 
 StepOverThreadController::~StepOverThreadController() = default;
 
-void StepOverThreadController::InitWithThread(Thread* thread, std::function<void(const Err&)> cb) {
+void StepOverThreadController::InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) {
   set_thread(thread);
 
   if (thread->GetStack().empty()) {

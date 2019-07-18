@@ -50,7 +50,7 @@ class StepThreadController : public ThreadController {
   void set_stop_on_no_symbols(bool stop) { stop_on_no_symbols_ = stop; }
 
   // ThreadController implementation.
-  void InitWithThread(Thread* thread, std::function<void(const Err&)> cb) override;
+  void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) override;
   ContinueOp GetContinueOp() override;
   StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
                       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;

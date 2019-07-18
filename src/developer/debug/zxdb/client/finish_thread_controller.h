@@ -39,7 +39,7 @@ class FinishThreadController : public ThreadController {
   ~FinishThreadController() override;
 
   // ThreadController implementation.
-  void InitWithThread(Thread* thread, std::function<void(const Err&)> cb) override;
+  void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) override;
   ContinueOp GetContinueOp() override;
   StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
                       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
@@ -48,7 +48,7 @@ class FinishThreadController : public ThreadController {
  private:
   // Creates the controller for stepping out of the inline function at the top
   // of the stack. Issues the callback in all cases. Returns false on failure.
-  bool CreateInlineStepOverController(std::function<void(const Err&)> cb);
+  bool CreateInlineStepOverController(fit::callback<void(const Err&)> cb);
 
   // Index of the frame to finish. Invalid after the thread is resumed.
   size_t frame_to_finish_;

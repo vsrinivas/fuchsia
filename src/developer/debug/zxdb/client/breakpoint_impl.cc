@@ -105,7 +105,7 @@ BreakpointImpl::~BreakpointImpl() {
   if (backend_installed_ && settings_.enabled) {
     // Breakpoint was installed and the process still exists.
     settings_.enabled = false;
-    SendBackendRemove(std::function<void(const Err&)>());
+    SendBackendRemove(fit::callback<void(const Err&)>());
   }
 
   session()->system().RemoveObserver(this);
@@ -120,10 +120,11 @@ BreakpointImpl::~BreakpointImpl() {
 BreakpointSettings BreakpointImpl::GetSettings() const { return settings_; }
 
 void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
-                                 std::function<void(const Err&)> callback) {
+                                 fit::callback<void(const Err&)> callback) {
   Err err = ValidateSettings(settings);
   if (err.has_error()) {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback, err]() { callback(err); });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [callback = std::move(callback), err]() mutable { callback(err); });
     return;
   }
 
@@ -230,7 +231,7 @@ void BreakpointImpl::GlobalWillDestroyProcess(Process* process) {
     SyncBackend();
 }
 
-void BreakpointImpl::SyncBackend(std::function<void(const Err&)> callback) {
+void BreakpointImpl::SyncBackend(fit::callback<void(const Err&)> callback) {
   bool has_locations = HasEnabledLocation();
 
   if (backend_installed_ && !has_locations) {
@@ -240,12 +241,13 @@ void BreakpointImpl::SyncBackend(std::function<void(const Err&)> callback) {
   } else {
     // Backend doesn't know about it and we don't require anything.
     if (callback) {
-      debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback]() { callback(Err()); });
+      debug_ipc::MessageLoop::Current()->PostTask(
+          FROM_HERE, [callback = std::move(callback)]() mutable { callback(Err()); });
     }
   }
 }
 
-void BreakpointImpl::SendBackendAddOrChange(std::function<void(const Err&)> callback) {
+void BreakpointImpl::SendBackendAddOrChange(fit::callback<void(const Err&)> callback) {
   backend_installed_ = true;
 
   debug_ipc::AddOrChangeBreakpointRequest request;
@@ -287,8 +289,8 @@ void BreakpointImpl::SendBackendAddOrChange(std::function<void(const Err&)> call
   }
 
   session()->remote_api()->AddOrChangeBreakpoint(
-      request, [callback, breakpoint = impl_weak_factory_.GetWeakPtr()](
-                   const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) {
+      request, [callback = std::move(callback), breakpoint = impl_weak_factory_.GetWeakPtr()](
+                   const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) mutable {
         // Be sure to issue the callback even if the breakpoint no longer
         // exists.
         if (err.has_error()) {
@@ -330,12 +332,13 @@ void BreakpointImpl::SendBackendAddOrChange(std::function<void(const Err&)> call
       });
 }
 
-void BreakpointImpl::SendBackendRemove(std::function<void(const Err&)> callback) {
+void BreakpointImpl::SendBackendRemove(fit::callback<void(const Err&)> callback) {
   debug_ipc::RemoveBreakpointRequest request;
   request.breakpoint_id = backend_id_;
 
   session()->remote_api()->RemoveBreakpoint(
-      request, [callback](const Err& err, debug_ipc::RemoveBreakpointReply reply) {
+      request, [callback = std::move(callback)](const Err& err,
+                                                debug_ipc::RemoveBreakpointReply reply) mutable {
         if (callback)
           callback(err);
       });

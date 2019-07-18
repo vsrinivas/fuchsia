@@ -32,7 +32,7 @@ UntilThreadController::~UntilThreadController() {
     GetSystem()->DeleteBreakpoint(breakpoint_.get());
 }
 
-void UntilThreadController::InitWithThread(Thread* thread, std::function<void(const Err&)> cb) {
+void UntilThreadController::InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) {
   set_thread(thread);
 
   BreakpointSettings settings;
@@ -50,7 +50,8 @@ void UntilThreadController::InitWithThread(Thread* thread, std::function<void(co
   // The breakpoint may post the callback asynchronously, so we can't be sure
   // this class is still alive when this callback is issued, even though we
   // destroy the breakpoint in the destructor.
-  breakpoint_->SetSettings(settings, [weak_this = weak_factory_.GetWeakPtr(), cb](const Err& err) {
+  breakpoint_->SetSettings(settings, [weak_this = weak_factory_.GetWeakPtr(),
+                                      cb = std::move(cb)](const Err& err) mutable {
     if (weak_this)
       weak_this->OnBreakpointSet(err, std::move(cb));
   });
@@ -133,7 +134,7 @@ System* UntilThreadController::GetSystem() { return &thread()->session()->system
 
 Target* UntilThreadController::GetTarget() { return thread()->GetProcess()->GetTarget(); }
 
-void UntilThreadController::OnBreakpointSet(const Err& err, std::function<void(const Err&)> cb) {
+void UntilThreadController::OnBreakpointSet(const Err& err, fit::callback<void(const Err&)> cb) {
   // This may get called after the thread stop in some cases so don't do
   // anything important in this function. See OnThreadStop().
   if (err.has_error()) {

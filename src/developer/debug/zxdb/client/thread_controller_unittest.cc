@@ -23,7 +23,7 @@ class DummyThreadController : public ThreadController {
   ~DummyThreadController() = default;
 
   // ThreadController implementation.
-  void InitWithThread(Thread* thread, std::function<void(const Err&)> cb) override {
+  void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) override {
     set_thread(thread);
     cb(Err());
   }

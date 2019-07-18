@@ -42,7 +42,7 @@ class BreakpointImpl : public Breakpoint, public ProcessObserver, public SystemO
   // Breakpoint implementation:
   BreakpointSettings GetSettings() const override;
   void SetSettings(const BreakpointSettings& settings,
-                   std::function<void(const Err&)> callback) override;
+                   fit::callback<void(const Err&)> callback) override;
   bool IsInternal() const override;
   std::vector<BreakpointLocation*> GetLocations() override;
 
@@ -67,9 +67,9 @@ class BreakpointImpl : public Breakpoint, public ProcessObserver, public SystemO
   void GlobalDidCreateProcess(Process* process) override;
   void GlobalWillDestroyProcess(Process* process) override;
 
-  void SyncBackend(std::function<void(const Err&)> callback = std::function<void(const Err&)>());
-  void SendBackendAddOrChange(std::function<void(const Err&)> callback);
-  void SendBackendRemove(std::function<void(const Err&)> callback);
+  void SyncBackend(fit::callback<void(const Err&)> callback = {});
+  void SendBackendAddOrChange(fit::callback<void(const Err&)> callback);
+  void SendBackendRemove(fit::callback<void(const Err&)> callback);
 
   // Notification from BreakpointLocationImpl that the enabled state has
   // changed and the breakpoint state needs to be synced.

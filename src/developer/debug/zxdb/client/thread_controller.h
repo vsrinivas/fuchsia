@@ -8,6 +8,7 @@
 #include <functional>
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/common/address_range.h"
@@ -118,7 +119,7 @@ class ThreadController {
   // If the callback does not specify an error, the thread will be resumed
   // when it is called. If the callback has an error, it will be reported and
   // the thread will remain stopped.
-  virtual void InitWithThread(Thread* thread, std::function<void(const Err&)> cb) = 0;
+  virtual void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) = 0;
 
   // Returns how to continue the thread when running this controller. This
   // will be called after InitWithThread and after every subsequent kContinue
