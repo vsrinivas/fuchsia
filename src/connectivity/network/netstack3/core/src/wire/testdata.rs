@@ -432,3 +432,52 @@ pub(crate) mod icmp_time_exceeded {
     // First 8 bytes of original datagram.
     pub(crate) const ORIGIN_DATA: &[u8] = &[0xde, 0x74, 0x82, 0x9b, 0x00, 0x20, 0x1f, 0xce];
 }
+
+pub(crate) mod mld_router_query {
+    // from: https://www.cloudshark.org/captures/696d02f3316e
+    use crate::Ipv6Addr;
+    pub(crate) const QUERY: &[u8] = &[
+        0x82, 0x00, 0x7a, 0xc1, 0x03, 0xe8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ];
+
+    pub(crate) const HOST_GROUP_ADDRESS: [u8; 16] = [0; 16];
+    pub(crate) const MAX_RESP_CODE: u16 = 1000;
+
+    pub(crate) const SRC_IP: Ipv6Addr = Ipv6Addr::new([0; 16]);
+    pub(crate) const DST_IP: Ipv6Addr =
+        Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+}
+
+pub(crate) mod mld_router_report {
+    use crate::Ipv6Addr;
+    pub(crate) const REPORT: &[u8] = &[
+        0x83, 0x00, 0x7e, 0xa4, 0x00, 0x00, 0x00, 0x00, // Ipv6 address
+        0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x02,
+    ];
+
+    pub(crate) const HOST_GROUP_ADDRESS: [u8; 16] =
+        [0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2];
+
+    pub(crate) const SRC_IP: Ipv6Addr = Ipv6Addr::new([0; 16]);
+    pub(crate) const DST_IP: Ipv6Addr =
+        Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+
+}
+
+pub(crate) mod mld_router_done {
+    use crate::Ipv6Addr;
+    pub(crate) const DONE: &[u8] = &[
+        0x84, 0x00, 0x7d, 0xa4, 0x00, 0x00, 0x00, 0x00, // Ipv6 address
+        0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x02,
+    ];
+
+    pub(crate) const HOST_GROUP_ADDRESS: [u8; 16] =
+        [0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2];
+
+    pub(crate) const SRC_IP: Ipv6Addr = Ipv6Addr::new([0; 16]);
+    pub(crate) const DST_IP: Ipv6Addr =
+        Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+}

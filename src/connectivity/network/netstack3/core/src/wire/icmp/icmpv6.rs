@@ -15,8 +15,8 @@ use crate::wire::U32;
 
 use super::common::{IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpTimeExceeded};
 use super::{
-    ndp, peek_message_type, IcmpIpExt, IcmpMessageType, IcmpPacket, IcmpParseArgs, IcmpUnusedCode,
-    OriginalPacket,
+    mld, ndp, peek_message_type, IcmpIpExt, IcmpMessageType, IcmpPacket, IcmpParseArgs,
+    IcmpUnusedCode, OriginalPacket,
 };
 
 /// An ICMPv6 packet with a dynamic message type.
@@ -39,6 +39,9 @@ pub(crate) enum Icmpv6Packet<B: ByteSlice> {
     NeighborSolicitation(IcmpPacket<Ipv6, B, ndp::NeighborSolicitation>),
     NeighborAdvertisment(IcmpPacket<Ipv6, B, ndp::NeighborAdvertisment>),
     Redirect(IcmpPacket<Ipv6, B, ndp::Redirect>),
+    MulticastListenerQuery(IcmpPacket<Ipv6, B, mld::MulticastListenerQuery>),
+    MulticastListenerReport(IcmpPacket<Ipv6, B, mld::MulticastListenerReport>),
+    MulticastListenerDone(IcmpPacket<Ipv6, B, mld::MulticastListenerDone>),
 }
 
 impl<B: ByteSlice + fmt::Debug> fmt::Debug for Icmpv6Packet<B> {
@@ -56,6 +59,15 @@ impl<B: ByteSlice + fmt::Debug> fmt::Debug for Icmpv6Packet<B> {
             NeighborSolicitation(ref p) => f.debug_tuple("NeighborSolicitation").field(p).finish(),
             NeighborAdvertisment(ref p) => f.debug_tuple("NeighborAdvertisment").field(p).finish(),
             Redirect(ref p) => f.debug_tuple("Redirect").field(p).finish(),
+            MulticastListenerQuery(ref p) => {
+                f.debug_tuple("MulticastListenerQuery").field(p).finish()
+            }
+            MulticastListenerReport(ref p) => {
+                f.debug_tuple("MulticastListenerReport").field(p).finish()
+            }
+            MulticastListenerDone(ref p) => {
+                f.debug_tuple("MulticastListenerDone").field(p).finish()
+            }
         }
     }
 }
@@ -77,6 +89,9 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv6Addr>> for Icmpv6Packet<B
             NeighborSolicitation(p) => p.parse_metadata(),
             NeighborAdvertisment(p) => p.parse_metadata(),
             Redirect(p) => p.parse_metadata(),
+            MulticastListenerQuery(p) => p.parse_metadata(),
+            MulticastListenerReport(p) => p.parse_metadata(),
+            MulticastListenerDone(p) => p.parse_metadata(),
         }
     }
 
@@ -109,6 +124,9 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv6Addr>> for Icmpv6Packet<B
             NeighborSolicitation => ndp::NeighborSolicitation,
             NeighborAdvertisment => ndp::NeighborAdvertisment,
             Redirect => ndp::Redirect,
+            MulticastListenerQuery => mld::MulticastListenerQuery,
+            MulticastListenerReport => mld::MulticastListenerReport,
+            MulticastListenerDone => mld::MulticastListenerDone,
         ))
     }
 }
@@ -128,6 +146,11 @@ create_net_enum! {
     NeighborSolicitation: NEIGHBOR_SOLICITATION = 135,
     NeighborAdvertisment: NEIGHBOR_ADVERTISMENT = 136,
     Redirect: REDIRECT = 137,
+
+    // MLDv1 messages
+    MulticastListenerQuery: MULTICAST_LISTENER_QUERY = 130,
+    MulticastListenerReport: MULTICAST_LISTENER_REPORT = 131,
+    MulticastListenerDone: MULTICAST_LISTENER_DONE = 132,
 }
 
 impl IcmpMessageType for Icmpv6MessageType {

@@ -57,7 +57,7 @@ use std::net;
 use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
-use crate::{sealed, MulticastAddress, UnicastAddress};
+use crate::{sealed, MulticastAddr, MulticastAddress, UnicastAddress};
 
 // NOTE on passing by reference vs by value: Clippy advises us to pass IPv4
 // addresses by value, and IPv6 addresses by reference. For concrete types, we
@@ -656,6 +656,12 @@ impl From<net::Ipv6Addr> for Ipv6Addr {
     #[inline]
     fn from(ip: net::Ipv6Addr) -> Ipv6Addr {
         Ipv6Addr::new(ip.octets())
+    }
+}
+
+impl From<MulticastAddr<Ipv6Addr>> for Ipv6Addr {
+    fn from(m: MulticastAddr<Ipv6Addr>) -> Self {
+        m.get()
     }
 }
 
