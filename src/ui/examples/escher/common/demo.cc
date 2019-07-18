@@ -54,10 +54,7 @@ bool Demo::HandleKeyPress(std::string key) {
 }
 
 void Demo::ToggleTracing() {
-#ifdef __fuchsia__
-  // On Fuchsia, use system-wide tracing in the usual way.
-  FXL_LOG(INFO) << "ToggleTracing() only supported for Escher-Linux.";
-#else
+#ifdef __linux__
   if (tracer_) {
     tracer_.reset();
     FXL_LOG(INFO) << "Tracing disabled.";
@@ -65,6 +62,8 @@ void Demo::ToggleTracing() {
     tracer_ = std::make_unique<escher::Tracer>();
     FXL_LOG(INFO) << "Tracing enabled.";
   }
+#else
+  FXL_LOG(INFO) << "ToggleTracing() only supported for Escher-Linux.";
 #endif
 }
 
