@@ -9,6 +9,7 @@ mod gmp;
 pub mod icmp;
 mod igmp;
 mod ipv6;
+mod mld;
 pub(crate) mod path_mtu;
 pub(crate) mod reassembly;
 mod types;
