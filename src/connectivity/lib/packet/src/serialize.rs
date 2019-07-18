@@ -774,6 +774,7 @@ impl PacketBuilder for () {
 /// implements [`NestedPacketBuilder`]. When `I: Serializer` and `O:
 /// NestedPacketBuilder`, `Nested<I, O>` implements [`Serializer`].
 #[derive(Copy, Clone, Debug)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Nested<I, O> {
     inner: I,
     outer: O,
@@ -869,6 +870,7 @@ impl<'a, PB: NestedPacketBuilder> NestedPacketBuilder for RefNestedPacketBuilder
 /// `MtuPacketBuilder`s are constructed using the
 /// [`NestedPacketBuilder::with_mtu`] method.
 #[derive(Copy, Clone, Debug)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct MtuPacketBuilder<B> {
     mtu: usize,
     inner: B,
@@ -1039,6 +1041,26 @@ impl<'a> InnerPacketBuilder for Vec<u8> {
 pub enum SerializeError<A> {
     Alloc(A),
     Mtu,
+}
+
+impl<A> SerializeError<A> {
+    /// Is this `SerializeError::Alloc`?
+    #[inline]
+    pub fn is_alloc(&self) -> bool {
+        match self {
+            SerializeError::Alloc(_) => true,
+            SerializeError::Mtu => false,
+        }
+    }
+
+    /// Is this `SerializeError::Mtu`?
+    #[inline]
+    pub fn is_mtu(&self) -> bool {
+        match self {
+            SerializeError::Alloc(_) => false,
+            SerializeError::Mtu => true,
+        }
+    }
 }
 
 impl<A> From<A> for SerializeError<A> {
@@ -1662,6 +1684,8 @@ impl<I: Serializer, O: NestedPacketBuilder> Serializer for Nested<I, O> {
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Debug;
+
     use super::*;
 
     // DummyPacketBuilder:
@@ -1669,7 +1693,7 @@ mod tests {
     //   header with 0xFF and the footer with 0xFE
     // - Implements InnerPacketBuilder by consuming a `header_len`-bytes body,
     //   and filling it with 0xFF
-    #[derive(Copy, Clone)]
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
     struct DummyPacketBuilder {
         header_len: usize,
         footer_len: usize,
@@ -1727,6 +1751,106 @@ mod tests {
             fill(buffer, 0xFF);
         }
     }
+
+    impl SerializeError<Never> {
+        fn into<E>(self) -> SerializeError<E> {
+            match self {
+                SerializeError::Alloc(never) => match never {},
+                SerializeError::Mtu => SerializeError::Mtu,
+            }
+        }
+    }
+
+    // A Serializer that verifies certain invariants while operating. In
+    // particular:
+    // - If serialization fails, the original Serializer is returned unmodified.
+    // - If `outer.try_constraints()` returns `None`, serialization fails.
+    // - If the MTU is exceeded and truncation is disabled, serialization fails.
+    // - If serialization succeeds, the body has the correct length, including
+    //   taking into account `outer`'s minimum body length requirement
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    struct VerifyingSerializer<S> {
+        ser: S,
+        // Is the inner Serializer a truncating (a TruncatingSerializer with
+        // TruncateDirection::DiscardFront or DiscardBack)?
+        truncating: bool,
+    }
+
+    impl<S: Serializer + Debug + Clone + Eq> Serializer for VerifyingSerializer<S> {
+        type Buffer = S::Buffer;
+
+        fn serialize<B: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<Self::Buffer, B>>(
+            self,
+            outer: PB,
+            provider: P,
+        ) -> Result<B, (SerializeError<P::Error>, Self)> {
+            let orig = self.ser.clone();
+
+            // How long is the packet if we serialize it without the outer
+            // PacketBuilder?
+            let inner_len = match self.clone().ser.serialize_vec_outer() {
+                Ok(buf) => buf.len(),
+                Err((err, ser)) => {
+                    // If serialization fails, the original Serializer should be
+                    // unmodified.
+                    assert_eq!(ser, orig);
+                    return Err((err.into(), ser.into_verifying(self.truncating)));
+                }
+            };
+            let outer_constraints = outer.try_constraints();
+            let should_fail_mtu = outer_constraints
+                .map(|c| c.max_body_len() < inner_len && !self.truncating)
+                .unwrap_or(true);
+
+            let res = self.ser.serialize(outer, provider);
+            match res {
+                Ok(buf) => {
+                    let c = outer_constraints.unwrap();
+                    // Since serialization has succeeded, we know that either
+                    // inner_len <= c.max_body_len(), or that the body was
+                    // truncated to fit.
+                    let body_len =
+                        cmp::min(cmp::max(inner_len, c.min_body_len()), c.max_body_len());
+                    assert_eq!(buf.len(), c.header_len() + body_len + c.footer_len());
+                    assert!(!should_fail_mtu);
+                    Ok(buf)
+                }
+                Err((err, ser)) => {
+                    // If we shouldn't fail as a result of an MTU error, we
+                    // might still fail as a result of allocation.
+                    assert!(should_fail_mtu || err.is_alloc());
+                    // If serialization fails, the original Serializer should be
+                    // unmodified.
+                    assert_eq!(ser, orig);
+                    Err((err, ser.into_verifying(self.truncating)))
+                }
+            }
+        }
+    }
+
+    trait SerializerExt: Serializer {
+        fn into_verifying(self, truncating: bool) -> VerifyingSerializer<Self> {
+            VerifyingSerializer { ser: self, truncating }
+        }
+
+        fn encapsulate_verifying<B: PacketBuilder>(
+            self,
+            outer: B,
+            truncating: bool,
+        ) -> VerifyingSerializer<Nested<Self, B>> {
+            self.encapsulate(outer).into_verifying(truncating)
+        }
+
+        fn with_mtu_verifying(
+            self,
+            mtu: usize,
+            truncating: bool,
+        ) -> VerifyingSerializer<Nested<Self, MtuPacketBuilder<()>>> {
+            self.with_mtu(mtu).into_verifying(truncating)
+        }
+    }
+
+    impl<S: Serializer> SerializerExt for S {}
 
     #[test]
     fn test_either_into_inner() {
@@ -1853,6 +1977,7 @@ mod tests {
         // added.
         let buf = INNER
             .into_serializer()
+            .into_verifying(false)
             .serialize_vec(DummyPacketBuilder::new(0, 0, 20, MAX_USIZE))
             .unwrap();
         assert_eq!(buf.as_ref(), concat(&[INNER, vec![0; 10].as_ref()]).as_slice());
@@ -1862,6 +1987,7 @@ mod tests {
         // 0xFE).
         let buf = INNER
             .into_serializer()
+            .into_verifying(false)
             .serialize_vec(DummyPacketBuilder::new(10, 10, 0, MAX_USIZE))
             .unwrap();
         assert_eq!(
@@ -1873,6 +1999,7 @@ mod tests {
         assert_eq!(
             INNER
                 .into_serializer()
+                .into_verifying(false)
                 .serialize_vec(DummyPacketBuilder::new(0, 0, 0, 9))
                 .unwrap_err()
                 .0,
@@ -1880,12 +2007,9 @@ mod tests {
         );
     }
 
-    // TODO(joshlf): Add test to verify that minimum body length requirements
-    // compose properly, including when executed by Serializers.
-
     #[test]
     fn test_buffer_serializer_and_inner_serializer() {
-        fn verify_buffer_serializer<B: BufferMut + std::fmt::Debug>(
+        fn verify_buffer_serializer<B: BufferMut + Debug>(
             buffer: B,
             header_len: usize,
             footer_len: usize,
@@ -1999,9 +2123,42 @@ mod tests {
     }
 
     #[test]
+    fn test_min_body_len() {
+        // Test that padding is added after the body of the packet whose minimum
+        // body length constraint requires it. A previous version of this code
+        // had a bug where padding was always added after the innermost body.
+
+        let body = &[1, 2];
+
+        // 4 bytes of header and footer for a total of 6 bytes (including the
+        // body).
+        let inner = DummyPacketBuilder::new(2, 2, 0, MAX_USIZE);
+        // Minimum body length of 8 will require 2 bytes of padding.
+        let outer = DummyPacketBuilder::new(2, 2, 8, MAX_USIZE);
+        let buf = body
+            .into_serializer()
+            .into_verifying(false)
+            .encapsulate_verifying(inner, false)
+            .encapsulate_verifying(outer, false)
+            .serialize_vec_outer()
+            .unwrap();
+        assert_eq!(
+            buf.as_ref(),
+            &[
+                0xFF, 0xFF, // Outer header
+                0xFF, 0xFF, // Inner header
+                1, 2, // Inner body
+                0xFE, 0xFE, // Inner footer
+                0, 0, // Padding to satisfy outer minimum body length requirement
+                0xFE, 0xFE // Outer footer
+            ]
+        );
+    }
+
+    #[test]
     fn test_mtu() {
         // ser is a Serializer that will consume 1 byte of buffer space
-        fn test<S: Serializer + Clone>(ser: S) {
+        fn test<S: Serializer + Clone + Debug + Eq>(ser: S) {
             // Each of these tests encapsulates ser in a DummyPacketBuilder
             // which consumes 1 byte for the header and one byte for the footer.
             // Thus, the inner serializer will consume 1 byte, while the
@@ -2013,32 +2170,52 @@ mod tests {
             // since it tests the case when the MTU is exactly sufficient. A
             // previous version of this code had a bug where a packet which fit
             // the MTU exactly would be rejected.
-            assert!(ser.clone().encapsulate(pb).with_mtu(3).serialize_vec_outer().is_ok());
+            assert!(ser
+                .clone()
+                .encapsulate_verifying(pb, false)
+                .with_mtu_verifying(3, false)
+                .serialize_vec_outer()
+                .is_ok());
             // Test that a more-than-large-enough MTU of 4 is OK.
-            assert!(ser.clone().encapsulate(pb).with_mtu(4).serialize_vec_outer().is_ok());
+            assert!(ser
+                .clone()
+                .encapsulate_verifying(pb, false)
+                .with_mtu_verifying(4, false)
+                .serialize_vec_outer()
+                .is_ok());
             // Test that the inner MTU of 1 only applies to the inner
             // serializer, and so is still OK even though the outer serializer
             // consumes 3 bytes total.
             assert!(ser
                 .clone()
-                .with_mtu(1)
-                .encapsulate(pb)
-                .with_mtu(3)
+                .with_mtu_verifying(1, false)
+                .encapsulate_verifying(pb, false)
+                .with_mtu_verifying(3, false)
                 .serialize_vec_outer()
                 .is_ok());
             // Test that the inner MTU of 0 is exceeded by the inner
             // serializer's 1 byte length.
-            assert!(ser.clone().with_mtu(0).encapsulate(pb).serialize_vec_outer().is_err());
+            assert!(ser
+                .clone()
+                .with_mtu_verifying(0, false)
+                .encapsulate_verifying(pb, false)
+                .serialize_vec_outer()
+                .is_err());
             // Test that an MTU which would be exceeded by the encapsulating
             // layer is rejected by Nested's implementation. If this doesn't
             // work properly, then the MTU should underflow, resulting in a
             // panic (see the Nested implementation of Serialize).
-            assert!(ser.clone().encapsulate(pb).with_mtu(1).serialize_vec_outer().is_err());
+            assert!(ser
+                .clone()
+                .encapsulate_verifying(pb, false)
+                .with_mtu_verifying(1, false)
+                .serialize_vec_outer()
+                .is_err());
         }
 
         // We use this as an InnerPacketBuilder which consumes 1 byte of body.
-        test(DummyPacketBuilder::new(1, 0, 0, MAX_USIZE).into_serializer());
-        test(Buf::new(vec![0], ..));
+        test(DummyPacketBuilder::new(1, 0, 0, MAX_USIZE).into_serializer().into_verifying(false));
+        test(Buf::new(vec![0], ..).into_verifying(false));
     }
 
     #[test]
@@ -2049,8 +2226,9 @@ mod tests {
 
         let body = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let ser =
-            TruncatingSerializer::new(Buf::new(body.clone(), ..), TruncateDirection::DiscardFront);
-        let buf = ser.with_mtu(4).serialize_vec_outer().unwrap();
+            TruncatingSerializer::new(Buf::new(body.clone(), ..), TruncateDirection::DiscardFront)
+                .into_verifying(true);
+        let buf = ser.clone().with_mtu_verifying(4, true).serialize_vec_outer().unwrap();
         let buf: &[u8] = buf.as_ref();
         assert_eq!(buf, &[6, 7, 8, 9][..]);
 
@@ -2059,8 +2237,9 @@ mod tests {
         //
 
         let ser =
-            TruncatingSerializer::new(Buf::new(body.clone(), ..), TruncateDirection::DiscardBack);
-        let buf = ser.with_mtu(7).serialize_vec_outer().unwrap();
+            TruncatingSerializer::new(Buf::new(body.clone(), ..), TruncateDirection::DiscardBack)
+                .into_verifying(true);
+        let buf = ser.with_mtu_verifying(7, true).serialize_vec_outer().unwrap();
         let buf: &[u8] = buf.as_ref();
         assert_eq!(buf, &[0, 1, 2, 3, 4, 5, 6][..]);
 
@@ -2069,21 +2248,22 @@ mod tests {
         //
 
         let ser =
-            TruncatingSerializer::new(Buf::new(body.clone(), ..), TruncateDirection::NoTruncating);
-        assert!(ser.with_mtu(5).serialize_vec_outer().is_err());
-        let ser =
-            TruncatingSerializer::new(Buf::new(body.clone(), ..), TruncateDirection::NoTruncating);
-        assert!(ser.with_mtu(5).serialize_vec_outer().is_err());
+            TruncatingSerializer::new(Buf::new(body.clone(), ..), TruncateDirection::NoTruncating)
+                .into_verifying(false);
+        assert!(ser.clone().with_mtu_verifying(5, true).serialize_vec_outer().is_err());
+        assert!(ser.with_mtu_verifying(5, true).serialize_vec_outer().is_err());
 
         //
         // Test that, when serialization fails, any truncation is undone.
         //
 
         // `ser` has a body of `[1, 2]` and no prefix or suffix
-        fn test_serialization_failure<B: BufferMut + Clone + Eq + std::fmt::Debug>(
-            ser: TruncatingSerializer<B>,
+        fn test_serialization_failure<S: Serializer + Clone + Eq + Debug>(
+            ser: S,
             err: SerializeError<BufferTooShortError>,
-        ) {
+        ) where
+            S::Buffer: Debug,
+        {
             // Serialize with a PacketBuilder with an MTU of 1 so that the body
             // (of length 2) is too large. If `ser` is configured not to
             // truncate, it should result in an MTU error. If it is configured
@@ -2100,15 +2280,18 @@ mod tests {
 
         let body = Buf::new(vec![1, 2], ..);
         test_serialization_failure(
-            TruncatingSerializer::new(body.clone(), TruncateDirection::DiscardFront),
+            TruncatingSerializer::new(body.clone(), TruncateDirection::DiscardFront)
+                .into_verifying(true),
             SerializeError::Alloc(BufferTooShortError),
         );
         test_serialization_failure(
-            TruncatingSerializer::new(body.clone(), TruncateDirection::DiscardFront),
+            TruncatingSerializer::new(body.clone(), TruncateDirection::DiscardFront)
+                .into_verifying(true),
             SerializeError::Alloc(BufferTooShortError),
         );
         test_serialization_failure(
-            TruncatingSerializer::new(body.clone(), TruncateDirection::NoTruncating),
+            TruncatingSerializer::new(body.clone(), TruncateDirection::NoTruncating)
+                .into_verifying(false),
             SerializeError::Mtu,
         );
     }
