@@ -15,12 +15,13 @@ use packet::{
     BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
     SerializeBuffer,
 };
+use specialize_ip_macro::specialize_ip;
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::ip::IpProto;
-use crate::wire::compute_transport_checksum;
-use crate::wire::U16;
+use crate::ip::{IpProto, IpVersionMarker};
+use crate::wire::{compute_transport_checksum, compute_transport_checksum_parts};
+use crate::wire::{FromRaw, MaybeParsed, U16};
 
 pub(crate) const HEADER_BYTES: usize = 8;
 const LENGTH_OFFSET: usize = 4;
@@ -61,43 +62,17 @@ impl<A: IpAddress> UdpParseArgs<A> {
     }
 }
 
-impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, UdpParseArgs<A>> for UdpPacket<B> {
+impl<B: ByteSlice, A: IpAddress> FromRaw<UdpPacketRaw<B>, UdpParseArgs<A>> for UdpPacket<B> {
     type Error = ParseError;
 
-    fn parse_metadata(&self) -> ParseMetadata {
-        ParseMetadata::from_packet(self.header.bytes().len(), self.body.len(), 0)
-    }
-
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: UdpParseArgs<A>) -> ParseResult<Self> {
+    fn try_from_raw_with(raw: UdpPacketRaw<B>, args: UdpParseArgs<A>) -> Result<Self, Self::Error> {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
+        let header = raw
+            .header
+            .ok_or_else(|_| debug_err!(ParseError::Format, "too few bytes for header"))?;
+        let body = raw.body.ok_or_else(|_| debug_err!(ParseError::Format, "incomplete body"))?;
 
-        let buf_len = buffer.as_ref().len();
-        if buf_len < HEADER_BYTES {
-            return debug_err!(Err(ParseError::Format), "too few bytes for header");
-        }
-
-        // We first read a few fields directly (rather than by doing
-        // buffer.take_obj_front) since we need to compute the checksum over the
-        // entire buffer, and so need to feed the buffer unmodified to
-        // compute_transport_checksum.
-        let length_field = NetworkEndian::read_u16(&buffer.as_ref()[LENGTH_OFFSET..]);
-        let checksum = NetworkEndian::read_u16(&buffer.as_ref()[CHECKSUM_OFFSET..]);
-        let real_length = if length_field == 0 && A::Version::VERSION.is_v6() {
-            // IPv6 supports jumbograms, so a UDP packet may be greater than
-            // 2^16 bytes in size. In this case, the size doesn't fit in the
-            // 16-bit length field in the header, and so the length field is set
-            // to zero to indicate this.
-            buf_len
-        } else {
-            length_field.into()
-        };
-        if real_length > buf_len || real_length < HEADER_BYTES {
-            return debug_err!(
-                Err(ParseError::Format),
-                "length field shorter than header or longer than buffer"
-            );
-        }
-
+        let checksum = header.checksum.get();
         // A 0 checksum indicates that the checksum wasn't computed. In IPv4,
         // this means that it shouldn't be validated. In IPv6, the checksum is
         // mandatory, so this is an error.
@@ -107,33 +82,58 @@ impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, UdpParseArgs<A>> for UdpPacke
             // checksum to be 0, but we've added an extra factor of (0xFFFF - 0)
             // = 0xFFFF, we expect the sum to be 0xFFFF.
             let target = if checksum == 0xFFFF { 0xFFFF } else { 0 };
-            let checksum = compute_transport_checksum(
-                args.src_ip,
-                args.dst_ip,
-                IpProto::Udp,
-                &buffer.as_ref()[..real_length],
-            )
-            .ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?;
+
+            // We try to calculate the checksum using a "joined" view of the
+            // header and body in the UDP packet. Joining into a single byte
+            // slice gives us performance benefits when calculating checksum. If
+            // joining fails, we fall back to compute_transport_checksum_parts.
+            // In practice, a UdpPacketRaw that was parsed from some buffer data
+            // will always succeed joining its header and body, so we won't be
+            // hitting the slow path unless the given UdpPacketRaw was
+            // hand-crafted in some other way.
+            let checksum =
+                if let Some(joined) = zerocopy::join(header.bytes(), body.deref().as_ref()) {
+                    compute_transport_checksum(args.src_ip, args.dst_ip, IpProto::Udp, joined)
+                } else {
+                    let parts = [header.bytes(), body.deref().as_ref()];
+                    compute_transport_checksum_parts(
+                        args.src_ip,
+                        args.dst_ip,
+                        IpProto::Udp,
+                        parts.iter(),
+                    )
+                }
+                .ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?;
             if target != checksum {
-                return debug_err!(Err(ParseError::Checksum), "invalid checksum");
+                return debug_err!(
+                    Err(ParseError::Checksum),
+                    "invalid checksum {:04X}, expected {:04X}",
+                    checksum,
+                    target
+                );
             }
         } else if A::Version::VERSION.is_v6() {
             return debug_err!(Err(ParseError::Format), "missing checksum");
         }
 
-        let header = buffer.take_obj_front::<Header>().expect("header length already validated");
-        // Discard any padding left by the previous layer. The unwrap is safe
-        // because we've already validated that real_length <= buf_len and that
-        // real_length >= HEADER_BYTES. Thus, even though we've already consumed
-        // HEADER_BYTES bytes from the buffer, we know that there are at least
-        // buf_len - real_length bytes left.
-        buffer.take_back(buf_len - real_length).unwrap();
-        let packet = UdpPacket { header, body: buffer.into_rest() };
-        if packet.header.dst_port.get() == 0 {
+        if header.dst_port.get() == 0 {
             return debug_err!(Err(ParseError::Format), "zero destination port");
         }
 
-        Ok(packet)
+        Ok(UdpPacket { header, body })
+    }
+}
+
+impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, UdpParseArgs<A>> for UdpPacket<B> {
+    type Error = ParseError;
+
+    fn parse_metadata(&self) -> ParseMetadata {
+        ParseMetadata::from_packet(self.header.bytes().len(), self.body.len(), 0)
+    }
+
+    fn parse<BV: BufferView<B>>(mut buffer: BV, args: UdpParseArgs<A>) -> ParseResult<Self> {
+        UdpPacketRaw::<B>::parse(buffer, IpVersionMarker::<A::Version>::default())
+            .and_then(|u| UdpPacket::try_from_raw_with(u, args))
     }
 }
 
@@ -183,6 +183,120 @@ impl<B: ByteSlice> UdpPacket<B> {
     /// Construct a builder with the same contents as this packet.
     pub(crate) fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> UdpPacketBuilder<A> {
         UdpPacketBuilder { src_ip, dst_ip, src_port: self.src_port(), dst_port: self.dst_port() }
+    }
+}
+
+/// The minimal information required from a UDP packet header.
+///
+/// A `UdpPacketHeader` may be the result of a partially parsed UDP packet in
+/// [`UdpPacketRaw`].
+#[derive(Default, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
+struct UdpFlowHeader {
+    src_port: U16,
+    dst_port: U16,
+}
+
+/// A partially parsed UDP packet header.
+struct PartialHeader<B> {
+    flow: LayoutVerified<B, UdpFlowHeader>,
+    rest: B,
+}
+
+/// A partially-parsed and not yet validated UDP packet.
+///
+/// A `UdpPacketRaw` shares its underlying memory with the byte slice it was
+/// parsed from or serialized to, meaning that no copying or extra allocation is
+/// necessary.
+///
+/// Parsing a `UdpPacketRaw` from raw data will succeed as long as at least 4
+/// bytes are available, which will be extracted as a [`UdpFlowHeader`] that
+/// contains the UDP source and destination ports. A `UdpPacketRaw` is, then,
+/// guaranteed to always have at least that minimal information available.
+///
+/// [`UdpPacket`] provides a [`FromRaw`] implementation that can be used to
+/// validate a `UdpPacketRaw`.
+pub(crate) struct UdpPacketRaw<B> {
+    header: MaybeParsed<LayoutVerified<B, Header>, PartialHeader<B>>,
+    body: MaybeParsed<B, B>,
+}
+
+impl<B, I> ParsablePacket<B, IpVersionMarker<I>> for UdpPacketRaw<B>
+where
+    B: ByteSlice,
+    I: Ip,
+{
+    type Error = ParseError;
+
+    fn parse_metadata(&self) -> ParseMetadata {
+        let header_len = match &self.header {
+            MaybeParsed::Complete(h) => h.bytes().len(),
+            MaybeParsed::Incomplete(h) => h.flow.bytes().len() + h.rest.len(),
+        };
+        ParseMetadata::from_packet(header_len, self.body.len(), 0)
+    }
+
+    fn parse<BV: BufferView<B>>(mut buffer: BV, args: IpVersionMarker<I>) -> ParseResult<Self> {
+        // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
+
+        let header = if let Some(header) = buffer.take_obj_front::<Header>() {
+            header
+        } else {
+            let flow = buffer
+                .take_obj_front::<UdpFlowHeader>()
+                .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for flow header"))?;
+            // if we can't parse an entire header, just return early since
+            // there's no way to look into how many body bytes to consume:
+            return Ok(UdpPacketRaw {
+                header: MaybeParsed::Incomplete(PartialHeader {
+                    flow,
+                    rest: buffer.take_rest_front(),
+                }),
+                body: MaybeParsed::Incomplete(buffer.into_rest()),
+            });
+        };
+        let buffer_len = buffer.len();
+
+        #[specialize_ip]
+        fn get_udp_body_length<I: Ip>(header: &Header, remaining_buff_len: usize) -> Option<usize> {
+            #[ipv6]
+            {
+                // IPv6 supports jumbograms, so a UDP packet may be greater than
+                // 2^16 bytes in size. In this case, the size doesn't fit in the
+                // 16-bit length field in the header, and so the length field is set
+                // to zero to indicate this.
+                // Per RFC 2675 Section 4, we only do that if the UDP header
+                // plus data is actually more than 65535.
+                if header.length.get() == 0
+                    && remaining_buff_len.saturating_add(HEADER_BYTES) >= (std::u16::MAX as usize)
+                {
+                    return Some(remaining_buff_len);
+                }
+            }
+
+            usize::from(header.length.get()).checked_sub(HEADER_BYTES)
+        }
+
+        let body = if let Some(body_len) = get_udp_body_length::<I>(&header, buffer_len) {
+            if body_len <= buffer_len {
+                // Discard any padding left by the previous layer. The unwrap is safe
+                // and the subtraction is always valid because body_len is guaranteed
+                // to not exceed buffer.len()
+                buffer.take_back(buffer_len - body_len).unwrap();
+                MaybeParsed::Complete(buffer.into_rest())
+            } else {
+                // buffer does not contain all the body bytes
+                MaybeParsed::Incomplete(buffer.into_rest())
+            }
+        } else {
+            // body_len can't be calculated because it's less than the header
+            // length, consider all the rest of the buffer padding and return
+            // an incomplete empty body.
+            buffer.take_rest_back();
+            MaybeParsed::Incomplete(buffer.into_rest())
+        };
+
+        Ok(UdpPacketRaw { header: MaybeParsed::Complete(header), body })
     }
 }
 
@@ -296,7 +410,7 @@ impl<B> Debug for UdpPacket<B> {
 
 #[cfg(test)]
 mod tests {
-    use net_types::ip::{Ipv4, Ipv4Addr, Ipv6Addr};
+    use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
     use std::num::NonZeroU16;
 
@@ -409,15 +523,17 @@ mod tests {
         assert!(!packet.checksummed());
         assert!(packet.body().is_empty());
 
-        // length of 0 is allowed in IPv6
-        let mut buf = &[0, 0, 1, 2, 0, 0, 0xFD, 0xD3][..];
-        let packet = buf
+        // length of 0 is allowed in IPv6 if the body is long enough
+        let mut buf = vec![0_u8, 0, 1, 2, 0, 0, 0xBF, 0x12];
+        buf.extend((0..std::u16::MAX).into_iter().map(|p| p as u8));
+        let mut bv = &mut &buf[..];
+        let packet = bv
             .parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(TEST_SRC_IPV6, TEST_DST_IPV6))
             .unwrap();
         assert!(packet.src_port().is_none());
         assert_eq!(packet.dst_port().get(), NetworkEndian::read_u16(&[1, 2]));
         assert!(packet.checksummed());
-        assert!(packet.body().is_empty());
+        assert_eq!(packet.body().len(), std::u16::MAX as usize);
     }
 
     #[test]
@@ -542,6 +658,83 @@ mod tests {
             ))
             .serialize_vec_outer()
             .unwrap();
+    }
+
+    #[test]
+    fn test_partial_parse() {
+        // Try to get something with only the flow header:
+        let buf = [0, 0, 1, 2, 10, 20];
+        let mut bv = &buf[..];
+        let packet =
+            bv.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<Ipv4>::default()).unwrap();
+        let header = packet.header.as_ref().unwrap_incomplete();
+        let body = packet.body.as_ref().unwrap_incomplete();
+        assert_eq!(header.flow.src_port.get(), 0);
+        assert_eq!(header.flow.dst_port.get(), 0x0102);
+        assert_eq!(&header.rest[..], &buf[4..]);
+        assert_eq!(body, &[]);
+        assert!(UdpPacket::try_from_raw_with(
+            packet,
+            UdpParseArgs::new(TEST_SRC_IPV4, TEST_DST_IPV4)
+        )
+        .is_err());
+
+        // check that we fail if flow header is not retrievable:
+        let mut buf = &[0, 0, 1][..];
+        assert!(buf.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<Ipv4>::default()).is_err());
+
+        // Get an incomplete body:
+        let buf = [0, 0, 1, 2, 0, 30, 0, 0, 10, 20];
+        let mut bv = &buf[..];
+        let packet =
+            bv.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<Ipv4>::default()).unwrap();
+        let header = packet.header.as_ref().unwrap();
+        let body = packet.body.as_ref().unwrap_incomplete();
+        assert_eq!(header.bytes(), &buf[..8]);
+        assert_eq!(&body[..], &buf[8..]);
+        assert!(UdpPacket::try_from_raw_with(
+            packet,
+            UdpParseArgs::new(TEST_SRC_IPV4, TEST_DST_IPV4)
+        )
+        .is_err());
+
+        // Incomplete empty body if total length in header is less than 8:
+        let buf = [0, 0, 1, 2, 0, 6, 0, 0, 10, 20];
+        let mut bv = &buf[..];
+        let packet =
+            bv.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<Ipv4>::default()).unwrap();
+        let header = packet.header.as_ref().unwrap();
+        let body = packet.body.as_ref().unwrap_incomplete();
+        assert_eq!(header.bytes(), &buf[..8]);
+        assert_eq!(body, &[]);
+        assert!(UdpPacket::try_from_raw_with(
+            packet,
+            UdpParseArgs::new(TEST_SRC_IPV4, TEST_DST_IPV4)
+        )
+        .is_err());
+
+        // IPv6 allows zero-length body, which will just be the rest of the
+        // buffer, but only as long as it has more than 65535 bytes, otherwise
+        // it'll just be interpreted as an invalid length:
+        let buf = [0, 0, 1, 2, 0, 0, 0, 0, 10, 20];
+        let mut bv = &buf[..];
+        let packet =
+            bv.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<Ipv6>::default()).unwrap();
+        let header = packet.header.as_ref().unwrap();
+        let body = packet.body.as_ref().unwrap_incomplete();
+        assert_eq!(header.bytes(), &buf[..8]);
+        assert_eq!(&body[..], &[]);
+        // Now try same thing but with a body that's actually big enough to
+        // justify len being 0.
+        let mut buf = vec![0, 0, 1, 2, 0, 0, 0, 0, 10, 20];
+        buf.extend((0..std::u16::MAX).into_iter().map(|x| x as u8));
+        let mut bv = &mut &buf[..];
+        let packet =
+            bv.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<Ipv6>::default()).unwrap();
+        let header = packet.header.as_ref().unwrap();
+        let body = packet.body.as_ref().unwrap();
+        assert_eq!(header.bytes(), &buf[..8]);
+        assert_eq!(&body[..], &buf[8..]);
     }
 
     // TODO(joshlf): Figure out why compiling this test (yes, just compiling!)

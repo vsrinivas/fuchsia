@@ -14,6 +14,21 @@ use crate::error::IpParseError;
 use crate::wire::ipv4::{Ipv4Header, Ipv4Packet, Ipv4PacketBuilder};
 use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 
+/// A ZST that carries IP version information.
+///
+/// Typically used by implementers of [`packet::ParsablePacket`] that need
+/// to receive external information of which IP version encapsulates the
+/// packet, but without any other associated data.
+pub struct IpVersionMarker<I> {
+    _marker: core::marker::PhantomData<I>,
+}
+
+impl<I: Ip> Default for IpVersionMarker<I> {
+    fn default() -> Self {
+        Self { _marker: core::marker::PhantomData }
+    }
+}
+
 /// The destination for forwarding a packet.
 ///
 /// `EntryDest` can either be a device or another network address.
