@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "tools/fidlcat/lib/library_loader.h"
+#include "tools/fidlcat/lib/type_decoder.h"
 #include "tools/fidlcat/lib/wire_types.h"
 
 namespace fidlcat {
@@ -579,7 +580,9 @@ void EnumField::PrettyPrint(std::ostream& os, const Colors& colors, std::string_
   }
 }
 
-int HandleField::DisplaySize(int remaining_size) const { return std::to_string(handle_).size(); }
+int HandleField::DisplaySize(int remaining_size) const {
+  return std::to_string(handle_.handle).size();
+}
 
 void HandleField::DecodeContent(MessageDecoder* decoder) {
   FXL_LOG(FATAL) << "Handle field is defined inline";
@@ -587,7 +590,7 @@ void HandleField::DecodeContent(MessageDecoder* decoder) {
 
 void HandleField::PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
                               int tabs, int remaining_size, int max_line_size) const {
-  os << colors.red << handle_ << colors.reset;
+  DisplayHandle(colors, handle_, os);
 }
 
 }  // namespace fidlcat

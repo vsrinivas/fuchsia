@@ -322,7 +322,7 @@ class EnumField : public InlineField {
 // A handle.
 class HandleField : public Field {
  public:
-  HandleField(std::string_view name, const Type* type, zx_handle_t handle)
+  HandleField(std::string_view name, const Type* type, const zx_handle_info_t& handle)
       : Field(name, type), handle_(handle) {}
 
   int DisplaySize(int remaining_size) const override;
@@ -333,7 +333,7 @@ class HandleField : public Field {
                    int remaining_size, int max_line_size) const override;
 
  private:
-  const zx_handle_t handle_;
+  const zx_handle_info_t handle_;
 };
 
 }  // namespace fidlcat

@@ -21,7 +21,7 @@ namespace fidlcat {
 // Returns false if it cannot decode the message using the metadata associated
 // with the method.
 bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, uint32_t num_bytes,
-                   const zx_handle_t* handles, uint32_t num_handles,
+                   const zx_handle_info_t* handles, uint32_t num_handles,
                    std::unique_ptr<Object>* decoded_object);
 
 // Given a wire-formatted |message| and a schema for that message represented by
@@ -31,7 +31,7 @@ bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, uint32_t
 // Returns false if it cannot decode the message using the metadata associated
 // with the method.
 bool DecodeResponse(const InterfaceMethod* method, const uint8_t* bytes, uint32_t num_bytes,
-                    const zx_handle_t* handles, uint32_t num_handles,
+                    const zx_handle_info_t* handles, uint32_t num_handles,
                     std::unique_ptr<Object>* decoded_object);
 
 }  // namespace fidlcat

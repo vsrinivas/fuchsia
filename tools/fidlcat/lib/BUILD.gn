@@ -12,6 +12,7 @@ static_library("lib") {
     "library_loader.h",
     "memory_helpers.h",
     "message_decoder.h",
+    "type_decoder.h",
     "wire_object.h",
     "wire_parser.h",
     "wire_types.h",
@@ -20,6 +21,7 @@ static_library("lib") {
   sources = [
     "library_loader.cc",
     "message_decoder.cc",
+    "type_decoder.cc",
     "wire_object.cc",
     "wire_parser.cc",
     "wire_types.cc",

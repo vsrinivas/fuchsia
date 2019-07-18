@@ -18,6 +18,7 @@
 #include "tools/fidlcat/lib/display_options.h"
 #include "tools/fidlcat/lib/library_loader.h"
 #include "tools/fidlcat/lib/memory_helpers.h"
+#include "tools/fidlcat/lib/type_decoder.h"
 
 namespace fidlcat {
 
@@ -29,22 +30,6 @@ class Type;
 enum class Direction { kUnknown, kClient, kServer };
 
 constexpr int kTabSize = 2;
-
-struct Colors {
-  Colors(const char* new_reset, const char* new_red, const char* new_green, const char* new_blue,
-         const char* new_white_on_magenta)
-      : reset(new_reset),
-        red(new_red),
-        green(new_green),
-        blue(new_blue),
-        white_on_magenta(new_white_on_magenta) {}
-
-  const char* const reset;
-  const char* const red;
-  const char* const green;
-  const char* const blue;
-  const char* const white_on_magenta;
-};
 
 extern const Colors WithoutColors;
 extern const Colors WithColors;
@@ -79,7 +64,7 @@ class MessageDecoderDispatcher {
   }
 
   bool DecodeMessage(uint64_t process_koid, zx_handle_t handle, const uint8_t* bytes,
-                     uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles,
+                     uint32_t num_bytes, const zx_handle_info_t* handles, uint32_t num_handles,
                      SyscallFidlType type, std::ostream& os, std::string_view line_header = "",
                      int tabs = 0);
 
@@ -94,14 +79,14 @@ class MessageDecoderDispatcher {
 // Helper to decode a message (request or response). It generates an Object.
 class MessageDecoder {
  public:
-  MessageDecoder(const uint8_t* bytes, uint32_t num_bytes, const zx_handle_t* handles,
+  MessageDecoder(const uint8_t* bytes, uint32_t num_bytes, const zx_handle_info_t* handles,
                  uint32_t num_handles, bool output_errors = false);
   MessageDecoder(const MessageDecoder* container, uint64_t num_bytes_remaining,
                  uint64_t num_handles_remaining);
 
   const uint8_t* byte_pos() const { return byte_pos_; }
 
-  const zx_handle_t* handle_pos() const { return handle_pos_; }
+  const zx_handle_info_t* handle_pos() const { return handle_pos_; }
 
   size_t current_offset() const { return byte_pos_ - start_byte_pos_; }
 
@@ -164,13 +149,17 @@ class MessageDecoder {
 
   // Consumes a handle. Returns FIDL_HANDLE_ABSENT if there is no handle
   // available.
-  zx_handle_t GetNextHandle() {
+  zx_handle_info_t GetNextHandle() {
     if (handle_pos_ == end_handle_pos_) {
       if (output_errors_) {
         FXL_LOG(ERROR) << "not enough handles";
       }
       ++error_count_;
-      return FIDL_HANDLE_ABSENT;
+      zx_handle_info_t result;
+      result.handle = FIDL_HANDLE_ABSENT;
+      result.type = ZX_OBJ_TYPE_NONE;
+      result.rights = 0;
+      return result;
     }
     return *handle_pos_++;
   }
@@ -190,11 +179,11 @@ class MessageDecoder {
 
   // The end of the message.
   const uint8_t* const end_byte_pos_;
-  const zx_handle_t* const end_handle_pos_;
+  const zx_handle_info_t* const end_handle_pos_;
 
   // The current decoding position in the message.
   const uint8_t* byte_pos_;
-  const zx_handle_t* handle_pos_;
+  const zx_handle_info_t* handle_pos_;
 
   // All the values which are not defined within the object they belong to.
   // It is the case, for example, of string, nullable structs, ...

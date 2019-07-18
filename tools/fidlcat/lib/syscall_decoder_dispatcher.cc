@@ -40,13 +40,46 @@ class ZxChannelCallArgs {
   }
 };
 
-void SyscallFidlMessage::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
-                                        SyscallDecoder* decoder, std::string_view line_header,
-                                        int tabs, std::ostream& os) const {
+void SyscallFidlMessageHandle::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
+                                              SyscallDecoder* decoder, std::string_view line_header,
+                                              int tabs, std::ostream& os) const {
   zx_handle_t handle = handle_->Value(decoder);
   const uint8_t* bytes = bytes_->Content(decoder);
   uint32_t num_bytes = num_bytes_->Value(decoder);
   const zx_handle_t* handles = handles_->Content(decoder);
+  uint32_t num_handles = num_handles_->Value(decoder);
+  zx_handle_info_t* handle_infos = nullptr;
+  if (num_handles > 0) {
+    handle_infos = new zx_handle_info_t[num_handles];
+    for (uint32_t i = 0; i < num_handles; ++i) {
+      handle_infos[i].handle = handles[i];
+      handle_infos[i].type = ZX_OBJ_TYPE_NONE;
+      handle_infos[i].rights = 0;
+    }
+  }
+  if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
+          decoder->thread()->GetProcess()->GetKoid(), handle, bytes, num_bytes, handle_infos,
+          num_handles, type_, os, line_header, tabs)) {
+    os << line_header << std::string(tabs * kTabSize, ' ') << dispatcher->colors().red
+       << "Can't decode message" << dispatcher->colors().reset << " num_bytes=" << num_bytes
+       << " num_handles=" << num_handles;
+    if ((bytes != nullptr) && (num_bytes >= sizeof(fidl_message_header_t))) {
+      const fidl_message_header_t* header = reinterpret_cast<const fidl_message_header_t*>(bytes);
+      os << " ordinal=" << header->ordinal;
+    }
+    os << '\n';
+  }
+  delete[] handle_infos;
+}
+
+void SyscallFidlMessageHandleInfo::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
+                                                  SyscallDecoder* decoder,
+                                                  std::string_view line_header, int tabs,
+                                                  std::ostream& os) const {
+  zx_handle_t handle = handle_->Value(decoder);
+  const uint8_t* bytes = bytes_->Content(decoder);
+  uint32_t num_bytes = num_bytes_->Value(decoder);
+  const zx_handle_info_t* handles = handles_->Content(decoder);
   uint32_t num_handles = num_handles_->Value(decoder);
   if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
           decoder->thread()->GetProcess()->GetKoid(), handle, bytes, num_bytes, handles,
@@ -141,16 +174,52 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_read->Input<uint32_t>("num_handles",
                                      std::make_unique<ArgumentAccess<uint32_t>>(num_handles));
     // Outputs
-    zx_channel_read->OutputFidlMessage(ZX_OK, "", SyscallFidlType::kInputMessage,
-                                       std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
-                                       std::make_unique<ArgumentAccess<uint8_t>>(bytes),
-                                       std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes),
-                                       std::make_unique<ArgumentAccess<zx_handle_t>>(handles),
-                                       std::make_unique<ArgumentAccess<uint32_t>>(actual_handles));
+    zx_channel_read->OutputFidlMessageHandle(
+        ZX_OK, "", SyscallFidlType::kInputMessage,
+        std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<ArgumentAccess<uint8_t>>(bytes),
+        std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes),
+        std::make_unique<ArgumentAccess<zx_handle_t>>(handles),
+        std::make_unique<ArgumentAccess<uint32_t>>(actual_handles));
     zx_channel_read->Output<uint32_t>(ZX_ERR_BUFFER_TOO_SMALL, "actual_bytes",
                                       std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes));
     zx_channel_read->Output<uint32_t>(ZX_ERR_BUFFER_TOO_SMALL, "actual_handles",
                                       std::make_unique<ArgumentAccess<uint32_t>>(actual_handles));
+  }
+
+  {
+    Syscall* zx_channel_read_etc = Add("zx_channel_read_etc");
+    // Arguments
+    auto handle = zx_channel_read_etc->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_channel_read_etc->Argument<uint32_t>(SyscallType::kUint32);
+    auto bytes = zx_channel_read_etc->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto handles = zx_channel_read_etc->PointerArgument<zx_handle_info_t>(SyscallType::kHandle);
+    auto num_bytes = zx_channel_read_etc->Argument<uint32_t>(SyscallType::kUint32);
+    auto num_handles = zx_channel_read_etc->Argument<uint32_t>(SyscallType::kUint32);
+    auto actual_bytes = zx_channel_read_etc->PointerArgument<uint32_t>(SyscallType::kUint32);
+    auto actual_handles = zx_channel_read_etc->PointerArgument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_channel_read_etc->Input<zx_handle_t>("handle",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_channel_read_etc->Input<uint32_t>("options",
+                                         std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_channel_read_etc->Input<uint32_t>("num_bytes",
+                                         std::make_unique<ArgumentAccess<uint32_t>>(num_bytes));
+    zx_channel_read_etc->Input<uint32_t>("num_handles",
+                                         std::make_unique<ArgumentAccess<uint32_t>>(num_handles));
+    // Outputs
+    zx_channel_read_etc->OutputFidlMessageHandleInfo(
+        ZX_OK, "", SyscallFidlType::kInputMessage,
+        std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<ArgumentAccess<uint8_t>>(bytes),
+        std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes),
+        std::make_unique<ArgumentAccess<zx_handle_info_t>>(handles),
+        std::make_unique<ArgumentAccess<uint32_t>>(actual_handles));
+    zx_channel_read_etc->Output<uint32_t>(ZX_ERR_BUFFER_TOO_SMALL, "actual_bytes",
+                                          std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes));
+    zx_channel_read_etc->Output<uint32_t>(
+        ZX_ERR_BUFFER_TOO_SMALL, "actual_handles",
+        std::make_unique<ArgumentAccess<uint32_t>>(actual_handles));
   }
 
   {
@@ -186,7 +255,7 @@ void SyscallDecoderDispatcher::Populate() {
         std::make_unique<FieldAccess<zx_channel_call_args, uint32_t>>(
             args, ZxChannelCallArgs::wr_num_handles, SyscallType::kUint32));
     // Outputs
-    zx_channel_call->OutputFidlMessage(
+    zx_channel_call->OutputFidlMessageHandle(
         ZX_OK, "", SyscallFidlType::kInputResponse,
         std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
         std::make_unique<PointerFieldAccess<zx_channel_call_args, uint8_t>>(

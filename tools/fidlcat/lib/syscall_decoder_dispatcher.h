@@ -384,13 +384,14 @@ class SyscallInputOutput : public SyscallInputOutputBase {
 };
 
 // An input/output which is a FIDL message. This is always displayed outline.
+template <typename HandleType>
 class SyscallFidlMessage : public SyscallInputOutputBase {
  public:
   SyscallFidlMessage(int64_t error_code, std::string_view name, SyscallFidlType type,
                      std::unique_ptr<Access<zx_handle_t>> handle,
                      std::unique_ptr<Access<uint8_t>> bytes,
                      std::unique_ptr<Access<uint32_t>> num_bytes,
-                     std::unique_ptr<Access<zx_handle_t>> handles,
+                     std::unique_ptr<Access<HandleType>> handles,
                      std::unique_ptr<Access<uint32_t>> num_handles)
       : SyscallInputOutputBase(error_code, name),
         type_(type),
@@ -415,21 +416,50 @@ class SyscallFidlMessage : public SyscallInputOutputBase {
     if (num_handles_->Loaded(decoder)) {
       uint32_t value = num_handles_->Value(decoder);
       if (value > 0) {
-        handles_->LoadArray(decoder, value * sizeof(zx_handle_t));
+        handles_->LoadArray(decoder, value * sizeof(HandleType));
       }
     }
   }
 
-  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
-                      std::string_view line_header, int tabs, std::ostream& os) const override;
-
- private:
+ protected:
   const SyscallFidlType type_;
   const std::unique_ptr<Access<zx_handle_t>> handle_;
   const std::unique_ptr<Access<uint8_t>> bytes_;
   const std::unique_ptr<Access<uint32_t>> num_bytes_;
-  const std::unique_ptr<Access<zx_handle_t>> handles_;
+  const std::unique_ptr<Access<HandleType>> handles_;
   const std::unique_ptr<Access<uint32_t>> num_handles_;
+};
+
+class SyscallFidlMessageHandle : public SyscallFidlMessage<zx_handle_t> {
+ public:
+  SyscallFidlMessageHandle(int64_t error_code, std::string_view name, SyscallFidlType type,
+                           std::unique_ptr<Access<zx_handle_t>> handle,
+                           std::unique_ptr<Access<uint8_t>> bytes,
+                           std::unique_ptr<Access<uint32_t>> num_bytes,
+                           std::unique_ptr<Access<zx_handle_t>> handles,
+                           std::unique_ptr<Access<uint32_t>> num_handles)
+      : SyscallFidlMessage<zx_handle_t>(error_code, name, type, std::move(handle), std::move(bytes),
+                                        std::move(num_bytes), std::move(handles),
+                                        std::move(num_handles)) {}
+
+  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+                      std::string_view line_header, int tabs, std::ostream& os) const override;
+};
+
+class SyscallFidlMessageHandleInfo : public SyscallFidlMessage<zx_handle_info_t> {
+ public:
+  SyscallFidlMessageHandleInfo(int64_t error_code, std::string_view name, SyscallFidlType type,
+                               std::unique_ptr<Access<zx_handle_t>> handle,
+                               std::unique_ptr<Access<uint8_t>> bytes,
+                               std::unique_ptr<Access<uint32_t>> num_bytes,
+                               std::unique_ptr<Access<zx_handle_info_t>> handles,
+                               std::unique_ptr<Access<uint32_t>> num_handles)
+      : SyscallFidlMessage<zx_handle_info_t>(error_code, name, type, std::move(handle),
+                                             std::move(bytes), std::move(num_bytes),
+                                             std::move(handles), std::move(num_handles)) {}
+
+  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+                      std::string_view line_header, int tabs, std::ostream& os) const override;
 };
 
 // Defines a syscall we want to decode/display.
@@ -485,7 +515,7 @@ class Syscall {
                         std::unique_ptr<Access<uint32_t>> num_bytes,
                         std::unique_ptr<Access<zx_handle_t>> handles,
                         std::unique_ptr<Access<uint32_t>> num_handles) {
-    inputs_.push_back(std::make_unique<SyscallFidlMessage>(
+    inputs_.push_back(std::make_unique<SyscallFidlMessageHandle>(
         0, name, type, std::move(handle), std::move(bytes), std::move(num_bytes),
         std::move(handles), std::move(num_handles)));
   }
@@ -498,13 +528,23 @@ class Syscall {
   }
 
   // Add an output FIDL message to display.
-  void OutputFidlMessage(int64_t error_code, std::string_view name, SyscallFidlType type,
-                         std::unique_ptr<Access<zx_handle_t>> handle,
-                         std::unique_ptr<Access<uint8_t>> bytes,
-                         std::unique_ptr<Access<uint32_t>> num_bytes,
-                         std::unique_ptr<Access<zx_handle_t>> handles,
-                         std::unique_ptr<Access<uint32_t>> num_handles) {
-    outputs_.push_back(std::make_unique<SyscallFidlMessage>(
+  void OutputFidlMessageHandle(int64_t error_code, std::string_view name, SyscallFidlType type,
+                               std::unique_ptr<Access<zx_handle_t>> handle,
+                               std::unique_ptr<Access<uint8_t>> bytes,
+                               std::unique_ptr<Access<uint32_t>> num_bytes,
+                               std::unique_ptr<Access<zx_handle_t>> handles,
+                               std::unique_ptr<Access<uint32_t>> num_handles) {
+    outputs_.push_back(std::make_unique<SyscallFidlMessageHandle>(
+        error_code, name, type, std::move(handle), std::move(bytes), std::move(num_bytes),
+        std::move(handles), std::move(num_handles)));
+  }
+  void OutputFidlMessageHandleInfo(int64_t error_code, std::string_view name, SyscallFidlType type,
+                                   std::unique_ptr<Access<zx_handle_t>> handle,
+                                   std::unique_ptr<Access<uint8_t>> bytes,
+                                   std::unique_ptr<Access<uint32_t>> num_bytes,
+                                   std::unique_ptr<Access<zx_handle_info_t>> handles,
+                                   std::unique_ptr<Access<uint32_t>> num_handles) {
+    outputs_.push_back(std::make_unique<SyscallFidlMessageHandleInfo>(
         error_code, name, type, std::move(handle), std::move(bytes), std::move(num_bytes),
         std::move(handles), std::move(num_handles)));
   }
@@ -614,9 +654,14 @@ inline void Access<uint32_t>::DisplayValue(SyscallDisplayDispatcher* dispatcher,
     case SyscallType::kUint32:
       os << colors.blue << value << colors.reset;
       break;
-    case SyscallType::kHandle:
-      os << colors.red << value << colors.reset;
+    case SyscallType::kHandle: {
+      zx_handle_info_t handle_info;
+      handle_info.handle = value;
+      handle_info.type = ZX_OBJ_TYPE_NONE;
+      handle_info.rights = 0;
+      DisplayHandle(colors, handle_info, os);
       break;
+    }
     default:
       os << "unimplemented uint32_t value " << static_cast<uint32_t>(GetSyscallType());
       break;

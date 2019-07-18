@@ -52,7 +52,7 @@ namespace {
 // specified by str.
 // Returns true on success, false on failure.
 bool DecodeMessage(const Struct& str, const uint8_t* bytes, uint32_t num_bytes,
-                   const zx_handle_t* handles, uint32_t num_handles,
+                   const zx_handle_info_t* handles, uint32_t num_handles,
                    std::unique_ptr<Object>* decoded_object) {
   MessageDecoder decoder(bytes, num_bytes, handles, num_handles);
   *decoded_object = decoder.DecodeMessage(str);
@@ -62,7 +62,7 @@ bool DecodeMessage(const Struct& str, const uint8_t* bytes, uint32_t num_bytes,
 }  // anonymous namespace
 
 bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, uint32_t num_bytes,
-                   const zx_handle_t* handles, uint32_t num_handles,
+                   const zx_handle_info_t* handles, uint32_t num_handles,
                    std::unique_ptr<Object>* decoded_object) {
   if (method->request() == nullptr) {
     return false;
@@ -71,7 +71,7 @@ bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, uint32_t
 }
 
 bool DecodeResponse(const InterfaceMethod* method, const uint8_t* bytes, uint32_t num_bytes,
-                    const zx_handle_t* handles, uint32_t num_handles,
+                    const zx_handle_info_t* handles, uint32_t num_handles,
                     std::unique_ptr<Object>* decoded_object) {
   if (method->response() == nullptr) {
     return false;

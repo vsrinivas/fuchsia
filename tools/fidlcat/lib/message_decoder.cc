@@ -26,21 +26,21 @@ std::string DocumentToString(rapidjson::Document& document) {
 
 bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t handle,
                                              const uint8_t* bytes, uint32_t num_bytes,
-                                             const zx_handle_t* handles, uint32_t num_handles,
+                                             const zx_handle_info_t* handles, uint32_t num_handles,
                                              SyscallFidlType type, std::ostream& os,
                                              std::string_view line_header, int tabs) {
   if (loader_ == nullptr) {
     return false;
   }
   if ((bytes == nullptr) || (num_bytes < sizeof(fidl_message_header_t))) {
-    FXL_LOG(WARNING) << "not enought data for message";
+    os << line_header << std::string(tabs * kTabSize, ' ') << "not enough data for message\n";
     return false;
   }
   const fidl_message_header_t* header = reinterpret_cast<const fidl_message_header_t*>(bytes);
   const std::vector<const InterfaceMethod*>* methods = loader_->GetByOrdinal(header->ordinal);
   if (methods == nullptr || methods->empty()) {
-    FXL_LOG(WARNING) << "No protocol method with ordinal 0x" << std::hex << header->ordinal
-                     << " found";
+    os << line_header << std::string(tabs * kTabSize, ' ') << "Protocol method with ordinal 0x"
+       << std::hex << header->ordinal << " not found\n";
     return false;
   }
 
@@ -171,8 +171,9 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
   return matched_request || matched_response;
 }
 
-MessageDecoder::MessageDecoder(const uint8_t* bytes, uint32_t num_bytes, const zx_handle_t* handles,
-                               uint32_t num_handles, bool output_errors)
+MessageDecoder::MessageDecoder(const uint8_t* bytes, uint32_t num_bytes,
+                               const zx_handle_info_t* handles, uint32_t num_handles,
+                               bool output_errors)
     : start_byte_pos_(bytes),
       end_byte_pos_(bytes + num_bytes),
       end_handle_pos_(handles + num_handles),

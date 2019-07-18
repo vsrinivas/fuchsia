@@ -167,12 +167,17 @@ std::unique_ptr<Field> HandleType::Decode(MessageDecoder* decoder, std::string_v
   decoder->GetValueAt(offset, &handle);
   if ((handle != FIDL_HANDLE_ABSENT) && (handle != FIDL_HANDLE_PRESENT)) {
     FXL_LOG(ERROR) << "invalid value <" << std::hex << handle << std::dec << "> for handle";
-    return std::make_unique<HandleField>(name, this, FIDL_HANDLE_ABSENT);
+    handle = FIDL_HANDLE_ABSENT;
   }
-  if (handle != FIDL_HANDLE_ABSENT) {
-    handle = decoder->GetNextHandle();
+  zx_handle_info_t handle_info;
+  if (handle == FIDL_HANDLE_ABSENT) {
+    handle_info.handle = FIDL_HANDLE_ABSENT;
+    handle_info.type = ZX_OBJ_TYPE_NONE;
+    handle_info.rights = 0;
+  } else {
+    handle_info = decoder->GetNextHandle();
   }
-  return std::make_unique<HandleField>(name, this, handle);
+  return std::make_unique<HandleField>(name, this, handle_info);
 }
 
 std::unique_ptr<Type> Type::ScalarTypeFromName(const std::string& type_name, size_t inline_size) {
