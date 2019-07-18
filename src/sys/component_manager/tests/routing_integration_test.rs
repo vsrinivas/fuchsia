@@ -8,8 +8,8 @@ use fuchsia_async as fasync;
 
 mod test_utils;
 
-#[fasync::run_singlethreaded()]
-async fn main() {
+#[fasync::run_singlethreaded(test)]
+async fn test() {
     test_utils::launch_and_wait_for_msg(
         "fuchsia-pkg://fuchsia.com/routing_integration_test#meta/component_manager.cmx".to_string(),
         Some(vec![

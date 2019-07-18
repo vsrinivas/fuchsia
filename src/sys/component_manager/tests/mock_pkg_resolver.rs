@@ -5,7 +5,7 @@
 #![feature(async_await, await_macro)]
 
 use {
-    failure::{Error, ResultExt},
+    failure::Error,
     fdio,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
@@ -19,14 +19,14 @@ use {
     std::ptr,
 };
 
-fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     // Ignore argv[0] which is the program binary. Everything else is what
     // needs to be mocked.
     let packages_to_mock: Vec<String> = std::env::args().skip(1).collect();
 
     fuchsia_syslog::init_with_tags(&["mock_pkg_resolver"]).expect("can't init logger");
     fx_log_info!("starting mock resolver");
-    let mut executor = fasync::Executor::new().context("error creating executor")?;
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         let packages_to_mock = packages_to_mock.clone();
@@ -36,7 +36,7 @@ fn main() -> Result<(), Error> {
         });
     });
     fs.take_and_serve_directory_handle()?;
-    executor.run_singlethreaded(fs.collect::<()>());
+    await!(fs.collect::<()>());
     Ok(())
 }
 

@@ -40,8 +40,8 @@ async fn connect_to_echo_service(hub_proxy: &DirectoryProxy, echo_service_path: 
     assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()));
 }
 
-#[fuchsia_async::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test() -> Result<(), Error> {
     let args = startup::Arguments { use_builtin_process_launcher: false, ..Default::default() };
     let builtin_services = Arc::new(startup::BuiltinRootServices::new(&args)?);
     let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);

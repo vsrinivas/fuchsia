@@ -15,6 +15,7 @@ rustc_library("process_builder") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/zerocopy",
     "//third_party/rust_crates:bitflags",
@@ -28,11 +29,14 @@ rustc_library("process_builder") {
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/public/fidl/fuchsia-ldsvc:fuchsia-ldsvc-rustc",
     "//zircon/public/fidl/fuchsia-process:fuchsia-process-rustc",
+  ]
 
-    # Test only deps
+  # Test-only deps. Prefer adding deps used only in tests here instead of
+  # above, which has the benefit of keeping unneeded deps out of the production
+  # library and allows depending on 'testonly' targets.
+  test_deps = [
     ":test-util-fidl-rustc",
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
   ]
 }
@@ -64,8 +68,8 @@ rustc_binary("root_job_test_runner") {
 }
 
 fidl("test-util-fidl") {
-  # Should be 'testonly = true', but :process_builder's tests need to use this
-  # and test-only deps are not separate
+  # TODO(TC-582): Still can't use testonly here :(
+  # testonly = true
   name = "test.processbuilder"
 
   sources = [

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await, await_macro)]
+
 use {
     component_manager_lib::{
         model::{Resolver, ResolverError},
@@ -10,17 +12,10 @@ use {
     fuchsia_async as fasync,
 };
 
-fn main() {
-    run_test();
-}
-
-fn run_test() {
-    let mut executor = fasync::Executor::new().expect("Failed to create executor");
-
+#[fasync::run_singlethreaded(test)]
+async fn fuchsia_pkg_resolve_fails() {
     let resolver_registry = startup::available_resolvers().expect("Failed to get resolvers");
-    let result = executor.run_singlethreaded(
-        resolver_registry.resolve("fuchsia-pkg://fuchsia.com/anything#meta/anything.cmx"),
-    );
+    let result = await!(resolver_registry.resolve("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx"));
     match result {
         Err(ResolverError::SchemeNotRegistered) => {}
         _ => {
