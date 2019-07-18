@@ -4,9 +4,8 @@
 
 #pragma once
 
-#include <lib/operation/operation.h>
-
 #include <ddk/protocol/block.h>
+#include <lib/operation/operation.h>
 
 namespace block {
 
@@ -16,7 +15,7 @@ namespace block {
 // capabilites to interact with a block_op buffer which is used to traverse the
 // block stack. On deletion, it will automatically free itself.
 //
-// block::UnownedOperation provides an unowned variant of block::Operation. It adds
+// block::BorrowedOperation provides an unowned variant of block::Operation. It adds
 // functionality to store and call a complete callback which isn't present in
 // block::Operation.  In addition, it will call the completion on destruction if it
 // wasn't already triggered.
@@ -24,9 +23,9 @@ namespace block {
 // block::OperationPool provides pooling functionality for block::Operation reuse.
 //
 // block::OperationQueue provides a queue interface for tracking block::Operation and
-// block::UnownedOperation objects.
+// block::BorrowedOperation objects.
 //
-// Available methods for both Operation and UnownedOperation include:
+// Available methods for both Operation and BorrowedOperation include:
 //
 //   block_op_t* operation(); // accessor for inner type.
 //
@@ -34,7 +33,7 @@ namespace block {
 //   // ownership to another driver.
 //   block_op_t* take();
 //
-// Available to Operation and UnownedOperation if they templatize of Storage:
+// Available to Operation and BorrowedOperation if they templatize of Storage:
 //
 //   Storage* private_storage(); // accessor for private storage.
 //
@@ -42,7 +41,7 @@ namespace block {
 //
 //   void Release(); // Frees the inner type.
 //
-// Available to UnownedOperation:
+// Available to BorrowedOperation:
 //
 //   void Complete(zx_status_t); // Completes the operation.
 //
@@ -67,12 +66,12 @@ namespace block {
 // public:
 //     <...>
 // private:
-//     block::UnownedOperationQueue<> operations_;
+//     block::BorrowedOperationQueue<> operations_;
 //     const size_t parent_op_size_;
 // };
 //
 // void Driver::BlockImplQueue(block_op_t* op, block_queue_callback completion_cb, void* cookie) {
-//     operations_.push(block::UnownedOperation<>(op, cb, parent_req_size_));
+//     operations_.push(block::BorrowedOperation<>(op, cb, parent_req_size_));
 // }
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -83,7 +82,7 @@ namespace block {
 //     size_t count_metric;
 // }
 //
-// using BlockOperation = block::UnownedOperation<PrivateStorage>;
+// using BlockOperation = block::BorrowedOperation<PrivateStorage>;
 //
 // void Driver::BlockImplQueue(block_op_t* op, block_queue_callback completion_cb, void* cookie) {
 //     BlockOperation block_op(op, cb, parent_req_size_));
@@ -94,56 +93,51 @@ namespace block {
 // }
 //
 struct OperationTraits {
-    using OperationType = block_op_t;
+  using OperationType = block_op_t;
 
-    static OperationType* Alloc(size_t op_size) {
-        fbl::AllocChecker ac;
-        fbl::unique_ptr<uint8_t[]> raw;
-        if constexpr (alignof(OperationType) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
-            raw = fbl::unique_ptr<uint8_t[]>(
-                new (static_cast<std::align_val_t>(alignof(OperationType)), &ac) uint8_t[op_size]);
-        } else {
-            raw = fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[op_size]);
-        }
-        if (!ac.check()) {
-            return nullptr;
-        }
-        return reinterpret_cast<OperationType*>(raw.release());
+  static OperationType* Alloc(size_t op_size) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> raw;
+    if constexpr (alignof(OperationType) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
+      raw = fbl::unique_ptr<uint8_t[]>(
+          new (static_cast<std::align_val_t>(alignof(OperationType)), &ac) uint8_t[op_size]);
+    } else {
+      raw = fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[op_size]);
     }
+    if (!ac.check()) {
+      return nullptr;
+    }
+    return reinterpret_cast<OperationType*>(raw.release());
+  }
 
-    static void Free(OperationType* op) {
-        delete[] reinterpret_cast<uint8_t*>(op);
-    }
+  static void Free(OperationType* op) { delete[] reinterpret_cast<uint8_t*>(op); }
 };
 
 struct CallbackTraits {
-    using CallbackType = void(void*, zx_status_t, block_op_t*);
+  using CallbackType = void(void*, zx_status_t, block_op_t*);
 
-    static std::tuple<zx_status_t> AutoCompleteArgs() {
-        return std::make_tuple(ZX_ERR_INTERNAL);
-    }
+  static std::tuple<zx_status_t> AutoCompleteArgs() { return std::make_tuple(ZX_ERR_INTERNAL); }
 
-    static void Callback(CallbackType* callback, void* cookie, block_op_t* op,
-                         zx_status_t status) {
-        callback(cookie, status, op);
-    }
+  static void Callback(CallbackType* callback, void* cookie, block_op_t* op, zx_status_t status) {
+    callback(cookie, status, op);
+  }
 };
 
 template <typename Storage = void>
 class Operation : public operation::Operation<Operation<Storage>, OperationTraits, Storage> {
-public:
-    using BaseClass = operation::Operation<Operation<Storage>, OperationTraits, Storage>;
-    using BaseClass::BaseClass;
+ public:
+  using BaseClass = operation::Operation<Operation<Storage>, OperationTraits, Storage>;
+  using BaseClass::BaseClass;
 };
 
 template <typename Storage = void>
-class UnownedOperation : public operation::BorrowedOperation<UnownedOperation<Storage>,
-                                                             OperationTraits, CallbackTraits,
-                                                             Storage> {
-public:
-    using BaseClass = operation::BorrowedOperation<UnownedOperation<Storage>, OperationTraits,
-                                                   CallbackTraits, Storage>;
-    using BaseClass::BaseClass;
+class BorrowedOperation
+    : public operation::BorrowedOperation<BorrowedOperation<Storage>, OperationTraits,
+                                          CallbackTraits, Storage> {
+ public:
+  using BaseClass = operation::BorrowedOperation<BorrowedOperation<Storage>, OperationTraits,
+                                                 CallbackTraits, Storage>;
+  using BaseClass::BaseClass;
 };
 
 template <typename Storage = void>
@@ -153,8 +147,8 @@ template <typename Storage = void>
 using OperationQueue = operation::OperationQueue<Operation<Storage>, OperationTraits, Storage>;
 
 template <typename Storage = void>
-using UnownedOperationQueue = operation::BorrowedOperationQueue<UnownedOperation<Storage>,
-                                                               OperationTraits, CallbackTraits,
-                                                               Storage>;
+using BorrowedOperationQueue =
+    operation::BorrowedOperationQueue<BorrowedOperation<Storage>, OperationTraits, CallbackTraits,
+                                      Storage>;
 
-} // namespace block
+}  // namespace block

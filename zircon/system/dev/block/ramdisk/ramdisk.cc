@@ -23,7 +23,7 @@
 namespace ramdisk {
 namespace {
 
-using Transaction = block::UnownedOperation<>;
+using Transaction = block::BorrowedOperation<>;
 
 constexpr uint64_t kMaxTransferSize = 1LLU << 19;
 
@@ -240,7 +240,7 @@ void Ramdisk::ProcessRequests() {
     std::optional<Transaction> txn;
     bool dead, asleep, defer;
     uint64_t blocks = 0;
-    block::UnownedOperationQueue<> deferred_list;
+    block::BorrowedOperationQueue<> deferred_list;
 
     for (;;) {
         for (;;) {

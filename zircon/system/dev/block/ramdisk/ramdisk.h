@@ -100,7 +100,7 @@ private:
     sync_completion_t signal_;
 
     // This is threadsafe.
-    block::UnownedOperationQueue<> txn_list_;
+    block::BorrowedOperationQueue<> txn_list_;
 
     // Guards fields of the ramdisk which may be accessed concurrently
     // from a background worker thread.

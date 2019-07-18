@@ -29,7 +29,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType,
                          public ddk::BlockImplProtocol<SdmmcBlockDevice, ddk::base_protocol>,
                          public fbl::RefCounted<SdmmcBlockDevice> {
 public:
-    using BlockOperation = block::UnownedOperation<>;
+    using BlockOperation = block::BorrowedOperation<>;
 
     static constexpr size_t BlockOpSize() {
         return BlockOperation::OperationSize(sizeof(block_op_t));
@@ -104,7 +104,7 @@ private:
     fbl::ConditionVariable worker_event_ TA_GUARDED(lock_);
 
     // blockio requests
-    block::UnownedOperationQueue<> txn_list_ TA_GUARDED(lock_);
+    block::BorrowedOperationQueue<> txn_list_ TA_GUARDED(lock_);
 
     // outstanding request (1 right now)
     sdmmc_req_t req_;
