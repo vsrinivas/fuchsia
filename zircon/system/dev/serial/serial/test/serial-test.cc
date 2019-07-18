@@ -8,7 +8,7 @@
 #include <fbl/mutex.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <memory>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 namespace {
@@ -145,8 +145,51 @@ private:
     FakeSerialImpl serial_impl_;
 };
 
+TEST(SerialTest, InitNoProtocolParent) {
+    // SerialTester is intentionally not defined in this scope as it would
+    // define the ZX_PROTOCOL_SERIAL_IMPL protocol.
+    serial::SerialDevice device(fake_ddk::kFakeParent);
+    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, device.Init());
+}
+
+TEST(SerialTest, Init) {
+    SerialTester tester;
+    serial::SerialDevice device(fake_ddk::kFakeParent);
+    ASSERT_EQ(ZX_OK, device.Init());
+}
+
+TEST(SerialTest, DdkLifetime) {
+    SerialTester tester;
+    serial::SerialDevice* device(new serial::SerialDevice(fake_ddk::kFakeParent));
+
+    ASSERT_EQ(ZX_OK, device->Init());
+    ASSERT_EQ(ZX_OK, device->Bind());
+    device->DdkRemove();
+    EXPECT_TRUE(tester.ddk().Ok());
+
+    // Delete the object.
+    device->DdkRelease();
+}
+
+TEST(SerialTest, DdkRelease) {
+    SerialTester tester;
+    serial::SerialDevice* device(new serial::SerialDevice(fake_ddk::kFakeParent));
+    FakeSerialImpl& serial_impl = tester.serial_impl();
+
+    ASSERT_EQ(ZX_OK, device->Init());
+
+    // Manually set enabled to true.
+    serial_impl.SerialImplEnable(true);
+    EXPECT_TRUE(serial_impl.enabled());
+
+    device->DdkRelease();
+
+    EXPECT_FALSE(serial_impl.enabled());
+    ASSERT_EQ(nullptr, serial_impl.callback()->callback);
+}
+
 // Provides control primitives for tests that issue IO requests to the device.
-class SerialDeviceTest {
+class SerialDeviceTest : public zxtest::Test {
 public:
     SerialDeviceTest();
     ~SerialDeviceTest();
@@ -154,7 +197,7 @@ public:
     serial::SerialDevice* device() { return device_; }
     FakeSerialImpl& serial_impl() { return tester_.serial_impl(); }
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(SerialDeviceTest);
+    //DISALLOW_COPY_ASSIGN_AND_MOVE(SerialDeviceTest);
 
 private:
     SerialTester tester_;
@@ -174,170 +217,80 @@ SerialDeviceTest::~SerialDeviceTest() {
     device_->DdkRelease();
 }
 
-bool SerialInitNoParentProtocolTest() {
-    BEGIN_TEST;
-    // SerialTester is intentionally not defined in this scope as it would
-    // define the ZX_PROTOCOL_SERIAL_IMPL protocol.
-    serial::SerialDevice device(fake_ddk::kFakeParent);
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, device.Init());
-    END_TEST;
-}
+TEST_F(SerialDeviceTest, DdkOpen) {
+    ASSERT_EQ(ZX_OK, device()->DdkOpen(nullptr /* dev_out */, 0 /* flags */));
 
-bool SerialInitTest() {
-    BEGIN_TEST;
-    SerialTester tester;
-    serial::SerialDevice device(fake_ddk::kFakeParent);
-    ASSERT_EQ(ZX_OK, device.Init());
-    END_TEST;
-}
-
-bool DdkLifetimeTest() {
-    BEGIN_TEST;
-    SerialTester tester;
-    serial::SerialDevice* device(new serial::SerialDevice(fake_ddk::kFakeParent));
-
-    ASSERT_EQ(ZX_OK, device->Init());
-    ASSERT_EQ(ZX_OK, device->Bind());
-    device->DdkRemove();
-    EXPECT_TRUE(tester.ddk().Ok());
-
-    // Delete the object.
-    device->DdkRelease();
-    END_TEST;
-}
-
-bool DdkReleaseTest() {
-    BEGIN_TEST;
-
-    SerialTester tester;
-    serial::SerialDevice* device(new serial::SerialDevice(fake_ddk::kFakeParent));
-    FakeSerialImpl& serial_impl = tester.serial_impl();
-
-    ASSERT_EQ(ZX_OK, device->Init());
-
-    // Manually set enabled to true.
-    serial_impl.SerialImplEnable(true);
-    EXPECT_TRUE(serial_impl.enabled());
-
-    device->DdkRelease();
-
-    EXPECT_FALSE(serial_impl.enabled());
-    ASSERT_EQ(nullptr, serial_impl.callback()->callback);
-
-    END_TEST;
-}
-
-bool DdkOpenTest() {
-    BEGIN_TEST;
-
-    SerialDeviceTest test;
-    serial::SerialDevice* device = test.device();
-    FakeSerialImpl& serial_impl = test.serial_impl();
-
-    ASSERT_EQ(ZX_OK, device->DdkOpen(nullptr /* dev_out */, 0 /* flags */));
-
-    EXPECT_TRUE(serial_impl.enabled());
+    EXPECT_TRUE(serial_impl().enabled());
     // Callback is not null.
-    ASSERT_TRUE(serial_impl.callback()->callback);
+    ASSERT_TRUE(serial_impl().callback()->callback);
 
     // Verify state.
-    ASSERT_EQ(ZX_ERR_ALREADY_BOUND, device->DdkOpen(nullptr /* dev_out */, 0 /* flags */));
-
-    END_TEST;
+    ASSERT_EQ(ZX_ERR_ALREADY_BOUND, device()->DdkOpen(nullptr /* dev_out */, 0 /* flags */));
 }
 
-bool DdkCloseTest() {
-    BEGIN_TEST;
+TEST_F(SerialDeviceTest, DdkClose) {
+    ASSERT_EQ(ZX_OK, device()->DdkOpen(nullptr /* dev_out */, 0 /* flags */));
+    ASSERT_EQ(ZX_OK, device()->DdkClose(0 /* flags */));
 
-    SerialDeviceTest test;
-    serial::SerialDevice* device = test.device();
-    FakeSerialImpl& serial_impl = test.serial_impl();
-
-    ASSERT_EQ(ZX_OK, device->DdkOpen(nullptr /* dev_out */, 0 /* flags */));
-    ASSERT_EQ(ZX_OK, device->DdkClose(0 /* flags */));
-
-    EXPECT_FALSE(serial_impl.enabled());
-    ASSERT_EQ(nullptr, serial_impl.callback()->callback);
+    EXPECT_FALSE(serial_impl().enabled());
+    ASSERT_EQ(nullptr, serial_impl().callback()->callback);
 
     // Verify state.
-    ASSERT_EQ(ZX_ERR_BAD_STATE, device->DdkClose(0 /* flags */));
-
-    END_TEST;
+    ASSERT_EQ(ZX_ERR_BAD_STATE, device()->DdkClose(0 /* flags */));
 }
 
-bool DdkReadTest() {
-    BEGIN_TEST;
-
-    SerialDeviceTest test;
-    serial::SerialDevice* device = test.device();
-    FakeSerialImpl& serial_impl = test.serial_impl();
-
+TEST_F(SerialDeviceTest, DdkRead) {
     const char* expected = "test";
     char buffer[kBufferLength];
     size_t read_len;
 
     // Try to read without opening.
-    ASSERT_EQ(ZX_ERR_BAD_STATE, device->DdkRead(buffer, kBufferLength, 0, &read_len));
+    ASSERT_EQ(ZX_ERR_BAD_STATE, device()->DdkRead(buffer, kBufferLength, 0, &read_len));
 
     // Test set up.
-    strcpy(serial_impl.read_buffer(), expected);
-    serial_impl.set_state_and_notify(SERIAL_STATE_READABLE);
-    ASSERT_EQ(ZX_OK, device->DdkOpen(nullptr /* dev_out */, 0 /* flags */));
+    strcpy(serial_impl().read_buffer(), expected);
+    serial_impl().set_state_and_notify(SERIAL_STATE_READABLE);
+    ASSERT_EQ(ZX_OK, device()->DdkOpen(nullptr /* dev_out */, 0 /* flags */));
 
     // Test.
-    ASSERT_EQ(ZX_OK, device->DdkRead(buffer, kBufferLength, 0, &read_len));
+    ASSERT_EQ(ZX_OK, device()->DdkRead(buffer, kBufferLength, 0, &read_len));
     ASSERT_EQ(4, read_len);
     ASSERT_EQ(0, strncmp(expected, buffer, read_len));
-
-    END_TEST;
 }
 
-bool DdkWriteTest() {
-    BEGIN_TEST;
-
-    SerialDeviceTest test;
-    serial::SerialDevice* device = test.device();
-    FakeSerialImpl& serial_impl = test.serial_impl();
-
+TEST_F(SerialDeviceTest, DdkWrite) {
     const char* data = "test";
     char buffer[kBufferLength];
     size_t write_len;
 
     // Try to write without opening.
-    ASSERT_EQ(ZX_ERR_BAD_STATE, device->DdkWrite(buffer, kBufferLength, 0, &write_len));
+    ASSERT_EQ(ZX_ERR_BAD_STATE, device()->DdkWrite(buffer, kBufferLength, 0, &write_len));
 
     // Test set up.
-    ASSERT_EQ(ZX_OK, device->DdkOpen(nullptr /* dev_out */, 0 /* flags */));
+    ASSERT_EQ(ZX_OK, device()->DdkOpen(nullptr /* dev_out */, 0 /* flags */));
 
     // Test.
-    ASSERT_EQ(ZX_OK, device->DdkWrite(data, kBufferLength, 0, &write_len));
+    ASSERT_EQ(ZX_OK, device()->DdkWrite(data, kBufferLength, 0, &write_len));
     ASSERT_EQ(4, write_len);
-    ASSERT_EQ(0, strncmp(data, serial_impl.write_buffer(), write_len));
-
-    END_TEST;
+    ASSERT_EQ(0, strncmp(data, serial_impl().write_buffer(), write_len));
 }
 
-bool SerialOpenSocketTest() {
-    BEGIN_TEST;
-
-    SerialDeviceTest test;
-    serial::SerialDevice* device = test.device();
-    FakeSerialImpl& serial_impl = test.serial_impl();
+TEST_F(SerialDeviceTest, OpenSocket) {
     zx::socket socket;
 
     const char* data = "test";
     char buffer[kBufferLength];
     size_t length;
 
-    ASSERT_EQ(ZX_OK, device->SerialOpenSocket(&socket));
+    ASSERT_EQ(ZX_OK, device()->SerialOpenSocket(&socket));
     // Trivial state check.
-    ASSERT_EQ(ZX_ERR_ALREADY_BOUND, device->SerialOpenSocket(&socket));
+    ASSERT_EQ(ZX_ERR_ALREADY_BOUND, device()->SerialOpenSocket(&socket));
 
     ////////////////////
     // Serial -> Socket.
-    strcpy(serial_impl.read_buffer(), data);
+    strcpy(serial_impl().read_buffer(), data);
     // Notify device that serial is readable.
-    serial_impl.set_state_and_notify(SERIAL_STATE_READABLE);
+    serial_impl().set_state_and_notify(SERIAL_STATE_READABLE);
 
     zx_signals_t pending;
     // Wait and read from socket.
@@ -353,26 +306,12 @@ bool SerialOpenSocketTest() {
     ASSERT_EQ(4, length);
 
     //Notify device that serial is writable.
-    serial_impl.set_state_and_notify(SERIAL_STATE_WRITABLE);
+    serial_impl().set_state_and_notify(SERIAL_STATE_WRITABLE);
     // Wait and read from device.
-    ASSERT_EQ(ZX_OK, serial_impl.wait_for_write(zx::time::infinite(), &pending));
+    ASSERT_EQ(ZX_OK, serial_impl().wait_for_write(zx::time::infinite(), &pending));
     ASSERT_TRUE(pending & kEventWrittenSignal);
-    ASSERT_EQ(4, serial_impl.write_buffer_length());
-    ASSERT_EQ(0, strncmp(data, serial_impl.write_buffer(), 4));
-
-    END_TEST;
+    ASSERT_EQ(4, serial_impl().write_buffer_length());
+    ASSERT_EQ(0, strncmp(data, serial_impl().write_buffer(), 4));
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(SerialDeviceTests)
-RUN_TEST_SMALL(SerialInitNoParentProtocolTest)
-RUN_TEST_SMALL(SerialInitTest)
-RUN_TEST_SMALL(DdkLifetimeTest)
-RUN_TEST_SMALL(DdkReleaseTest)
-RUN_TEST_SMALL(DdkOpenTest)
-RUN_TEST_SMALL(DdkCloseTest)
-RUN_TEST_SMALL(DdkReadTest)
-RUN_TEST_SMALL(DdkWriteTest)
-RUN_TEST_SMALL(SerialOpenSocketTest)
-END_TEST_CASE(SerialDeviceTests)
