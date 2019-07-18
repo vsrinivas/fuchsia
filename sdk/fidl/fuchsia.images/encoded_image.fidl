@@ -5,8 +5,8 @@
 library fuchsia.images;
 
 struct EncodedImage {
-  // The vmo.
+  /// The vmo.
   handle<vmo> vmo;
-  // The size of the image in the vmo in bytes.
+  /// The size of the image in the vmo in bytes.
   uint64 size;
 };
