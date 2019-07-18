@@ -20,6 +20,7 @@
 #include <lib/device-protocol/pci.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <lib/zx/clock.h>
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>

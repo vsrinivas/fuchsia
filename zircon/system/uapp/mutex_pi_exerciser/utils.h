@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <zircon/types.h>
 

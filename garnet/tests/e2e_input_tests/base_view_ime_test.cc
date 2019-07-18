@@ -15,6 +15,7 @@
 #include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/zx/clock.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -116,8 +117,8 @@ class ImeInputTest : public gtest::RealLoopFixture {
         .outgoing_services = nullptr,
         .startup_context = g_context,
     };
-    view_ = std::make_unique<ImeClientView>(std::move(view_context),
-                                                dispatcher());
+    view_ =
+        std::make_unique<ImeClientView>(std::move(view_context), dispatcher());
 
     // Connect to RootPresenter, create a ViewHolder.
     root_presenter_ =

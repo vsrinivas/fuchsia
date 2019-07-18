@@ -14,8 +14,8 @@
 #include <fuchsia/tee/manager/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fidl/coding.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/handle.h>
-#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <tee-client-api/tee-client-types.h>
 #include <zircon/time.h>

@@ -9,6 +9,7 @@
 
 #include <fbl/unique_fd.h>
 #include <lib/fdio/watcher.h>
+#include <lib/zx/clock.h>
 
 namespace devmgr_integration_test {
 

@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <hid/usages.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/zx/clock.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"

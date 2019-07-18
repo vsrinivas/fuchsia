@@ -5,6 +5,7 @@
 #include "lib/gtest/real_loop_fixture.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/zx/clock.h>
 
 namespace gtest {
 

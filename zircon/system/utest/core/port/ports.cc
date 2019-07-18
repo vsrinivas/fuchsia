@@ -8,9 +8,9 @@
 #include <thread>
 
 #include <fbl/algorithm.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
-#include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>

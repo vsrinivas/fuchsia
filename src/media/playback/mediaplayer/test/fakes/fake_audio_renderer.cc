@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/zx/clock.h>
 
 #include <iomanip>
 #include <iostream>

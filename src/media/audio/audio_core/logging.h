@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_LOGGING_H_
 
 #include <iomanip>
+#include <lib/zx/clock.h>
 
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/logging.h"

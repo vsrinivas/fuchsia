@@ -18,6 +18,7 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/zx/clock.h>
 
 #include <memory>
 #include <mutex>

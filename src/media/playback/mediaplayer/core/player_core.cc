@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
+#include <lib/zx/clock.h>
 
 #include <queue>
 #include <unordered_set>

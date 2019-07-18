@@ -22,6 +22,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/mutex.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/event.h>
 #include <unittest/unittest.h>
 #include <zircon/status.h>

@@ -21,6 +21,7 @@
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/images/cpp/images.h>
+#include <lib/zx/clock.h>
 #include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
 

@@ -10,6 +10,7 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/svc/cpp/service_provider_bridge.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <src/lib/fxl/macros.h>
 

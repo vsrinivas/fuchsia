@@ -17,6 +17,7 @@
 #include <fbl/auto_lock.h>
 #include <hw/sdio.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/zx/clock.h>
 #include <zircon/driver/binding.h>
 #include <zircon/process.h>
 #include <zircon/threads.h>

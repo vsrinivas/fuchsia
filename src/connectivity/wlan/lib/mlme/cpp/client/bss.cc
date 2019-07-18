@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <lib/zx/clock.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element_splitter.h>
 #include <wlan/common/parse_element.h>

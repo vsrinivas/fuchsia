@@ -19,6 +19,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <loader-service/loader-service.h>

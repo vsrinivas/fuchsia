@@ -4,7 +4,7 @@
 
 #include <fbl/string.h>
 #include <fbl/vector.h>
-#include <lib/zx/time.h>
+#include <lib/zx/clock.h>
 #include <runtests-utils/fuchsia-run-test.h>
 #include <runtests-utils/log-exporter.h>
 #include <runtests-utils/runtests-utils.h>

@@ -13,10 +13,12 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/zx/clock.h>
 
 // clang-format off
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clang-format on
+
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>

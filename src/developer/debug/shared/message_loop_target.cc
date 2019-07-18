@@ -5,6 +5,7 @@
 #include "src/developer/debug/shared/message_loop_target.h"
 
 #include <lib/fdio/io.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>

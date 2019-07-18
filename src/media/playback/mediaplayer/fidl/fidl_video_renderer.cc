@@ -6,6 +6,7 @@
 
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/ui/scenic/cpp/commands.h>
+#include <lib/zx/clock.h>
 
 #include <limits>
 

@@ -5,6 +5,7 @@
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_stream.h"
 
 #include <ddk/debug.h>
+#include <lib/zx/clock.h>
 
 #include <cmath>
 

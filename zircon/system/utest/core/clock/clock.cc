@@ -4,6 +4,7 @@
 
 #include <utility>
 
+#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 
 #include <zxtest/zxtest.h>

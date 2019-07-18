@@ -10,6 +10,7 @@
 #include <string>
 #include <unordered_set>
 
+#include "lib/zx/clock.h"
 #include "lib/zx/time.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/tests/enclosed_guest.h"

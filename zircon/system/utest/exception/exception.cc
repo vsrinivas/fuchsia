@@ -26,6 +26,7 @@
 #include <fbl/algorithm.h>
 #include <lib/test-exceptions/exception-catcher.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/job.h>
 #include <lib/zx/port.h>

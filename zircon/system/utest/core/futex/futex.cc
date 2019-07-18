@@ -17,6 +17,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/futex.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/suspend_token.h>
 #include <lib/zx/thread.h>
 #include <zircon/syscalls.h>

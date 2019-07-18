@@ -4,6 +4,7 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/cpp/time.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/eventpair.h>
 
 #include <memory>

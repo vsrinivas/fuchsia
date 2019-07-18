@@ -17,6 +17,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/zx/clock.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/object.h>
 

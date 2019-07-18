@@ -9,6 +9,7 @@
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/driver/test/c/fidl.h>
 #include <lib/fidl/coding.h>
+#include <lib/zx/clock.h>
 
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"

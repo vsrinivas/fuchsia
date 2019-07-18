@@ -15,6 +15,7 @@
 #include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/zx/clock.h>
 #include <zircon/status.h>
 
 #include <memory>

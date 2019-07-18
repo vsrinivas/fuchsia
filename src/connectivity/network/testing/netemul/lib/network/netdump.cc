@@ -5,6 +5,7 @@
 #include "netdump.h"
 
 #include <iomanip>
+#include <lib/zx/clock.h>
 
 #include "netdump_types.h"
 

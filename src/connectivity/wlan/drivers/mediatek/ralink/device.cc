@@ -10,6 +10,7 @@
 #include <fbl/algorithm.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/vmo.h>
 #include <usb/usb-request.h>
 #include <wlan/common/channel.h>

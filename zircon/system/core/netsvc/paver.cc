@@ -9,7 +9,7 @@
 #include <fbl/auto_call.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
-#include <lib/zx/time.h>
+#include <lib/zx/clock.h>
 #include <zircon/boot/netboot.h>
 
 #include "payload-streamer.h"

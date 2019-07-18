@@ -5,6 +5,7 @@
 #include "src/media/playback/mediaplayer/decode/software_decoder.h"
 
 #include <lib/async/default.h>
+#include <lib/zx/clock.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"

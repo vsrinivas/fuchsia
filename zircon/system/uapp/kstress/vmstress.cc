@@ -11,6 +11,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/pager.h>
 #include <lib/zx/port.h>

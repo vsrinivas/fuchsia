@@ -8,6 +8,7 @@
 #include <utility>
 
 #ifdef __Fuchsia__
+#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #else
 #include <sys/time.h>

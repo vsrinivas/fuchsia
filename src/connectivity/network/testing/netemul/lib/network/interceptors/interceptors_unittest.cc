@@ -5,6 +5,7 @@
 #include <lib/gtest/real_loop_fixture.h>
 
 #include <unordered_set>
+#include <lib/zx/clock.h>
 
 #include "latency.h"
 #include "packet_loss.h"

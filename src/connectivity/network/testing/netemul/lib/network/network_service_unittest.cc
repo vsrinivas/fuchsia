@@ -5,6 +5,7 @@
 #include <fuchsia/netemul/devmgr/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/zx/clock.h>
 #include <src/connectivity/network/testing/netemul/lib/network/ethernet_client.h>
 #include <src/connectivity/network/testing/netemul/lib/network/fake_endpoint.h>
 #include <src/connectivity/network/testing/netemul/lib/network/netdump.h>

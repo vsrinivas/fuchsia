@@ -18,6 +18,7 @@
 #include <src/lib/fxl/strings/string_printf.h>
 #include <src/lib/fxl/strings/string_view.h>
 #include <lib/fzl/fdio.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>

@@ -6,6 +6,7 @@
 
 #include <fbl/auto_lock.h>
 #include <lib/fit/defer.h>
+#include <lib/zx/clock.h>
 
 #include <limits>
 

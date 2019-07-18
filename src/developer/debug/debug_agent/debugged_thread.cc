@@ -5,6 +5,7 @@
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 
 #include <inttypes.h>
+#include <lib/zx/clock.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>

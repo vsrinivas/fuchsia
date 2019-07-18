@@ -5,6 +5,7 @@
 #include "peridot/bin/basemgr/session_provider.h"
 
 #include <fuchsia/device/manager/cpp/fidl.h>
+#include <lib/zx/clock.h>
 #include <zircon/status.h>
 
 #include "peridot/bin/basemgr/session_context_impl.h"

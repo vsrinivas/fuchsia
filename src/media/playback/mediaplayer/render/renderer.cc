@@ -5,6 +5,7 @@
 #include "src/media/playback/mediaplayer/render/renderer.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/zx/clock.h>
 
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 

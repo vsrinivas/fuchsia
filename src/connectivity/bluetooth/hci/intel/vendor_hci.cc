@@ -5,6 +5,7 @@
 #include "vendor_hci.h"
 
 #include <fbl/algorithm.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/object.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>

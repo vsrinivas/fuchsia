@@ -8,6 +8,7 @@
 #include <fs/vnode.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/clock.h>
 
 #include <string>
 

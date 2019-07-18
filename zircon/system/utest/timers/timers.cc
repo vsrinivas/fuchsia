@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/timer.h>
 #include <stdio.h>
 #include <threads.h>
+
 #include <unistd.h>
 #include <zxtest/zxtest.h>
 

@@ -9,6 +9,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/resource.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>

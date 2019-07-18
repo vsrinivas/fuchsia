@@ -6,7 +6,7 @@
 
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/zx/time.h>
+#include <lib/zx/clock.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/errors.h>
