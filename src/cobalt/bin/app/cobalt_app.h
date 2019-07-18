@@ -91,17 +91,21 @@ class CobaltApp {
   // REQUIRED:
   //   0 <= min_interval <= target_interval <= kMaxSeconds
   //   0 <= initial_interval <= target_interval
-  CobaltApp(
-      async_dispatcher_t* dispatcher, std::chrono::seconds target_interval,
-      std::chrono::seconds min_interval, std::chrono::seconds initial_interval,
-      size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
-      bool use_memory_observation_store, size_t max_bytes_per_observation_store,
-      const std::string& product_name, const std::string& board_name,
-      const std::string& version,
-      const std::vector<std::string>& debug_channels);
+  CobaltApp(async_dispatcher_t* dispatcher, std::chrono::seconds target_interval,
+            std::chrono::seconds min_interval, std::chrono::seconds initial_interval,
+            size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
+            bool use_memory_observation_store, size_t max_bytes_per_observation_store,
+            const std::string& product_name, const std::string& board_name,
+            const std::string& version, const std::vector<std::string>& debug_channels);
 
  private:
   static encoder::ClientSecret getClientSecret();
+
+  // Creates a Logger which will be used for logging Cobalt's internal metrics.
+  std::unique_ptr<logger::Logger> NewInternalLogger(
+      const std::shared_ptr<logger::ProjectContextFactory> global_project_context_factory,
+      const std::string& customer_name, const std::string& project_name,
+      ReleaseStage release_stage);
 
   encoder::SystemData system_data_;
 
@@ -128,8 +132,7 @@ class CobaltApp {
   fidl::BindingSet<fuchsia::cobalt::LoggerFactory> logger_factory_bindings_;
 
   std::unique_ptr<fuchsia::cobalt::SystemDataUpdater> system_data_updater_impl_;
-  fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater>
-      system_data_updater_bindings_;
+  fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater> system_data_updater_bindings_;
 
   // Cobalt uses internal_logger_ to log events about Cobalt.
   std::unique_ptr<logger::Logger> internal_logger_;
