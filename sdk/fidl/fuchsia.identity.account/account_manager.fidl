@@ -1,0 +1,180 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.identity.account;
+
+using fuchsia.auth;
+
+// An `AuthState` along with the account that it applies to.
+struct AccountAuthState {
+    LocalAccountId account_id;
+    fuchsia.auth.AuthState auth_state;
+};
+
+// AccountManager manages the overall state of Fuchsia accounts and personae on
+// a Fuchsia device, installation of the AuthProviders that are used to obtain
+// authentication tokens for these accounts, and access to TokenManagers for
+// these accounts.
+//
+// The AccountManager is the most powerful interface in the authentication
+// system and is intended only for use by the most trusted parts of the system.
+[Discoverable]
+protocol AccountManager {
+    // Returns a vector of all unlocked accounts provisioned on the current
+    // device.
+    GetAccountIds()
+        -> (vector<LocalAccountId>:MAX_ACCOUNTS_PER_DEVICE account_ids);
+
+    // Returns a vector of all unlocked accounts provisioned on the current
+    // device and the current authentication state for each.
+    GetAccountAuthStates() -> (
+        Status status,
+        vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE account_auth_states);
+
+    // Connects an interface to read properties of and perform operations on
+    // one account.
+    //
+    // `id` The account's identifier as returned by GetAccountIds()
+    // `context_provider` An `AuthenticationContextProvider` capable of
+    //                    supplying UI contexts used for interactive
+    //                    authentication on this account
+    // `account` The server end of an `Account` channel
+    //
+    // Returns: `status` A `Status` indicating whether the operation was
+    //                   successful
+    GetAccount(
+        LocalAccountId id,
+        fuchsia.auth.AuthenticationContextProvider auth_context_provider,
+        request<Account> account)
+        -> (Status status);
+
+    // Connects an interface that will receive changes in the provisioned
+    // accounts and their authentication state. Optionally this interface will
+    // also receive the initial set of accounts and authentication states onto
+    // which changes may be applied.
+    //
+    // `listener` The client end of an `AccountListener` channel
+    // `options` An `AccountListenerOptions` that defines the set of events to
+    //           be sent to the listener.
+    //
+    // Returns: `status` A `Status` indicating whether the operation was
+    //                   successful
+    RegisterAccountListener(
+        AccountListener listener,
+        AccountListenerOptions options)
+        -> (Status status);
+
+    // TODO(jsankey): Define a method to return a list of accounts that have
+    // been provisioned on the current device but not unlocked in the current
+    // power cycle, i.e. those where data decryption keys are not available.
+    // This list will not include the globally unique account id. Define a
+    // method that requests unlocking for an unlocked account and potentially
+    // a method to lock an account.
+
+    // Removes a provisioned Fuchsia account from the current device, revoking
+    // any credentials that are held for the account.
+    //
+    // `id` The account's identifier as returned by GetAccountIds()
+    // `force` If true, continues removing the account even if revocation of
+    //         credentials fails. If false, any revocation failure will result
+    //         in an error and the account will remain. In this case, a subset
+    //         of the credentials may have been deleted.
+    //
+    // Returns: `status` A `Status` indicating whether the operation was
+    //                   successful
+    RemoveAccount(LocalAccountId id, bool force) -> (Status status);
+
+    // Adds a Fuchsia account to the current device based on authenticating
+    // to a service provider (such as Google). If the service provider account
+    // is not already a recovery account for any Fuchsia account, a new Fuchsia
+    // account will be created with its recovery account set to the service
+    // provider account.
+    //
+    // `auth_context_provider` An `AuthenticationContextProvider` capable of
+    //                         supplying UI contexts used for interactive
+    //                         authentication
+    // `auth_provider_type` A unique identifier for an installed `AuthProvider`
+    //                      that should be used to authenticate with the service
+    //                      provider
+    // `lifetime` The lifetime of the account
+    //
+    // Returns: `status` A `Status` indicating whether the operation was
+    //                   successful
+    //          `account_id` The identifier of the newly added account, if the
+    //                       operation was successful
+    ProvisionFromAuthProvider(
+        fuchsia.auth.AuthenticationContextProvider auth_context_provider,
+        string auth_provider_type,
+        Lifetime lifetime)
+        -> (Status status, LocalAccountId? account_id);
+
+    // Adds a new, initially empty, Fuchsia account to the current device.
+    //
+    // `lifetime` The lifetime of the account
+    //
+    // Returns: `status` A `Status` indicating whether the operation was
+    //                   successful
+    //          `account_id` The identifier of the newly added account, if the
+    //                       operation was successful.
+    ProvisionNewAccount(Lifetime lifetime)
+        -> (Status status, LocalAccountId? account_id);
+
+    // TODO(jsankey): Add methods to provision by authenticating directly to an
+    //                existing Fuchsia account.
+
+    // TODO(jsankey): Add methods to list AuthProviders and manage their dynamic
+    //                addition and removal.
+};
+
+// The configuration for an AccountListener, defining the set of events that it
+// will receive.
+struct AccountListenerOptions {
+    // If true, the listener will receive the initial auth state for all accounts.
+    bool initial_state;
+    // If true, the listener will receive events when a new account is added
+    // to the device.
+    bool add_account;
+    // If true, the listener will receive events.
+    bool remove_account;
+    // An `AuthChangeGranularity` expressing the magnitude of change in
+    // authentication state that will lead to AuthStateChange events.
+    fuchsia.auth.AuthChangeGranularity granularity;
+};
+
+// An interface to receive events when the set of accounts on a device or the
+// authentication states of these accounts change.
+//
+// AccountListeners may be registered through the AccountManager interface
+// and this registration also defines which types of event should be sent to
+// the listener. Optionally, the AccountListener will recieve an initial state
+// event onto which the change events may be safely accumulated.
+//
+// All methods include an empty response to follow the "Throttle push using
+// acknowledgements" FIDL design pattern.
+protocol AccountListener {
+    // A method that is called to communicate the initial set of accounts and
+    // their authentication states. OnInitialize is called exactly once if and
+    // only if AccountListenerOptions.initial_state was set when creating the
+    // AccountListener. When called, it will always be the first call on the
+    // interface. If no accounts are present on the device the vector will be
+    // empty.
+    OnInitialize(
+        vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE account_auth_states)
+        -> ();
+
+    // A method that is called when a new account is added to the device.
+    // This method is only called if AccountListenerOptions.add_account was
+    // set when creating the AccountListener.
+    OnAccountAdded(LocalAccountId id) -> ();
+
+    // A method that is called when a provisioned account is removed.
+    // This method is only called if AccountListenerOptions.remove_account was
+    // set when creating the AccountListener.
+
+    OnAccountRemoved(LocalAccountId id) -> ();
+
+    // A method that is called when the authentication state of any provisioned
+    // account changes.
+    OnAuthStateChanged(AccountAuthState account_auth_state) -> ();
+};

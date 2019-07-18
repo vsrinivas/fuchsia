@@ -1,0 +1,84 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.identity.account;
+
+// The maximum number of Fuchsia accounts that may be simultaneously provisioned
+// on a device. This number may be increased in the future.
+const uint32 MAX_ACCOUNTS_PER_DEVICE = 128;
+
+// The maximum number of personae that may be simultaneously defined within a
+// Fuchsia account. This number may be increased in the future.
+const uint32 MAX_PERSONAE_PER_ACCOUNT = 128;
+
+// The maximum length of the global Fuchsia account and persona identifiers,
+// in bytes.
+const uint32 MAX_ID_SIZE = 256;
+
+// The maximum length of the (UTF-8 encoded) human readable names, in bytes.
+const uint32 MAX_NAME_SIZE = 128;
+
+// Specifies the success/failure status of AccountManager calls.
+enum Status {
+    // The command completed successfully
+    OK = 0;
+    // An internal error occurred. This usually indicates a bug within the
+    // Account Manager itself. Retry is optional.
+    INTERNAL_ERROR = 1;
+    // The request was malformed in some way, such as using an empty string for
+    // the user_profile_id. The request should not be retried.
+    INVALID_REQUEST = 2;
+    // A local error occurred such as disk I/O or memory allocation. Retry, after
+    // a delay, is recommended.
+    IO_ERROR = 3;
+    // A network error occurred while communicating with the auth server. Retry,
+    // after a delay, is recommended.
+    NETWORK_ERROR = 4;
+    // The requested account or persona is not present on the current device.
+    // The request should not be retried.
+    NOT_FOUND = 5;
+    // Some other problem occurred that cannot be classified using one of the
+    // more specific statuses. Retry is optional.
+    UNKNOWN_ERROR = 6;
+    // The request cannot be processed due to an ongoing account or persona
+    // removal.
+    REMOVAL_IN_PROGRESS = 7;
+
+    // TODO(jsankey): Add additional statuses as needed. Examples are likely to
+    // include: MAX_LISTENERS, NO_SUITABLE_AUTHENTICATOR, INVALID_AUTH_PROVIDER,
+};
+
+// Provides an upper bound to how long a Fuchsia account can live on the device.
+enum Lifetime : uint8 {
+    // The account lives at the longest to the end of the power cycle it
+    // was created in.
+    EPHEMERAL = 1;
+    // The account lives on the device until it is removed.
+    PERSISTENT = 2;
+};
+
+// A globally unique identifier for a Fuchsia account that is constant across
+// the devices that the account is provisioned on. Identifiers are not human
+// readable.
+struct GlobalAccountId {
+    bytes:MAX_ID_SIZE id;
+};
+
+// A unique identifier for a Fuchsia account on the current device. If the
+// account is removed and re-added it will receive a different LocalAccountId.
+// The same account will have different LocalAccountIds on different devices
+// and a particular LocalAccountId value may refer to different accounts on
+// different devices.
+struct LocalAccountId {
+    uint64 id;
+};
+
+// A unique identifier for a Persona of a Fuchsia account on the current device.
+// If the account is removed and re-added its personae will receive different
+// LocalPersonaIds. A particular LocalPersonaId value may refer to different
+// personae and/or different accounts on different devices. The LocalAccountId
+// for an account cannot be derived from the LocalPersonaId of its personae.
+struct LocalPersonaId {
+    uint64 id;
+};
