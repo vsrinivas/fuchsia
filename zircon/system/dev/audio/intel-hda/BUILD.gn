@@ -13,7 +13,7 @@ group("intel-hda") {
 group("test") {
   testonly = true
   deps = [
-    "$zx/system/dev/audio/intel-hda/controller:controller_test",
+    "$zx/system/dev/audio/intel-hda/controller:test",
     "$zx/system/dev/audio/intel-hda/test",
   ]
 }

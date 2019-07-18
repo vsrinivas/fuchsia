@@ -3,10 +3,21 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/firmware.gni")
+import("$zx/public/gn/fuzzer.gni")
 
+# All non-test targets.
 group("controller") {
   deps = [
     ":intel-hda",
+  ]
+}
+
+# All test targets.
+group("test") {
+  testonly = true
+  deps = [
+    ":controller_test",
+    ":nhlt-fuzzer",
   ]
 }
 
@@ -87,6 +98,19 @@ test("controller_test") {
     "$zx/system/ulib/intel-hda",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
+  ]
+}
+
+# Fuzz testing for NHLT parsing.
+#
+# Name needs to end with "-fuzzer" to be included in the Zircon fuzz test package.
+fuzzer("nhlt-fuzzer") {
+  sources = [
+    "nhlt_fuzzer.cc",
+  ]
+  deps = [
+    ":src",
+    "$zx/system/ulib/fbl",
   ]
 }
 
