@@ -38,7 +38,7 @@ void main() {
   setUp(() async {
     sl4fDriver = Sl4f.fromEnvironment();
     await sl4fDriver.startServer();
-    inspect = Inspect(sl4fDriver.sshProcess);
+    inspect = Inspect(sl4fDriver.ssh);
     webdriverConnector = WebDriverConnector(_chromedriverPath, sl4fDriver);
     await webdriverConnector.initialize();
     await startLoginTester(sl4fDriver);
@@ -49,7 +49,7 @@ void main() {
     await sl4fDriver.stopServer();
     sl4fDriver.close();
     webdriverConnector.tearDown();
-    await sl4fDriver.ssh('tiles_ctl quit');
+    await sl4fDriver.ssh.run('tiles_ctl quit');
   });
 
   test('Authenticate through Google using Chromium', () async {
@@ -107,14 +107,14 @@ Future<void> _driveGoogleLogin(WebDriver webdriver) async {
 
 /// Starts the login tester mod on the DuT.
 Future<void> startLoginTester(Sl4f sl4f) async {
-  await sl4f.ssh('tiles_ctl start');
-  var testerStarted =
-      await sl4f.ssh('tiles_ctl add $_testerUrl ${_testerFlags.join(" ")}');
+  await sl4f.ssh.run('tiles_ctl start');
+  var runResult =
+      await sl4f.ssh.run('tiles_ctl add $_testerUrl ${_testerFlags.join(" ")}');
   // tiles_ctl add can fail if tiles is not ready yet.
-  while (!testerStarted) {
+  while (runResult.exitCode != 0) {
     await Future.delayed(pollDelay);
-    testerStarted =
-        await sl4f.ssh('tiles_ctl add $_testerUrl ${_testerFlags.join(" ")}');
+    runResult = await sl4f.ssh
+        .run('tiles_ctl add $_testerUrl ${_testerFlags.join(" ")}');
   }
 }
 
