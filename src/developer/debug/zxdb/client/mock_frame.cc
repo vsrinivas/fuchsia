@@ -49,8 +49,9 @@ const Location& MockFrame::GetLocation() const { return location_; }
 uint64_t MockFrame::GetAddress() const { return location_.address(); }
 const std::vector<Register>& MockFrame::GetGeneralRegisters() const { return registers_; }
 std::optional<uint64_t> MockFrame::GetBasePointer() const { return frame_base_; }
-void MockFrame::GetBasePointerAsync(std::function<void(uint64_t)> cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [bp = frame_base_, cb]() { cb(bp); });
+void MockFrame::GetBasePointerAsync(fit::callback<void(uint64_t)> cb) {
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [bp = frame_base_, cb = std::move(cb)]() mutable { cb(bp); });
 }
 uint64_t MockFrame::GetStackPointer() const { return sp_; }
 uint64_t MockFrame::GetCanonicalFrameAddress() const { return cfa_; }

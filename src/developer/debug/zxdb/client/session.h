@@ -78,7 +78,7 @@ class Session : public SettingStoreObserver {
 
   // Connects to a remote system. Calling when there is already a connection
   // will issue the callback with an error.
-  void Connect(const std::string& host, uint16_t port, std::function<void(const Err&)> callback);
+  void Connect(const std::string& host, uint16_t port, fit::callback<void(const Err&)> callback);
 
   // Disconnects from the remote system. Calling when there is no connection
   // connection will issue the callback with an error.
@@ -87,12 +87,12 @@ class Session : public SettingStoreObserver {
   // called but the callback has not been issued yet) which will cancel the
   // pending connection. The Connect() callback will still be issued but
   // will indicate failure.
-  void Disconnect(std::function<void(const Err&)> callback);
+  void Disconnect(fit::callback<void(const Err&)> callback);
 
   // Open a minidump instead of connecting to a running system. The callback
   // will be issued with an error if the file cannot be opened or if there is
   // already a connection.
-  void OpenMinidump(const std::string& path, std::function<void(const Err&)> callback);
+  void OpenMinidump(const std::string& path, fit::callback<void(const Err&)> callback);
 
   // Frees all connection-related data. A helper for different modes of
   // cleanup. Returns true if there was a connection to clear.
@@ -142,7 +142,7 @@ class Session : public SettingStoreObserver {
   void DispatchNotifyIO(const debug_ipc::NotifyIO& notify);
 
   // Sends an explicit quit cmd to the agent.
-  void QuitAgent(std::function<void(const Err&)> callback);
+  void QuitAgent(fit::callback<void(const Err&)> callback);
 
   // SettingStoreObserver
   void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;
@@ -169,7 +169,7 @@ class Session : public SettingStoreObserver {
   // callback is invoked with details. The opening_dump argument indicates
   // whether we are trying to open a dump file rather than connect to a debug
   // agent.
-  bool ConnectCanProceed(std::function<void(const Err&)> callback, bool opening_dump);
+  bool ConnectCanProceed(fit::callback<void(const Err&)>& callback, bool opening_dump);
 
   // Dispatches unsolicited notifications sent from the agent.
   void DispatchNotification(const debug_ipc::MsgHeader& header, std::vector<char> data);
@@ -181,7 +181,7 @@ class Session : public SettingStoreObserver {
   void ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const Err& err,
                           const debug_ipc::HelloReply& reply,
                           std::unique_ptr<debug_ipc::BufferedFD> buffer,
-                          std::function<void(const Err&)> callback);
+                          fit::callback<void(const Err&)> callback);
 
   // Sends a notification to all the UI observers.
   void SendSessionNotification(SessionObserver::NotificationType, const char* fmt, ...)

@@ -35,7 +35,7 @@ class FrameImpl final : public Frame {
   uint64_t GetAddress() const override;
   const std::vector<Register>& GetGeneralRegisters() const override;
   std::optional<uint64_t> GetBasePointer() const override;
-  void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override;
+  void GetBasePointerAsync(fit::callback<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
   uint64_t GetCanonicalFrameAddress() const override;
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
@@ -71,7 +71,7 @@ class FrameImpl final : public Frame {
 
   // When an async base pointer request is pending, this maintains all
   // pending callbacks.
-  std::vector<std::function<void(uint64_t)>> base_pointer_requests_;
+  std::vector<fit::callback<void(uint64_t)>> base_pointer_requests_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FrameImpl);
 };

@@ -54,7 +54,7 @@ class MockFrame : public Frame {
   uint64_t GetAddress() const override;
   const std::vector<Register>& GetGeneralRegisters() const override;
   std::optional<uint64_t> GetBasePointer() const override;
-  void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override;
+  void GetBasePointerAsync(fit::callback<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
   uint64_t GetCanonicalFrameAddress() const override;
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;

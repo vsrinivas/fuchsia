@@ -39,7 +39,7 @@ class SymbolServerTest : public TestWithLoop {
 
   void QuietlyFinishInit() {
     server()->on_do_authenticate = [](const std::map<std::string, std::string>& data,
-                                      std::function<void(const Err&)>) {};
+                                      fit::callback<void(const Err&)>) {};
     server()->InitForTest();
     server()->ForceReady();
   }
@@ -59,7 +59,7 @@ TEST_F(SymbolServerTest, LoadAuth) {
   std::map<std::string, std::string> got;
 
   server()->on_do_authenticate = [&got](const std::map<std::string, std::string>& data,
-                                        std::function<void(const Err&)>) { got = data; };
+                                        fit::callback<void(const Err&)>) { got = data; };
 
   server()->InitForTest();
 

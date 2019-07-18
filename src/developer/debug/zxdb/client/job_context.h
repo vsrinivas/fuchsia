@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/client/setting_store.h"
 #include "src/lib/fxl/macros.h"
@@ -31,7 +32,7 @@ class JobContext : public ClientObject {
  public:
   // Note that the callback will be issued in all cases which may be after the
   // job_context is destroyed. In this case the weak pointer will be null.
-  using Callback = std::function<void(fxl::WeakPtr<JobContext> job_context, const Err&)>;
+  using Callback = fit::callback<void(fxl::WeakPtr<JobContext> job_context, const Err&)>;
 
   enum class State {
     // There is no job currently running. From here, it can only transition

@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/client/job_context.h"
@@ -34,7 +35,7 @@ class SystemSymbols;
 class System : public ClientObject {
  public:
   // Callback for requesting the process tree.
-  using ProcessTreeCallback = std::function<void(const Err&, debug_ipc::ProcessTreeReply)>;
+  using ProcessTreeCallback = fit::callback<void(const Err&, debug_ipc::ProcessTreeReply)>;
 
   explicit System(Session* session);
   ~System() override;
@@ -113,7 +114,7 @@ class System : public ClientObject {
   // issuing the on_paused callback. But this is best effort and not
   // guaranteed: both because there's a timeout for the synchronous suspending
   // and because a different continue message could race with the reply.
-  virtual void Pause(std::function<void()> on_paused) = 0;
+  virtual void Pause(fit::callback<void()> on_paused) = 0;
 
   // Applies to all threads of all debugged processes.
   virtual void Continue() = 0;

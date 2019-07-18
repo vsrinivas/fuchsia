@@ -5,13 +5,15 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_CURL_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_CURL_H_
 
-#include <curl/curl.h>
-
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <curl/curl.h>
+
+#include "lib/fit/function.h"
 
 namespace zxdb {
 
@@ -41,11 +43,10 @@ class Curl {
     CURLcode code_;
   };
 
-  // Callback when we receive data from libcurl. The return value should be the
-  // number of bytes successfully processed (i.e. if we are passing this data
-  // to the write() syscall and it returns a short bytes written count, we
-  // should as well).
-  using DataCallback = std::function<size_t(const std::string&)>;
+  // Callback when we receive data from libcurl. The return value should be the number of bytes
+  // successfully processed (i.e. if we are passing this data to the write() syscall and it returns
+  // a short bytes written count, we should as well).
+  using DataCallback = fit::function<size_t(const std::string&)>;
 
   Curl();
   ~Curl();
@@ -75,7 +76,7 @@ class Curl {
   Error Perform();
 
   // Run the curl request asynchronously. Invoke the callback when done.
-  void Perform(std::function<void(Curl*, Error)> cb);
+  void Perform(fit::callback<void(Curl*, Error)> cb);
 
   // Get the response code from the request. Undefined if the request hasn't
   // run.
@@ -107,7 +108,7 @@ class Curl {
   std::weak_ptr<Curl> weak_self_ref_;
   std::shared_ptr<Curl> self_ref_;
   std::vector<std::string> headers_;
-  std::function<void(Curl*, Error)> multi_cb_ = nullptr;
+  fit::callback<void(Curl*, Error)> multi_cb_;
   DataCallback header_callback_ = [](const std::string& data) { return data.size(); };
   DataCallback data_callback_ = [](const std::string& data) { return data.size(); };
 };

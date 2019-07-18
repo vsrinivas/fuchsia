@@ -7,6 +7,7 @@
 
 #include <map>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/client/curl.h"
 #include "src/developer/debug/zxdb/client/symbol_server.h"
 
@@ -22,22 +23,21 @@ class CloudStorageSymbolServer : public SymbolServer {
 
   // Implementation of SymbolServer
   std::string AuthInfo() const override;
-  void Authenticate(const std::string& data, std::function<void(const Err&)> cb) override;
+  void Authenticate(const std::string& data, fit::callback<void(const Err&)> cb) override;
 
  protected:
   virtual void DoAuthenticate(const std::map<std::string, std::string>& data,
-                              std::function<void(const Err&)> cb) = 0;
+                              fit::callback<void(const Err&)> cb) = 0;
 
-  // Initialize the class. We want the constructor to do this, but the test
-  // mock might need to be manipulated first, so we break this out into a
-  // separate function.
+  // Initialize the class. We want the constructor to do this, but the test mock might need to be
+  // manipulated first, so we break this out into a separate function.
   void DoInit() {
     ChangeState(SymbolServer::State::kAuth);
     LoadCachedAuth();
   }
 
-  // General dispatch from the result of a Curl transaction. Handles the error
-  // cases and then returns true if no error occurred.
+  // General dispatch from the result of a Curl transaction. Handles the error cases and then
+  // returns true if no error occurred.
   bool HandleRequestResult(Curl::Error result, long response_code, size_t previous_ready_count,
                            Err* out_err);
 
@@ -57,18 +57,18 @@ class MockCloudStorageSymbolServer : public CloudStorageSymbolServer {
   MockCloudStorageSymbolServer(Session* session, const std::string& url)
       : CloudStorageSymbolServer(session, url) {}
 
-  // Finishes constructing the object. This is manual for the mock class so we
-  // can get our instrumentation in place before we do the heavier parts of the
-  // initialization.
+  // Finishes constructing the object. This is manual for the mock class so we can get our
+  // instrumentation in place before we do the heavier parts of the initialization.
   void InitForTest() { DoInit(); }
 
-  // The big IO methods are proxied to callbacks for the mock so tests can just
-  // intercept them.
-  std::function<void(const std::string&, DebugSymbolFileType, SymbolServer::FetchCallback)>
+  // The big IO methods are proxied to callbacks for the mock so tests can just intercept them.
+  //
+  // These are fit::function and not fit::callback because they can be called more than once.
+  fit::function<void(const std::string&, DebugSymbolFileType, SymbolServer::FetchCallback)>
       on_fetch = {};
-  std::function<void(const std::string&, DebugSymbolFileType, SymbolServer::CheckFetchCallback)>
+  fit::function<void(const std::string&, DebugSymbolFileType, SymbolServer::CheckFetchCallback)>
       on_check_fetch = {};
-  std::function<void(const std::map<std::string, std::string>&, std::function<void(const Err&)>)>
+  fit::function<void(const std::map<std::string, std::string>&, fit::callback<void(const Err&)>)>
       on_do_authenticate = {};
 
   // Force the symbol server into the ready state.
@@ -77,17 +77,17 @@ class MockCloudStorageSymbolServer : public CloudStorageSymbolServer {
   // Implementation of Symbol server.
   void Fetch(const std::string& build_id, DebugSymbolFileType file_type,
              SymbolServer::FetchCallback cb) override {
-    on_fetch(build_id, file_type, cb);
+    on_fetch(build_id, file_type, std::move(cb));
   }
   void CheckFetch(const std::string& build_id, DebugSymbolFileType file_type,
                   SymbolServer::CheckFetchCallback cb) override {
-    on_check_fetch(build_id, file_type, cb);
+    on_check_fetch(build_id, file_type, std::move(cb));
   }
 
  private:
   void DoAuthenticate(const std::map<std::string, std::string>& data,
-                      std::function<void(const Err&)> cb) override {
-    on_do_authenticate(data, cb);
+                      fit::callback<void(const Err&)> cb) override {
+    on_do_authenticate(data, std::move(cb));
   }
 };
 

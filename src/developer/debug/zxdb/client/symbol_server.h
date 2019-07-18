@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/debug_symbol_file_type.h"
@@ -18,13 +19,12 @@ namespace zxdb {
 
 class SymbolServer : public ClientObject {
  public:
-  // Callback used to receive the results of trying to fetch symbols. The
-  // string given is the path where the symbols were downloaded. If the string
-  // is empty the symbols were unavailable. The error is only set in the event
-  // of a connection error. If the symbols are simply unavailable the error
-  // will not be set.
-  using FetchCallback = std::function<void(const Err&, const std::string&)>;
-  using CheckFetchCallback = std::function<void(const Err&, std::function<void(FetchCallback)>)>;
+  // Callback used to receive the results of trying to fetch symbols. The string given is the path
+  // where the symbols were downloaded. If the string is empty the symbols were unavailable. The
+  // error is only set in the event of a connection error. If the symbols are simply unavailable the
+  // error will not be set.
+  using FetchCallback = fit::callback<void(const Err&, const std::string&)>;
+  using CheckFetchCallback = fit::callback<void(const Err&, fit::callback<void(FetchCallback)>)>;
 
   enum class State {
     kInitializing,
@@ -45,23 +45,22 @@ class SymbolServer : public ClientObject {
   const std::vector<std::string>& error_log() const { return error_log_; }
 
   State state() const { return state_; }
-  void set_state_change_callback(std::function<void(SymbolServer*, State)> cb) {
-    state_change_callback_ = cb;
+  void set_state_change_callback(fit::callback<void(SymbolServer*, State)> cb) {
+    state_change_callback_ = std::move(cb);
   }
 
   AuthType auth_type() const { return AuthType::kOAuth; }
 
   virtual std::string AuthInfo() const = 0;
-  virtual void Authenticate(const std::string& data, std::function<void(const Err&)> cb) = 0;
+  virtual void Authenticate(const std::string& data, fit::callback<void(const Err&)> cb) = 0;
   virtual void Fetch(const std::string& build_id, DebugSymbolFileType file_type,
                      FetchCallback cb) = 0;
 
-  // Query to see whether the server has symbols for the given build ID, but
-  // don't actually download them. Callback receives a function which it can
-  // call to continue and actually download the symbols. That function has the
-  // same signature as the Fetch method. If the callback == nullptr the symbol
-  // was not found. The error supplied is only set if there was a problem with
-  // the connection, not if the symbols were simply unavailable.
+  // Query to see whether the server has symbols for the given build ID, but don't actually download
+  // them. Callback receives a function which it can call to continue and actually download the
+  // symbols. That function has the same signature as the Fetch method. If the callback == nullptr
+  // the symbol was not found. The error supplied is only set if there was a problem with the
+  // connection, not if the symbols were simply unavailable.
   virtual void CheckFetch(const std::string& build_id, DebugSymbolFileType file_type,
                           CheckFetchCallback cb) = 0;
 
@@ -80,12 +79,11 @@ class SymbolServer : public ClientObject {
  private:
   State state_ = State::kInitializing;
 
-  // URL as originally used to construct the class. This is mostly to be used
-  // to identify the server in the UI. The actual URL may be processed to
-  // handle custom protocol identifiers etc.
+  // URL as originally used to construct the class. This is mostly to be used to identify the server
+  // in the UI. The actual URL may be processed to handle custom protocol identifiers etc.
   std::string name_;
 
-  std::function<void(SymbolServer*, State)> state_change_callback_ = nullptr;
+  fit::callback<void(SymbolServer*, State)> state_change_callback_;
 };
 
 }  // namespace zxdb

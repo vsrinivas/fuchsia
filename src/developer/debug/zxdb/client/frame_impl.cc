@@ -59,12 +59,12 @@ std::optional<uint64_t> FrameImpl::GetBasePointer() const {
   return std::nullopt;
 }
 
-void FrameImpl::GetBasePointerAsync(std::function<void(uint64_t bp)> cb) {
+void FrameImpl::GetBasePointerAsync(fit::callback<void(uint64_t bp)> cb) {
   if (EnsureBasePointer()) {
     // BP available synchronously but we don't want to reenter the caller.
     FXL_DCHECK(computed_base_pointer_);
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [bp = *computed_base_pointer_, cb = std::move(cb)]() { cb(bp); });
+        FROM_HERE, [bp = *computed_base_pointer_, cb = std::move(cb)]() mutable { cb(bp); });
   } else {
     // Add pending request for when evaluation is complete.
     FXL_DCHECK(base_pointer_eval_ && !base_pointer_eval_->is_complete());
@@ -153,8 +153,8 @@ bool FrameImpl::EnsureBasePointer() {
 
     // Issue callbacks for everybody waiting. Moving to a local here prevents
     // weirdness if a callback calls back into us, and also clears the vector.
-    std::vector<std::function<void(uint64_t)>> callbacks = std::move(base_pointer_requests_);
-    for (const auto& cb : callbacks)
+    std::vector<fit::callback<void(uint64_t)>> callbacks = std::move(base_pointer_requests_);
+    for (auto& cb : callbacks)
       cb(*computed_base_pointer_);
   };
 

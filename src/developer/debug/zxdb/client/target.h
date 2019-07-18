@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/client/setting_store.h"
@@ -44,7 +45,7 @@ class Target : public ClientObject {
  public:
   // Note that the callback will be issued in all cases which may be after the
   // target is destroyed. In this case the weak pointer will be null.
-  using Callback = std::function<void(fxl::WeakPtr<Target> target, const Err&)>;
+  using Callback = fit::callback<void(fxl::WeakPtr<Target> target, const Err&)>;
 
   enum State {
     // There is no process currently running. From here, it can only transition

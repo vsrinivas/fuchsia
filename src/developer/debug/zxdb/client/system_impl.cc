@@ -59,7 +59,7 @@ class Download {
 
   // Notify this Download object that one of the servers has the symbols
   // available.
-  void Found(std::shared_ptr<Download> self, std::function<void(SymbolServer::FetchCallback)>);
+  void Found(std::shared_ptr<Download> self, fit::callback<void(SymbolServer::FetchCallback)>);
 
   // Notify this Download object that a transaction failed.
   void Error(std::shared_ptr<Download> self, const Err& err);
@@ -68,14 +68,14 @@ class Download {
   void AddServer(std::shared_ptr<Download> self, SymbolServer* server);
 
  private:
-  void RunCB(std::shared_ptr<Download> self, std::function<void(SymbolServer::FetchCallback)>& cb);
+  void RunCB(std::shared_ptr<Download> self, fit::callback<void(SymbolServer::FetchCallback)>& cb);
 
   std::string build_id_;
   DebugSymbolFileType file_type_;
   Err err_;
   std::string path_;
   SymbolServer::FetchCallback result_cb_;
-  std::vector<std::function<void(SymbolServer::FetchCallback)>> server_cbs_;
+  std::vector<fit::callback<void(SymbolServer::FetchCallback)>> server_cbs_;
   bool trying_ = false;
 };
 
@@ -85,7 +85,7 @@ void Download::Finish() {
 
   debug_ipc::MessageLoop::Current()->PostTask(
       FROM_HERE, [result_cb = std::move(result_cb_), err = std::move(err_),
-                  path = std::move(path_)]() { result_cb(err, path); });
+                  path = std::move(path_)]() mutable { result_cb(err, path); });
 
   result_cb_ = nullptr;
 }
@@ -97,7 +97,7 @@ void Download::AddServer(std::shared_ptr<Download> self, SymbolServer* server) {
     return;
 
   server->CheckFetch(build_id_, file_type_,
-                     [self](const Err& err, std::function<void(SymbolServer::FetchCallback)> cb) {
+                     [self](const Err& err, fit::callback<void(SymbolServer::FetchCallback)> cb) {
                        if (!cb)
                          self->Error(self, err);
                        else
@@ -106,7 +106,7 @@ void Download::AddServer(std::shared_ptr<Download> self, SymbolServer* server) {
 }
 
 void Download::Found(std::shared_ptr<Download> self,
-                     std::function<void(SymbolServer::FetchCallback)> cb) {
+                     fit::callback<void(SymbolServer::FetchCallback)> cb) {
   FXL_DCHECK(self.get() == this);
 
   if (!result_cb_)
@@ -139,7 +139,7 @@ void Download::Error(std::shared_ptr<Download> self, const Err& err) {
 }
 
 void Download::RunCB(std::shared_ptr<Download> self,
-                     std::function<void(SymbolServer::FetchCallback)>& cb) {
+                     fit::callback<void(SymbolServer::FetchCallback)>& cb) {
   FXL_DCHECK(!trying_);
   trying_ = true;
 
@@ -473,13 +473,13 @@ void SystemImpl::DeleteFilter(Filter* filter) {
   filters_.erase(found);
 }
 
-void SystemImpl::Pause(std::function<void()> on_paused) {
+void SystemImpl::Pause(fit::callback<void()> on_paused) {
   debug_ipc::PauseRequest request;
   request.process_koid = 0;  // 0 means all processes.
   request.thread_koid = 0;   // 0 means all threads.
   session()->remote_api()->Pause(
       request, [weak_system = weak_factory_.GetWeakPtr(), on_paused = std::move(on_paused)](
-                   const Err&, debug_ipc::PauseReply reply) {
+                   const Err&, debug_ipc::PauseReply reply) mutable {
         if (weak_system) {
           // Save the newly paused thread metadata. This may need to be
           // generalized if we add other messages that update thread metadata.

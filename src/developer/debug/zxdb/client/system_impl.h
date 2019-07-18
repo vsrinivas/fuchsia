@@ -57,7 +57,7 @@ class SystemImpl final : public System,
   void DeleteBreakpoint(Breakpoint* breakpoint) override;
   Filter* CreateNewFilter() override;
   void DeleteFilter(Filter* filter) override;
-  void Pause(std::function<void()> on_paused) override;
+  void Pause(fit::callback<void()> on_paused) override;
   void Continue() override;
   bool HasDownload(const std::string& build_id) override;
   std::shared_ptr<Download> InjectDownloadForTesting(const std::string& build_id) override;

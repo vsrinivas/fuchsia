@@ -97,9 +97,10 @@ void JobContextImpl::OnAttachReply(Callback callback, const Err& err, uint64_t k
 void JobContextImpl::AttachInternal(debug_ipc::TaskType type, uint64_t koid, Callback callback) {
   if (state_ != State::kNone) {
     // Avoid reentering caller to dispatch the error.
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
-      callback(std::move(weak_ptr), Err("Can't attach, job is already running or starting."));
-    });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [callback = std::move(callback), weak_ptr = GetWeakPtr()]() mutable {
+          callback(std::move(weak_ptr), Err("Can't attach, job is already running or starting."));
+        });
     return;
   }
 
@@ -109,30 +110,31 @@ void JobContextImpl::AttachInternal(debug_ipc::TaskType type, uint64_t koid, Cal
   request.koid = koid;
   request.type = type;
   session()->remote_api()->Attach(
-      request, [callback, weak_job_context = impl_weak_factory_.GetWeakPtr()](
-                   const Err& err, debug_ipc::AttachReply reply) {
+      request, [callback = std::move(callback), weak_job_context = impl_weak_factory_.GetWeakPtr()](
+                   const Err& err, debug_ipc::AttachReply reply) mutable {
         OnAttachReplyThunk(std::move(weak_job_context), std::move(callback), err, reply.koid,
                            reply.status, reply.name);
       });
 }
 
 void JobContextImpl::Attach(uint64_t koid, Callback callback) {
-  AttachInternal(debug_ipc::TaskType::kJob, koid, callback);
+  AttachInternal(debug_ipc::TaskType::kJob, koid, std::move(callback));
 }
 
 void JobContextImpl::AttachToSystemRoot(Callback callback) {
-  AttachInternal(debug_ipc::TaskType::kSystemRoot, 0, callback);
+  AttachInternal(debug_ipc::TaskType::kSystemRoot, 0, std::move(callback));
 }
 
 void JobContextImpl::AttachToComponentRoot(Callback callback) {
-  AttachInternal(debug_ipc::TaskType::kComponentRoot, 0, callback);
+  AttachInternal(debug_ipc::TaskType::kComponentRoot, 0, std::move(callback));
 }
 
 void JobContextImpl::Detach(Callback callback) {
   if (!job_.get()) {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
-      callback(std::move(weak_ptr), Err("Error detaching: No job."));
-    });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [callback = std::move(callback), weak_ptr = GetWeakPtr()]() mutable {
+          callback(std::move(weak_ptr), Err("Error detaching: No job."));
+        });
     return;
   }
 
@@ -145,8 +147,8 @@ void JobContextImpl::Detach(Callback callback) {
   request.koid = job_->GetKoid();
   request.type = debug_ipc::TaskType::kJob;
   session()->remote_api()->Detach(
-      request, [callback, weak_job_context = impl_weak_factory_.GetWeakPtr()](
-                   const Err& err, debug_ipc::DetachReply reply) {
+      request, [callback = std::move(callback), weak_job_context = impl_weak_factory_.GetWeakPtr()](
+                   const Err& err, debug_ipc::DetachReply reply) mutable {
         if (weak_job_context) {
           weak_job_context->OnDetachReply(err, reply.status, std::move(callback));
         } else {

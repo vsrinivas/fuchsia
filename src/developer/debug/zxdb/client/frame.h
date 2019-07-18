@@ -10,6 +10,7 @@
 #include <functional>
 #include <optional>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/lib/fxl/macros.h"
@@ -77,7 +78,7 @@ class Frame : public ClientObject {
   // returns no value, code that can handle async calls can call the
   // asynchronous version to be notified when the value is available.
   virtual std::optional<uint64_t> GetBasePointer() const = 0;
-  virtual void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) = 0;
+  virtual void GetBasePointerAsync(fit::callback<void(uint64_t bp)> cb) = 0;
 
   // Returns the stack pointer at this location.
   virtual uint64_t GetStackPointer() const = 0;

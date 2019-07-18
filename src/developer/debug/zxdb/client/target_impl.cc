@@ -101,8 +101,9 @@ void TargetImpl::Launch(Callback callback) {
   if (err.has_error()) {
     // Avoid reentering caller to dispatch the error.
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE,
-        [callback, err, weak_ptr = GetWeakPtr()]() { callback(std::move(weak_ptr), err); });
+        FROM_HERE, [callback = std::move(callback), err, weak_ptr = GetWeakPtr()]() mutable {
+          callback(std::move(weak_ptr), err);
+        });
     return;
   }
 
@@ -112,40 +113,43 @@ void TargetImpl::Launch(Callback callback) {
   request.inferior_type = debug_ipc::InferiorType::kBinary;
   request.argv = args_;
   session()->remote_api()->Launch(
-      request, [callback, weak_target = impl_weak_factory_.GetWeakPtr()](
-                   const Err& err, debug_ipc::LaunchReply reply) {
-        TargetImpl::OnLaunchOrAttachReplyThunk(weak_target, callback, err, reply.process_id,
-                                               reply.status, reply.process_name);
+      request, [callback = std::move(callback), weak_target = impl_weak_factory_.GetWeakPtr()](
+                   const Err& err, debug_ipc::LaunchReply reply) mutable {
+        TargetImpl::OnLaunchOrAttachReplyThunk(weak_target, std::move(callback), err,
+                                               reply.process_id, reply.status, reply.process_name);
       });
 }
 
 void TargetImpl::Kill(Callback callback) {
   if (!process_.get()) {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
-      callback(std::move(weak_ptr), Err("Error killing: No process."));
-    });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [callback = std::move(callback), weak_ptr = GetWeakPtr()]() mutable {
+          callback(std::move(weak_ptr), Err("Error killing: No process."));
+        });
     return;
   }
 
   debug_ipc::KillRequest request;
   request.process_koid = process_->GetKoid();
-  session()->remote_api()->Kill(request, [callback, weak_target = impl_weak_factory_.GetWeakPtr()](
-                                             const Err& err, debug_ipc::KillReply reply) {
-    if (weak_target) {
-      weak_target->OnKillOrDetachReply(TargetObserver::DestroyReason::kKill, err, reply.status,
-                                       std::move(callback));
-    } else {
-      // The reply that the process was launched came after the local
-      // objects were destroyed. We're still OK to dispatch either way.
-      callback(weak_target, err);
-    }
-  });
+  session()->remote_api()->Kill(
+      request, [callback = std::move(callback), weak_target = impl_weak_factory_.GetWeakPtr()](
+                   const Err& err, debug_ipc::KillReply reply) mutable {
+        if (weak_target) {
+          weak_target->OnKillOrDetachReply(TargetObserver::DestroyReason::kKill, err, reply.status,
+                                           std::move(callback));
+        } else {
+          // The reply that the process was launched came after the local
+          // objects were destroyed. We're still OK to dispatch either way.
+          callback(weak_target, err);
+        }
+      });
 }
 
 void TargetImpl::Attach(uint64_t koid, Callback callback) {
   if (state_ != State::kNone) {
     // Avoid reentering caller to dispatch the error.
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback = std::move(callback),
+                                                            weak_ptr = GetWeakPtr()]() mutable {
       callback(std::move(weak_ptr), Err("Can't attach, program is already running or starting."));
     });
     return;
@@ -156,8 +160,9 @@ void TargetImpl::Attach(uint64_t koid, Callback callback) {
   debug_ipc::AttachRequest request;
   request.koid = koid;
   session()->remote_api()->Attach(
-      request, [koid, callback, weak_target = impl_weak_factory_.GetWeakPtr()](
-                   const Err& err, debug_ipc::AttachReply reply) {
+      request,
+      [koid, callback = std::move(callback), weak_target = impl_weak_factory_.GetWeakPtr()](
+          const Err& err, debug_ipc::AttachReply reply) mutable {
         OnLaunchOrAttachReplyThunk(std::move(weak_target), std::move(callback), err, koid,
                                    reply.status, reply.name);
       });
@@ -165,17 +170,18 @@ void TargetImpl::Attach(uint64_t koid, Callback callback) {
 
 void TargetImpl::Detach(Callback callback) {
   if (!process_.get()) {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
-      callback(std::move(weak_ptr), Err("Error detaching: No process."));
-    });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [callback = std::move(callback), weak_ptr = GetWeakPtr()]() mutable {
+          callback(std::move(weak_ptr), Err("Error detaching: No process."));
+        });
     return;
   }
 
   debug_ipc::DetachRequest request;
   request.koid = process_->GetKoid();
   session()->remote_api()->Detach(
-      request, [callback, weak_target = impl_weak_factory_.GetWeakPtr()](
-                   const Err& err, debug_ipc::DetachReply reply) {
+      request, [callback = std::move(callback), weak_target = impl_weak_factory_.GetWeakPtr()](
+                   const Err& err, debug_ipc::DetachReply reply) mutable {
         if (weak_target) {
           weak_target->OnKillOrDetachReply(TargetObserver::DestroyReason::kDetach, err,
                                            reply.status, std::move(callback));

@@ -61,7 +61,7 @@ void CurlFDWatcher::OnFDReady(int fd, bool read, bool write, bool err) {
       auto result = curl_easy_getinfo(info->easy_handle, CURLINFO_PRIVATE, &curl);
       FXL_DCHECK(result == CURLE_OK);
 
-      auto cb = curl->multi_cb_;
+      auto cb = std::move(curl->multi_cb_);
       curl->multi_cb_ = nullptr;
       curl->FreeSList();
       auto rem_result = curl_multi_remove_handle(Curl::multi_handle, info->easy_handle);
@@ -260,7 +260,7 @@ Curl::Error Curl::Perform() {
   return ret;
 }
 
-void Curl::Perform(std::function<void(Curl*, Curl::Error)> cb) {
+void Curl::Perform(fit::callback<void(Curl*, Curl::Error)> cb) {
   self_ref_ = weak_self_ref_.lock();
   FXL_DCHECK(self_ref_) << "To use async Curl::Perform you must construct with Curl::MakeShared";
 
@@ -269,7 +269,7 @@ void Curl::Perform(std::function<void(Curl*, Curl::Error)> cb) {
   auto result = curl_multi_add_handle(multi_handle, curl_);
   FXL_DCHECK(result == CURLM_OK);
 
-  multi_cb_ = cb;
+  multi_cb_ = std::move(cb);
 
   int _ignore;
   result = curl_multi_socket_action(multi_handle, CURL_SOCKET_TIMEOUT, 0, &_ignore);

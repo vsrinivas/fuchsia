@@ -137,7 +137,7 @@ class Stack {
   //
   // If the stack is destroyed before the frames can be synced, the callback
   // will be issued with an error.
-  void SyncFrames(std::function<void(const Err&)> callback);
+  void SyncFrames(fit::callback<void(const Err&)> callback);
 
   // Provides a new set of frames computed by a backtrace in the debug_agent.
   // In normal operation this is called by the Thread.

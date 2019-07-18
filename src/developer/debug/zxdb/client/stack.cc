@@ -43,7 +43,7 @@ class InlineFrame final : public Frame {
   std::optional<uint64_t> GetBasePointer() const override {
     return physical_frame_->GetBasePointer();
   }
-  void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override {
+  void GetBasePointerAsync(fit::callback<void(uint64_t bp)> cb) override {
     return physical_frame_->GetBasePointerAsync(std::move(cb));
   }
   uint64_t GetCanonicalFrameAddress() const override {
@@ -169,7 +169,7 @@ void Stack::SetHideAmbiguousInlineFrameCount(size_t hide_count) {
   hide_ambiguous_inline_frame_count_ = hide_count;
 }
 
-void Stack::SyncFrames(std::function<void(const Err&)> callback) {
+void Stack::SyncFrames(fit::callback<void(const Err&)> callback) {
   delegate_->SyncFramesForStack(std::move(callback));
 }
 
