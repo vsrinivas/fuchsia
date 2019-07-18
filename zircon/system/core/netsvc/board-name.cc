@@ -58,7 +58,7 @@ fbl::unique_fd FindGpt() {
         uint8_t out_buffer[fidl::MaxSizeInChannel<::llcpp::fuchsia::hardware::block::Block::GetInfoResponse>()] = {};
         ::llcpp::fuchsia::hardware::block::BlockInfo* info;
 
-        auto decoded = ::llcpp::fuchsia::hardware::block::Block::Call::GetInfo(
+        auto decoded = ::llcpp::fuchsia::hardware::block::Block::Call::GetInfo_Deprecated(
             zx::unowned_channel(dev.get()), fidl::BytePart::WrapEmpty(out_buffer), &status,
             &info);
         if (decoded.status != ZX_OK || status != ZX_OK) {
@@ -66,7 +66,7 @@ fbl::unique_fd FindGpt() {
         }
         uint8_t out_buffer2[fidl::MaxSizeInChannel<::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse>()] = {};
         fidl::StringView path_view;
-        auto decoded2 = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
+        auto decoded2 = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath_Deprecated(
             zx::unowned_channel(dev.get()), fidl::BytePart::WrapEmpty(out_buffer2), &status,
             &path_view);
         if (decoded2.status != ZX_OK || status != ZX_OK) {
@@ -99,7 +99,7 @@ static bool IsChromebook() {
     ::llcpp::fuchsia::hardware::block::BlockInfo* block_info;
 
     zx_status_t status;
-    auto decoded = ::llcpp::fuchsia::hardware::block::Block::Call::GetInfo(
+    auto decoded = ::llcpp::fuchsia::hardware::block::Block::Call::GetInfo_Deprecated(
         zx::unowned_channel(caller.borrow_channel()), fidl::BytePart::WrapEmpty(out_buffer),
         &status, &block_info);
     if (decoded.status != ZX_OK) {
@@ -134,7 +134,7 @@ bool CheckBoardName(const zx::channel& sysinfo, const char* name, size_t length)
     uint8_t out_buffer[fidl::MaxSizeInChannel<::llcpp::fuchsia::sysinfo::Device::GetBoardNameResponse>()] = {};
     fidl::StringView board_name;
     zx_status_t status;
-    auto decoded = ::llcpp::fuchsia::sysinfo::Device::Call::GetBoardName(
+    auto decoded = ::llcpp::fuchsia::sysinfo::Device::Call::GetBoardName_Deprecated(
         zx::unowned_channel(sysinfo), fidl::BytePart::WrapEmpty(out_buffer), &status, &board_name);
     if (decoded.status != ZX_OK || status != ZX_OK) {
         return false;

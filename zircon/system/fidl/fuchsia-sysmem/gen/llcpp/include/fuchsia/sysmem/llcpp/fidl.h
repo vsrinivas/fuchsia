@@ -247,7 +247,7 @@ class BufferCollectionToken final {
     // block waiting for a response message, the other option is to notice
     // arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
     // after turning in this token for a BufferCollection.
-    zx_status_t Duplicate(uint32_t rights_attenuation_mask, ::zx::channel token_request);
+    zx_status_t Duplicate_Deprecated(uint32_t rights_attenuation_mask, ::zx::channel token_request);
 
     // The initiator or a participant can send Duplicate() as part of creating
     // another participant-side handle to the same logical
@@ -309,7 +309,7 @@ class BufferCollectionToken final {
     // arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
     // after turning in this token for a BufferCollection.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Duplicate(::fidl::BytePart _request_buffer, uint32_t rights_attenuation_mask, ::zx::channel token_request);
+    zx_status_t Duplicate_Deprecated(::fidl::BytePart _request_buffer, uint32_t rights_attenuation_mask, ::zx::channel token_request);
 
     // The initiator or a participant can send Duplicate() as part of creating
     // another participant-side handle to the same logical
@@ -371,7 +371,7 @@ class BufferCollectionToken final {
     // arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
     // after turning in this token for a BufferCollection.
     // Messages are encoded and decoded in-place.
-    zx_status_t Duplicate(::fidl::DecodedMessage<DuplicateRequest> params);
+    zx_status_t Duplicate_Deprecated(::fidl::DecodedMessage<DuplicateRequest> params);
 
     // Ensure that previous Duplicate() messages have been received server side,
     // so that it's safe to send the client end of token_request to another
@@ -382,7 +382,7 @@ class BufferCollectionToken final {
     // individually, or calling Sync() on BufferCollection after this token has
     // been turned in via BindSharedCollection(), or noticing arrival of
     // BufferCollectionEvents::OnDuplicatedTokensKnownByServer().
-    zx_status_t Sync();
+    zx_status_t Sync_Deprecated();
 
     // Normally a participant will convert the token into a BufferCollection
     // view, but a particpant is also free to Close() the token (and then close
@@ -390,7 +390,7 @@ class BufferCollectionToken final {
     // its end), which avoids causing LogicalBufferCollection failure.
     // Normally an unexpected token channel close will cause
     // LogicalBufferCollection failure.
-    zx_status_t Close();
+    zx_status_t Close_Deprecated();
 
    private:
     ::zx::channel channel_;
@@ -459,7 +459,7 @@ class BufferCollectionToken final {
     // block waiting for a response message, the other option is to notice
     // arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
     // after turning in this token for a BufferCollection.
-    static zx_status_t Duplicate(zx::unowned_channel _client_end, uint32_t rights_attenuation_mask, ::zx::channel token_request);
+    static zx_status_t Duplicate_Deprecated(zx::unowned_channel _client_end, uint32_t rights_attenuation_mask, ::zx::channel token_request);
 
     // The initiator or a participant can send Duplicate() as part of creating
     // another participant-side handle to the same logical
@@ -521,7 +521,7 @@ class BufferCollectionToken final {
     // arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
     // after turning in this token for a BufferCollection.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Duplicate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t rights_attenuation_mask, ::zx::channel token_request);
+    static zx_status_t Duplicate_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t rights_attenuation_mask, ::zx::channel token_request);
 
     // The initiator or a participant can send Duplicate() as part of creating
     // another participant-side handle to the same logical
@@ -583,7 +583,7 @@ class BufferCollectionToken final {
     // arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
     // after turning in this token for a BufferCollection.
     // Messages are encoded and decoded in-place.
-    static zx_status_t Duplicate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DuplicateRequest> params);
+    static zx_status_t Duplicate_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DuplicateRequest> params);
 
     // Ensure that previous Duplicate() messages have been received server side,
     // so that it's safe to send the client end of token_request to another
@@ -594,7 +594,7 @@ class BufferCollectionToken final {
     // individually, or calling Sync() on BufferCollection after this token has
     // been turned in via BindSharedCollection(), or noticing arrival of
     // BufferCollectionEvents::OnDuplicatedTokensKnownByServer().
-    static zx_status_t Sync(zx::unowned_channel _client_end);
+    static zx_status_t Sync_Deprecated(zx::unowned_channel _client_end);
 
     // Normally a participant will convert the token into a BufferCollection
     // view, but a particpant is also free to Close() the token (and then close
@@ -602,7 +602,7 @@ class BufferCollectionToken final {
     // its end), which avoids causing LogicalBufferCollection failure.
     // Normally an unexpected token channel close will cause
     // LogicalBufferCollection failure.
-    static zx_status_t Close(zx::unowned_channel _client_end);
+    static zx_status_t Close_Deprecated(zx::unowned_channel _client_end);
 
   };
 
@@ -753,7 +753,7 @@ class Heap final {
     //
     // The caller guarantees that CreateResource() will be called prior
     // to the returned VMO or any associated child VMO being used.
-    zx_status_t AllocateVmo(uint64_t size, int32_t* out_s, ::zx::vmo* out_vmo);
+    zx_status_t AllocateVmo_Deprecated(uint64_t size, int32_t* out_s, ::zx::vmo* out_vmo);
 
     // Request a new memory allocation of `size` on heap.
     // For heaps which don't permit CPU access to the buffer data, this
@@ -771,7 +771,7 @@ class Heap final {
     // to the returned VMO or any associated child VMO being used.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<AllocateVmoResponse> AllocateVmo(::fidl::BytePart _request_buffer, uint64_t size, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::vmo* out_vmo);
+    ::fidl::DecodeResult<AllocateVmoResponse> AllocateVmo_Deprecated(::fidl::BytePart _request_buffer, uint64_t size, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::vmo* out_vmo);
 
     // Request a new memory allocation of `size` on heap.
     // For heaps which don't permit CPU access to the buffer data, this
@@ -788,7 +788,7 @@ class Heap final {
     // The caller guarantees that CreateResource() will be called prior
     // to the returned VMO or any associated child VMO being used.
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<AllocateVmoResponse> AllocateVmo(::fidl::DecodedMessage<AllocateVmoRequest> params, ::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<AllocateVmoResponse> AllocateVmo_Deprecated(::fidl::DecodedMessage<AllocateVmoRequest> params, ::fidl::BytePart response_buffer);
 
     // Create resources and associate heap-specific resources with the
     // passed-in VMO. Resources can be hardware specific and their
@@ -810,7 +810,7 @@ class Heap final {
     // VMO, or any VMAR mapping to VMO, as any of those would keep VMO
     // alive beyond all sysmem participant usages of the vmo; instead
     // the heap can get the vmo's koid for the heap's mapping.
-    zx_status_t CreateResource(::zx::vmo vmo, int32_t* out_s, uint64_t* out_id);
+    zx_status_t CreateResource_Deprecated(::zx::vmo vmo, int32_t* out_s, uint64_t* out_id);
 
     // Create resources and associate heap-specific resources with the
     // passed-in VMO. Resources can be hardware specific and their
@@ -834,7 +834,7 @@ class Heap final {
     // the heap can get the vmo's koid for the heap's mapping.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<CreateResourceResponse> CreateResource(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_id);
+    ::fidl::DecodeResult<CreateResourceResponse> CreateResource_Deprecated(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_id);
 
     // Create resources and associate heap-specific resources with the
     // passed-in VMO. Resources can be hardware specific and their
@@ -857,19 +857,19 @@ class Heap final {
     // alive beyond all sysmem participant usages of the vmo; instead
     // the heap can get the vmo's koid for the heap's mapping.
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<CreateResourceResponse> CreateResource(::fidl::DecodedMessage<CreateResourceRequest> params, ::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<CreateResourceResponse> CreateResource_Deprecated(::fidl::DecodedMessage<CreateResourceRequest> params, ::fidl::BytePart response_buffer);
 
     // Destroy previously created resources.
-    zx_status_t DestroyResource(uint64_t id);
+    zx_status_t DestroyResource_Deprecated(uint64_t id);
 
     // Destroy previously created resources.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<DestroyResourceResponse> DestroyResource(::fidl::BytePart _request_buffer, uint64_t id);
+    ::fidl::DecodeResult<DestroyResourceResponse> DestroyResource_Deprecated(::fidl::BytePart _request_buffer, uint64_t id);
 
     // Destroy previously created resources.
     // Messages are encoded and decoded in-place.
-    zx_status_t DestroyResource(::fidl::DecodedMessage<DestroyResourceRequest> params);
+    zx_status_t DestroyResource_Deprecated(::fidl::DecodedMessage<DestroyResourceRequest> params);
 
    private:
     ::zx::channel channel_;
@@ -893,7 +893,7 @@ class Heap final {
     //
     // The caller guarantees that CreateResource() will be called prior
     // to the returned VMO or any associated child VMO being used.
-    static zx_status_t AllocateVmo(zx::unowned_channel _client_end, uint64_t size, int32_t* out_s, ::zx::vmo* out_vmo);
+    static zx_status_t AllocateVmo_Deprecated(zx::unowned_channel _client_end, uint64_t size, int32_t* out_s, ::zx::vmo* out_vmo);
 
     // Request a new memory allocation of `size` on heap.
     // For heaps which don't permit CPU access to the buffer data, this
@@ -911,7 +911,7 @@ class Heap final {
     // to the returned VMO or any associated child VMO being used.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<AllocateVmoResponse> AllocateVmo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t size, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::vmo* out_vmo);
+    static ::fidl::DecodeResult<AllocateVmoResponse> AllocateVmo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t size, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::vmo* out_vmo);
 
     // Request a new memory allocation of `size` on heap.
     // For heaps which don't permit CPU access to the buffer data, this
@@ -928,7 +928,7 @@ class Heap final {
     // The caller guarantees that CreateResource() will be called prior
     // to the returned VMO or any associated child VMO being used.
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<AllocateVmoResponse> AllocateVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateVmoRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<AllocateVmoResponse> AllocateVmo_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateVmoRequest> params, ::fidl::BytePart response_buffer);
 
     // Create resources and associate heap-specific resources with the
     // passed-in VMO. Resources can be hardware specific and their
@@ -950,7 +950,7 @@ class Heap final {
     // VMO, or any VMAR mapping to VMO, as any of those would keep VMO
     // alive beyond all sysmem participant usages of the vmo; instead
     // the heap can get the vmo's koid for the heap's mapping.
-    static zx_status_t CreateResource(zx::unowned_channel _client_end, ::zx::vmo vmo, int32_t* out_s, uint64_t* out_id);
+    static zx_status_t CreateResource_Deprecated(zx::unowned_channel _client_end, ::zx::vmo vmo, int32_t* out_s, uint64_t* out_id);
 
     // Create resources and associate heap-specific resources with the
     // passed-in VMO. Resources can be hardware specific and their
@@ -974,7 +974,7 @@ class Heap final {
     // the heap can get the vmo's koid for the heap's mapping.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<CreateResourceResponse> CreateResource(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_id);
+    static ::fidl::DecodeResult<CreateResourceResponse> CreateResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_id);
 
     // Create resources and associate heap-specific resources with the
     // passed-in VMO. Resources can be hardware specific and their
@@ -997,19 +997,19 @@ class Heap final {
     // alive beyond all sysmem participant usages of the vmo; instead
     // the heap can get the vmo's koid for the heap's mapping.
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<CreateResourceResponse> CreateResource(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateResourceRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CreateResourceResponse> CreateResource_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateResourceRequest> params, ::fidl::BytePart response_buffer);
 
     // Destroy previously created resources.
-    static zx_status_t DestroyResource(zx::unowned_channel _client_end, uint64_t id);
+    static zx_status_t DestroyResource_Deprecated(zx::unowned_channel _client_end, uint64_t id);
 
     // Destroy previously created resources.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<DestroyResourceResponse> DestroyResource(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t id);
+    static ::fidl::DecodeResult<DestroyResourceResponse> DestroyResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t id);
 
     // Destroy previously created resources.
     // Messages are encoded and decoded in-place.
-    static zx_status_t DestroyResource(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DestroyResourceRequest> params);
+    static zx_status_t DestroyResource_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DestroyResourceRequest> params);
 
   };
 
@@ -1150,33 +1150,33 @@ class DriverConnector final {
     //
     // `allocator_request` will be served by the sysmem driver (or the channel
     // will close).
-    zx_status_t Connect(::zx::channel allocator_request);
+    zx_status_t Connect_Deprecated(::zx::channel allocator_request);
 
     // This one-way message sends in the server end of an Allocator channel.
     //
     // `allocator_request` will be served by the sysmem driver (or the channel
     // will close).
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t Connect(::fidl::BytePart _request_buffer, ::zx::channel allocator_request);
+    zx_status_t Connect_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel allocator_request);
 
     // This one-way message sends in the server end of an Allocator channel.
     //
     // `allocator_request` will be served by the sysmem driver (or the channel
     // will close).
     // Messages are encoded and decoded in-place.
-    zx_status_t Connect(::fidl::DecodedMessage<ConnectRequest> params);
+    zx_status_t Connect_Deprecated(::fidl::DecodedMessage<ConnectRequest> params);
 
     // Get information about the physical layout of protected memory, for use by sysmem-assistant.
-    zx_status_t GetProtectedMemoryInfo(int32_t* out_status, uint64_t* out_base_address, uint64_t* out_size);
+    zx_status_t GetProtectedMemoryInfo_Deprecated(int32_t* out_status, uint64_t* out_base_address, uint64_t* out_size);
 
     // Get information about the physical layout of protected memory, for use by sysmem-assistant.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetProtectedMemoryInfoResponse> GetProtectedMemoryInfo(::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_base_address, uint64_t* out_size);
+    ::fidl::DecodeResult<GetProtectedMemoryInfoResponse> GetProtectedMemoryInfo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_base_address, uint64_t* out_size);
 
     // Get information about the physical layout of protected memory, for use by sysmem-assistant.
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetProtectedMemoryInfoResponse> GetProtectedMemoryInfo(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<GetProtectedMemoryInfoResponse> GetProtectedMemoryInfo_Deprecated(::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -1190,33 +1190,33 @@ class DriverConnector final {
     //
     // `allocator_request` will be served by the sysmem driver (or the channel
     // will close).
-    static zx_status_t Connect(zx::unowned_channel _client_end, ::zx::channel allocator_request);
+    static zx_status_t Connect_Deprecated(zx::unowned_channel _client_end, ::zx::channel allocator_request);
 
     // This one-way message sends in the server end of an Allocator channel.
     //
     // `allocator_request` will be served by the sysmem driver (or the channel
     // will close).
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t Connect(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel allocator_request);
+    static zx_status_t Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel allocator_request);
 
     // This one-way message sends in the server end of an Allocator channel.
     //
     // `allocator_request` will be served by the sysmem driver (or the channel
     // will close).
     // Messages are encoded and decoded in-place.
-    static zx_status_t Connect(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params);
+    static zx_status_t Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params);
 
     // Get information about the physical layout of protected memory, for use by sysmem-assistant.
-    static zx_status_t GetProtectedMemoryInfo(zx::unowned_channel _client_end, int32_t* out_status, uint64_t* out_base_address, uint64_t* out_size);
+    static zx_status_t GetProtectedMemoryInfo_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, uint64_t* out_base_address, uint64_t* out_size);
 
     // Get information about the physical layout of protected memory, for use by sysmem-assistant.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetProtectedMemoryInfoResponse> GetProtectedMemoryInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_base_address, uint64_t* out_size);
+    static ::fidl::DecodeResult<GetProtectedMemoryInfoResponse> GetProtectedMemoryInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_base_address, uint64_t* out_size);
 
     // Get information about the physical layout of protected memory, for use by sysmem-assistant.
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetProtectedMemoryInfoResponse> GetProtectedMemoryInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetProtectedMemoryInfoResponse> GetProtectedMemoryInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1348,7 +1348,7 @@ class Allocator final {
     // BufferCollection.  The client should also keep the client end of
     // this channel open while using the BufferCollection, and should notice
     // when this channel closes and stop using the BufferCollection ASAP.
-    zx_status_t AllocateNonSharedCollection(::zx::channel collection);
+    zx_status_t AllocateNonSharedCollection_Deprecated(::zx::channel collection);
 
     // Allocates a BufferCollection on behalf of a single client (aka initiator)
     // who is also the only participant (from the point of view of sysmem).
@@ -1372,7 +1372,7 @@ class Allocator final {
     // this channel open while using the BufferCollection, and should notice
     // when this channel closes and stop using the BufferCollection ASAP.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t AllocateNonSharedCollection(::fidl::BytePart _request_buffer, ::zx::channel collection);
+    zx_status_t AllocateNonSharedCollection_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel collection);
 
     // Allocates a BufferCollection on behalf of a single client (aka initiator)
     // who is also the only participant (from the point of view of sysmem).
@@ -1396,7 +1396,7 @@ class Allocator final {
     // this channel open while using the BufferCollection, and should notice
     // when this channel closes and stop using the BufferCollection ASAP.
     // Messages are encoded and decoded in-place.
-    zx_status_t AllocateNonSharedCollection(::fidl::DecodedMessage<AllocateNonSharedCollectionRequest> params);
+    zx_status_t AllocateNonSharedCollection_Deprecated(::fidl::DecodedMessage<AllocateNonSharedCollectionRequest> params);
 
     // Creates a logical BufferCollectionToken which can be shared among
     // participants (using BufferCollectionToken.Duplicate()), and then
@@ -1404,7 +1404,7 @@ class Allocator final {
     //
     // Success/failure to populate the BufferCollection with buffers is
     // determined via the BufferCollection interface.
-    zx_status_t AllocateSharedCollection(::zx::channel token_request);
+    zx_status_t AllocateSharedCollection_Deprecated(::zx::channel token_request);
 
     // Creates a logical BufferCollectionToken which can be shared among
     // participants (using BufferCollectionToken.Duplicate()), and then
@@ -1413,7 +1413,7 @@ class Allocator final {
     // Success/failure to populate the BufferCollection with buffers is
     // determined via the BufferCollection interface.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t AllocateSharedCollection(::fidl::BytePart _request_buffer, ::zx::channel token_request);
+    zx_status_t AllocateSharedCollection_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel token_request);
 
     // Creates a logical BufferCollectionToken which can be shared among
     // participants (using BufferCollectionToken.Duplicate()), and then
@@ -1422,7 +1422,7 @@ class Allocator final {
     // Success/failure to populate the BufferCollection with buffers is
     // determined via the BufferCollection interface.
     // Messages are encoded and decoded in-place.
-    zx_status_t AllocateSharedCollection(::fidl::DecodedMessage<AllocateSharedCollectionRequest> params);
+    zx_status_t AllocateSharedCollection_Deprecated(::fidl::DecodedMessage<AllocateSharedCollectionRequest> params);
 
     // Convert a BufferCollectionToken into a connection to the logical
     // BufferCollection.  The BufferCollection hasn't yet been populated with
@@ -1444,7 +1444,7 @@ class Allocator final {
     // is a single participant's connection to the logical BufferCollection.
     // There typically will be other participants with their own
     // BufferCollection channel to the logical BufferCollection.
-    zx_status_t BindSharedCollection(::zx::channel token, ::zx::channel buffer_collection_request);
+    zx_status_t BindSharedCollection_Deprecated(::zx::channel token, ::zx::channel buffer_collection_request);
 
     // Convert a BufferCollectionToken into a connection to the logical
     // BufferCollection.  The BufferCollection hasn't yet been populated with
@@ -1467,7 +1467,7 @@ class Allocator final {
     // There typically will be other participants with their own
     // BufferCollection channel to the logical BufferCollection.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t BindSharedCollection(::fidl::BytePart _request_buffer, ::zx::channel token, ::zx::channel buffer_collection_request);
+    zx_status_t BindSharedCollection_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel token, ::zx::channel buffer_collection_request);
 
     // Convert a BufferCollectionToken into a connection to the logical
     // BufferCollection.  The BufferCollection hasn't yet been populated with
@@ -1490,7 +1490,7 @@ class Allocator final {
     // There typically will be other participants with their own
     // BufferCollection channel to the logical BufferCollection.
     // Messages are encoded and decoded in-place.
-    zx_status_t BindSharedCollection(::fidl::DecodedMessage<BindSharedCollectionRequest> params);
+    zx_status_t BindSharedCollection_Deprecated(::fidl::DecodedMessage<BindSharedCollectionRequest> params);
 
    private:
     ::zx::channel channel_;
@@ -1521,7 +1521,7 @@ class Allocator final {
     // BufferCollection.  The client should also keep the client end of
     // this channel open while using the BufferCollection, and should notice
     // when this channel closes and stop using the BufferCollection ASAP.
-    static zx_status_t AllocateNonSharedCollection(zx::unowned_channel _client_end, ::zx::channel collection);
+    static zx_status_t AllocateNonSharedCollection_Deprecated(zx::unowned_channel _client_end, ::zx::channel collection);
 
     // Allocates a BufferCollection on behalf of a single client (aka initiator)
     // who is also the only participant (from the point of view of sysmem).
@@ -1545,7 +1545,7 @@ class Allocator final {
     // this channel open while using the BufferCollection, and should notice
     // when this channel closes and stop using the BufferCollection ASAP.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t AllocateNonSharedCollection(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel collection);
+    static zx_status_t AllocateNonSharedCollection_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel collection);
 
     // Allocates a BufferCollection on behalf of a single client (aka initiator)
     // who is also the only participant (from the point of view of sysmem).
@@ -1569,7 +1569,7 @@ class Allocator final {
     // this channel open while using the BufferCollection, and should notice
     // when this channel closes and stop using the BufferCollection ASAP.
     // Messages are encoded and decoded in-place.
-    static zx_status_t AllocateNonSharedCollection(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateNonSharedCollectionRequest> params);
+    static zx_status_t AllocateNonSharedCollection_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateNonSharedCollectionRequest> params);
 
     // Creates a logical BufferCollectionToken which can be shared among
     // participants (using BufferCollectionToken.Duplicate()), and then
@@ -1577,7 +1577,7 @@ class Allocator final {
     //
     // Success/failure to populate the BufferCollection with buffers is
     // determined via the BufferCollection interface.
-    static zx_status_t AllocateSharedCollection(zx::unowned_channel _client_end, ::zx::channel token_request);
+    static zx_status_t AllocateSharedCollection_Deprecated(zx::unowned_channel _client_end, ::zx::channel token_request);
 
     // Creates a logical BufferCollectionToken which can be shared among
     // participants (using BufferCollectionToken.Duplicate()), and then
@@ -1586,7 +1586,7 @@ class Allocator final {
     // Success/failure to populate the BufferCollection with buffers is
     // determined via the BufferCollection interface.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t AllocateSharedCollection(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel token_request);
+    static zx_status_t AllocateSharedCollection_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel token_request);
 
     // Creates a logical BufferCollectionToken which can be shared among
     // participants (using BufferCollectionToken.Duplicate()), and then
@@ -1595,7 +1595,7 @@ class Allocator final {
     // Success/failure to populate the BufferCollection with buffers is
     // determined via the BufferCollection interface.
     // Messages are encoded and decoded in-place.
-    static zx_status_t AllocateSharedCollection(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateSharedCollectionRequest> params);
+    static zx_status_t AllocateSharedCollection_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateSharedCollectionRequest> params);
 
     // Convert a BufferCollectionToken into a connection to the logical
     // BufferCollection.  The BufferCollection hasn't yet been populated with
@@ -1617,7 +1617,7 @@ class Allocator final {
     // is a single participant's connection to the logical BufferCollection.
     // There typically will be other participants with their own
     // BufferCollection channel to the logical BufferCollection.
-    static zx_status_t BindSharedCollection(zx::unowned_channel _client_end, ::zx::channel token, ::zx::channel buffer_collection_request);
+    static zx_status_t BindSharedCollection_Deprecated(zx::unowned_channel _client_end, ::zx::channel token, ::zx::channel buffer_collection_request);
 
     // Convert a BufferCollectionToken into a connection to the logical
     // BufferCollection.  The BufferCollection hasn't yet been populated with
@@ -1640,7 +1640,7 @@ class Allocator final {
     // There typically will be other participants with their own
     // BufferCollection channel to the logical BufferCollection.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t BindSharedCollection(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel token, ::zx::channel buffer_collection_request);
+    static zx_status_t BindSharedCollection_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel token, ::zx::channel buffer_collection_request);
 
     // Convert a BufferCollectionToken into a connection to the logical
     // BufferCollection.  The BufferCollection hasn't yet been populated with
@@ -1663,7 +1663,7 @@ class Allocator final {
     // There typically will be other participants with their own
     // BufferCollection channel to the logical BufferCollection.
     // Messages are encoded and decoded in-place.
-    static zx_status_t BindSharedCollection(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindSharedCollectionRequest> params);
+    static zx_status_t BindSharedCollection_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindSharedCollectionRequest> params);
 
   };
 
@@ -2408,7 +2408,7 @@ class BufferCollectionEvents final {
     // This message only indicates that the server has reached the point where
     // it knows about previously created tokens Duplicate()ed from the token
     // used to create this BufferCollection.
-    zx_status_t OnDuplicatedTokensKnownByServer();
+    zx_status_t OnDuplicatedTokensKnownByServer_Deprecated();
 
     // This event inidicates that buffer allocation is over, whether succesful
     // or failed.
@@ -2429,7 +2429,7 @@ class BufferCollectionEvents final {
     // `buffer_collection_info` The buffer information, including VMO handles.
     // If `status` is not `ZX_OK`, `buffer_collection_info` is default
     // initialized and contains no meaningful information.
-    zx_status_t OnBuffersAllocated(int32_t status, BufferCollectionInfo_2 buffer_collection_info);
+    zx_status_t OnBuffersAllocated_Deprecated(int32_t status, BufferCollectionInfo_2 buffer_collection_info);
 
     // This event inidicates that buffer allocation is over, whether succesful
     // or failed.
@@ -2451,7 +2451,7 @@ class BufferCollectionEvents final {
     // If `status` is not `ZX_OK`, `buffer_collection_info` is default
     // initialized and contains no meaningful information.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t OnBuffersAllocated(::fidl::BytePart _request_buffer, int32_t status, BufferCollectionInfo_2 buffer_collection_info);
+    zx_status_t OnBuffersAllocated_Deprecated(::fidl::BytePart _request_buffer, int32_t status, BufferCollectionInfo_2 buffer_collection_info);
 
     // This event inidicates that buffer allocation is over, whether succesful
     // or failed.
@@ -2473,7 +2473,7 @@ class BufferCollectionEvents final {
     // If `status` is not `ZX_OK`, `buffer_collection_info` is default
     // initialized and contains no meaningful information.
     // Messages are encoded and decoded in-place.
-    zx_status_t OnBuffersAllocated(::fidl::DecodedMessage<OnBuffersAllocatedRequest> params);
+    zx_status_t OnBuffersAllocated_Deprecated(::fidl::DecodedMessage<OnBuffersAllocatedRequest> params);
 
     // A participant can learn when a new buffer is allocated via this event.
     // The only participant that will see a failing status is the participant
@@ -2499,7 +2499,7 @@ class BufferCollectionEvents final {
     // `ZX_ERR_INVALID_ARGS` if the request is malformed.
     // `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
     // perhaps due to hardware limitations.
-    zx_status_t OnAllocateSingleBufferDone(int32_t status, SingleBufferInfo buffer_info);
+    zx_status_t OnAllocateSingleBufferDone_Deprecated(int32_t status, SingleBufferInfo buffer_info);
 
     // A participant can learn when a new buffer is allocated via this event.
     // The only participant that will see a failing status is the participant
@@ -2526,7 +2526,7 @@ class BufferCollectionEvents final {
     // `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
     // perhaps due to hardware limitations.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t OnAllocateSingleBufferDone(::fidl::BytePart _request_buffer, int32_t status, SingleBufferInfo buffer_info);
+    zx_status_t OnAllocateSingleBufferDone_Deprecated(::fidl::BytePart _request_buffer, int32_t status, SingleBufferInfo buffer_info);
 
     // A participant can learn when a new buffer is allocated via this event.
     // The only participant that will see a failing status is the participant
@@ -2553,7 +2553,7 @@ class BufferCollectionEvents final {
     // `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
     // perhaps due to hardware limitations.
     // Messages are encoded and decoded in-place.
-    zx_status_t OnAllocateSingleBufferDone(::fidl::DecodedMessage<OnAllocateSingleBufferDoneRequest> params);
+    zx_status_t OnAllocateSingleBufferDone_Deprecated(::fidl::DecodedMessage<OnAllocateSingleBufferDoneRequest> params);
 
    private:
     ::zx::channel channel_;
@@ -2568,7 +2568,7 @@ class BufferCollectionEvents final {
     // This message only indicates that the server has reached the point where
     // it knows about previously created tokens Duplicate()ed from the token
     // used to create this BufferCollection.
-    static zx_status_t OnDuplicatedTokensKnownByServer(zx::unowned_channel _client_end);
+    static zx_status_t OnDuplicatedTokensKnownByServer_Deprecated(zx::unowned_channel _client_end);
 
     // This event inidicates that buffer allocation is over, whether succesful
     // or failed.
@@ -2589,7 +2589,7 @@ class BufferCollectionEvents final {
     // `buffer_collection_info` The buffer information, including VMO handles.
     // If `status` is not `ZX_OK`, `buffer_collection_info` is default
     // initialized and contains no meaningful information.
-    static zx_status_t OnBuffersAllocated(zx::unowned_channel _client_end, int32_t status, BufferCollectionInfo_2 buffer_collection_info);
+    static zx_status_t OnBuffersAllocated_Deprecated(zx::unowned_channel _client_end, int32_t status, BufferCollectionInfo_2 buffer_collection_info);
 
     // This event inidicates that buffer allocation is over, whether succesful
     // or failed.
@@ -2611,7 +2611,7 @@ class BufferCollectionEvents final {
     // If `status` is not `ZX_OK`, `buffer_collection_info` is default
     // initialized and contains no meaningful information.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t OnBuffersAllocated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, BufferCollectionInfo_2 buffer_collection_info);
+    static zx_status_t OnBuffersAllocated_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, BufferCollectionInfo_2 buffer_collection_info);
 
     // This event inidicates that buffer allocation is over, whether succesful
     // or failed.
@@ -2633,7 +2633,7 @@ class BufferCollectionEvents final {
     // If `status` is not `ZX_OK`, `buffer_collection_info` is default
     // initialized and contains no meaningful information.
     // Messages are encoded and decoded in-place.
-    static zx_status_t OnBuffersAllocated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnBuffersAllocatedRequest> params);
+    static zx_status_t OnBuffersAllocated_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnBuffersAllocatedRequest> params);
 
     // A participant can learn when a new buffer is allocated via this event.
     // The only participant that will see a failing status is the participant
@@ -2659,7 +2659,7 @@ class BufferCollectionEvents final {
     // `ZX_ERR_INVALID_ARGS` if the request is malformed.
     // `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
     // perhaps due to hardware limitations.
-    static zx_status_t OnAllocateSingleBufferDone(zx::unowned_channel _client_end, int32_t status, SingleBufferInfo buffer_info);
+    static zx_status_t OnAllocateSingleBufferDone_Deprecated(zx::unowned_channel _client_end, int32_t status, SingleBufferInfo buffer_info);
 
     // A participant can learn when a new buffer is allocated via this event.
     // The only participant that will see a failing status is the participant
@@ -2686,7 +2686,7 @@ class BufferCollectionEvents final {
     // `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
     // perhaps due to hardware limitations.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t OnAllocateSingleBufferDone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, SingleBufferInfo buffer_info);
+    static zx_status_t OnAllocateSingleBufferDone_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t status, SingleBufferInfo buffer_info);
 
     // A participant can learn when a new buffer is allocated via this event.
     // The only participant that will see a failing status is the participant
@@ -2713,7 +2713,7 @@ class BufferCollectionEvents final {
     // `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
     // perhaps due to hardware limitations.
     // Messages are encoded and decoded in-place.
-    static zx_status_t OnAllocateSingleBufferDone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnAllocateSingleBufferDoneRequest> params);
+    static zx_status_t OnAllocateSingleBufferDone_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnAllocateSingleBufferDoneRequest> params);
 
   };
 
@@ -3061,7 +3061,7 @@ class BufferCollection final {
     // one-way messages indicating events relevant to this BufferCollection
     // channel (some may be specific to this BufferCollection channel and some
     // may be relevant to the overall logical BufferCollection).
-    zx_status_t SetEventSink(::zx::channel events);
+    zx_status_t SetEventSink_Deprecated(::zx::channel events);
 
     // At least for now, the only way to get events from a BufferCollection is
     // to set a reverse BufferCollectionEvents channel.  This can be sent up to
@@ -3075,7 +3075,7 @@ class BufferCollection final {
     // channel (some may be specific to this BufferCollection channel and some
     // may be relevant to the overall logical BufferCollection).
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t SetEventSink(::fidl::BytePart _request_buffer, ::zx::channel events);
+    zx_status_t SetEventSink_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel events);
 
     // At least for now, the only way to get events from a BufferCollection is
     // to set a reverse BufferCollectionEvents channel.  This can be sent up to
@@ -3089,10 +3089,10 @@ class BufferCollection final {
     // channel (some may be specific to this BufferCollection channel and some
     // may be relevant to the overall logical BufferCollection).
     // Messages are encoded and decoded in-place.
-    zx_status_t SetEventSink(::fidl::DecodedMessage<SetEventSinkRequest> params);
+    zx_status_t SetEventSink_Deprecated(::fidl::DecodedMessage<SetEventSinkRequest> params);
 
     // See comments on BufferCollectionToken::Sync().
-    zx_status_t Sync();
+    zx_status_t Sync_Deprecated();
 
     // Provide BufferCollectionConstraints to the logical BufferCollection.
     //
@@ -3129,7 +3129,7 @@ class BufferCollection final {
     // buffer_index.
     //
     // `constraints` are constraints on the buffer collection.
-    zx_status_t SetConstraints(bool has_constraints, BufferCollectionConstraints constraints);
+    zx_status_t SetConstraints_Deprecated(bool has_constraints, BufferCollectionConstraints constraints);
 
     // Provide BufferCollectionConstraints to the logical BufferCollection.
     //
@@ -3167,7 +3167,7 @@ class BufferCollection final {
     //
     // `constraints` are constraints on the buffer collection.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t SetConstraints(::fidl::BytePart _request_buffer, bool has_constraints, BufferCollectionConstraints constraints);
+    zx_status_t SetConstraints_Deprecated(::fidl::BytePart _request_buffer, bool has_constraints, BufferCollectionConstraints constraints);
 
     // Provide BufferCollectionConstraints to the logical BufferCollection.
     //
@@ -3205,7 +3205,7 @@ class BufferCollection final {
     //
     // `constraints` are constraints on the buffer collection.
     // Messages are encoded and decoded in-place.
-    zx_status_t SetConstraints(::fidl::DecodedMessage<SetConstraintsRequest> params);
+    zx_status_t SetConstraints_Deprecated(::fidl::DecodedMessage<SetConstraintsRequest> params);
 
     // This request completes when buffers have been allocated, responds with
     // some failure detail if allocation has been attempted but failed.
@@ -3240,7 +3240,7 @@ class BufferCollection final {
     // satisfied, perhaps due to hardware limitations.
     //
     // `buffer_collection_info` has the VMO handles and other related info.
-    zx_status_t WaitForBuffersAllocated(int32_t* out_status, BufferCollectionInfo_2* out_buffer_collection_info);
+    zx_status_t WaitForBuffersAllocated_Deprecated(int32_t* out_status, BufferCollectionInfo_2* out_buffer_collection_info);
 
     // This request completes when buffers have been allocated, responds with
     // some failure detail if allocation has been attempted but failed.
@@ -3277,7 +3277,7 @@ class BufferCollection final {
     // `buffer_collection_info` has the VMO handles and other related info.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<WaitForBuffersAllocatedResponse> WaitForBuffersAllocated(::fidl::BytePart _response_buffer, int32_t* out_status, BufferCollectionInfo_2* out_buffer_collection_info);
+    ::fidl::DecodeResult<WaitForBuffersAllocatedResponse> WaitForBuffersAllocated_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, BufferCollectionInfo_2* out_buffer_collection_info);
 
     // This request completes when buffers have been allocated, responds with
     // some failure detail if allocation has been attempted but failed.
@@ -3313,25 +3313,25 @@ class BufferCollection final {
     //
     // `buffer_collection_info` has the VMO handles and other related info.
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<WaitForBuffersAllocatedResponse> WaitForBuffersAllocated(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<WaitForBuffersAllocatedResponse> WaitForBuffersAllocated_Deprecated(::fidl::BytePart response_buffer);
 
     // This returns the same result code as WaitForBuffersAllocated if the
     // buffer collection has been allocated or failed, or `ZX_ERR_UNAVAILABLE`
     // if WaitForBuffersAllocated would block.
-    zx_status_t CheckBuffersAllocated(int32_t* out_status);
+    zx_status_t CheckBuffersAllocated_Deprecated(int32_t* out_status);
 
     // This returns the same result code as WaitForBuffersAllocated if the
     // buffer collection has been allocated or failed, or `ZX_ERR_UNAVAILABLE`
     // if WaitForBuffersAllocated would block.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<CheckBuffersAllocatedResponse> CheckBuffersAllocated(::fidl::BytePart _response_buffer, int32_t* out_status);
+    ::fidl::DecodeResult<CheckBuffersAllocatedResponse> CheckBuffersAllocated_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // This returns the same result code as WaitForBuffersAllocated if the
     // buffer collection has been allocated or failed, or `ZX_ERR_UNAVAILABLE`
     // if WaitForBuffersAllocated would block.
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<CheckBuffersAllocatedResponse> CheckBuffersAllocated(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<CheckBuffersAllocatedResponse> CheckBuffersAllocated_Deprecated(::fidl::BytePart response_buffer);
 
     // The CloseBuffer() doesn't immediately force all VMO handles to that
     // buffer to close, but it does close any handle held by sysmem, and does
@@ -3343,7 +3343,7 @@ class BufferCollection final {
     //
     // `buffer_index` indicates which buffer to close.  If the buffer is already
     // closed this has no effect (idempotent).
-    zx_status_t CloseSingleBuffer(uint64_t buffer_index);
+    zx_status_t CloseSingleBuffer_Deprecated(uint64_t buffer_index);
 
     // The CloseBuffer() doesn't immediately force all VMO handles to that
     // buffer to close, but it does close any handle held by sysmem, and does
@@ -3356,7 +3356,7 @@ class BufferCollection final {
     // `buffer_index` indicates which buffer to close.  If the buffer is already
     // closed this has no effect (idempotent).
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t CloseSingleBuffer(::fidl::BytePart _request_buffer, uint64_t buffer_index);
+    zx_status_t CloseSingleBuffer_Deprecated(::fidl::BytePart _request_buffer, uint64_t buffer_index);
 
     // The CloseBuffer() doesn't immediately force all VMO handles to that
     // buffer to close, but it does close any handle held by sysmem, and does
@@ -3369,7 +3369,7 @@ class BufferCollection final {
     // `buffer_index` indicates which buffer to close.  If the buffer is already
     // closed this has no effect (idempotent).
     // Messages are encoded and decoded in-place.
-    zx_status_t CloseSingleBuffer(::fidl::DecodedMessage<CloseSingleBufferRequest> params);
+    zx_status_t CloseSingleBuffer_Deprecated(::fidl::DecodedMessage<CloseSingleBufferRequest> params);
 
     // This allocates a new buffer that is consistent with the most recent call
     // to SetConstraints(), if possible.  If not possible, this indicates the
@@ -3380,7 +3380,7 @@ class BufferCollection final {
     //
     // The participant is (intentionally) never informed of other participant's
     // constraints.
-    zx_status_t AllocateSingleBuffer(uint64_t buffer_index);
+    zx_status_t AllocateSingleBuffer_Deprecated(uint64_t buffer_index);
 
     // This allocates a new buffer that is consistent with the most recent call
     // to SetConstraints(), if possible.  If not possible, this indicates the
@@ -3392,7 +3392,7 @@ class BufferCollection final {
     // The participant is (intentionally) never informed of other participant's
     // constraints.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t AllocateSingleBuffer(::fidl::BytePart _request_buffer, uint64_t buffer_index);
+    zx_status_t AllocateSingleBuffer_Deprecated(::fidl::BytePart _request_buffer, uint64_t buffer_index);
 
     // This allocates a new buffer that is consistent with the most recent call
     // to SetConstraints(), if possible.  If not possible, this indicates the
@@ -3404,25 +3404,25 @@ class BufferCollection final {
     // The participant is (intentionally) never informed of other participant's
     // constraints.
     // Messages are encoded and decoded in-place.
-    zx_status_t AllocateSingleBuffer(::fidl::DecodedMessage<AllocateSingleBufferRequest> params);
+    zx_status_t AllocateSingleBuffer_Deprecated(::fidl::DecodedMessage<AllocateSingleBufferRequest> params);
 
     // Completes when AllocateBuffer is done.  Callers who wish to avoid
     // blocking a thread while waiting can use OnAllocateSingleBufferDone()
     // instead.
-    zx_status_t WaitForSingleBufferAllocated(uint64_t buffer_index, int32_t* out_status, SingleBufferInfo* out_buffer_info);
+    zx_status_t WaitForSingleBufferAllocated_Deprecated(uint64_t buffer_index, int32_t* out_status, SingleBufferInfo* out_buffer_info);
 
     // Completes when AllocateBuffer is done.  Callers who wish to avoid
     // blocking a thread while waiting can use OnAllocateSingleBufferDone()
     // instead.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<WaitForSingleBufferAllocatedResponse> WaitForSingleBufferAllocated(::fidl::BytePart _request_buffer, uint64_t buffer_index, ::fidl::BytePart _response_buffer, int32_t* out_status, SingleBufferInfo* out_buffer_info);
+    ::fidl::DecodeResult<WaitForSingleBufferAllocatedResponse> WaitForSingleBufferAllocated_Deprecated(::fidl::BytePart _request_buffer, uint64_t buffer_index, ::fidl::BytePart _response_buffer, int32_t* out_status, SingleBufferInfo* out_buffer_info);
 
     // Completes when AllocateBuffer is done.  Callers who wish to avoid
     // blocking a thread while waiting can use OnAllocateSingleBufferDone()
     // instead.
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<WaitForSingleBufferAllocatedResponse> WaitForSingleBufferAllocated(::fidl::DecodedMessage<WaitForSingleBufferAllocatedRequest> params, ::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<WaitForSingleBufferAllocatedResponse> WaitForSingleBufferAllocated_Deprecated(::fidl::DecodedMessage<WaitForSingleBufferAllocatedRequest> params, ::fidl::BytePart response_buffer);
 
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
@@ -3435,7 +3435,7 @@ class BufferCollection final {
     // buffer_index that the participant doesn't yet know about, to ensure that
     // the participant won't be waiting forever for the
     // OnAllocateSingleBufferDone() message regarding this buffer_index.
-    zx_status_t CheckSingleBufferAllocated(uint64_t buffer_index);
+    zx_status_t CheckSingleBufferAllocated_Deprecated(uint64_t buffer_index);
 
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
@@ -3449,7 +3449,7 @@ class BufferCollection final {
     // the participant won't be waiting forever for the
     // OnAllocateSingleBufferDone() message regarding this buffer_index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t CheckSingleBufferAllocated(::fidl::BytePart _request_buffer, uint64_t buffer_index);
+    zx_status_t CheckSingleBufferAllocated_Deprecated(::fidl::BytePart _request_buffer, uint64_t buffer_index);
 
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
@@ -3463,7 +3463,7 @@ class BufferCollection final {
     // the participant won't be waiting forever for the
     // OnAllocateSingleBufferDone() message regarding this buffer_index.
     // Messages are encoded and decoded in-place.
-    zx_status_t CheckSingleBufferAllocated(::fidl::DecodedMessage<CheckSingleBufferAllocatedRequest> params);
+    zx_status_t CheckSingleBufferAllocated_Deprecated(::fidl::DecodedMessage<CheckSingleBufferAllocatedRequest> params);
 
     // The server handles unexpected failure of a BufferCollection by failing
     // the whole LogicalBufferCollection.  Partly this is to expedite closing
@@ -3472,7 +3472,7 @@ class BufferCollection final {
     // the participant can send Close() before closing the client end of the
     // BufferCollection channel.  If this is the last BufferCollection view, the
     // LogicalBufferCollection will still go away.
-    zx_status_t Close();
+    zx_status_t Close_Deprecated();
 
    private:
     ::zx::channel channel_;
@@ -3493,7 +3493,7 @@ class BufferCollection final {
     // one-way messages indicating events relevant to this BufferCollection
     // channel (some may be specific to this BufferCollection channel and some
     // may be relevant to the overall logical BufferCollection).
-    static zx_status_t SetEventSink(zx::unowned_channel _client_end, ::zx::channel events);
+    static zx_status_t SetEventSink_Deprecated(zx::unowned_channel _client_end, ::zx::channel events);
 
     // At least for now, the only way to get events from a BufferCollection is
     // to set a reverse BufferCollectionEvents channel.  This can be sent up to
@@ -3507,7 +3507,7 @@ class BufferCollection final {
     // channel (some may be specific to this BufferCollection channel and some
     // may be relevant to the overall logical BufferCollection).
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t SetEventSink(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel events);
+    static zx_status_t SetEventSink_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel events);
 
     // At least for now, the only way to get events from a BufferCollection is
     // to set a reverse BufferCollectionEvents channel.  This can be sent up to
@@ -3521,10 +3521,10 @@ class BufferCollection final {
     // channel (some may be specific to this BufferCollection channel and some
     // may be relevant to the overall logical BufferCollection).
     // Messages are encoded and decoded in-place.
-    static zx_status_t SetEventSink(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetEventSinkRequest> params);
+    static zx_status_t SetEventSink_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetEventSinkRequest> params);
 
     // See comments on BufferCollectionToken::Sync().
-    static zx_status_t Sync(zx::unowned_channel _client_end);
+    static zx_status_t Sync_Deprecated(zx::unowned_channel _client_end);
 
     // Provide BufferCollectionConstraints to the logical BufferCollection.
     //
@@ -3561,7 +3561,7 @@ class BufferCollection final {
     // buffer_index.
     //
     // `constraints` are constraints on the buffer collection.
-    static zx_status_t SetConstraints(zx::unowned_channel _client_end, bool has_constraints, BufferCollectionConstraints constraints);
+    static zx_status_t SetConstraints_Deprecated(zx::unowned_channel _client_end, bool has_constraints, BufferCollectionConstraints constraints);
 
     // Provide BufferCollectionConstraints to the logical BufferCollection.
     //
@@ -3599,7 +3599,7 @@ class BufferCollection final {
     //
     // `constraints` are constraints on the buffer collection.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t SetConstraints(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool has_constraints, BufferCollectionConstraints constraints);
+    static zx_status_t SetConstraints_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool has_constraints, BufferCollectionConstraints constraints);
 
     // Provide BufferCollectionConstraints to the logical BufferCollection.
     //
@@ -3637,7 +3637,7 @@ class BufferCollection final {
     //
     // `constraints` are constraints on the buffer collection.
     // Messages are encoded and decoded in-place.
-    static zx_status_t SetConstraints(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConstraintsRequest> params);
+    static zx_status_t SetConstraints_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConstraintsRequest> params);
 
     // This request completes when buffers have been allocated, responds with
     // some failure detail if allocation has been attempted but failed.
@@ -3672,7 +3672,7 @@ class BufferCollection final {
     // satisfied, perhaps due to hardware limitations.
     //
     // `buffer_collection_info` has the VMO handles and other related info.
-    static zx_status_t WaitForBuffersAllocated(zx::unowned_channel _client_end, int32_t* out_status, BufferCollectionInfo_2* out_buffer_collection_info);
+    static zx_status_t WaitForBuffersAllocated_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, BufferCollectionInfo_2* out_buffer_collection_info);
 
     // This request completes when buffers have been allocated, responds with
     // some failure detail if allocation has been attempted but failed.
@@ -3709,7 +3709,7 @@ class BufferCollection final {
     // `buffer_collection_info` has the VMO handles and other related info.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<WaitForBuffersAllocatedResponse> WaitForBuffersAllocated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, BufferCollectionInfo_2* out_buffer_collection_info);
+    static ::fidl::DecodeResult<WaitForBuffersAllocatedResponse> WaitForBuffersAllocated_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, BufferCollectionInfo_2* out_buffer_collection_info);
 
     // This request completes when buffers have been allocated, responds with
     // some failure detail if allocation has been attempted but failed.
@@ -3745,25 +3745,25 @@ class BufferCollection final {
     //
     // `buffer_collection_info` has the VMO handles and other related info.
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<WaitForBuffersAllocatedResponse> WaitForBuffersAllocated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WaitForBuffersAllocatedResponse> WaitForBuffersAllocated_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // This returns the same result code as WaitForBuffersAllocated if the
     // buffer collection has been allocated or failed, or `ZX_ERR_UNAVAILABLE`
     // if WaitForBuffersAllocated would block.
-    static zx_status_t CheckBuffersAllocated(zx::unowned_channel _client_end, int32_t* out_status);
+    static zx_status_t CheckBuffersAllocated_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
 
     // This returns the same result code as WaitForBuffersAllocated if the
     // buffer collection has been allocated or failed, or `ZX_ERR_UNAVAILABLE`
     // if WaitForBuffersAllocated would block.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<CheckBuffersAllocatedResponse> CheckBuffersAllocated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
+    static ::fidl::DecodeResult<CheckBuffersAllocatedResponse> CheckBuffersAllocated_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // This returns the same result code as WaitForBuffersAllocated if the
     // buffer collection has been allocated or failed, or `ZX_ERR_UNAVAILABLE`
     // if WaitForBuffersAllocated would block.
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<CheckBuffersAllocatedResponse> CheckBuffersAllocated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CheckBuffersAllocatedResponse> CheckBuffersAllocated_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // The CloseBuffer() doesn't immediately force all VMO handles to that
     // buffer to close, but it does close any handle held by sysmem, and does
@@ -3775,7 +3775,7 @@ class BufferCollection final {
     //
     // `buffer_index` indicates which buffer to close.  If the buffer is already
     // closed this has no effect (idempotent).
-    static zx_status_t CloseSingleBuffer(zx::unowned_channel _client_end, uint64_t buffer_index);
+    static zx_status_t CloseSingleBuffer_Deprecated(zx::unowned_channel _client_end, uint64_t buffer_index);
 
     // The CloseBuffer() doesn't immediately force all VMO handles to that
     // buffer to close, but it does close any handle held by sysmem, and does
@@ -3788,7 +3788,7 @@ class BufferCollection final {
     // `buffer_index` indicates which buffer to close.  If the buffer is already
     // closed this has no effect (idempotent).
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t CloseSingleBuffer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t buffer_index);
+    static zx_status_t CloseSingleBuffer_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t buffer_index);
 
     // The CloseBuffer() doesn't immediately force all VMO handles to that
     // buffer to close, but it does close any handle held by sysmem, and does
@@ -3801,7 +3801,7 @@ class BufferCollection final {
     // `buffer_index` indicates which buffer to close.  If the buffer is already
     // closed this has no effect (idempotent).
     // Messages are encoded and decoded in-place.
-    static zx_status_t CloseSingleBuffer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloseSingleBufferRequest> params);
+    static zx_status_t CloseSingleBuffer_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloseSingleBufferRequest> params);
 
     // This allocates a new buffer that is consistent with the most recent call
     // to SetConstraints(), if possible.  If not possible, this indicates the
@@ -3812,7 +3812,7 @@ class BufferCollection final {
     //
     // The participant is (intentionally) never informed of other participant's
     // constraints.
-    static zx_status_t AllocateSingleBuffer(zx::unowned_channel _client_end, uint64_t buffer_index);
+    static zx_status_t AllocateSingleBuffer_Deprecated(zx::unowned_channel _client_end, uint64_t buffer_index);
 
     // This allocates a new buffer that is consistent with the most recent call
     // to SetConstraints(), if possible.  If not possible, this indicates the
@@ -3824,7 +3824,7 @@ class BufferCollection final {
     // The participant is (intentionally) never informed of other participant's
     // constraints.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t AllocateSingleBuffer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t buffer_index);
+    static zx_status_t AllocateSingleBuffer_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t buffer_index);
 
     // This allocates a new buffer that is consistent with the most recent call
     // to SetConstraints(), if possible.  If not possible, this indicates the
@@ -3836,25 +3836,25 @@ class BufferCollection final {
     // The participant is (intentionally) never informed of other participant's
     // constraints.
     // Messages are encoded and decoded in-place.
-    static zx_status_t AllocateSingleBuffer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateSingleBufferRequest> params);
+    static zx_status_t AllocateSingleBuffer_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateSingleBufferRequest> params);
 
     // Completes when AllocateBuffer is done.  Callers who wish to avoid
     // blocking a thread while waiting can use OnAllocateSingleBufferDone()
     // instead.
-    static zx_status_t WaitForSingleBufferAllocated(zx::unowned_channel _client_end, uint64_t buffer_index, int32_t* out_status, SingleBufferInfo* out_buffer_info);
+    static zx_status_t WaitForSingleBufferAllocated_Deprecated(zx::unowned_channel _client_end, uint64_t buffer_index, int32_t* out_status, SingleBufferInfo* out_buffer_info);
 
     // Completes when AllocateBuffer is done.  Callers who wish to avoid
     // blocking a thread while waiting can use OnAllocateSingleBufferDone()
     // instead.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<WaitForSingleBufferAllocatedResponse> WaitForSingleBufferAllocated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t buffer_index, ::fidl::BytePart _response_buffer, int32_t* out_status, SingleBufferInfo* out_buffer_info);
+    static ::fidl::DecodeResult<WaitForSingleBufferAllocatedResponse> WaitForSingleBufferAllocated_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t buffer_index, ::fidl::BytePart _response_buffer, int32_t* out_status, SingleBufferInfo* out_buffer_info);
 
     // Completes when AllocateBuffer is done.  Callers who wish to avoid
     // blocking a thread while waiting can use OnAllocateSingleBufferDone()
     // instead.
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<WaitForSingleBufferAllocatedResponse> WaitForSingleBufferAllocated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WaitForSingleBufferAllocatedRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WaitForSingleBufferAllocatedResponse> WaitForSingleBufferAllocated_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WaitForSingleBufferAllocatedRequest> params, ::fidl::BytePart response_buffer);
 
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
@@ -3867,7 +3867,7 @@ class BufferCollection final {
     // buffer_index that the participant doesn't yet know about, to ensure that
     // the participant won't be waiting forever for the
     // OnAllocateSingleBufferDone() message regarding this buffer_index.
-    static zx_status_t CheckSingleBufferAllocated(zx::unowned_channel _client_end, uint64_t buffer_index);
+    static zx_status_t CheckSingleBufferAllocated_Deprecated(zx::unowned_channel _client_end, uint64_t buffer_index);
 
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
@@ -3881,7 +3881,7 @@ class BufferCollection final {
     // the participant won't be waiting forever for the
     // OnAllocateSingleBufferDone() message regarding this buffer_index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t CheckSingleBufferAllocated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t buffer_index);
+    static zx_status_t CheckSingleBufferAllocated_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t buffer_index);
 
     // A participant can use this message to have sysmem verify that this
     // buffer_index exists.  This message is intentionally ignored by the
@@ -3895,7 +3895,7 @@ class BufferCollection final {
     // the participant won't be waiting forever for the
     // OnAllocateSingleBufferDone() message regarding this buffer_index.
     // Messages are encoded and decoded in-place.
-    static zx_status_t CheckSingleBufferAllocated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CheckSingleBufferAllocatedRequest> params);
+    static zx_status_t CheckSingleBufferAllocated_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CheckSingleBufferAllocatedRequest> params);
 
     // The server handles unexpected failure of a BufferCollection by failing
     // the whole LogicalBufferCollection.  Partly this is to expedite closing
@@ -3904,7 +3904,7 @@ class BufferCollection final {
     // the participant can send Close() before closing the client end of the
     // BufferCollection channel.  If this is the last BufferCollection view, the
     // LogicalBufferCollection will still go away.
-    static zx_status_t Close(zx::unowned_channel _client_end);
+    static zx_status_t Close_Deprecated(zx::unowned_channel _client_end);
 
   };
 

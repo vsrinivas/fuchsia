@@ -92,11 +92,11 @@ extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataResponseTable;
 
 }  // namespace
 
-zx_status_t PayloadStream::SyncClient::RegisterVmo(::zx::vmo vmo, int32_t* out_status) {
-  return PayloadStream::Call::RegisterVmo(zx::unowned_channel(this->channel_), std::move(vmo), out_status);
+zx_status_t PayloadStream::SyncClient::RegisterVmo_Deprecated(::zx::vmo vmo, int32_t* out_status) {
+  return PayloadStream::Call::RegisterVmo_Deprecated(zx::unowned_channel(this->channel_), std::move(vmo), out_status);
 }
 
-zx_status_t PayloadStream::Call::RegisterVmo(zx::unowned_channel _client_end, ::zx::vmo vmo, int32_t* out_status) {
+zx_status_t PayloadStream::Call::RegisterVmo_Deprecated(zx::unowned_channel _client_end, ::zx::vmo vmo, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RegisterVmoRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<RegisterVmoRequest*>(_write_bytes);
@@ -125,11 +125,11 @@ zx_status_t PayloadStream::Call::RegisterVmo(zx::unowned_channel _client_end, ::
   return ZX_OK;
 }
 
-::fidl::DecodeResult<PayloadStream::RegisterVmoResponse> PayloadStream::SyncClient::RegisterVmo(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return PayloadStream::Call::RegisterVmo(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(vmo), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<PayloadStream::RegisterVmoResponse> PayloadStream::SyncClient::RegisterVmo_Deprecated(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return PayloadStream::Call::RegisterVmo_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(vmo), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<PayloadStream::RegisterVmoResponse> PayloadStream::Call::RegisterVmo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<PayloadStream::RegisterVmoResponse> PayloadStream::Call::RegisterVmo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   if (_request_buffer.capacity() < RegisterVmoRequest::PrimarySize) {
     return ::fidl::DecodeResult<RegisterVmoResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -156,11 +156,11 @@ zx_status_t PayloadStream::Call::RegisterVmo(zx::unowned_channel _client_end, ::
   return _decode_result;
 }
 
-::fidl::DecodeResult<PayloadStream::RegisterVmoResponse> PayloadStream::SyncClient::RegisterVmo(::fidl::DecodedMessage<RegisterVmoRequest> params, ::fidl::BytePart response_buffer) {
-  return PayloadStream::Call::RegisterVmo(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<PayloadStream::RegisterVmoResponse> PayloadStream::SyncClient::RegisterVmo_Deprecated(::fidl::DecodedMessage<RegisterVmoRequest> params, ::fidl::BytePart response_buffer) {
+  return PayloadStream::Call::RegisterVmo_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<PayloadStream::RegisterVmoResponse> PayloadStream::Call::RegisterVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RegisterVmoRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<PayloadStream::RegisterVmoResponse> PayloadStream::Call::RegisterVmo_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RegisterVmoRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPayloadStream_RegisterVmo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -182,11 +182,11 @@ zx_status_t PayloadStream::Call::RegisterVmo(zx::unowned_channel _client_end, ::
 }
 
 
-zx_status_t PayloadStream::SyncClient::ReadData(ReadResult* out_result) {
-  return PayloadStream::Call::ReadData(zx::unowned_channel(this->channel_), out_result);
+zx_status_t PayloadStream::SyncClient::ReadData_Deprecated(ReadResult* out_result) {
+  return PayloadStream::Call::ReadData_Deprecated(zx::unowned_channel(this->channel_), out_result);
 }
 
-zx_status_t PayloadStream::Call::ReadData(zx::unowned_channel _client_end, ReadResult* out_result) {
+zx_status_t PayloadStream::Call::ReadData_Deprecated(zx::unowned_channel _client_end, ReadResult* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadDataRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ReadDataRequest*>(_write_bytes);
@@ -214,11 +214,11 @@ zx_status_t PayloadStream::Call::ReadData(zx::unowned_channel _client_end, ReadR
   return ZX_OK;
 }
 
-::fidl::DecodeResult<PayloadStream::ReadDataResponse> PayloadStream::SyncClient::ReadData(::fidl::BytePart _response_buffer, ReadResult* out_result) {
-  return PayloadStream::Call::ReadData(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_result);
+::fidl::DecodeResult<PayloadStream::ReadDataResponse> PayloadStream::SyncClient::ReadData_Deprecated(::fidl::BytePart _response_buffer, ReadResult* out_result) {
+  return PayloadStream::Call::ReadData_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<PayloadStream::ReadDataResponse> PayloadStream::Call::ReadData(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ReadResult* out_result) {
+::fidl::DecodeResult<PayloadStream::ReadDataResponse> PayloadStream::Call::ReadData_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ReadResult* out_result) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ReadDataRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<ReadDataRequest*>(_request_buffer.data());
@@ -243,11 +243,11 @@ zx_status_t PayloadStream::Call::ReadData(zx::unowned_channel _client_end, ReadR
   return _decode_result;
 }
 
-::fidl::DecodeResult<PayloadStream::ReadDataResponse> PayloadStream::SyncClient::ReadData(::fidl::BytePart response_buffer) {
-  return PayloadStream::Call::ReadData(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<PayloadStream::ReadDataResponse> PayloadStream::SyncClient::ReadData_Deprecated(::fidl::BytePart response_buffer) {
+  return PayloadStream::Call::ReadData_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<PayloadStream::ReadDataResponse> PayloadStream::Call::ReadData(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<PayloadStream::ReadDataResponse> PayloadStream::Call::ReadData_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ReadDataRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(ReadDataRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -473,11 +473,11 @@ extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumesResponseTable;
 
 }  // namespace
 
-zx_status_t Paver::SyncClient::QueryActiveConfiguration(Paver_QueryActiveConfiguration_Result* out_result) {
-  return Paver::Call::QueryActiveConfiguration(zx::unowned_channel(this->channel_), out_result);
+zx_status_t Paver::SyncClient::QueryActiveConfiguration_Deprecated(Paver_QueryActiveConfiguration_Result* out_result) {
+  return Paver::Call::QueryActiveConfiguration_Deprecated(zx::unowned_channel(this->channel_), out_result);
 }
 
-zx_status_t Paver::Call::QueryActiveConfiguration(zx::unowned_channel _client_end, Paver_QueryActiveConfiguration_Result* out_result) {
+zx_status_t Paver::Call::QueryActiveConfiguration_Deprecated(zx::unowned_channel _client_end, Paver_QueryActiveConfiguration_Result* out_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<QueryActiveConfigurationRequest*>(_write_bytes);
@@ -505,11 +505,11 @@ zx_status_t Paver::Call::QueryActiveConfiguration(zx::unowned_channel _client_en
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Paver::QueryActiveConfigurationResponse> Paver::SyncClient::QueryActiveConfiguration(::fidl::BytePart _response_buffer, Paver_QueryActiveConfiguration_Result* out_result) {
-  return Paver::Call::QueryActiveConfiguration(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_result);
+::fidl::DecodeResult<Paver::QueryActiveConfigurationResponse> Paver::SyncClient::QueryActiveConfiguration_Deprecated(::fidl::BytePart _response_buffer, Paver_QueryActiveConfiguration_Result* out_result) {
+  return Paver::Call::QueryActiveConfiguration_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_result);
 }
 
-::fidl::DecodeResult<Paver::QueryActiveConfigurationResponse> Paver::Call::QueryActiveConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, Paver_QueryActiveConfiguration_Result* out_result) {
+::fidl::DecodeResult<Paver::QueryActiveConfigurationResponse> Paver::Call::QueryActiveConfiguration_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, Paver_QueryActiveConfiguration_Result* out_result) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(QueryActiveConfigurationRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<QueryActiveConfigurationRequest*>(_request_buffer.data());
@@ -534,11 +534,11 @@ zx_status_t Paver::Call::QueryActiveConfiguration(zx::unowned_channel _client_en
   return _decode_result;
 }
 
-::fidl::DecodeResult<Paver::QueryActiveConfigurationResponse> Paver::SyncClient::QueryActiveConfiguration(::fidl::BytePart response_buffer) {
-  return Paver::Call::QueryActiveConfiguration(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Paver::QueryActiveConfigurationResponse> Paver::SyncClient::QueryActiveConfiguration_Deprecated(::fidl::BytePart response_buffer) {
+  return Paver::Call::QueryActiveConfiguration_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Paver::QueryActiveConfigurationResponse> Paver::Call::QueryActiveConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Paver::QueryActiveConfigurationResponse> Paver::Call::QueryActiveConfiguration_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(QueryActiveConfigurationRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(QueryActiveConfigurationRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -564,11 +564,11 @@ zx_status_t Paver::Call::QueryActiveConfiguration(zx::unowned_channel _client_en
 }
 
 
-zx_status_t Paver::SyncClient::SetActiveConfiguration(Configuration configuration, int32_t* out_status) {
-  return Paver::Call::SetActiveConfiguration(zx::unowned_channel(this->channel_), std::move(configuration), out_status);
+zx_status_t Paver::SyncClient::SetActiveConfiguration_Deprecated(Configuration configuration, int32_t* out_status) {
+  return Paver::Call::SetActiveConfiguration_Deprecated(zx::unowned_channel(this->channel_), std::move(configuration), out_status);
 }
 
-zx_status_t Paver::Call::SetActiveConfiguration(zx::unowned_channel _client_end, Configuration configuration, int32_t* out_status) {
+zx_status_t Paver::Call::SetActiveConfiguration_Deprecated(zx::unowned_channel _client_end, Configuration configuration, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SetActiveConfigurationRequest*>(_write_bytes);
@@ -597,11 +597,11 @@ zx_status_t Paver::Call::SetActiveConfiguration(zx::unowned_channel _client_end,
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Paver::SetActiveConfigurationResponse> Paver::SyncClient::SetActiveConfiguration(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Paver::Call::SetActiveConfiguration(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Paver::SetActiveConfigurationResponse> Paver::SyncClient::SetActiveConfiguration_Deprecated(::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Paver::Call::SetActiveConfiguration_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Paver::SetActiveConfigurationResponse> Paver::Call::SetActiveConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Paver::SetActiveConfigurationResponse> Paver::Call::SetActiveConfiguration_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   if (_request_buffer.capacity() < SetActiveConfigurationRequest::PrimarySize) {
     return ::fidl::DecodeResult<SetActiveConfigurationResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -628,11 +628,11 @@ zx_status_t Paver::Call::SetActiveConfiguration(zx::unowned_channel _client_end,
   return _decode_result;
 }
 
-::fidl::DecodeResult<Paver::SetActiveConfigurationResponse> Paver::SyncClient::SetActiveConfiguration(::fidl::DecodedMessage<SetActiveConfigurationRequest> params, ::fidl::BytePart response_buffer) {
-  return Paver::Call::SetActiveConfiguration(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Paver::SetActiveConfigurationResponse> Paver::SyncClient::SetActiveConfiguration_Deprecated(::fidl::DecodedMessage<SetActiveConfigurationRequest> params, ::fidl::BytePart response_buffer) {
+  return Paver::Call::SetActiveConfiguration_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Paver::SetActiveConfigurationResponse> Paver::Call::SetActiveConfiguration(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetActiveConfigurationRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Paver::SetActiveConfigurationResponse> Paver::Call::SetActiveConfiguration_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetActiveConfigurationRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPaver_SetActiveConfiguration_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -654,11 +654,11 @@ zx_status_t Paver::Call::SetActiveConfiguration(zx::unowned_channel _client_end,
 }
 
 
-zx_status_t Paver::SyncClient::MarkActiveConfigurationSuccessful(int32_t* out_status) {
-  return Paver::Call::MarkActiveConfigurationSuccessful(zx::unowned_channel(this->channel_), out_status);
+zx_status_t Paver::SyncClient::MarkActiveConfigurationSuccessful_Deprecated(int32_t* out_status) {
+  return Paver::Call::MarkActiveConfigurationSuccessful_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t Paver::Call::MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end, int32_t* out_status) {
+zx_status_t Paver::Call::MarkActiveConfigurationSuccessful_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MarkActiveConfigurationSuccessfulRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<MarkActiveConfigurationSuccessfulRequest*>(_write_bytes);
@@ -686,11 +686,11 @@ zx_status_t Paver::Call::MarkActiveConfigurationSuccessful(zx::unowned_channel _
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Paver::MarkActiveConfigurationSuccessfulResponse> Paver::SyncClient::MarkActiveConfigurationSuccessful(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Paver::Call::MarkActiveConfigurationSuccessful(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Paver::MarkActiveConfigurationSuccessfulResponse> Paver::SyncClient::MarkActiveConfigurationSuccessful_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Paver::Call::MarkActiveConfigurationSuccessful_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Paver::MarkActiveConfigurationSuccessfulResponse> Paver::Call::MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Paver::MarkActiveConfigurationSuccessfulResponse> Paver::Call::MarkActiveConfigurationSuccessful_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(MarkActiveConfigurationSuccessfulRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<MarkActiveConfigurationSuccessfulRequest*>(_request_buffer.data());
@@ -715,11 +715,11 @@ zx_status_t Paver::Call::MarkActiveConfigurationSuccessful(zx::unowned_channel _
   return _decode_result;
 }
 
-::fidl::DecodeResult<Paver::MarkActiveConfigurationSuccessfulResponse> Paver::SyncClient::MarkActiveConfigurationSuccessful(::fidl::BytePart response_buffer) {
-  return Paver::Call::MarkActiveConfigurationSuccessful(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Paver::MarkActiveConfigurationSuccessfulResponse> Paver::SyncClient::MarkActiveConfigurationSuccessful_Deprecated(::fidl::BytePart response_buffer) {
+  return Paver::Call::MarkActiveConfigurationSuccessful_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Paver::MarkActiveConfigurationSuccessfulResponse> Paver::Call::MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Paver::MarkActiveConfigurationSuccessfulResponse> Paver::Call::MarkActiveConfigurationSuccessful_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(MarkActiveConfigurationSuccessfulRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(MarkActiveConfigurationSuccessfulRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -745,11 +745,11 @@ zx_status_t Paver::Call::MarkActiveConfigurationSuccessful(zx::unowned_channel _
 }
 
 
-zx_status_t Paver::SyncClient::ForceRecoveryConfiguration(int32_t* out_status) {
-  return Paver::Call::ForceRecoveryConfiguration(zx::unowned_channel(this->channel_), out_status);
+zx_status_t Paver::SyncClient::ForceRecoveryConfiguration_Deprecated(int32_t* out_status) {
+  return Paver::Call::ForceRecoveryConfiguration_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t Paver::Call::ForceRecoveryConfiguration(zx::unowned_channel _client_end, int32_t* out_status) {
+zx_status_t Paver::Call::ForceRecoveryConfiguration_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ForceRecoveryConfigurationRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ForceRecoveryConfigurationRequest*>(_write_bytes);
@@ -777,11 +777,11 @@ zx_status_t Paver::Call::ForceRecoveryConfiguration(zx::unowned_channel _client_
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Paver::ForceRecoveryConfigurationResponse> Paver::SyncClient::ForceRecoveryConfiguration(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Paver::Call::ForceRecoveryConfiguration(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Paver::ForceRecoveryConfigurationResponse> Paver::SyncClient::ForceRecoveryConfiguration_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Paver::Call::ForceRecoveryConfiguration_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Paver::ForceRecoveryConfigurationResponse> Paver::Call::ForceRecoveryConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Paver::ForceRecoveryConfigurationResponse> Paver::Call::ForceRecoveryConfiguration_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ForceRecoveryConfigurationRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<ForceRecoveryConfigurationRequest*>(_request_buffer.data());
@@ -806,11 +806,11 @@ zx_status_t Paver::Call::ForceRecoveryConfiguration(zx::unowned_channel _client_
   return _decode_result;
 }
 
-::fidl::DecodeResult<Paver::ForceRecoveryConfigurationResponse> Paver::SyncClient::ForceRecoveryConfiguration(::fidl::BytePart response_buffer) {
-  return Paver::Call::ForceRecoveryConfiguration(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Paver::ForceRecoveryConfigurationResponse> Paver::SyncClient::ForceRecoveryConfiguration_Deprecated(::fidl::BytePart response_buffer) {
+  return Paver::Call::ForceRecoveryConfiguration_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Paver::ForceRecoveryConfigurationResponse> Paver::Call::ForceRecoveryConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Paver::ForceRecoveryConfigurationResponse> Paver::Call::ForceRecoveryConfiguration_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ForceRecoveryConfigurationRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(ForceRecoveryConfigurationRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -836,11 +836,11 @@ zx_status_t Paver::Call::ForceRecoveryConfiguration(zx::unowned_channel _client_
 }
 
 
-zx_status_t Paver::SyncClient::WriteAsset(Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
-  return Paver::Call::WriteAsset(zx::unowned_channel(this->channel_), std::move(configuration), std::move(asset), std::move(payload), out_status);
+zx_status_t Paver::SyncClient::WriteAsset_Deprecated(Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
+  return Paver::Call::WriteAsset_Deprecated(zx::unowned_channel(this->channel_), std::move(configuration), std::move(asset), std::move(payload), out_status);
 }
 
-zx_status_t Paver::Call::WriteAsset(zx::unowned_channel _client_end, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
+zx_status_t Paver::Call::WriteAsset_Deprecated(zx::unowned_channel _client_end, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WriteAssetRequest*>(_write_bytes);
@@ -871,11 +871,11 @@ zx_status_t Paver::Call::WriteAsset(zx::unowned_channel _client_end, Configurati
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Paver::WriteAssetResponse> Paver::SyncClient::WriteAsset(::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Paver::Call::WriteAsset(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(payload), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Paver::WriteAssetResponse> Paver::SyncClient::WriteAsset_Deprecated(::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Paver::Call::WriteAsset_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(payload), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Paver::WriteAssetResponse> Paver::Call::WriteAsset(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Paver::WriteAssetResponse> Paver::Call::WriteAsset_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   if (_request_buffer.capacity() < WriteAssetRequest::PrimarySize) {
     return ::fidl::DecodeResult<WriteAssetResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -904,11 +904,11 @@ zx_status_t Paver::Call::WriteAsset(zx::unowned_channel _client_end, Configurati
   return _decode_result;
 }
 
-::fidl::DecodeResult<Paver::WriteAssetResponse> Paver::SyncClient::WriteAsset(::fidl::DecodedMessage<WriteAssetRequest> params, ::fidl::BytePart response_buffer) {
-  return Paver::Call::WriteAsset(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Paver::WriteAssetResponse> Paver::SyncClient::WriteAsset_Deprecated(::fidl::DecodedMessage<WriteAssetRequest> params, ::fidl::BytePart response_buffer) {
+  return Paver::Call::WriteAsset_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Paver::WriteAssetResponse> Paver::Call::WriteAsset(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAssetRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Paver::WriteAssetResponse> Paver::Call::WriteAsset_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAssetRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPaver_WriteAsset_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -930,11 +930,11 @@ zx_status_t Paver::Call::WriteAsset(zx::unowned_channel _client_end, Configurati
 }
 
 
-zx_status_t Paver::SyncClient::WriteVolumes(::zx::channel payload, int32_t* out_status) {
-  return Paver::Call::WriteVolumes(zx::unowned_channel(this->channel_), std::move(payload), out_status);
+zx_status_t Paver::SyncClient::WriteVolumes_Deprecated(::zx::channel payload, int32_t* out_status) {
+  return Paver::Call::WriteVolumes_Deprecated(zx::unowned_channel(this->channel_), std::move(payload), out_status);
 }
 
-zx_status_t Paver::Call::WriteVolumes(zx::unowned_channel _client_end, ::zx::channel payload, int32_t* out_status) {
+zx_status_t Paver::Call::WriteVolumes_Deprecated(zx::unowned_channel _client_end, ::zx::channel payload, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WriteVolumesRequest*>(_write_bytes);
@@ -963,11 +963,11 @@ zx_status_t Paver::Call::WriteVolumes(zx::unowned_channel _client_end, ::zx::cha
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Paver::WriteVolumesResponse> Paver::SyncClient::WriteVolumes(::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Paver::Call::WriteVolumes(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(payload), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Paver::WriteVolumesResponse> Paver::SyncClient::WriteVolumes_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Paver::Call::WriteVolumes_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(payload), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Paver::WriteVolumesResponse> Paver::Call::WriteVolumes(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Paver::WriteVolumesResponse> Paver::Call::WriteVolumes_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   if (_request_buffer.capacity() < WriteVolumesRequest::PrimarySize) {
     return ::fidl::DecodeResult<WriteVolumesResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -994,11 +994,11 @@ zx_status_t Paver::Call::WriteVolumes(zx::unowned_channel _client_end, ::zx::cha
   return _decode_result;
 }
 
-::fidl::DecodeResult<Paver::WriteVolumesResponse> Paver::SyncClient::WriteVolumes(::fidl::DecodedMessage<WriteVolumesRequest> params, ::fidl::BytePart response_buffer) {
-  return Paver::Call::WriteVolumes(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Paver::WriteVolumesResponse> Paver::SyncClient::WriteVolumes_Deprecated(::fidl::DecodedMessage<WriteVolumesRequest> params, ::fidl::BytePart response_buffer) {
+  return Paver::Call::WriteVolumes_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Paver::WriteVolumesResponse> Paver::Call::WriteVolumes(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteVolumesRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Paver::WriteVolumesResponse> Paver::Call::WriteVolumes_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteVolumesRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPaver_WriteVolumes_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -1020,11 +1020,11 @@ zx_status_t Paver::Call::WriteVolumes(zx::unowned_channel _client_end, ::zx::cha
 }
 
 
-zx_status_t Paver::SyncClient::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
-  return Paver::Call::WriteBootloader(zx::unowned_channel(this->channel_), std::move(payload), out_status);
+zx_status_t Paver::SyncClient::WriteBootloader_Deprecated(::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
+  return Paver::Call::WriteBootloader_Deprecated(zx::unowned_channel(this->channel_), std::move(payload), out_status);
 }
 
-zx_status_t Paver::Call::WriteBootloader(zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
+zx_status_t Paver::Call::WriteBootloader_Deprecated(zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WriteBootloaderRequest*>(_write_bytes);
@@ -1053,11 +1053,11 @@ zx_status_t Paver::Call::WriteBootloader(zx::unowned_channel _client_end, ::llcp
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Paver::WriteBootloaderResponse> Paver::SyncClient::WriteBootloader(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Paver::Call::WriteBootloader(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(payload), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Paver::WriteBootloaderResponse> Paver::SyncClient::WriteBootloader_Deprecated(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Paver::Call::WriteBootloader_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(payload), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Paver::WriteBootloaderResponse> Paver::Call::WriteBootloader(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Paver::WriteBootloaderResponse> Paver::Call::WriteBootloader_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   if (_request_buffer.capacity() < WriteBootloaderRequest::PrimarySize) {
     return ::fidl::DecodeResult<WriteBootloaderResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -1084,11 +1084,11 @@ zx_status_t Paver::Call::WriteBootloader(zx::unowned_channel _client_end, ::llcp
   return _decode_result;
 }
 
-::fidl::DecodeResult<Paver::WriteBootloaderResponse> Paver::SyncClient::WriteBootloader(::fidl::DecodedMessage<WriteBootloaderRequest> params, ::fidl::BytePart response_buffer) {
-  return Paver::Call::WriteBootloader(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Paver::WriteBootloaderResponse> Paver::SyncClient::WriteBootloader_Deprecated(::fidl::DecodedMessage<WriteBootloaderRequest> params, ::fidl::BytePart response_buffer) {
+  return Paver::Call::WriteBootloader_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Paver::WriteBootloaderResponse> Paver::Call::WriteBootloader(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBootloaderRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Paver::WriteBootloaderResponse> Paver::Call::WriteBootloader_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBootloaderRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPaver_WriteBootloader_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -1110,11 +1110,11 @@ zx_status_t Paver::Call::WriteBootloader(zx::unowned_channel _client_end, ::llcp
 }
 
 
-zx_status_t Paver::SyncClient::WriteDataFile(::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
-  return Paver::Call::WriteDataFile(zx::unowned_channel(this->channel_), std::move(filename), std::move(payload), out_status);
+zx_status_t Paver::SyncClient::WriteDataFile_Deprecated(::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
+  return Paver::Call::WriteDataFile_Deprecated(zx::unowned_channel(this->channel_), std::move(filename), std::move(payload), out_status);
 }
 
-zx_status_t Paver::Call::WriteDataFile(zx::unowned_channel _client_end, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
+zx_status_t Paver::Call::WriteDataFile_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteDataFileRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -1149,11 +1149,11 @@ zx_status_t Paver::Call::WriteDataFile(zx::unowned_channel _client_end, ::fidl::
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Paver::WriteDataFileResponse> Paver::SyncClient::WriteDataFile(::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Paver::Call::WriteDataFile(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(filename), std::move(payload), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Paver::WriteDataFileResponse> Paver::SyncClient::WriteDataFile_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Paver::Call::WriteDataFile_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(filename), std::move(payload), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Paver::WriteDataFileResponse> Paver::Call::WriteDataFile(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Paver::WriteDataFileResponse> Paver::Call::WriteDataFile_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   if (_request_buffer.capacity() < WriteDataFileRequest::PrimarySize) {
     return ::fidl::DecodeResult<WriteDataFileResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -1184,11 +1184,11 @@ zx_status_t Paver::Call::WriteDataFile(zx::unowned_channel _client_end, ::fidl::
   return _decode_result;
 }
 
-::fidl::DecodeResult<Paver::WriteDataFileResponse> Paver::SyncClient::WriteDataFile(::fidl::DecodedMessage<WriteDataFileRequest> params, ::fidl::BytePart response_buffer) {
-  return Paver::Call::WriteDataFile(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Paver::WriteDataFileResponse> Paver::SyncClient::WriteDataFile_Deprecated(::fidl::DecodedMessage<WriteDataFileRequest> params, ::fidl::BytePart response_buffer) {
+  return Paver::Call::WriteDataFile_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Paver::WriteDataFileResponse> Paver::Call::WriteDataFile(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteDataFileRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Paver::WriteDataFileResponse> Paver::Call::WriteDataFile_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteDataFileRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kPaver_WriteDataFile_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -1210,11 +1210,11 @@ zx_status_t Paver::Call::WriteDataFile(zx::unowned_channel _client_end, ::fidl::
 }
 
 
-zx_status_t Paver::SyncClient::WipeVolumes(int32_t* out_status) {
-  return Paver::Call::WipeVolumes(zx::unowned_channel(this->channel_), out_status);
+zx_status_t Paver::SyncClient::WipeVolumes_Deprecated(int32_t* out_status) {
+  return Paver::Call::WipeVolumes_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t Paver::Call::WipeVolumes(zx::unowned_channel _client_end, int32_t* out_status) {
+zx_status_t Paver::Call::WipeVolumes_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumesRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WipeVolumesRequest*>(_write_bytes);
@@ -1242,11 +1242,11 @@ zx_status_t Paver::Call::WipeVolumes(zx::unowned_channel _client_end, int32_t* o
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Paver::WipeVolumesResponse> Paver::SyncClient::WipeVolumes(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Paver::Call::WipeVolumes(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Paver::WipeVolumesResponse> Paver::SyncClient::WipeVolumes_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Paver::Call::WipeVolumes_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Paver::WipeVolumesResponse> Paver::Call::WipeVolumes(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Paver::WipeVolumesResponse> Paver::Call::WipeVolumes_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(WipeVolumesRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<WipeVolumesRequest*>(_request_buffer.data());
@@ -1271,11 +1271,11 @@ zx_status_t Paver::Call::WipeVolumes(zx::unowned_channel _client_end, int32_t* o
   return _decode_result;
 }
 
-::fidl::DecodeResult<Paver::WipeVolumesResponse> Paver::SyncClient::WipeVolumes(::fidl::BytePart response_buffer) {
-  return Paver::Call::WipeVolumes(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Paver::WipeVolumesResponse> Paver::SyncClient::WipeVolumes_Deprecated(::fidl::BytePart response_buffer) {
+  return Paver::Call::WipeVolumes_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Paver::WipeVolumesResponse> Paver::Call::WipeVolumes(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Paver::WipeVolumesResponse> Paver::Call::WipeVolumes_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(WipeVolumesRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(WipeVolumesRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);

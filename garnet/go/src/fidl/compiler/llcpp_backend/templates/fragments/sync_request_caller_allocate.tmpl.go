@@ -15,17 +15,17 @@ const SyncRequestCallerAllocate = `
 
 {{- define "SyncRequestCallerAllocateMethodSignature" -}}
   {{- if .Response -}}
-{{ .Name }}({{ template "CallerBufferParams" .Request }}{{ if .Request }}, {{ end }}::fidl::BytePart _response_buffer, {{ template "OutParams" .Response }})
+{{ .Name }}_Deprecated({{ template "CallerBufferParams" .Request }}{{ if .Request }}, {{ end }}::fidl::BytePart _response_buffer, {{ template "OutParams" .Response }})
   {{- else -}}
-{{ .Name }}({{ template "CallerBufferParams" .Request }})
+{{ .Name }}_Deprecated({{ template "CallerBufferParams" .Request }})
   {{- end -}}
 {{- end }}
 
 {{- define "StaticCallSyncRequestCallerAllocateMethodSignature" -}}
   {{- if .Response -}}
-{{ .Name }}(zx::unowned_channel _client_end, {{ template "CallerBufferParams" .Request }}{{ if .Request }}, {{ end }}::fidl::BytePart _response_buffer, {{ template "OutParams" .Response }})
+{{ .Name }}_Deprecated(zx::unowned_channel _client_end, {{ template "CallerBufferParams" .Request }}{{ if .Request }}, {{ end }}::fidl::BytePart _response_buffer, {{ template "OutParams" .Response }})
   {{- else -}}
-{{ .Name }}(zx::unowned_channel _client_end, {{ template "CallerBufferParams" .Request }})
+{{ .Name }}_Deprecated(zx::unowned_channel _client_end, {{ template "CallerBufferParams" .Request }})
   {{- end -}}
 {{- end }}
 
@@ -35,7 +35,7 @@ const SyncRequestCallerAllocate = `
 {{- else -}}
   zx_status_t
 {{- end }} {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCallerAllocateMethodSignature" . }} {
-  return {{ .LLProps.InterfaceName }}::Call::{{ .Name }}(zx::unowned_channel(this->channel_)
+  return {{ .LLProps.InterfaceName }}::Call::{{ .Name }}_Deprecated(zx::unowned_channel(this->channel_)
     {{- if or .Request .Response }}, {{ end }}
     {{- if .Request -}}
       std::move(_request_buffer), {{ template "SyncClientMoveParams" .Request }}

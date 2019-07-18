@@ -99,7 +99,7 @@ int socket(int domain, int type, int protocol) {
     // We're going to manage blocking on the client side, so always ask the
     // provider for a non-blocking socket.
     zx_status_t status =
-        provider->Socket(static_cast<int16_t>(domain), static_cast<int16_t>(type) | SOCK_NONBLOCK,
+        provider->Socket_Deprecated(static_cast<int16_t>(domain), static_cast<int16_t>(type) | SOCK_NONBLOCK,
                          static_cast<int16_t>(protocol), &out_code, &created);
     if (status != ZX_OK) {
         return ERROR(status);
@@ -110,7 +110,7 @@ int socket(int domain, int type, int protocol) {
     fsocket::Control::SyncClient control(std::move(created));
 
     fio::NodeInfo node_info;
-    status = control.Describe(&node_info);
+    status = control.Describe_Deprecated(&node_info);
     if (status != ZX_OK) {
         return ERROR(status);
     }
@@ -155,7 +155,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     }
 
     int16_t out_code;
-    zx_status_t status = socket->control.Connect(
+    zx_status_t status = socket->control.Connect_Deprecated(
         fidl::VectorView(len, reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))), &out_code);
     if (status != ZX_OK) {
         fdio_release(io);
@@ -175,7 +175,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
                 return ERROR(status);
             }
             // Call Connect() again after blocking to find connect's result.
-            status = socket->control.Connect(
+            status = socket->control.Connect_Deprecated(
                 fidl::VectorView(len, reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))),
                 &out_code);
             if (status != ZX_OK) {
@@ -208,7 +208,7 @@ int bind(int fd, const struct sockaddr* addr, socklen_t len) {
     }
 
     int16_t out_code;
-    zx_status_t status = socket->control.Bind(
+    zx_status_t status = socket->control.Bind_Deprecated(
         fidl::VectorView(len, reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))), &out_code);
     fdio_release(io);
     if (status != ZX_OK) {
@@ -229,7 +229,7 @@ int listen(int fd, int backlog) {
     }
 
     int16_t out_code;
-    zx_status_t status = socket->control.Listen(static_cast<int16_t>(backlog), &out_code);
+    zx_status_t status = socket->control.Listen_Deprecated(static_cast<int16_t>(backlog), &out_code);
     if (status != ZX_OK) {
         fdio_release(io);
         return ERROR(status);
@@ -273,7 +273,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
         for (;;) {
             // We're going to manage blocking on the client side, so always ask the
             // provider for a non-blocking socket.
-            status = socket->control.Accept(static_cast<int16_t>(flags) | SOCK_NONBLOCK, &out_code,
+            status = socket->control.Accept_Deprecated(static_cast<int16_t>(flags) | SOCK_NONBLOCK, &out_code,
                                             &accepted);
             if (status != ZX_OK) {
                 break;
@@ -316,7 +316,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
 
     if (len) {
         uint8_t response_buffer[fidl::MaxSizeInChannel<fsocket::Control::GetPeerNameResponse>()];
-        fidl::DecodeResult result = control.GetPeerName(fidl::BytePart::WrapEmpty(response_buffer));
+        fidl::DecodeResult result = control.GetPeerName_Deprecated(fidl::BytePart::WrapEmpty(response_buffer));
         if (result.status != ZX_OK) {
             fdio_release_reserved(nfd);
             return ERROR(result.status);
@@ -331,7 +331,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
     }
 
     fio::NodeInfo node_info;
-    status = control.Describe(&node_info);
+    status = control.Describe_Deprecated(&node_info);
     if (status != ZX_OK) {
         fdio_release_reserved(nfd);
         return ERROR(status);
@@ -443,7 +443,7 @@ int getaddrinfo(const char* __restrict node, const char* __restrict service,
     fnet::AddrInfoStatus info_status;
     uint32_t nres = 0;
     fidl::Array<fnet::AddrInfo, 4> ai;
-    zx_status_t status = socket_provider->GetAddrInfo(fidl::StringView(node_size, node),
+    zx_status_t status = socket_provider->GetAddrInfo_Deprecated(fidl::StringView(node_size, node),
                                                       fidl::StringView(service_size, service), ht,
                                                       &info_status, &nres, &ai);
 
@@ -542,7 +542,7 @@ int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
 
     uint8_t response_buffer[fidl::MaxSizeInChannel<fsocket::Control::GetSockNameResponse>()];
     fidl::DecodeResult result =
-        socket->control.GetSockName(fidl::BytePart::WrapEmpty(response_buffer));
+        socket->control.GetSockName_Deprecated(fidl::BytePart::WrapEmpty(response_buffer));
     fdio_release(io);
     if (result.status != ZX_OK) {
         return ERROR(result.status);
@@ -570,7 +570,7 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
 
     uint8_t response_buffer[fidl::MaxSizeInChannel<fsocket::Control::GetPeerNameResponse>()];
     fidl::DecodeResult result =
-        socket->control.GetPeerName(fidl::BytePart::WrapEmpty(response_buffer));
+        socket->control.GetPeerName_Deprecated(fidl::BytePart::WrapEmpty(response_buffer));
     fdio_release(io);
     if (result.status != ZX_OK) {
         return ERROR(result.status);
@@ -617,7 +617,7 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
     request.message()->level = static_cast<int16_t>(level);
     request.message()->optname = static_cast<int16_t>(optname);
     fidl::DecodeResult result =
-        socket->control.GetSockOpt(std::move(request), fidl::BytePart::WrapEmpty(response_buffer));
+        socket->control.GetSockOpt_Deprecated(std::move(request), fidl::BytePart::WrapEmpty(response_buffer));
     fdio_release(io);
     if (result.status != ZX_OK) {
         return ERROR(result.status);
@@ -657,7 +657,7 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
     }
 
     int16_t out_code;
-    zx_status_t status = socket->control.SetSockOpt(
+    zx_status_t status = socket->control.SetSockOpt_Deprecated(
         static_cast<int16_t>(level), static_cast<int16_t>(optname),
         fidl::VectorView(optlen, static_cast<uint8_t*>(const_cast<void*>(optval))), &out_code);
     fdio_release(io);

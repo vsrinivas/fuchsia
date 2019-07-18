@@ -275,7 +275,7 @@ zx_status_t UsbPeripheral::FunctionRegistered() {
     zxlogf(TRACE, "usb_device_function_registered functions_registered = true\n");
     functions_registered_ = true;
     if (listener_) {
-        ::llcpp::fuchsia::hardware::usb::peripheral::Events::Call::FunctionRegistered(
+        ::llcpp::fuchsia::hardware::usb::peripheral::Events::Call::FunctionRegistered_Deprecated(
             zx::unowned_channel(listener_.get()));
     }
     return DeviceStateChanged();

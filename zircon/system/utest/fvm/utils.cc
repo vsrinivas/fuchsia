@@ -147,7 +147,7 @@ void BlockDeviceAdapter::WriteAt(const fbl::Array<uint8_t>& data, uint64_t offse
 
     zx_status_t status;
     fidl::DecodeResult<fuchsia::io::File::WriteAtResponse> result =
-        fuchsia::io::File::Call::WriteAt(device()->channel(), ToBytePart(&request),
+        fuchsia::io::File::Call::WriteAt_Deprecated(device()->channel(), ToBytePart(&request),
                                          ToFidlVector(data), offset, ToBytePart(&response), &status,
                                          &written_bytes);
 
@@ -166,7 +166,7 @@ void BlockDeviceAdapter::ReadAt(uint64_t offset, fbl::Array<uint8_t>* out_data) 
     zx_status_t status;
 
     fidl::DecodeResult<fuchsia::io::File::ReadAtResponse> result =
-        fuchsia::io::File::Call::ReadAt(device()->channel(), ToBytePart(&request), out_data->size(),
+        fuchsia::io::File::Call::ReadAt_Deprecated(device()->channel(), ToBytePart(&request), out_data->size(),
                                         offset, ToBytePart(&response), &status, &data);
 
     ASSERT_OK(result.status, "Failed to communicate with block device.");

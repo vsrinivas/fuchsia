@@ -216,7 +216,7 @@ protected:
             client_.emplace(std::move(ddk().FidlClient()));
         }
         zx_status_t status;
-        ASSERT_OK(client_->Write(std::move(op), &status, bad_block_grown));
+        ASSERT_OK(client_->Write_Deprecated(std::move(op), &status, bad_block_grown));
         ASSERT_EQ(status, expected);
     }
 
@@ -225,7 +225,7 @@ protected:
             client_.emplace(std::move(ddk().FidlClient()));
         }
         zx_status_t status;
-        ASSERT_OK(client_->Read(std::move(op), &status));
+        ASSERT_OK(client_->Read_Deprecated(std::move(op), &status));
         ASSERT_EQ(status, expected);
     }
 

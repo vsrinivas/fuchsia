@@ -219,11 +219,11 @@ zx_status_t RealMain(Flags flags) {
         disk_pave::PayloadStreamer streamer(std::move(server), std::move(flags.payload_fd));
         loop.StartThread("payload-stream");
 
-        io_status = paver_client.WriteVolumes(std::move(client), &status);
+        io_status = paver_client.WriteVolumes_Deprecated(std::move(client), &status);
         return io_status == ZX_OK ? status : io_status;
     }
     case Command::kWipe:
-        io_status = paver_client.WipeVolumes(&status);
+        io_status = paver_client.WipeVolumes_Deprecated(&status);
         return io_status == ZX_OK ? status : io_status;
     default:
         break;
@@ -242,15 +242,15 @@ zx_status_t RealMain(Flags flags) {
             PrintUsage();
             return ZX_ERR_INVALID_ARGS;
         }
-        io_status = paver_client.WriteDataFile(fidl::StringView(strlen(flags.path), flags.path),
+        io_status = paver_client.WriteDataFile_Deprecated(fidl::StringView(strlen(flags.path), flags.path),
                                                std::move(payload), &status);
         break;
     }
     case Command::kBootloader:
-        io_status = paver_client.WriteBootloader(std::move(payload), &status);
+        io_status = paver_client.WriteBootloader_Deprecated(std::move(payload), &status);
         break;
     case Command::kAsset:
-        io_status = paver_client.WriteAsset(flags.configuration, flags.asset, std::move(payload),
+        io_status = paver_client.WriteAsset_Deprecated(flags.configuration, flags.asset, std::move(payload),
                                             &status);
         break;
     default:

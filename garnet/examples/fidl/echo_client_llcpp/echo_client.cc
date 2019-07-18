@@ -51,7 +51,7 @@ int main(int argc, const char** argv) {
   std::vector<uint8_t> request_buffer(512);
   std::vector<uint8_t> response_buffer(512);
   fidl::StringView out_str = {};
-  auto result = client.EchoString(
+  auto result = client.EchoString_Deprecated(
       fidl::BytePart(&request_buffer[0], request_buffer.size()),
       fidl::StringView(msg.size(), &msg[0]),
       fidl::BytePart(&response_buffer[0], response_buffer.size()), &out_str);

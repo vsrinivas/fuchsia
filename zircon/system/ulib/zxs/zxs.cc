@@ -13,7 +13,7 @@
 
 zx_status_t zxs_close(zxs_socket_t socket) {
   zx_status_t status;
-  zx_status_t io_status = socket.control.Close(&status);
+  zx_status_t io_status = socket.control.Close_Deprecated(&status);
   if (io_status != ZX_OK) {
     return io_status;
   }

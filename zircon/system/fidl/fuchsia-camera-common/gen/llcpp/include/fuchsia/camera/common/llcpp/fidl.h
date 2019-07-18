@@ -146,21 +146,21 @@ class Stream final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Starts the streaming of frames.
-    zx_status_t Start();
+    zx_status_t Start_Deprecated();
 
     // Stops the streaming of frames.
-    zx_status_t Stop();
+    zx_status_t Stop_Deprecated();
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
-    zx_status_t ReleaseFrame(uint32_t buffer_id);
+    zx_status_t ReleaseFrame_Deprecated(uint32_t buffer_id);
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t ReleaseFrame(::fidl::BytePart _request_buffer, uint32_t buffer_id);
+    zx_status_t ReleaseFrame_Deprecated(::fidl::BytePart _request_buffer, uint32_t buffer_id);
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
     // Messages are encoded and decoded in-place.
-    zx_status_t ReleaseFrame(::fidl::DecodedMessage<ReleaseFrameRequest> params);
+    zx_status_t ReleaseFrame_Deprecated(::fidl::DecodedMessage<ReleaseFrameRequest> params);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -176,21 +176,21 @@ class Stream final {
    public:
 
     // Starts the streaming of frames.
-    static zx_status_t Start(zx::unowned_channel _client_end);
+    static zx_status_t Start_Deprecated(zx::unowned_channel _client_end);
 
     // Stops the streaming of frames.
-    static zx_status_t Stop(zx::unowned_channel _client_end);
+    static zx_status_t Stop_Deprecated(zx::unowned_channel _client_end);
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
-    static zx_status_t ReleaseFrame(zx::unowned_channel _client_end, uint32_t buffer_id);
+    static zx_status_t ReleaseFrame_Deprecated(zx::unowned_channel _client_end, uint32_t buffer_id);
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t ReleaseFrame(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t buffer_id);
+    static zx_status_t ReleaseFrame_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t buffer_id);
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
     // Messages are encoded and decoded in-place.
-    static zx_status_t ReleaseFrame(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseFrameRequest> params);
+    static zx_status_t ReleaseFrame_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseFrameRequest> params);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -449,17 +449,17 @@ class VirtualCameraFactory final {
 
     // Creates a new VirtualCameraDevice based on the configuration passed in.
     // `config`: a VirtualCameraConfig defining how the new device should behave.
-    zx_status_t CreateDevice(VirtualCameraConfig config);
+    zx_status_t CreateDevice_Deprecated(VirtualCameraConfig config);
 
     // Creates a new VirtualCameraDevice based on the configuration passed in.
     // `config`: a VirtualCameraConfig defining how the new device should behave.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t CreateDevice(::fidl::BytePart _request_buffer, VirtualCameraConfig config);
+    zx_status_t CreateDevice_Deprecated(::fidl::BytePart _request_buffer, VirtualCameraConfig config);
 
     // Creates a new VirtualCameraDevice based on the configuration passed in.
     // `config`: a VirtualCameraConfig defining how the new device should behave.
     // Messages are encoded and decoded in-place.
-    zx_status_t CreateDevice(::fidl::DecodedMessage<CreateDeviceRequest> params);
+    zx_status_t CreateDevice_Deprecated(::fidl::DecodedMessage<CreateDeviceRequest> params);
 
    private:
     ::zx::channel channel_;
@@ -471,17 +471,17 @@ class VirtualCameraFactory final {
 
     // Creates a new VirtualCameraDevice based on the configuration passed in.
     // `config`: a VirtualCameraConfig defining how the new device should behave.
-    static zx_status_t CreateDevice(zx::unowned_channel _client_end, VirtualCameraConfig config);
+    static zx_status_t CreateDevice_Deprecated(zx::unowned_channel _client_end, VirtualCameraConfig config);
 
     // Creates a new VirtualCameraDevice based on the configuration passed in.
     // `config`: a VirtualCameraConfig defining how the new device should behave.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t CreateDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, VirtualCameraConfig config);
+    static zx_status_t CreateDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, VirtualCameraConfig config);
 
     // Creates a new VirtualCameraDevice based on the configuration passed in.
     // `config`: a VirtualCameraConfig defining how the new device should behave.
     // Messages are encoded and decoded in-place.
-    static zx_status_t CreateDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateDeviceRequest> params);
+    static zx_status_t CreateDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateDeviceRequest> params);
 
   };
 

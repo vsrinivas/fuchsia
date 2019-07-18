@@ -54,9 +54,9 @@ class SwitchingOrdinals final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    zx_status_t OrdinalFive();
+    zx_status_t OrdinalFive_Deprecated();
 
-    zx_status_t OnlyGeneratedOrdinal();
+    zx_status_t OnlyGeneratedOrdinal_Deprecated();
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -71,9 +71,9 @@ class SwitchingOrdinals final {
   class Call final {
    public:
 
-    static zx_status_t OrdinalFive(zx::unowned_channel _client_end);
+    static zx_status_t OrdinalFive_Deprecated(zx::unowned_channel _client_end);
 
-    static zx_status_t OnlyGeneratedOrdinal(zx::unowned_channel _client_end);
+    static zx_status_t OnlyGeneratedOrdinal_Deprecated(zx::unowned_channel _client_end);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler

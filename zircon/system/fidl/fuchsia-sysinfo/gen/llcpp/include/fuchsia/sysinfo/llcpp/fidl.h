@@ -120,48 +120,48 @@ class Device final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    zx_status_t GetRootJob(int32_t* out_status, ::zx::job* out_job);
+    zx_status_t GetRootJob_Deprecated(int32_t* out_status, ::zx::job* out_job);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetRootJobResponse> GetRootJob(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::job* out_job);
+    ::fidl::DecodeResult<GetRootJobResponse> GetRootJob_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::job* out_job);
 
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetRootJobResponse> GetRootJob(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<GetRootJobResponse> GetRootJob_Deprecated(::fidl::BytePart response_buffer);
 
-    zx_status_t GetRootResource(int32_t* out_status, ::zx::resource* out_resource);
+    zx_status_t GetRootResource_Deprecated(int32_t* out_status, ::zx::resource* out_resource);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetRootResourceResponse> GetRootResource(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource);
+    ::fidl::DecodeResult<GetRootResourceResponse> GetRootResource_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource);
 
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetRootResourceResponse> GetRootResource(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<GetRootResourceResponse> GetRootResource_Deprecated(::fidl::BytePart response_buffer);
 
-    zx_status_t GetHypervisorResource(int32_t* out_status, ::zx::resource* out_resource);
+    zx_status_t GetHypervisorResource_Deprecated(int32_t* out_status, ::zx::resource* out_resource);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetHypervisorResourceResponse> GetHypervisorResource(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource);
+    ::fidl::DecodeResult<GetHypervisorResourceResponse> GetHypervisorResource_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource);
 
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetHypervisorResourceResponse> GetHypervisorResource(::fidl::BytePart response_buffer);
-
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetBoardNameResponse> GetBoardName(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name);
-
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetBoardNameResponse> GetBoardName(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<GetHypervisorResourceResponse> GetHypervisorResource_Deprecated(::fidl::BytePart response_buffer);
 
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetInterruptControllerInfoResponse> GetInterruptControllerInfo(::fidl::BytePart _response_buffer, int32_t* out_status, InterruptControllerInfo** out_info);
+    ::fidl::DecodeResult<GetBoardNameResponse> GetBoardName_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name);
 
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetInterruptControllerInfoResponse> GetInterruptControllerInfo(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<GetBoardNameResponse> GetBoardName_Deprecated(::fidl::BytePart response_buffer);
+
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetInterruptControllerInfoResponse> GetInterruptControllerInfo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, InterruptControllerInfo** out_info);
+
+    // Messages are encoded and decoded in-place.
+    ::fidl::DecodeResult<GetInterruptControllerInfoResponse> GetInterruptControllerInfo_Deprecated(::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -171,48 +171,48 @@ class Device final {
   class Call final {
    public:
 
-    static zx_status_t GetRootJob(zx::unowned_channel _client_end, int32_t* out_status, ::zx::job* out_job);
+    static zx_status_t GetRootJob_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::job* out_job);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetRootJobResponse> GetRootJob(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::job* out_job);
+    static ::fidl::DecodeResult<GetRootJobResponse> GetRootJob_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::job* out_job);
 
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetRootJobResponse> GetRootJob(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetRootJobResponse> GetRootJob_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static zx_status_t GetRootResource(zx::unowned_channel _client_end, int32_t* out_status, ::zx::resource* out_resource);
+    static zx_status_t GetRootResource_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::resource* out_resource);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetRootResourceResponse> GetRootResource(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource);
+    static ::fidl::DecodeResult<GetRootResourceResponse> GetRootResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource);
 
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetRootResourceResponse> GetRootResource(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetRootResourceResponse> GetRootResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static zx_status_t GetHypervisorResource(zx::unowned_channel _client_end, int32_t* out_status, ::zx::resource* out_resource);
+    static zx_status_t GetHypervisorResource_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::resource* out_resource);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetHypervisorResourceResponse> GetHypervisorResource(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource);
+    static ::fidl::DecodeResult<GetHypervisorResourceResponse> GetHypervisorResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource);
 
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetHypervisorResourceResponse> GetHypervisorResource(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetBoardNameResponse> GetBoardName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name);
-
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetBoardNameResponse> GetBoardName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetHypervisorResourceResponse> GetHypervisorResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetInterruptControllerInfoResponse> GetInterruptControllerInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, InterruptControllerInfo** out_info);
+    static ::fidl::DecodeResult<GetBoardNameResponse> GetBoardName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name);
 
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetInterruptControllerInfoResponse> GetInterruptControllerInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetBoardNameResponse> GetBoardName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetInterruptControllerInfoResponse> GetInterruptControllerInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, InterruptControllerInfo** out_info);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<GetInterruptControllerInfoResponse> GetInterruptControllerInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

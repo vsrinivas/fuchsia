@@ -194,7 +194,7 @@ void Device::SnoopQmiMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
     qmi_msg.timestamp = zx_clock_get_monotonic();
     memcpy(qmi_msg.opaque_bytes.data_, snoop_data, current_length);
     snoop_msg.set_qmi_message(qmi_msg);
-    fidl_tel_snoop::Publisher::Call::SendMessage(
+    fidl_tel_snoop::Publisher::Call::SendMessage_Deprecated(
         zx::unowned_channel(snoop_channel_), std::move(snoop_msg));
   }
 }

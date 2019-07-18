@@ -6,6 +6,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
+  "service_declarations": [],
   "struct_declarations": [
     {
       "name": "test.name/Empty",

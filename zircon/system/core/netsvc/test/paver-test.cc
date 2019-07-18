@@ -103,7 +103,7 @@ public:
             return;
         }
         ::llcpp::fuchsia::paver::PayloadStream::SyncClient stream(std::move(payload_stream));
-        auto io_status = stream.RegisterVmo(std::move(vmo), &status);
+        auto io_status = stream.RegisterVmo_Deprecated(std::move(vmo), &status);
         status = io_status == ZX_OK ? status : io_status;
         if (status != ZX_OK) {
             completer.Reply(status);
@@ -114,7 +114,7 @@ public:
             size_t data_transferred = 0;
             for (;;) {
                 ::llcpp::fuchsia::paver::ReadResult result;
-                auto io_status = stream.ReadData(&result);
+                auto io_status = stream.ReadData_Deprecated(&result);
                 if (io_status != ZX_OK) {
                     return io_status;
                 }

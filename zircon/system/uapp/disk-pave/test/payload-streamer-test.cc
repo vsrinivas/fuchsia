@@ -53,18 +53,18 @@ TEST_F(PayloadStreamerTest, RegisterVmo) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
     zx_status_t status;
-    ASSERT_OK(client_->RegisterVmo(std::move(vmo), &status));
+    ASSERT_OK(client_->RegisterVmo_Deprecated(std::move(vmo), &status));
     EXPECT_OK(status);
 }
 
 TEST_F(PayloadStreamerTest, RegisterInvalidVmo) {
     zx_status_t status;
-    EXPECT_NE(client_->RegisterVmo(zx::vmo(), &status), ZX_OK);
+    EXPECT_NE(client_->RegisterVmo_Deprecated(zx::vmo(), &status), ZX_OK);
 }
 
 TEST_F(PayloadStreamerTest, ReadNoVmoRegistered) {
     ::llcpp::fuchsia::paver::ReadResult result;
-    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_OK(client_->ReadData_Deprecated(&result));
     ASSERT_TRUE(result.is_err());
     EXPECT_NE(result.err(), ZX_OK);
 }
@@ -74,11 +74,11 @@ TEST_F(PayloadStreamerTest, ReadData) {
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
     ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
     zx_status_t status;
-    ASSERT_OK(client_->RegisterVmo(std::move(dup), &status));
+    ASSERT_OK(client_->RegisterVmo_Deprecated(std::move(dup), &status));
     EXPECT_OK(status);
 
     ::llcpp::fuchsia::paver::ReadResult result;
-    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_OK(client_->ReadData_Deprecated(&result));
     ASSERT_TRUE(result.is_info());
 
     char buffer[sizeof(kFileData)] = {};
@@ -91,17 +91,17 @@ TEST_F(PayloadStreamerTest, ReadEof) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
     zx_status_t status;
-    ASSERT_OK(client_->RegisterVmo(std::move(vmo), &status));
+    ASSERT_OK(client_->RegisterVmo_Deprecated(std::move(vmo), &status));
     EXPECT_OK(status);
 
     ::llcpp::fuchsia::paver::ReadResult result;
-    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_OK(client_->ReadData_Deprecated(&result));
     ASSERT_TRUE(result.is_info());
 
-    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_OK(client_->ReadData_Deprecated(&result));
     ASSERT_TRUE(result.is_eof());
 
-    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_OK(client_->ReadData_Deprecated(&result));
     ASSERT_TRUE(result.is_eof());
 }
 

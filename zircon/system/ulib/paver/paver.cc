@@ -110,7 +110,7 @@ zx_status_t GetTopoPathFromFd(const fbl::unique_fd& fd, char* buf, size_t buf_le
     fzl::UnownedFdioCaller caller(fd.get());
     fidl::StringView path;
     zx_status_t status;
-    auto decoded = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
+    auto decoded = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath_Deprecated(
         caller.channel(),  fidl::BytePart::WrapEmpty(out_buffer), &status, &path);
     if (decoded.status != ZX_OK) {
         return decoded.status;
@@ -161,7 +161,7 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vm
 
     zx::fifo fifo;
     zx_status_t status;
-    zx_status_t io_status = block::Block::Call::GetFifo(caller.channel(), &status, &fifo);
+    zx_status_t io_status = block::Block::Call::GetFifo_Deprecated(caller.channel(), &status, &fifo);
     if (io_status != ZX_OK)
         return io_status;
     if (status != ZX_OK)
@@ -176,7 +176,7 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vm
     uint8_t in_buffer[fidl::MaxSizeInChannel<block::Block::AttachVmoRequest>()];
     uint8_t out_buffer[fidl::MaxSizeInChannel<block::Block::AttachVmoResponse>()];
     block::VmoID* vmoid;
-    auto decoded = block::Block::Call::AttachVmo(
+    auto decoded = block::Block::Call::AttachVmo_Deprecated(
         caller.channel(), fidl::BytePart::WrapEmpty(in_buffer), std::move(dup),
         fidl::BytePart::WrapEmpty(out_buffer), &status, &vmoid);
     if (decoded.status != ZX_OK)
@@ -391,7 +391,7 @@ zx_status_t WriteVmoToSkipBlock(const zx::vmo& vmo, size_t vmo_size,
             .block_count = static_cast<uint32_t>(vmo_size / block_size_bytes),
         };
 
-        auto io_status = skipblock::SkipBlock::Call::Read(caller.channel(), std::move(operation),
+        auto io_status = skipblock::SkipBlock::Call::Read_Deprecated(caller.channel(), std::move(operation),
                                                           &status);
         status = io_status == ZX_OK ? status : io_status;
         if (status != ZX_OK) {
@@ -421,7 +421,7 @@ zx_status_t WriteVmoToSkipBlock(const zx::vmo& vmo, size_t vmo_size,
     };
     bool bad_block_grown;
 
-    auto io_status = skipblock::SkipBlock::Call::Write(caller.channel(), std::move(operation),
+    auto io_status = skipblock::SkipBlock::Call::Write_Deprecated(caller.channel(), std::move(operation),
                                                        &status, &bad_block_grown);
     status = io_status == ZX_OK ? status : io_status;
     if (status != ZX_OK) {
@@ -513,7 +513,7 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& partition_fd, zx::durati
     fzl::UnownedFdioCaller caller(partition_fd.get());
     zx_status_t call_status;
     constexpr char kFvmDriverLib[] = "/boot/driver/fvm.so";
-    status = ::llcpp::fuchsia::device::Controller::Call::Bind(
+    status = ::llcpp::fuchsia::device::Controller::Call::Bind_Deprecated(
         caller.channel(), fidl::StringView(strlen(kFvmDriverLib), kFvmDriverLib), &call_status);
     if (status == ZX_OK) {
         status = call_status;
@@ -579,7 +579,7 @@ fbl::unique_fd FvmPartitionFormat(fbl::unique_fd partition_fd, size_t slice_size
 
     {
         fzl::UnownedFdioCaller partition_connection(partition_fd.get());
-        zx_status_t io_status = block::Block::Call::RebindDevice(partition_connection.channel(),
+        zx_status_t io_status = block::Block::Call::RebindDevice_Deprecated(partition_connection.channel(),
                                                                  &status);
         if (io_status != ZX_OK) {
             status = io_status;
@@ -655,7 +655,7 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     uint64_t length = needed - allocated;
     {
         fzl::UnownedFdioCaller partition_connection(part->new_part.get());
-        zx_status_t io_status = volume::Volume::Call::Extend(partition_connection.channel(), offset,
+        zx_status_t io_status = volume::Volume::Call::Extend_Deprecated(partition_connection.channel(), offset,
                                                              length, &status);
         if (io_status != ZX_OK) {
             status = io_status;
@@ -728,7 +728,7 @@ zx_status_t WipeAllFvmPartitionsWithGUID(const fbl::unique_fd& fvm_fd, const uin
 
         fzl::UnownedFdioCaller partition_connection(old_part.get());
         zx_status_t io_status, status;
-        io_status = volume::Volume::Call::Destroy(partition_connection.channel(), &status);
+        io_status = volume::Volume::Call::Destroy_Deprecated(partition_connection.channel(), &status);
         if (io_status != ZX_OK) {
             status = io_status;
         }
@@ -856,7 +856,7 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& fvm_fd,
 
             fzl::UnownedFdioCaller partition_connection(parts[p].new_part.get());
             zx_status_t status;
-            zx_status_t io_status = volume::Volume::Call::Extend(
+            zx_status_t io_status = volume::Volume::Call::Extend_Deprecated(
                 partition_connection.channel(), offset, length, &status);
             if (io_status != ZX_OK) {
                 status = io_status;
@@ -975,7 +975,7 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd,
         fzl::UnownedFdioCaller partition_connection(parts[p].new_part.get());
         uint8_t out_buffer[fidl::MaxSizeInChannel<block::Block::GetInfoResponse>()];
         block::BlockInfo* block_info;
-        auto decoded = block::Block::Call::GetInfo(
+        auto decoded = block::Block::Call::GetInfo_Deprecated(
             partition_connection.channel(), fidl::BytePart::WrapEmpty(out_buffer), &status,
             &block_info);
         if (decoded.status != ZX_OK) {
@@ -1013,7 +1013,7 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd,
         // inactive) so the new partition persists.
         uint8_t out_buffer[fidl::MaxSizeInChannel<partition::Partition::GetInstanceGuidResponse>()];
         block::partition::GUID* guid;
-        auto decoded = partition::Partition::Call::GetInstanceGuid(
+        auto decoded = partition::Partition::Call::GetInstanceGuid_Deprecated(
             partition_connection.channel(), fidl::BytePart::WrapEmpty(out_buffer), &status, &guid);
         if (decoded.status != ZX_OK || status != ZX_OK) {
             ERROR("Failed to get unique GUID of new partition\n");
@@ -1021,7 +1021,7 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd,
         }
 
         zx_status_t status;
-        zx_status_t io_status = volume::VolumeManager::Call::Activate(
+        zx_status_t io_status = volume::VolumeManager::Call::Activate_Deprecated(
             volume_manager.channel(), *guid, *guid, &status);
         if (io_status != ZX_OK || status != ZX_OK) {
             ERROR("Failed to upgrade partition\n");

@@ -28,11 +28,11 @@ extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetInterruptControllerInfoRes
 
 }  // namespace
 
-zx_status_t Device::SyncClient::GetRootJob(int32_t* out_status, ::zx::job* out_job) {
-  return Device::Call::GetRootJob(zx::unowned_channel(this->channel_), out_status, out_job);
+zx_status_t Device::SyncClient::GetRootJob_Deprecated(int32_t* out_status, ::zx::job* out_job) {
+  return Device::Call::GetRootJob_Deprecated(zx::unowned_channel(this->channel_), out_status, out_job);
 }
 
-zx_status_t Device::Call::GetRootJob(zx::unowned_channel _client_end, int32_t* out_status, ::zx::job* out_job) {
+zx_status_t Device::Call::GetRootJob_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::job* out_job) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRootJobRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRootJobRequest*>(_write_bytes);
@@ -61,11 +61,11 @@ zx_status_t Device::Call::GetRootJob(zx::unowned_channel _client_end, int32_t* o
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Device::GetRootJobResponse> Device::SyncClient::GetRootJob(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::job* out_job) {
-  return Device::Call::GetRootJob(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_job);
+::fidl::DecodeResult<Device::GetRootJobResponse> Device::SyncClient::GetRootJob_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::job* out_job) {
+  return Device::Call::GetRootJob_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_job);
 }
 
-::fidl::DecodeResult<Device::GetRootJobResponse> Device::Call::GetRootJob(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::job* out_job) {
+::fidl::DecodeResult<Device::GetRootJobResponse> Device::Call::GetRootJob_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::job* out_job) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRootJobRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetRootJobRequest*>(_request_buffer.data());
@@ -91,11 +91,11 @@ zx_status_t Device::Call::GetRootJob(zx::unowned_channel _client_end, int32_t* o
   return _decode_result;
 }
 
-::fidl::DecodeResult<Device::GetRootJobResponse> Device::SyncClient::GetRootJob(::fidl::BytePart response_buffer) {
-  return Device::Call::GetRootJob(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Device::GetRootJobResponse> Device::SyncClient::GetRootJob_Deprecated(::fidl::BytePart response_buffer) {
+  return Device::Call::GetRootJob_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetRootJobResponse> Device::Call::GetRootJob(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetRootJobResponse> Device::Call::GetRootJob_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRootJobRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetRootJobRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -121,11 +121,11 @@ zx_status_t Device::Call::GetRootJob(zx::unowned_channel _client_end, int32_t* o
 }
 
 
-zx_status_t Device::SyncClient::GetRootResource(int32_t* out_status, ::zx::resource* out_resource) {
-  return Device::Call::GetRootResource(zx::unowned_channel(this->channel_), out_status, out_resource);
+zx_status_t Device::SyncClient::GetRootResource_Deprecated(int32_t* out_status, ::zx::resource* out_resource) {
+  return Device::Call::GetRootResource_Deprecated(zx::unowned_channel(this->channel_), out_status, out_resource);
 }
 
-zx_status_t Device::Call::GetRootResource(zx::unowned_channel _client_end, int32_t* out_status, ::zx::resource* out_resource) {
+zx_status_t Device::Call::GetRootResource_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::resource* out_resource) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRootResourceRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetRootResourceRequest*>(_write_bytes);
@@ -154,11 +154,11 @@ zx_status_t Device::Call::GetRootResource(zx::unowned_channel _client_end, int32
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Device::GetRootResourceResponse> Device::SyncClient::GetRootResource(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource) {
-  return Device::Call::GetRootResource(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_resource);
+::fidl::DecodeResult<Device::GetRootResourceResponse> Device::SyncClient::GetRootResource_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource) {
+  return Device::Call::GetRootResource_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_resource);
 }
 
-::fidl::DecodeResult<Device::GetRootResourceResponse> Device::Call::GetRootResource(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource) {
+::fidl::DecodeResult<Device::GetRootResourceResponse> Device::Call::GetRootResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRootResourceRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetRootResourceRequest*>(_request_buffer.data());
@@ -184,11 +184,11 @@ zx_status_t Device::Call::GetRootResource(zx::unowned_channel _client_end, int32
   return _decode_result;
 }
 
-::fidl::DecodeResult<Device::GetRootResourceResponse> Device::SyncClient::GetRootResource(::fidl::BytePart response_buffer) {
-  return Device::Call::GetRootResource(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Device::GetRootResourceResponse> Device::SyncClient::GetRootResource_Deprecated(::fidl::BytePart response_buffer) {
+  return Device::Call::GetRootResource_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetRootResourceResponse> Device::Call::GetRootResource(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetRootResourceResponse> Device::Call::GetRootResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRootResourceRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetRootResourceRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -214,11 +214,11 @@ zx_status_t Device::Call::GetRootResource(zx::unowned_channel _client_end, int32
 }
 
 
-zx_status_t Device::SyncClient::GetHypervisorResource(int32_t* out_status, ::zx::resource* out_resource) {
-  return Device::Call::GetHypervisorResource(zx::unowned_channel(this->channel_), out_status, out_resource);
+zx_status_t Device::SyncClient::GetHypervisorResource_Deprecated(int32_t* out_status, ::zx::resource* out_resource) {
+  return Device::Call::GetHypervisorResource_Deprecated(zx::unowned_channel(this->channel_), out_status, out_resource);
 }
 
-zx_status_t Device::Call::GetHypervisorResource(zx::unowned_channel _client_end, int32_t* out_status, ::zx::resource* out_resource) {
+zx_status_t Device::Call::GetHypervisorResource_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::resource* out_resource) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetHypervisorResourceRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetHypervisorResourceRequest*>(_write_bytes);
@@ -247,11 +247,11 @@ zx_status_t Device::Call::GetHypervisorResource(zx::unowned_channel _client_end,
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Device::GetHypervisorResourceResponse> Device::SyncClient::GetHypervisorResource(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource) {
-  return Device::Call::GetHypervisorResource(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_resource);
+::fidl::DecodeResult<Device::GetHypervisorResourceResponse> Device::SyncClient::GetHypervisorResource_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource) {
+  return Device::Call::GetHypervisorResource_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_resource);
 }
 
-::fidl::DecodeResult<Device::GetHypervisorResourceResponse> Device::Call::GetHypervisorResource(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource) {
+::fidl::DecodeResult<Device::GetHypervisorResourceResponse> Device::Call::GetHypervisorResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetHypervisorResourceRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetHypervisorResourceRequest*>(_request_buffer.data());
@@ -277,11 +277,11 @@ zx_status_t Device::Call::GetHypervisorResource(zx::unowned_channel _client_end,
   return _decode_result;
 }
 
-::fidl::DecodeResult<Device::GetHypervisorResourceResponse> Device::SyncClient::GetHypervisorResource(::fidl::BytePart response_buffer) {
-  return Device::Call::GetHypervisorResource(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Device::GetHypervisorResourceResponse> Device::SyncClient::GetHypervisorResource_Deprecated(::fidl::BytePart response_buffer) {
+  return Device::Call::GetHypervisorResource_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetHypervisorResourceResponse> Device::Call::GetHypervisorResource(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetHypervisorResourceResponse> Device::Call::GetHypervisorResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetHypervisorResourceRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetHypervisorResourceRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -307,11 +307,11 @@ zx_status_t Device::Call::GetHypervisorResource(zx::unowned_channel _client_end,
 }
 
 
-::fidl::DecodeResult<Device::GetBoardNameResponse> Device::SyncClient::GetBoardName(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name) {
-  return Device::Call::GetBoardName(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_name);
+::fidl::DecodeResult<Device::GetBoardNameResponse> Device::SyncClient::GetBoardName_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name) {
+  return Device::Call::GetBoardName_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_name);
 }
 
-::fidl::DecodeResult<Device::GetBoardNameResponse> Device::Call::GetBoardName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name) {
+::fidl::DecodeResult<Device::GetBoardNameResponse> Device::Call::GetBoardName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetBoardNameRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetBoardNameRequest*>(_request_buffer.data());
@@ -337,11 +337,11 @@ zx_status_t Device::Call::GetHypervisorResource(zx::unowned_channel _client_end,
   return _decode_result;
 }
 
-::fidl::DecodeResult<Device::GetBoardNameResponse> Device::SyncClient::GetBoardName(::fidl::BytePart response_buffer) {
-  return Device::Call::GetBoardName(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Device::GetBoardNameResponse> Device::SyncClient::GetBoardName_Deprecated(::fidl::BytePart response_buffer) {
+  return Device::Call::GetBoardName_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetBoardNameResponse> Device::Call::GetBoardName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetBoardNameResponse> Device::Call::GetBoardName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetBoardNameRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetBoardNameRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -367,11 +367,11 @@ zx_status_t Device::Call::GetHypervisorResource(zx::unowned_channel _client_end,
 }
 
 
-::fidl::DecodeResult<Device::GetInterruptControllerInfoResponse> Device::SyncClient::GetInterruptControllerInfo(::fidl::BytePart _response_buffer, int32_t* out_status, InterruptControllerInfo** out_info) {
-  return Device::Call::GetInterruptControllerInfo(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_info);
+::fidl::DecodeResult<Device::GetInterruptControllerInfoResponse> Device::SyncClient::GetInterruptControllerInfo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, InterruptControllerInfo** out_info) {
+  return Device::Call::GetInterruptControllerInfo_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_info);
 }
 
-::fidl::DecodeResult<Device::GetInterruptControllerInfoResponse> Device::Call::GetInterruptControllerInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, InterruptControllerInfo** out_info) {
+::fidl::DecodeResult<Device::GetInterruptControllerInfoResponse> Device::Call::GetInterruptControllerInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, InterruptControllerInfo** out_info) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInterruptControllerInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetInterruptControllerInfoRequest*>(_request_buffer.data());
@@ -397,11 +397,11 @@ zx_status_t Device::Call::GetHypervisorResource(zx::unowned_channel _client_end,
   return _decode_result;
 }
 
-::fidl::DecodeResult<Device::GetInterruptControllerInfoResponse> Device::SyncClient::GetInterruptControllerInfo(::fidl::BytePart response_buffer) {
-  return Device::Call::GetInterruptControllerInfo(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Device::GetInterruptControllerInfoResponse> Device::SyncClient::GetInterruptControllerInfo_Deprecated(::fidl::BytePart response_buffer) {
+  return Device::Call::GetInterruptControllerInfo_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetInterruptControllerInfoResponse> Device::Call::GetInterruptControllerInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetInterruptControllerInfoResponse> Device::Call::GetInterruptControllerInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInterruptControllerInfoRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetInterruptControllerInfoRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);

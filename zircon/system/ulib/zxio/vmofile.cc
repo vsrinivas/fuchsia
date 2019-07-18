@@ -36,7 +36,7 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
     mtx_unlock(&file->lock);
 
     zx_status_t io_status, status;
-    if ((io_status = fio::File::Call::Seek(zx::unowned_channel(control),
+    if ((io_status = fio::File::Call::Seek_Deprecated(zx::unowned_channel(control),
                                            seek,
                                            fio::SeekOrigin::START,
                                            &status,
@@ -64,7 +64,7 @@ static zx_status_t zxio_vmofile_clone(zxio_t* io, zx_handle_t* out_handle) {
     if (status != ZX_OK) {
         return status;
     }
-    status = fio::Node::Call::Clone(zx::unowned_channel(file->control),
+    status = fio::Node::Call::Clone_Deprecated(zx::unowned_channel(file->control),
                                     fio::CLONE_FLAG_SAME_RIGHTS,
                                     std::move(remote));
     if (status != ZX_OK) {

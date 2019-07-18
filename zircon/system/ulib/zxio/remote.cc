@@ -40,7 +40,7 @@ private:
 zx_status_t zxio_remote_close(zxio_t* io) {
     Remote rio(io);
     zx_status_t io_status, status;
-    io_status = fio::Node::Call::Close(rio.control(), &status);
+    io_status = fio::Node::Call::Close_Deprecated(rio.control(), &status);
     rio.Release().reset();
     return io_status != ZX_OK ? io_status : status;
 }
@@ -59,7 +59,7 @@ zx_status_t zxio_remote_clone(zxio_t* io, zx_handle_t* out_handle) {
         return status;
     }
     uint32_t flags = fio::CLONE_FLAG_SAME_RIGHTS;
-    status = fio::Node::Call::Clone(rio.control(), flags, std::move(remote));
+    status = fio::Node::Call::Clone_Deprecated(rio.control(), flags, std::move(remote));
     if (status != ZX_OK) {
         return status;
     }
@@ -70,21 +70,21 @@ zx_status_t zxio_remote_clone(zxio_t* io, zx_handle_t* out_handle) {
 zx_status_t zxio_remote_sync(zxio_t* io) {
     Remote rio(io);
     zx_status_t io_status, status;
-    io_status = fio::Node::Call::Sync(rio.control(), &status);
+    io_status = fio::Node::Call::Sync_Deprecated(rio.control(), &status);
     return io_status != ZX_OK ? io_status : status;
 }
 
 zx_status_t zxio_remote_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
     Remote rio(io);
     zx_status_t io_status, status;
-    io_status = fio::Node::Call::GetAttr(rio.control(), &status, out_attr);
+    io_status = fio::Node::Call::GetAttr_Deprecated(rio.control(), &status, out_attr);
     return io_status != ZX_OK ? io_status : status;
 }
 
 zx_status_t zxio_remote_attr_set(zxio_t* io, uint32_t flags, const zxio_node_attr_t* attr) {
     Remote rio(io);
     zx_status_t io_status, status;
-    io_status = fio::Node::Call::SetAttr(rio.control(),
+    io_status = fio::Node::Call::SetAttr_Deprecated(rio.control(),
                                          flags,
                                          *attr,
                                          &status);
@@ -97,7 +97,7 @@ zx_status_t zxio_remote_read_once(const Remote& rio, uint8_t* buffer,
     uint8_t response_buffer[fidl::MaxSizeInChannel<fio::File::ReadResponse>()];
     fidl::DecodedMessage<fio::File::ReadRequest> request(fidl::BytePart::WrapFull(request_buffer));
     request.message()->count = capacity;
-    auto result = fio::File::Call::Read(rio.control(),
+    auto result = fio::File::Call::Read_Deprecated(rio.control(),
                                         std::move(request),
                                         fidl::BytePart::WrapEmpty(response_buffer));
     if (result.status != ZX_OK) {
@@ -148,7 +148,7 @@ zx_status_t zxio_remote_read_once_at(const Remote& rio, size_t offset,
         fidl::BytePart::WrapFull(request_buffer));
     request.message()->count = capacity;
     request.message()->offset = offset;
-    auto result = fio::File::Call::ReadAt(rio.control(),
+    auto result = fio::File::Call::ReadAt_Deprecated(rio.control(),
                                           std::move(request),
                                           fidl::BytePart::WrapEmpty(response_buffer));
     if (result.status != ZX_OK) {
@@ -198,7 +198,7 @@ zx_status_t zxio_remote_write_once(const Remote& rio, const uint8_t* buffer,
     zx_status_t status;
     uint8_t request_buffer[fidl::MaxSizeInChannel<fio::File::WriteRequest>()];
     uint8_t response_buffer[fidl::MaxSizeInChannel<fio::File::WriteResponse>()];
-    auto result = fio::File::Call::Write(rio.control(),
+    auto result = fio::File::Call::Write_Deprecated(rio.control(),
                                          fidl::BytePart::WrapEmpty(request_buffer),
                                          fidl::VectorView(capacity, const_cast<uint8_t*>(buffer)),
                                          fidl::BytePart::WrapEmpty(response_buffer),
@@ -248,7 +248,7 @@ zx_status_t zxio_remote_write_once_at(const Remote& rio, size_t offset,
     zx_status_t status;
     uint8_t request_buffer[fidl::MaxSizeInChannel<fio::File::WriteAtRequest>()] = {};
     uint8_t response_buffer[fidl::MaxSizeInChannel<fio::File::WriteAtResponse>()];
-    auto result = fio::File::Call::WriteAt(rio.control(),
+    auto result = fio::File::Call::WriteAt_Deprecated(rio.control(),
                                            fidl::BytePart::WrapEmpty(request_buffer),
                                            fidl::VectorView(capacity, const_cast<uint8_t*>(buffer)),
                                            offset,
@@ -300,7 +300,7 @@ zx_status_t zxio_remote_seek(zxio_t* io,
                              size_t* out_offset) {
     Remote rio(io);
     zx_status_t io_status, status;
-    io_status = fio::File::Call::Seek(rio.control(),
+    io_status = fio::File::Call::Seek_Deprecated(rio.control(),
                                       offset,
                                       static_cast<fio::SeekOrigin>(start),
                                       &status,
@@ -311,21 +311,21 @@ zx_status_t zxio_remote_seek(zxio_t* io,
 zx_status_t zxio_remote_truncate(zxio_t* io, size_t length) {
     Remote rio(io);
     zx_status_t io_status, status;
-    io_status = fio::File::Call::Truncate(rio.control(), length, &status);
+    io_status = fio::File::Call::Truncate_Deprecated(rio.control(), length, &status);
     return io_status != ZX_OK ? io_status : status;
 }
 
 zx_status_t zxio_remote_flags_get(zxio_t* io, uint32_t* out_flags) {
     Remote rio(io);
     zx_status_t io_status, status;
-    io_status = fio::File::Call::GetFlags(rio.control(), &status, out_flags);
+    io_status = fio::File::Call::GetFlags_Deprecated(rio.control(), &status, out_flags);
     return io_status != ZX_OK ? io_status : status;
 }
 
 zx_status_t zxio_remote_flags_set(zxio_t* io, uint32_t flags) {
     Remote rio(io);
     zx_status_t io_status, status;
-    io_status = fio::File::Call::SetFlags(rio.control(), flags, &status);
+    io_status = fio::File::Call::SetFlags_Deprecated(rio.control(), flags, &status);
     return io_status != ZX_OK ? io_status : status;
 }
 
@@ -339,7 +339,7 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io,
     fidl::DecodedMessage<fio::File::GetBufferRequest> request(
         fidl::BytePart::WrapFull(request_buffer));
     request.message()->flags = flags;
-    auto result = fio::File::Call::GetBuffer(rio.control(),
+    auto result = fio::File::Call::GetBuffer_Deprecated(rio.control(),
                                              std::move(request),
                                              fidl::BytePart::WrapEmpty(response_buffer));
     if (result.status != ZX_OK) {
@@ -367,7 +367,7 @@ zx_status_t zxio_remote_open_async(zxio_t* io,
                                    const char* path,
                                    zx_handle_t request) {
     Remote rio(io);
-    return fio::Directory::Call::Open(rio.control(),
+    return fio::Directory::Call::Open_Deprecated(rio.control(),
                                       flags,
                                       mode,
                                       fidl::StringView(strlen(path), path),
@@ -377,7 +377,7 @@ zx_status_t zxio_remote_open_async(zxio_t* io,
 zx_status_t zxio_remote_unlink(zxio_t* io, const char* path) {
     Remote rio(io);
     zx_status_t io_status, status;
-    io_status = fio::Directory::Call::Unlink(rio.control(),
+    io_status = fio::Directory::Call::Unlink_Deprecated(rio.control(),
                                              fidl::StringView(strlen(path), path),
                                              &status);
     return io_status != ZX_OK ? io_status : status;
@@ -387,7 +387,7 @@ zx_status_t zxio_remote_token_get(zxio_t* io, zx_handle_t* out_token) {
     Remote rio(io);
     zx_status_t io_status, status;
     zx::handle token;
-    io_status = fio::Directory::Call::GetToken(rio.control(), &status, &token);
+    io_status = fio::Directory::Call::GetToken_Deprecated(rio.control(), &status, &token);
     if (io_status != ZX_OK) {
         return io_status;
     }
@@ -401,7 +401,7 @@ zx_status_t zxio_remote_rename(zxio_t* io,
                                const char* dst_path) {
     Remote rio(io);
     zx_status_t io_status, status;
-    io_status = fio::Directory::Call::Rename(rio.control(),
+    io_status = fio::Directory::Call::Rename_Deprecated(rio.control(),
                                              fidl::StringView(strlen(src_path), src_path),
                                              zx::handle(dst_token),
                                              fidl::StringView(strlen(dst_path), dst_path),
@@ -415,7 +415,7 @@ zx_status_t zxio_remote_link(zxio_t* io,
                              const char* dst_path) {
     Remote rio(io);
     zx_status_t io_status, status;
-    io_status = fio::Directory::Call::Link(rio.control(),
+    io_status = fio::Directory::Call::Link_Deprecated(rio.control(),
                                            fidl::StringView(strlen(src_path), src_path),
                                            zx::handle(dst_token),
                                            fidl::StringView(strlen(dst_path), dst_path),
@@ -433,7 +433,7 @@ zx_status_t zxio_remote_readdir(zxio_t* io,
     fidl::DecodedMessage<fio::Directory::ReadDirentsRequest> request(
         fidl::BytePart::WrapFull(request_buffer));
     request.message()->max_bytes = capacity;
-    auto result = fio::Directory::Call::ReadDirents(rio.control(),
+    auto result = fio::Directory::Call::ReadDirents_Deprecated(rio.control(),
                                                     std::move(request),
                                                     fidl::BytePart::WrapEmpty(response_buffer));
     if (result.status != ZX_OK) {
@@ -455,14 +455,14 @@ zx_status_t zxio_remote_readdir(zxio_t* io,
 zx_status_t zxio_remote_rewind(zxio_t* io) {
     Remote rio(io);
     zx_status_t io_status, status;
-    io_status = fio::Directory::Call::Rewind(rio.control(), &status);
+    io_status = fio::Directory::Call::Rewind_Deprecated(rio.control(), &status);
     return io_status != ZX_OK ? io_status : status;
 }
 
 zx_status_t zxio_remote_isatty(zxio_t* io, bool* tty) {
     Remote rio(io);
     fio::NodeInfo info;
-    zx_status_t io_status = fio::Node::Call::Describe(rio.control(), &info);
+    zx_status_t io_status = fio::Node::Call::Describe_Deprecated(rio.control(), &info);
     if (io_status != ZX_OK) {
         return io_status;
     }

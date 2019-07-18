@@ -157,7 +157,7 @@ class Interface final {
     // method comment #1
     //
     // method comment #3
-    zx_status_t Method();
+    zx_status_t Method_Deprecated();
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -175,7 +175,7 @@ class Interface final {
     // method comment #1
     //
     // method comment #3
-    static zx_status_t Method(zx::unowned_channel _client_end);
+    static zx_status_t Method_Deprecated(zx::unowned_channel _client_end);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler

@@ -43,7 +43,7 @@ static zx_status_t fdio_watcher_create(int dirfd, fdio_watcher_t** out) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx_status_t io_status = fio::Directory::Call::Watch(zx::unowned_channel(dir_channel),
+    zx_status_t io_status = fio::Directory::Call::Watch_Deprecated(zx::unowned_channel(dir_channel),
                                                         fio::WATCH_MASK_ALL,
                                                         0,
                                                         std::move(watcher),

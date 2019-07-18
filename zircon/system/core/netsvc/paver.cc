@@ -119,7 +119,7 @@ int Paver::StreamBuffer() {
     loop.StartThread("payload-streamer");
 
     // Blocks untils paving is complete.
-    auto io_status = paver_svc_->WriteVolumes(std::move(client), &status);
+    auto io_status = paver_svc_->WriteVolumes_Deprecated(std::move(client), &status);
     status = io_status == ZX_OK ? status : io_status;
     exit_code_.store(status);
 
@@ -175,14 +175,14 @@ int Paver::MonitorBuffer() {
     // Blocks untils paving is complete.
     switch (command_) {
     case Command::kDataFile:
-        io_status = paver_svc_->WriteDataFile(fidl::StringView(strlen(path_), path_),
+        io_status = paver_svc_->WriteDataFile_Deprecated(fidl::StringView(strlen(path_), path_),
                                               std::move(buffer), &status);
         break;
     case Command::kBootloader:
-        io_status = paver_svc_->WriteBootloader(std::move(buffer), &status);
+        io_status = paver_svc_->WriteBootloader_Deprecated(std::move(buffer), &status);
         break;
     case Command::kAsset:
-        io_status = paver_svc_->WriteAsset(configuration_, asset_, std::move(buffer), &status);
+        io_status = paver_svc_->WriteAsset_Deprecated(configuration_, asset_, std::move(buffer), &status);
         break;
     default:
         io_status = ZX_OK;

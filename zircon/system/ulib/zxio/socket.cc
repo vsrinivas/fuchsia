@@ -27,7 +27,7 @@ static zx_status_t zxio_socket_clone(zxio_t* io, zx_handle_t* out_handle) {
   if (status != ZX_OK) {
     return status;
   }
-  status = socket->socket.control.Clone(fio::CLONE_FLAG_SAME_RIGHTS, std::move(remote));
+  status = socket->socket.control.Clone_Deprecated(fio::CLONE_FLAG_SAME_RIGHTS, std::move(remote));
   if (status != ZX_OK) {
     return status;
   }

@@ -21,7 +21,7 @@ zx_status_t StreamReader::Create(zx::channel stream, fbl::unique_ptr<StreamReade
         ERROR("Unable to duplicate vmo.\n");
         return status;
     }
-    auto io_status = ::llcpp::fuchsia::paver::PayloadStream::Call::RegisterVmo(
+    auto io_status = ::llcpp::fuchsia::paver::PayloadStream::Call::RegisterVmo_Deprecated(
         zx::unowned(stream), std::move(dup), &status);
     status = io_status == ZX_OK ? status : io_status;
     if (status != ZX_OK) {
@@ -35,7 +35,7 @@ zx_status_t StreamReader::Create(zx::channel stream, fbl::unique_ptr<StreamReade
 zx_status_t StreamReader::Read(void* buf, size_t buf_size, size_t* size_actual) {
     if (size_ == 0) {
         ::llcpp::fuchsia::paver::ReadResult result;
-        auto status = stream_.ReadData(&result);
+        auto status = stream_.ReadData_Deprecated(&result);
         if (status != ZX_OK) {
             return status;
         }

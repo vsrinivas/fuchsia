@@ -18,11 +18,11 @@ extern "C" const fidl_type_t fuchsia_posix_socket_ProviderSocketResponseTable;
 
 }  // namespace
 
-zx_status_t Provider::SyncClient::Socket(int16_t domain, int16_t type, int16_t protocol, int16_t* out_code, ::zx::channel* out_s) {
-  return Provider::Call::Socket(zx::unowned_channel(this->channel_), std::move(domain), std::move(type), std::move(protocol), out_code, out_s);
+zx_status_t Provider::SyncClient::Socket_Deprecated(int16_t domain, int16_t type, int16_t protocol, int16_t* out_code, ::zx::channel* out_s) {
+  return Provider::Call::Socket_Deprecated(zx::unowned_channel(this->channel_), std::move(domain), std::move(type), std::move(protocol), out_code, out_s);
 }
 
-zx_status_t Provider::Call::Socket(zx::unowned_channel _client_end, int16_t domain, int16_t type, int16_t protocol, int16_t* out_code, ::zx::channel* out_s) {
+zx_status_t Provider::Call::Socket_Deprecated(zx::unowned_channel _client_end, int16_t domain, int16_t type, int16_t protocol, int16_t* out_code, ::zx::channel* out_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SocketRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SocketRequest*>(_write_bytes);
@@ -54,11 +54,11 @@ zx_status_t Provider::Call::Socket(zx::unowned_channel _client_end, int16_t doma
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Provider::SocketResponse> Provider::SyncClient::Socket(::fidl::BytePart _request_buffer, int16_t domain, int16_t type, int16_t protocol, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::channel* out_s) {
-  return Provider::Call::Socket(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(domain), std::move(type), std::move(protocol), std::move(_response_buffer), out_code, out_s);
+::fidl::DecodeResult<Provider::SocketResponse> Provider::SyncClient::Socket_Deprecated(::fidl::BytePart _request_buffer, int16_t domain, int16_t type, int16_t protocol, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::channel* out_s) {
+  return Provider::Call::Socket_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(domain), std::move(type), std::move(protocol), std::move(_response_buffer), out_code, out_s);
 }
 
-::fidl::DecodeResult<Provider::SocketResponse> Provider::Call::Socket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t domain, int16_t type, int16_t protocol, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::channel* out_s) {
+::fidl::DecodeResult<Provider::SocketResponse> Provider::Call::Socket_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t domain, int16_t type, int16_t protocol, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::channel* out_s) {
   if (_request_buffer.capacity() < SocketRequest::PrimarySize) {
     return ::fidl::DecodeResult<SocketResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -88,11 +88,11 @@ zx_status_t Provider::Call::Socket(zx::unowned_channel _client_end, int16_t doma
   return _decode_result;
 }
 
-::fidl::DecodeResult<Provider::SocketResponse> Provider::SyncClient::Socket(::fidl::DecodedMessage<SocketRequest> params, ::fidl::BytePart response_buffer) {
-  return Provider::Call::Socket(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Provider::SocketResponse> Provider::SyncClient::Socket_Deprecated(::fidl::DecodedMessage<SocketRequest> params, ::fidl::BytePart response_buffer) {
+  return Provider::Call::Socket_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Provider::SocketResponse> Provider::Call::Socket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SocketRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Provider::SocketResponse> Provider::Call::Socket_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SocketRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kProvider_Socket_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -246,11 +246,11 @@ extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlPOSIXResponseTable
 
 }  // namespace
 
-zx_status_t Control::SyncClient::Clone(uint32_t flags, ::zx::channel object) {
-  return Control::Call::Clone(zx::unowned_channel(this->channel_), std::move(flags), std::move(object));
+zx_status_t Control::SyncClient::Clone_Deprecated(uint32_t flags, ::zx::channel object) {
+  return Control::Call::Clone_Deprecated(zx::unowned_channel(this->channel_), std::move(flags), std::move(object));
 }
 
-zx_status_t Control::Call::Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object) {
+zx_status_t Control::Call::Clone_Deprecated(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloneRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CloneRequest*>(_write_bytes);
@@ -266,11 +266,11 @@ zx_status_t Control::Call::Clone(zx::unowned_channel _client_end, uint32_t flags
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
-zx_status_t Control::SyncClient::Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object) {
-  return Control::Call::Clone(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(object));
+zx_status_t Control::SyncClient::Clone_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object) {
+  return Control::Call::Clone_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(object));
 }
 
-zx_status_t Control::Call::Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object) {
+zx_status_t Control::Call::Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object) {
   if (_request_buffer.capacity() < CloneRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -287,11 +287,11 @@ zx_status_t Control::Call::Clone(zx::unowned_channel _client_end, ::fidl::BytePa
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
-zx_status_t Control::SyncClient::Clone(::fidl::DecodedMessage<CloneRequest> params) {
-  return Control::Call::Clone(zx::unowned_channel(this->channel_), std::move(params));
+zx_status_t Control::SyncClient::Clone_Deprecated(::fidl::DecodedMessage<CloneRequest> params) {
+  return Control::Call::Clone_Deprecated(zx::unowned_channel(this->channel_), std::move(params));
 }
 
-zx_status_t Control::Call::Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params) {
+zx_status_t Control::Call::Clone_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Clone_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -302,11 +302,11 @@ zx_status_t Control::Call::Clone(zx::unowned_channel _client_end, ::fidl::Decode
 }
 
 
-zx_status_t Control::SyncClient::Close(int32_t* out_s) {
-  return Control::Call::Close(zx::unowned_channel(this->channel_), out_s);
+zx_status_t Control::SyncClient::Close_Deprecated(int32_t* out_s) {
+  return Control::Call::Close_Deprecated(zx::unowned_channel(this->channel_), out_s);
 }
 
-zx_status_t Control::Call::Close(zx::unowned_channel _client_end, int32_t* out_s) {
+zx_status_t Control::Call::Close_Deprecated(zx::unowned_channel _client_end, int32_t* out_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CloseRequest*>(_write_bytes);
@@ -334,11 +334,11 @@ zx_status_t Control::Call::Close(zx::unowned_channel _client_end, int32_t* out_s
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Control::CloseResponse> Control::SyncClient::Close(::fidl::BytePart _response_buffer, int32_t* out_s) {
-  return Control::Call::Close(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
+::fidl::DecodeResult<Control::CloseResponse> Control::SyncClient::Close_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s) {
+  return Control::Call::Close_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
 }
 
-::fidl::DecodeResult<Control::CloseResponse> Control::Call::Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
+::fidl::DecodeResult<Control::CloseResponse> Control::Call::Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CloseRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<CloseRequest*>(_request_buffer.data());
@@ -363,11 +363,11 @@ zx_status_t Control::Call::Close(zx::unowned_channel _client_end, int32_t* out_s
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::CloseResponse> Control::SyncClient::Close(::fidl::BytePart response_buffer) {
-  return Control::Call::Close(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Control::CloseResponse> Control::SyncClient::Close_Deprecated(::fidl::BytePart response_buffer) {
+  return Control::Call::Close_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::CloseResponse> Control::Call::Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::CloseResponse> Control::Call::Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CloseRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(CloseRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -393,11 +393,11 @@ zx_status_t Control::Call::Close(zx::unowned_channel _client_end, int32_t* out_s
 }
 
 
-zx_status_t Control::SyncClient::Describe(::llcpp::fuchsia::io::NodeInfo* out_info) {
-  return Control::Call::Describe(zx::unowned_channel(this->channel_), out_info);
+zx_status_t Control::SyncClient::Describe_Deprecated(::llcpp::fuchsia::io::NodeInfo* out_info) {
+  return Control::Call::Describe_Deprecated(zx::unowned_channel(this->channel_), out_info);
 }
 
-zx_status_t Control::Call::Describe(zx::unowned_channel _client_end, ::llcpp::fuchsia::io::NodeInfo* out_info) {
+zx_status_t Control::Call::Describe_Deprecated(zx::unowned_channel _client_end, ::llcpp::fuchsia::io::NodeInfo* out_info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DescribeRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<DescribeRequest*>(_write_bytes);
@@ -425,11 +425,11 @@ zx_status_t Control::Call::Describe(zx::unowned_channel _client_end, ::llcpp::fu
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Control::DescribeResponse> Control::SyncClient::Describe(::fidl::BytePart _response_buffer, ::llcpp::fuchsia::io::NodeInfo* out_info) {
-  return Control::Call::Describe(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_info);
+::fidl::DecodeResult<Control::DescribeResponse> Control::SyncClient::Describe_Deprecated(::fidl::BytePart _response_buffer, ::llcpp::fuchsia::io::NodeInfo* out_info) {
+  return Control::Call::Describe_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_info);
 }
 
-::fidl::DecodeResult<Control::DescribeResponse> Control::Call::Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::llcpp::fuchsia::io::NodeInfo* out_info) {
+::fidl::DecodeResult<Control::DescribeResponse> Control::Call::Describe_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::llcpp::fuchsia::io::NodeInfo* out_info) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DescribeRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<DescribeRequest*>(_request_buffer.data());
@@ -454,11 +454,11 @@ zx_status_t Control::Call::Describe(zx::unowned_channel _client_end, ::llcpp::fu
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::DescribeResponse> Control::SyncClient::Describe(::fidl::BytePart response_buffer) {
-  return Control::Call::Describe(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Control::DescribeResponse> Control::SyncClient::Describe_Deprecated(::fidl::BytePart response_buffer) {
+  return Control::Call::Describe_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::DescribeResponse> Control::Call::Describe(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::DescribeResponse> Control::Call::Describe_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DescribeRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(DescribeRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -484,11 +484,11 @@ zx_status_t Control::Call::Describe(zx::unowned_channel _client_end, ::llcpp::fu
 }
 
 
-zx_status_t Control::SyncClient::Sync(int32_t* out_s) {
-  return Control::Call::Sync(zx::unowned_channel(this->channel_), out_s);
+zx_status_t Control::SyncClient::Sync_Deprecated(int32_t* out_s) {
+  return Control::Call::Sync_Deprecated(zx::unowned_channel(this->channel_), out_s);
 }
 
-zx_status_t Control::Call::Sync(zx::unowned_channel _client_end, int32_t* out_s) {
+zx_status_t Control::Call::Sync_Deprecated(zx::unowned_channel _client_end, int32_t* out_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SyncRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SyncRequest*>(_write_bytes);
@@ -516,11 +516,11 @@ zx_status_t Control::Call::Sync(zx::unowned_channel _client_end, int32_t* out_s)
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Control::SyncResponse> Control::SyncClient::Sync(::fidl::BytePart _response_buffer, int32_t* out_s) {
-  return Control::Call::Sync(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
+::fidl::DecodeResult<Control::SyncResponse> Control::SyncClient::Sync_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s) {
+  return Control::Call::Sync_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
 }
 
-::fidl::DecodeResult<Control::SyncResponse> Control::Call::Sync(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
+::fidl::DecodeResult<Control::SyncResponse> Control::Call::Sync_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(SyncRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<SyncRequest*>(_request_buffer.data());
@@ -545,11 +545,11 @@ zx_status_t Control::Call::Sync(zx::unowned_channel _client_end, int32_t* out_s)
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::SyncResponse> Control::SyncClient::Sync(::fidl::BytePart response_buffer) {
-  return Control::Call::Sync(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Control::SyncResponse> Control::SyncClient::Sync_Deprecated(::fidl::BytePart response_buffer) {
+  return Control::Call::Sync_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::SyncResponse> Control::Call::Sync(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::SyncResponse> Control::Call::Sync_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(SyncRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(SyncRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -575,11 +575,11 @@ zx_status_t Control::Call::Sync(zx::unowned_channel _client_end, int32_t* out_s)
 }
 
 
-zx_status_t Control::SyncClient::GetAttr(int32_t* out_s, ::llcpp::fuchsia::io::NodeAttributes* out_attributes) {
-  return Control::Call::GetAttr(zx::unowned_channel(this->channel_), out_s, out_attributes);
+zx_status_t Control::SyncClient::GetAttr_Deprecated(int32_t* out_s, ::llcpp::fuchsia::io::NodeAttributes* out_attributes) {
+  return Control::Call::GetAttr_Deprecated(zx::unowned_channel(this->channel_), out_s, out_attributes);
 }
 
-zx_status_t Control::Call::GetAttr(zx::unowned_channel _client_end, int32_t* out_s, ::llcpp::fuchsia::io::NodeAttributes* out_attributes) {
+zx_status_t Control::Call::GetAttr_Deprecated(zx::unowned_channel _client_end, int32_t* out_s, ::llcpp::fuchsia::io::NodeAttributes* out_attributes) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAttrRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetAttrRequest*>(_write_bytes);
@@ -608,11 +608,11 @@ zx_status_t Control::Call::GetAttr(zx::unowned_channel _client_end, int32_t* out
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Control::GetAttrResponse> Control::SyncClient::GetAttr(::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::io::NodeAttributes* out_attributes) {
-  return Control::Call::GetAttr(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s, out_attributes);
+::fidl::DecodeResult<Control::GetAttrResponse> Control::SyncClient::GetAttr_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::io::NodeAttributes* out_attributes) {
+  return Control::Call::GetAttr_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s, out_attributes);
 }
 
-::fidl::DecodeResult<Control::GetAttrResponse> Control::Call::GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::io::NodeAttributes* out_attributes) {
+::fidl::DecodeResult<Control::GetAttrResponse> Control::Call::GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::io::NodeAttributes* out_attributes) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetAttrRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetAttrRequest*>(_request_buffer.data());
@@ -638,11 +638,11 @@ zx_status_t Control::Call::GetAttr(zx::unowned_channel _client_end, int32_t* out
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::GetAttrResponse> Control::SyncClient::GetAttr(::fidl::BytePart response_buffer) {
-  return Control::Call::GetAttr(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Control::GetAttrResponse> Control::SyncClient::GetAttr_Deprecated(::fidl::BytePart response_buffer) {
+  return Control::Call::GetAttr_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::GetAttrResponse> Control::Call::GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::GetAttrResponse> Control::Call::GetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetAttrRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetAttrRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -668,11 +668,11 @@ zx_status_t Control::Call::GetAttr(zx::unowned_channel _client_end, int32_t* out
 }
 
 
-zx_status_t Control::SyncClient::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, int32_t* out_s) {
-  return Control::Call::SetAttr(zx::unowned_channel(this->channel_), std::move(flags), std::move(attributes), out_s);
+zx_status_t Control::SyncClient::SetAttr_Deprecated(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, int32_t* out_s) {
+  return Control::Call::SetAttr_Deprecated(zx::unowned_channel(this->channel_), std::move(flags), std::move(attributes), out_s);
 }
 
-zx_status_t Control::Call::SetAttr(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, int32_t* out_s) {
+zx_status_t Control::Call::SetAttr_Deprecated(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, int32_t* out_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetAttrRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SetAttrRequest*>(_write_bytes);
@@ -702,11 +702,11 @@ zx_status_t Control::Call::SetAttr(zx::unowned_channel _client_end, uint32_t fla
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Control::SetAttrResponse> Control::SyncClient::SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s) {
-  return Control::Call::SetAttr(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(attributes), std::move(_response_buffer), out_s);
+::fidl::DecodeResult<Control::SetAttrResponse> Control::SyncClient::SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s) {
+  return Control::Call::SetAttr_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(attributes), std::move(_response_buffer), out_s);
 }
 
-::fidl::DecodeResult<Control::SetAttrResponse> Control::Call::SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s) {
+::fidl::DecodeResult<Control::SetAttrResponse> Control::Call::SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s) {
   if (_request_buffer.capacity() < SetAttrRequest::PrimarySize) {
     return ::fidl::DecodeResult<SetAttrResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -734,11 +734,11 @@ zx_status_t Control::Call::SetAttr(zx::unowned_channel _client_end, uint32_t fla
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::SetAttrResponse> Control::SyncClient::SetAttr(::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::SetAttr(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Control::SetAttrResponse> Control::SyncClient::SetAttr_Deprecated(::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer) {
+  return Control::Call::SetAttr_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::SetAttrResponse> Control::Call::SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::SetAttrResponse> Control::Call::SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_SetAttr_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -760,11 +760,11 @@ zx_status_t Control::Call::SetAttr(zx::unowned_channel _client_end, uint32_t fla
 }
 
 
-::fidl::DecodeResult<Control::IoctlResponse> Control::SyncClient::Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out) {
-  return Control::Call::Ioctl(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(opcode), std::move(max_out), std::move(handles), std::move(in), std::move(_response_buffer), out_s, out_handles, out_out);
+::fidl::DecodeResult<Control::IoctlResponse> Control::SyncClient::Ioctl_Deprecated(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out) {
+  return Control::Call::Ioctl_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(opcode), std::move(max_out), std::move(handles), std::move(in), std::move(_response_buffer), out_s, out_handles, out_out);
 }
 
-::fidl::DecodeResult<Control::IoctlResponse> Control::Call::Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out) {
+::fidl::DecodeResult<Control::IoctlResponse> Control::Call::Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out) {
   if (_request_buffer.capacity() < IoctlRequest::PrimarySize) {
     return ::fidl::DecodeResult<IoctlResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -799,11 +799,11 @@ zx_status_t Control::Call::SetAttr(zx::unowned_channel _client_end, uint32_t fla
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::IoctlResponse> Control::SyncClient::Ioctl(::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::Ioctl(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Control::IoctlResponse> Control::SyncClient::Ioctl_Deprecated(::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer) {
+  return Control::Call::Ioctl_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::IoctlResponse> Control::Call::Ioctl(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::IoctlResponse> Control::Call::Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Ioctl_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -825,11 +825,11 @@ zx_status_t Control::Call::SetAttr(zx::unowned_channel _client_end, uint32_t fla
 }
 
 
-zx_status_t Control::SyncClient::Bind(::fidl::VectorView<uint8_t> addr, int16_t* out_code) {
-  return Control::Call::Bind(zx::unowned_channel(this->channel_), std::move(addr), out_code);
+zx_status_t Control::SyncClient::Bind_Deprecated(::fidl::VectorView<uint8_t> addr, int16_t* out_code) {
+  return Control::Call::Bind_Deprecated(zx::unowned_channel(this->channel_), std::move(addr), out_code);
 }
 
-zx_status_t Control::Call::Bind(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr, int16_t* out_code) {
+zx_status_t Control::Call::Bind_Deprecated(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr, int16_t* out_code) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -863,11 +863,11 @@ zx_status_t Control::Call::Bind(zx::unowned_channel _client_end, ::fidl::VectorV
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Control::BindResponse> Control::SyncClient::Bind(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer, int16_t* out_code) {
-  return Control::Call::Bind(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(addr), std::move(_response_buffer), out_code);
+::fidl::DecodeResult<Control::BindResponse> Control::SyncClient::Bind_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer, int16_t* out_code) {
+  return Control::Call::Bind_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(addr), std::move(_response_buffer), out_code);
 }
 
-::fidl::DecodeResult<Control::BindResponse> Control::Call::Bind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer, int16_t* out_code) {
+::fidl::DecodeResult<Control::BindResponse> Control::Call::Bind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer, int16_t* out_code) {
   if (_request_buffer.capacity() < BindRequest::PrimarySize) {
     return ::fidl::DecodeResult<BindResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -897,11 +897,11 @@ zx_status_t Control::Call::Bind(zx::unowned_channel _client_end, ::fidl::VectorV
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::BindResponse> Control::SyncClient::Bind(::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::Bind(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Control::BindResponse> Control::SyncClient::Bind_Deprecated(::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer) {
+  return Control::Call::Bind_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::BindResponse> Control::Call::Bind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::BindResponse> Control::Call::Bind_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Bind_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -923,11 +923,11 @@ zx_status_t Control::Call::Bind(zx::unowned_channel _client_end, ::fidl::VectorV
 }
 
 
-zx_status_t Control::SyncClient::Connect(::fidl::VectorView<uint8_t> addr, int16_t* out_code) {
-  return Control::Call::Connect(zx::unowned_channel(this->channel_), std::move(addr), out_code);
+zx_status_t Control::SyncClient::Connect_Deprecated(::fidl::VectorView<uint8_t> addr, int16_t* out_code) {
+  return Control::Call::Connect_Deprecated(zx::unowned_channel(this->channel_), std::move(addr), out_code);
 }
 
-zx_status_t Control::Call::Connect(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr, int16_t* out_code) {
+zx_status_t Control::Call::Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr, int16_t* out_code) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -961,11 +961,11 @@ zx_status_t Control::Call::Connect(zx::unowned_channel _client_end, ::fidl::Vect
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Control::ConnectResponse> Control::SyncClient::Connect(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer, int16_t* out_code) {
-  return Control::Call::Connect(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(addr), std::move(_response_buffer), out_code);
+::fidl::DecodeResult<Control::ConnectResponse> Control::SyncClient::Connect_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer, int16_t* out_code) {
+  return Control::Call::Connect_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(addr), std::move(_response_buffer), out_code);
 }
 
-::fidl::DecodeResult<Control::ConnectResponse> Control::Call::Connect(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer, int16_t* out_code) {
+::fidl::DecodeResult<Control::ConnectResponse> Control::Call::Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer, int16_t* out_code) {
   if (_request_buffer.capacity() < ConnectRequest::PrimarySize) {
     return ::fidl::DecodeResult<ConnectResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -995,11 +995,11 @@ zx_status_t Control::Call::Connect(zx::unowned_channel _client_end, ::fidl::Vect
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::ConnectResponse> Control::SyncClient::Connect(::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::Connect(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Control::ConnectResponse> Control::SyncClient::Connect_Deprecated(::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer) {
+  return Control::Call::Connect_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::ConnectResponse> Control::Call::Connect(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::ConnectResponse> Control::Call::Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Connect_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -1021,11 +1021,11 @@ zx_status_t Control::Call::Connect(zx::unowned_channel _client_end, ::fidl::Vect
 }
 
 
-zx_status_t Control::SyncClient::Listen(int16_t backlog, int16_t* out_code) {
-  return Control::Call::Listen(zx::unowned_channel(this->channel_), std::move(backlog), out_code);
+zx_status_t Control::SyncClient::Listen_Deprecated(int16_t backlog, int16_t* out_code) {
+  return Control::Call::Listen_Deprecated(zx::unowned_channel(this->channel_), std::move(backlog), out_code);
 }
 
-zx_status_t Control::Call::Listen(zx::unowned_channel _client_end, int16_t backlog, int16_t* out_code) {
+zx_status_t Control::Call::Listen_Deprecated(zx::unowned_channel _client_end, int16_t backlog, int16_t* out_code) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ListenRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ListenRequest*>(_write_bytes);
@@ -1054,11 +1054,11 @@ zx_status_t Control::Call::Listen(zx::unowned_channel _client_end, int16_t backl
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Control::ListenResponse> Control::SyncClient::Listen(::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer, int16_t* out_code) {
-  return Control::Call::Listen(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(backlog), std::move(_response_buffer), out_code);
+::fidl::DecodeResult<Control::ListenResponse> Control::SyncClient::Listen_Deprecated(::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer, int16_t* out_code) {
+  return Control::Call::Listen_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(backlog), std::move(_response_buffer), out_code);
 }
 
-::fidl::DecodeResult<Control::ListenResponse> Control::Call::Listen(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer, int16_t* out_code) {
+::fidl::DecodeResult<Control::ListenResponse> Control::Call::Listen_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer, int16_t* out_code) {
   if (_request_buffer.capacity() < ListenRequest::PrimarySize) {
     return ::fidl::DecodeResult<ListenResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -1085,11 +1085,11 @@ zx_status_t Control::Call::Listen(zx::unowned_channel _client_end, int16_t backl
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::ListenResponse> Control::SyncClient::Listen(::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::Listen(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Control::ListenResponse> Control::SyncClient::Listen_Deprecated(::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer) {
+  return Control::Call::Listen_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::ListenResponse> Control::Call::Listen(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::ListenResponse> Control::Call::Listen_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Listen_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -1111,11 +1111,11 @@ zx_status_t Control::Call::Listen(zx::unowned_channel _client_end, int16_t backl
 }
 
 
-zx_status_t Control::SyncClient::Accept(int16_t flags, int16_t* out_code, ::zx::channel* out_s) {
-  return Control::Call::Accept(zx::unowned_channel(this->channel_), std::move(flags), out_code, out_s);
+zx_status_t Control::SyncClient::Accept_Deprecated(int16_t flags, int16_t* out_code, ::zx::channel* out_s) {
+  return Control::Call::Accept_Deprecated(zx::unowned_channel(this->channel_), std::move(flags), out_code, out_s);
 }
 
-zx_status_t Control::Call::Accept(zx::unowned_channel _client_end, int16_t flags, int16_t* out_code, ::zx::channel* out_s) {
+zx_status_t Control::Call::Accept_Deprecated(zx::unowned_channel _client_end, int16_t flags, int16_t* out_code, ::zx::channel* out_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AcceptRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<AcceptRequest*>(_write_bytes);
@@ -1145,11 +1145,11 @@ zx_status_t Control::Call::Accept(zx::unowned_channel _client_end, int16_t flags
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Control::AcceptResponse> Control::SyncClient::Accept(::fidl::BytePart _request_buffer, int16_t flags, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::channel* out_s) {
-  return Control::Call::Accept(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(_response_buffer), out_code, out_s);
+::fidl::DecodeResult<Control::AcceptResponse> Control::SyncClient::Accept_Deprecated(::fidl::BytePart _request_buffer, int16_t flags, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::channel* out_s) {
+  return Control::Call::Accept_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(_response_buffer), out_code, out_s);
 }
 
-::fidl::DecodeResult<Control::AcceptResponse> Control::Call::Accept(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t flags, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::channel* out_s) {
+::fidl::DecodeResult<Control::AcceptResponse> Control::Call::Accept_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t flags, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::channel* out_s) {
   if (_request_buffer.capacity() < AcceptRequest::PrimarySize) {
     return ::fidl::DecodeResult<AcceptResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -1177,11 +1177,11 @@ zx_status_t Control::Call::Accept(zx::unowned_channel _client_end, int16_t flags
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::AcceptResponse> Control::SyncClient::Accept(::fidl::DecodedMessage<AcceptRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::Accept(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Control::AcceptResponse> Control::SyncClient::Accept_Deprecated(::fidl::DecodedMessage<AcceptRequest> params, ::fidl::BytePart response_buffer) {
+  return Control::Call::Accept_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::AcceptResponse> Control::Call::Accept(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AcceptRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::AcceptResponse> Control::Call::Accept_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AcceptRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_Accept_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -1203,11 +1203,11 @@ zx_status_t Control::Call::Accept(zx::unowned_channel _client_end, int16_t flags
 }
 
 
-::fidl::DecodeResult<Control::GetSockNameResponse> Control::SyncClient::GetSockName(::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr) {
-  return Control::Call::GetSockName(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_code, out_addr);
+::fidl::DecodeResult<Control::GetSockNameResponse> Control::SyncClient::GetSockName_Deprecated(::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr) {
+  return Control::Call::GetSockName_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_code, out_addr);
 }
 
-::fidl::DecodeResult<Control::GetSockNameResponse> Control::Call::GetSockName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr) {
+::fidl::DecodeResult<Control::GetSockNameResponse> Control::Call::GetSockName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetSockNameRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetSockNameRequest*>(_request_buffer.data());
@@ -1233,11 +1233,11 @@ zx_status_t Control::Call::Accept(zx::unowned_channel _client_end, int16_t flags
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::GetSockNameResponse> Control::SyncClient::GetSockName(::fidl::BytePart response_buffer) {
-  return Control::Call::GetSockName(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Control::GetSockNameResponse> Control::SyncClient::GetSockName_Deprecated(::fidl::BytePart response_buffer) {
+  return Control::Call::GetSockName_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::GetSockNameResponse> Control::Call::GetSockName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::GetSockNameResponse> Control::Call::GetSockName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetSockNameRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetSockNameRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -1263,11 +1263,11 @@ zx_status_t Control::Call::Accept(zx::unowned_channel _client_end, int16_t flags
 }
 
 
-::fidl::DecodeResult<Control::GetPeerNameResponse> Control::SyncClient::GetPeerName(::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr) {
-  return Control::Call::GetPeerName(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_code, out_addr);
+::fidl::DecodeResult<Control::GetPeerNameResponse> Control::SyncClient::GetPeerName_Deprecated(::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr) {
+  return Control::Call::GetPeerName_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_code, out_addr);
 }
 
-::fidl::DecodeResult<Control::GetPeerNameResponse> Control::Call::GetPeerName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr) {
+::fidl::DecodeResult<Control::GetPeerNameResponse> Control::Call::GetPeerName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetPeerNameRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetPeerNameRequest*>(_request_buffer.data());
@@ -1293,11 +1293,11 @@ zx_status_t Control::Call::Accept(zx::unowned_channel _client_end, int16_t flags
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::GetPeerNameResponse> Control::SyncClient::GetPeerName(::fidl::BytePart response_buffer) {
-  return Control::Call::GetPeerName(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Control::GetPeerNameResponse> Control::SyncClient::GetPeerName_Deprecated(::fidl::BytePart response_buffer) {
+  return Control::Call::GetPeerName_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::GetPeerNameResponse> Control::Call::GetPeerName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::GetPeerNameResponse> Control::Call::GetPeerName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetPeerNameRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetPeerNameRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -1323,11 +1323,11 @@ zx_status_t Control::Call::Accept(zx::unowned_channel _client_end, int16_t flags
 }
 
 
-zx_status_t Control::SyncClient::SetSockOpt(int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, int16_t* out_code) {
-  return Control::Call::SetSockOpt(zx::unowned_channel(this->channel_), std::move(level), std::move(optname), std::move(optval), out_code);
+zx_status_t Control::SyncClient::SetSockOpt_Deprecated(int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, int16_t* out_code) {
+  return Control::Call::SetSockOpt_Deprecated(zx::unowned_channel(this->channel_), std::move(level), std::move(optname), std::move(optval), out_code);
 }
 
-zx_status_t Control::Call::SetSockOpt(zx::unowned_channel _client_end, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, int16_t* out_code) {
+zx_status_t Control::Call::SetSockOpt_Deprecated(zx::unowned_channel _client_end, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, int16_t* out_code) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetSockOptRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -1363,11 +1363,11 @@ zx_status_t Control::Call::SetSockOpt(zx::unowned_channel _client_end, int16_t l
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Control::SetSockOptResponse> Control::SyncClient::SetSockOpt(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, ::fidl::BytePart _response_buffer, int16_t* out_code) {
-  return Control::Call::SetSockOpt(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(level), std::move(optname), std::move(optval), std::move(_response_buffer), out_code);
+::fidl::DecodeResult<Control::SetSockOptResponse> Control::SyncClient::SetSockOpt_Deprecated(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, ::fidl::BytePart _response_buffer, int16_t* out_code) {
+  return Control::Call::SetSockOpt_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(level), std::move(optname), std::move(optval), std::move(_response_buffer), out_code);
 }
 
-::fidl::DecodeResult<Control::SetSockOptResponse> Control::Call::SetSockOpt(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, ::fidl::BytePart _response_buffer, int16_t* out_code) {
+::fidl::DecodeResult<Control::SetSockOptResponse> Control::Call::SetSockOpt_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, ::fidl::BytePart _response_buffer, int16_t* out_code) {
   if (_request_buffer.capacity() < SetSockOptRequest::PrimarySize) {
     return ::fidl::DecodeResult<SetSockOptResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -1399,11 +1399,11 @@ zx_status_t Control::Call::SetSockOpt(zx::unowned_channel _client_end, int16_t l
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::SetSockOptResponse> Control::SyncClient::SetSockOpt(::fidl::DecodedMessage<SetSockOptRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::SetSockOpt(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Control::SetSockOptResponse> Control::SyncClient::SetSockOpt_Deprecated(::fidl::DecodedMessage<SetSockOptRequest> params, ::fidl::BytePart response_buffer) {
+  return Control::Call::SetSockOpt_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::SetSockOptResponse> Control::Call::SetSockOpt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSockOptRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::SetSockOptResponse> Control::Call::SetSockOpt_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSockOptRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_SetSockOpt_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -1425,11 +1425,11 @@ zx_status_t Control::Call::SetSockOpt(zx::unowned_channel _client_end, int16_t l
 }
 
 
-::fidl::DecodeResult<Control::GetSockOptResponse> Control::SyncClient::GetSockOpt(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_optval) {
-  return Control::Call::GetSockOpt(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(level), std::move(optname), std::move(_response_buffer), out_code, out_optval);
+::fidl::DecodeResult<Control::GetSockOptResponse> Control::SyncClient::GetSockOpt_Deprecated(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_optval) {
+  return Control::Call::GetSockOpt_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(level), std::move(optname), std::move(_response_buffer), out_code, out_optval);
 }
 
-::fidl::DecodeResult<Control::GetSockOptResponse> Control::Call::GetSockOpt(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_optval) {
+::fidl::DecodeResult<Control::GetSockOptResponse> Control::Call::GetSockOpt_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_optval) {
   if (_request_buffer.capacity() < GetSockOptRequest::PrimarySize) {
     return ::fidl::DecodeResult<GetSockOptResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -1458,11 +1458,11 @@ zx_status_t Control::Call::SetSockOpt(zx::unowned_channel _client_end, int16_t l
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::GetSockOptResponse> Control::SyncClient::GetSockOpt(::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::GetSockOpt(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Control::GetSockOptResponse> Control::SyncClient::GetSockOpt_Deprecated(::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer) {
+  return Control::Call::GetSockOpt_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::GetSockOptResponse> Control::Call::GetSockOpt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::GetSockOptResponse> Control::Call::GetSockOpt_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_GetSockOpt_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -1484,11 +1484,11 @@ zx_status_t Control::Call::SetSockOpt(zx::unowned_channel _client_end, int16_t l
 }
 
 
-::fidl::DecodeResult<Control::IoctlPOSIXResponse> Control::SyncClient::IoctlPOSIX(::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_out) {
-  return Control::Call::IoctlPOSIX(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(req), std::move(in), std::move(_response_buffer), out_code, out_out);
+::fidl::DecodeResult<Control::IoctlPOSIXResponse> Control::SyncClient::IoctlPOSIX_Deprecated(::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_out) {
+  return Control::Call::IoctlPOSIX_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(req), std::move(in), std::move(_response_buffer), out_code, out_out);
 }
 
-::fidl::DecodeResult<Control::IoctlPOSIXResponse> Control::Call::IoctlPOSIX(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_out) {
+::fidl::DecodeResult<Control::IoctlPOSIXResponse> Control::Call::IoctlPOSIX_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_out) {
   if (_request_buffer.capacity() < IoctlPOSIXRequest::PrimarySize) {
     return ::fidl::DecodeResult<IoctlPOSIXResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -1520,11 +1520,11 @@ zx_status_t Control::Call::SetSockOpt(zx::unowned_channel _client_end, int16_t l
   return _decode_result;
 }
 
-::fidl::DecodeResult<Control::IoctlPOSIXResponse> Control::SyncClient::IoctlPOSIX(::fidl::DecodedMessage<IoctlPOSIXRequest> params, ::fidl::BytePart response_buffer) {
-  return Control::Call::IoctlPOSIX(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Control::IoctlPOSIXResponse> Control::SyncClient::IoctlPOSIX_Deprecated(::fidl::DecodedMessage<IoctlPOSIXRequest> params, ::fidl::BytePart response_buffer) {
+  return Control::Call::IoctlPOSIX_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Control::IoctlPOSIXResponse> Control::Call::IoctlPOSIX(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlPOSIXRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Control::IoctlPOSIXResponse> Control::Call::IoctlPOSIX_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlPOSIXRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kControl_IoctlPOSIX_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));

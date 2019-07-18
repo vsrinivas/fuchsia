@@ -61,7 +61,7 @@ TEST(FidlDDKDispatcherTest, TransactionTest) {
     ASSERT_EQ(ZX_OK, status);
 
     fuchsia::hardware::serial::Class device_class;
-    status = fuchsia::hardware::serial::Device::Call::GetClass(
+    status = fuchsia::hardware::serial::Device::Call::GetClass_Deprecated(
         zx::unowned_channel(driver_channel), &device_class);
     ASSERT_EQ(ZX_OK, status);
 

@@ -21,11 +21,11 @@ extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerSealResponseT
 
 }  // namespace
 
-zx_status_t DeviceManager::SyncClient::Unseal(::fidl::VectorView<uint8_t> key, uint8_t slot, int32_t* out_status) {
-  return DeviceManager::Call::Unseal(zx::unowned_channel(this->channel_), std::move(key), std::move(slot), out_status);
+zx_status_t DeviceManager::SyncClient::Unseal_Deprecated(::fidl::VectorView<uint8_t> key, uint8_t slot, int32_t* out_status) {
+  return DeviceManager::Call::Unseal_Deprecated(zx::unowned_channel(this->channel_), std::move(key), std::move(slot), out_status);
 }
 
-zx_status_t DeviceManager::Call::Unseal(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> key, uint8_t slot, int32_t* out_status) {
+zx_status_t DeviceManager::Call::Unseal_Deprecated(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> key, uint8_t slot, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnsealRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   UnsealRequest _request = {};
@@ -59,11 +59,11 @@ zx_status_t DeviceManager::Call::Unseal(zx::unowned_channel _client_end, ::fidl:
   return ZX_OK;
 }
 
-::fidl::DecodeResult<DeviceManager::UnsealResponse> DeviceManager::SyncClient::Unseal(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return DeviceManager::Call::Unseal(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(key), std::move(slot), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<DeviceManager::UnsealResponse> DeviceManager::SyncClient::Unseal_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return DeviceManager::Call::Unseal_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(key), std::move(slot), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<DeviceManager::UnsealResponse> DeviceManager::Call::Unseal(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<DeviceManager::UnsealResponse> DeviceManager::Call::Unseal_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   if (_request_buffer.capacity() < UnsealRequest::PrimarySize) {
     return ::fidl::DecodeResult<UnsealResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -94,11 +94,11 @@ zx_status_t DeviceManager::Call::Unseal(zx::unowned_channel _client_end, ::fidl:
   return _decode_result;
 }
 
-::fidl::DecodeResult<DeviceManager::UnsealResponse> DeviceManager::SyncClient::Unseal(::fidl::DecodedMessage<UnsealRequest> params, ::fidl::BytePart response_buffer) {
-  return DeviceManager::Call::Unseal(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<DeviceManager::UnsealResponse> DeviceManager::SyncClient::Unseal_Deprecated(::fidl::DecodedMessage<UnsealRequest> params, ::fidl::BytePart response_buffer) {
+  return DeviceManager::Call::Unseal_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<DeviceManager::UnsealResponse> DeviceManager::Call::Unseal(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnsealRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<DeviceManager::UnsealResponse> DeviceManager::Call::Unseal_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnsealRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kDeviceManager_Unseal_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -120,11 +120,11 @@ zx_status_t DeviceManager::Call::Unseal(zx::unowned_channel _client_end, ::fidl:
 }
 
 
-zx_status_t DeviceManager::SyncClient::Seal(int32_t* out_status) {
-  return DeviceManager::Call::Seal(zx::unowned_channel(this->channel_), out_status);
+zx_status_t DeviceManager::SyncClient::Seal_Deprecated(int32_t* out_status) {
+  return DeviceManager::Call::Seal_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t DeviceManager::Call::Seal(zx::unowned_channel _client_end, int32_t* out_status) {
+zx_status_t DeviceManager::Call::Seal_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SealRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<SealRequest*>(_write_bytes);
@@ -152,11 +152,11 @@ zx_status_t DeviceManager::Call::Seal(zx::unowned_channel _client_end, int32_t* 
   return ZX_OK;
 }
 
-::fidl::DecodeResult<DeviceManager::SealResponse> DeviceManager::SyncClient::Seal(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return DeviceManager::Call::Seal(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<DeviceManager::SealResponse> DeviceManager::SyncClient::Seal_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return DeviceManager::Call::Seal_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<DeviceManager::SealResponse> DeviceManager::Call::Seal(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<DeviceManager::SealResponse> DeviceManager::Call::Seal_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(SealRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<SealRequest*>(_request_buffer.data());
@@ -181,11 +181,11 @@ zx_status_t DeviceManager::Call::Seal(zx::unowned_channel _client_end, int32_t* 
   return _decode_result;
 }
 
-::fidl::DecodeResult<DeviceManager::SealResponse> DeviceManager::SyncClient::Seal(::fidl::BytePart response_buffer) {
-  return DeviceManager::Call::Seal(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<DeviceManager::SealResponse> DeviceManager::SyncClient::Seal_Deprecated(::fidl::BytePart response_buffer) {
+  return DeviceManager::Call::Seal_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<DeviceManager::SealResponse> DeviceManager::Call::Seal(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<DeviceManager::SealResponse> DeviceManager::Call::Seal_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(SealRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(SealRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);

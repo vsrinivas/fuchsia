@@ -25,11 +25,11 @@ extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteResponseTa
 
 }  // namespace
 
-zx_status_t SkipBlock::SyncClient::GetPartitionInfo(int32_t* out_status, PartitionInfo* out_partition_info) {
-  return SkipBlock::Call::GetPartitionInfo(zx::unowned_channel(this->channel_), out_status, out_partition_info);
+zx_status_t SkipBlock::SyncClient::GetPartitionInfo_Deprecated(int32_t* out_status, PartitionInfo* out_partition_info) {
+  return SkipBlock::Call::GetPartitionInfo_Deprecated(zx::unowned_channel(this->channel_), out_status, out_partition_info);
 }
 
-zx_status_t SkipBlock::Call::GetPartitionInfo(zx::unowned_channel _client_end, int32_t* out_status, PartitionInfo* out_partition_info) {
+zx_status_t SkipBlock::Call::GetPartitionInfo_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, PartitionInfo* out_partition_info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPartitionInfoRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetPartitionInfoRequest*>(_write_bytes);
@@ -58,11 +58,11 @@ zx_status_t SkipBlock::Call::GetPartitionInfo(zx::unowned_channel _client_end, i
   return ZX_OK;
 }
 
-::fidl::DecodeResult<SkipBlock::GetPartitionInfoResponse> SkipBlock::SyncClient::GetPartitionInfo(::fidl::BytePart _response_buffer, int32_t* out_status, PartitionInfo* out_partition_info) {
-  return SkipBlock::Call::GetPartitionInfo(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_partition_info);
+::fidl::DecodeResult<SkipBlock::GetPartitionInfoResponse> SkipBlock::SyncClient::GetPartitionInfo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, PartitionInfo* out_partition_info) {
+  return SkipBlock::Call::GetPartitionInfo_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_partition_info);
 }
 
-::fidl::DecodeResult<SkipBlock::GetPartitionInfoResponse> SkipBlock::Call::GetPartitionInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, PartitionInfo* out_partition_info) {
+::fidl::DecodeResult<SkipBlock::GetPartitionInfoResponse> SkipBlock::Call::GetPartitionInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, PartitionInfo* out_partition_info) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetPartitionInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetPartitionInfoRequest*>(_request_buffer.data());
@@ -88,11 +88,11 @@ zx_status_t SkipBlock::Call::GetPartitionInfo(zx::unowned_channel _client_end, i
   return _decode_result;
 }
 
-::fidl::DecodeResult<SkipBlock::GetPartitionInfoResponse> SkipBlock::SyncClient::GetPartitionInfo(::fidl::BytePart response_buffer) {
-  return SkipBlock::Call::GetPartitionInfo(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<SkipBlock::GetPartitionInfoResponse> SkipBlock::SyncClient::GetPartitionInfo_Deprecated(::fidl::BytePart response_buffer) {
+  return SkipBlock::Call::GetPartitionInfo_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<SkipBlock::GetPartitionInfoResponse> SkipBlock::Call::GetPartitionInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<SkipBlock::GetPartitionInfoResponse> SkipBlock::Call::GetPartitionInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetPartitionInfoRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetPartitionInfoRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -118,11 +118,11 @@ zx_status_t SkipBlock::Call::GetPartitionInfo(zx::unowned_channel _client_end, i
 }
 
 
-zx_status_t SkipBlock::SyncClient::Read(ReadWriteOperation op, int32_t* out_status) {
-  return SkipBlock::Call::Read(zx::unowned_channel(this->channel_), std::move(op), out_status);
+zx_status_t SkipBlock::SyncClient::Read_Deprecated(ReadWriteOperation op, int32_t* out_status) {
+  return SkipBlock::Call::Read_Deprecated(zx::unowned_channel(this->channel_), std::move(op), out_status);
 }
 
-zx_status_t SkipBlock::Call::Read(zx::unowned_channel _client_end, ReadWriteOperation op, int32_t* out_status) {
+zx_status_t SkipBlock::Call::Read_Deprecated(zx::unowned_channel _client_end, ReadWriteOperation op, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ReadRequest*>(_write_bytes);
@@ -151,11 +151,11 @@ zx_status_t SkipBlock::Call::Read(zx::unowned_channel _client_end, ReadWriteOper
   return ZX_OK;
 }
 
-::fidl::DecodeResult<SkipBlock::ReadResponse> SkipBlock::SyncClient::Read(::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return SkipBlock::Call::Read(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(op), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<SkipBlock::ReadResponse> SkipBlock::SyncClient::Read_Deprecated(::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return SkipBlock::Call::Read_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(op), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<SkipBlock::ReadResponse> SkipBlock::Call::Read(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<SkipBlock::ReadResponse> SkipBlock::Call::Read_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   if (_request_buffer.capacity() < ReadRequest::PrimarySize) {
     return ::fidl::DecodeResult<ReadResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -182,11 +182,11 @@ zx_status_t SkipBlock::Call::Read(zx::unowned_channel _client_end, ReadWriteOper
   return _decode_result;
 }
 
-::fidl::DecodeResult<SkipBlock::ReadResponse> SkipBlock::SyncClient::Read(::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer) {
-  return SkipBlock::Call::Read(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<SkipBlock::ReadResponse> SkipBlock::SyncClient::Read_Deprecated(::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer) {
+  return SkipBlock::Call::Read_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<SkipBlock::ReadResponse> SkipBlock::Call::Read(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<SkipBlock::ReadResponse> SkipBlock::Call::Read_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kSkipBlock_Read_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -208,11 +208,11 @@ zx_status_t SkipBlock::Call::Read(zx::unowned_channel _client_end, ReadWriteOper
 }
 
 
-zx_status_t SkipBlock::SyncClient::Write(ReadWriteOperation op, int32_t* out_status, bool* out_bad_block_grown) {
-  return SkipBlock::Call::Write(zx::unowned_channel(this->channel_), std::move(op), out_status, out_bad_block_grown);
+zx_status_t SkipBlock::SyncClient::Write_Deprecated(ReadWriteOperation op, int32_t* out_status, bool* out_bad_block_grown) {
+  return SkipBlock::Call::Write_Deprecated(zx::unowned_channel(this->channel_), std::move(op), out_status, out_bad_block_grown);
 }
 
-zx_status_t SkipBlock::Call::Write(zx::unowned_channel _client_end, ReadWriteOperation op, int32_t* out_status, bool* out_bad_block_grown) {
+zx_status_t SkipBlock::Call::Write_Deprecated(zx::unowned_channel _client_end, ReadWriteOperation op, int32_t* out_status, bool* out_bad_block_grown) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<WriteRequest*>(_write_bytes);
@@ -242,11 +242,11 @@ zx_status_t SkipBlock::Call::Write(zx::unowned_channel _client_end, ReadWriteOpe
   return ZX_OK;
 }
 
-::fidl::DecodeResult<SkipBlock::WriteResponse> SkipBlock::SyncClient::Write(::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status, bool* out_bad_block_grown) {
-  return SkipBlock::Call::Write(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(op), std::move(_response_buffer), out_status, out_bad_block_grown);
+::fidl::DecodeResult<SkipBlock::WriteResponse> SkipBlock::SyncClient::Write_Deprecated(::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status, bool* out_bad_block_grown) {
+  return SkipBlock::Call::Write_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(op), std::move(_response_buffer), out_status, out_bad_block_grown);
 }
 
-::fidl::DecodeResult<SkipBlock::WriteResponse> SkipBlock::Call::Write(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status, bool* out_bad_block_grown) {
+::fidl::DecodeResult<SkipBlock::WriteResponse> SkipBlock::Call::Write_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status, bool* out_bad_block_grown) {
   if (_request_buffer.capacity() < WriteRequest::PrimarySize) {
     return ::fidl::DecodeResult<WriteResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -274,11 +274,11 @@ zx_status_t SkipBlock::Call::Write(zx::unowned_channel _client_end, ReadWriteOpe
   return _decode_result;
 }
 
-::fidl::DecodeResult<SkipBlock::WriteResponse> SkipBlock::SyncClient::Write(::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer) {
-  return SkipBlock::Call::Write(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<SkipBlock::WriteResponse> SkipBlock::SyncClient::Write_Deprecated(::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer) {
+  return SkipBlock::Call::Write_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<SkipBlock::WriteResponse> SkipBlock::Call::Write(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<SkipBlock::WriteResponse> SkipBlock::Call::Write_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kSkipBlock_Write_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));

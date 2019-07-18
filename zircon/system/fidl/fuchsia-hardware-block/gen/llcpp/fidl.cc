@@ -17,11 +17,11 @@ extern "C" const fidl_type_t fuchsia_hardware_block_FtlFormatResponseTable;
 
 }  // namespace
 
-zx_status_t Ftl::SyncClient::Format(int32_t* out_status) {
-  return Ftl::Call::Format(zx::unowned_channel(this->channel_), out_status);
+zx_status_t Ftl::SyncClient::Format_Deprecated(int32_t* out_status) {
+  return Ftl::Call::Format_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t Ftl::Call::Format(zx::unowned_channel _client_end, int32_t* out_status) {
+zx_status_t Ftl::Call::Format_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<FormatRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<FormatRequest*>(_write_bytes);
@@ -49,11 +49,11 @@ zx_status_t Ftl::Call::Format(zx::unowned_channel _client_end, int32_t* out_stat
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Ftl::FormatResponse> Ftl::SyncClient::Format(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Ftl::Call::Format(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Ftl::FormatResponse> Ftl::SyncClient::Format_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Ftl::Call::Format_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Ftl::FormatResponse> Ftl::Call::Format(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Ftl::FormatResponse> Ftl::Call::Format_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(FormatRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<FormatRequest*>(_request_buffer.data());
@@ -78,11 +78,11 @@ zx_status_t Ftl::Call::Format(zx::unowned_channel _client_end, int32_t* out_stat
   return _decode_result;
 }
 
-::fidl::DecodeResult<Ftl::FormatResponse> Ftl::SyncClient::Format(::fidl::BytePart response_buffer) {
-  return Ftl::Call::Format(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Ftl::FormatResponse> Ftl::SyncClient::Format_Deprecated(::fidl::BytePart response_buffer) {
+  return Ftl::Call::Format_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Ftl::FormatResponse> Ftl::Call::Format(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Ftl::FormatResponse> Ftl::Call::Format_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(FormatRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(FormatRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -197,11 +197,11 @@ extern "C" const fidl_type_t fuchsia_hardware_block_BlockRebindDeviceResponseTab
 
 }  // namespace
 
-::fidl::DecodeResult<Block::GetInfoResponse> Block::SyncClient::GetInfo(::fidl::BytePart _response_buffer, int32_t* out_status, BlockInfo** out_info) {
-  return Block::Call::GetInfo(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_info);
+::fidl::DecodeResult<Block::GetInfoResponse> Block::SyncClient::GetInfo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, BlockInfo** out_info) {
+  return Block::Call::GetInfo_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_info);
 }
 
-::fidl::DecodeResult<Block::GetInfoResponse> Block::Call::GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, BlockInfo** out_info) {
+::fidl::DecodeResult<Block::GetInfoResponse> Block::Call::GetInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, BlockInfo** out_info) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetInfoRequest*>(_request_buffer.data());
@@ -227,11 +227,11 @@ extern "C" const fidl_type_t fuchsia_hardware_block_BlockRebindDeviceResponseTab
   return _decode_result;
 }
 
-::fidl::DecodeResult<Block::GetInfoResponse> Block::SyncClient::GetInfo(::fidl::BytePart response_buffer) {
-  return Block::Call::GetInfo(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Block::GetInfoResponse> Block::SyncClient::GetInfo_Deprecated(::fidl::BytePart response_buffer) {
+  return Block::Call::GetInfo_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Block::GetInfoResponse> Block::Call::GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Block::GetInfoResponse> Block::Call::GetInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInfoRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetInfoRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -257,11 +257,11 @@ extern "C" const fidl_type_t fuchsia_hardware_block_BlockRebindDeviceResponseTab
 }
 
 
-::fidl::DecodeResult<Block::GetStatsResponse> Block::SyncClient::GetStats(::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer, int32_t* out_status, BlockStats** out_stats) {
-  return Block::Call::GetStats(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(clear), std::move(_response_buffer), out_status, out_stats);
+::fidl::DecodeResult<Block::GetStatsResponse> Block::SyncClient::GetStats_Deprecated(::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer, int32_t* out_status, BlockStats** out_stats) {
+  return Block::Call::GetStats_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(clear), std::move(_response_buffer), out_status, out_stats);
 }
 
-::fidl::DecodeResult<Block::GetStatsResponse> Block::Call::GetStats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer, int32_t* out_status, BlockStats** out_stats) {
+::fidl::DecodeResult<Block::GetStatsResponse> Block::Call::GetStats_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer, int32_t* out_status, BlockStats** out_stats) {
   if (_request_buffer.capacity() < GetStatsRequest::PrimarySize) {
     return ::fidl::DecodeResult<GetStatsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -289,11 +289,11 @@ extern "C" const fidl_type_t fuchsia_hardware_block_BlockRebindDeviceResponseTab
   return _decode_result;
 }
 
-::fidl::DecodeResult<Block::GetStatsResponse> Block::SyncClient::GetStats(::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
-  return Block::Call::GetStats(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Block::GetStatsResponse> Block::SyncClient::GetStats_Deprecated(::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
+  return Block::Call::GetStats_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Block::GetStatsResponse> Block::Call::GetStats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Block::GetStatsResponse> Block::Call::GetStats_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kBlock_GetStats_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -315,11 +315,11 @@ extern "C" const fidl_type_t fuchsia_hardware_block_BlockRebindDeviceResponseTab
 }
 
 
-zx_status_t Block::SyncClient::GetFifo(int32_t* out_status, ::zx::fifo* out_fifo) {
-  return Block::Call::GetFifo(zx::unowned_channel(this->channel_), out_status, out_fifo);
+zx_status_t Block::SyncClient::GetFifo_Deprecated(int32_t* out_status, ::zx::fifo* out_fifo) {
+  return Block::Call::GetFifo_Deprecated(zx::unowned_channel(this->channel_), out_status, out_fifo);
 }
 
-zx_status_t Block::Call::GetFifo(zx::unowned_channel _client_end, int32_t* out_status, ::zx::fifo* out_fifo) {
+zx_status_t Block::Call::GetFifo_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::fifo* out_fifo) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFifoRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetFifoRequest*>(_write_bytes);
@@ -348,11 +348,11 @@ zx_status_t Block::Call::GetFifo(zx::unowned_channel _client_end, int32_t* out_s
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Block::GetFifoResponse> Block::SyncClient::GetFifo(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::fifo* out_fifo) {
-  return Block::Call::GetFifo(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_fifo);
+::fidl::DecodeResult<Block::GetFifoResponse> Block::SyncClient::GetFifo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::fifo* out_fifo) {
+  return Block::Call::GetFifo_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_fifo);
 }
 
-::fidl::DecodeResult<Block::GetFifoResponse> Block::Call::GetFifo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::fifo* out_fifo) {
+::fidl::DecodeResult<Block::GetFifoResponse> Block::Call::GetFifo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::fifo* out_fifo) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFifoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetFifoRequest*>(_request_buffer.data());
@@ -378,11 +378,11 @@ zx_status_t Block::Call::GetFifo(zx::unowned_channel _client_end, int32_t* out_s
   return _decode_result;
 }
 
-::fidl::DecodeResult<Block::GetFifoResponse> Block::SyncClient::GetFifo(::fidl::BytePart response_buffer) {
-  return Block::Call::GetFifo(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Block::GetFifoResponse> Block::SyncClient::GetFifo_Deprecated(::fidl::BytePart response_buffer) {
+  return Block::Call::GetFifo_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Block::GetFifoResponse> Block::Call::GetFifo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Block::GetFifoResponse> Block::Call::GetFifo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFifoRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetFifoRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -408,11 +408,11 @@ zx_status_t Block::Call::GetFifo(zx::unowned_channel _client_end, int32_t* out_s
 }
 
 
-::fidl::DecodeResult<Block::AttachVmoResponse> Block::SyncClient::AttachVmo(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status, VmoID** out_vmoid) {
-  return Block::Call::AttachVmo(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(vmo), std::move(_response_buffer), out_status, out_vmoid);
+::fidl::DecodeResult<Block::AttachVmoResponse> Block::SyncClient::AttachVmo_Deprecated(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status, VmoID** out_vmoid) {
+  return Block::Call::AttachVmo_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(vmo), std::move(_response_buffer), out_status, out_vmoid);
 }
 
-::fidl::DecodeResult<Block::AttachVmoResponse> Block::Call::AttachVmo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status, VmoID** out_vmoid) {
+::fidl::DecodeResult<Block::AttachVmoResponse> Block::Call::AttachVmo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status, VmoID** out_vmoid) {
   if (_request_buffer.capacity() < AttachVmoRequest::PrimarySize) {
     return ::fidl::DecodeResult<AttachVmoResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -440,11 +440,11 @@ zx_status_t Block::Call::GetFifo(zx::unowned_channel _client_end, int32_t* out_s
   return _decode_result;
 }
 
-::fidl::DecodeResult<Block::AttachVmoResponse> Block::SyncClient::AttachVmo(::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
-  return Block::Call::AttachVmo(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Block::AttachVmoResponse> Block::SyncClient::AttachVmo_Deprecated(::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
+  return Block::Call::AttachVmo_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Block::AttachVmoResponse> Block::Call::AttachVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Block::AttachVmoResponse> Block::Call::AttachVmo_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kBlock_AttachVmo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -466,11 +466,11 @@ zx_status_t Block::Call::GetFifo(zx::unowned_channel _client_end, int32_t* out_s
 }
 
 
-zx_status_t Block::SyncClient::CloseFifo(int32_t* out_status) {
-  return Block::Call::CloseFifo(zx::unowned_channel(this->channel_), out_status);
+zx_status_t Block::SyncClient::CloseFifo_Deprecated(int32_t* out_status) {
+  return Block::Call::CloseFifo_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t Block::Call::CloseFifo(zx::unowned_channel _client_end, int32_t* out_status) {
+zx_status_t Block::Call::CloseFifo_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseFifoRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CloseFifoRequest*>(_write_bytes);
@@ -498,11 +498,11 @@ zx_status_t Block::Call::CloseFifo(zx::unowned_channel _client_end, int32_t* out
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Block::CloseFifoResponse> Block::SyncClient::CloseFifo(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Block::Call::CloseFifo(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Block::CloseFifoResponse> Block::SyncClient::CloseFifo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Block::Call::CloseFifo_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Block::CloseFifoResponse> Block::Call::CloseFifo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Block::CloseFifoResponse> Block::Call::CloseFifo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CloseFifoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<CloseFifoRequest*>(_request_buffer.data());
@@ -527,11 +527,11 @@ zx_status_t Block::Call::CloseFifo(zx::unowned_channel _client_end, int32_t* out
   return _decode_result;
 }
 
-::fidl::DecodeResult<Block::CloseFifoResponse> Block::SyncClient::CloseFifo(::fidl::BytePart response_buffer) {
-  return Block::Call::CloseFifo(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Block::CloseFifoResponse> Block::SyncClient::CloseFifo_Deprecated(::fidl::BytePart response_buffer) {
+  return Block::Call::CloseFifo_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Block::CloseFifoResponse> Block::Call::CloseFifo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Block::CloseFifoResponse> Block::Call::CloseFifo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CloseFifoRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(CloseFifoRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -557,11 +557,11 @@ zx_status_t Block::Call::CloseFifo(zx::unowned_channel _client_end, int32_t* out
 }
 
 
-zx_status_t Block::SyncClient::RebindDevice(int32_t* out_status) {
-  return Block::Call::RebindDevice(zx::unowned_channel(this->channel_), out_status);
+zx_status_t Block::SyncClient::RebindDevice_Deprecated(int32_t* out_status) {
+  return Block::Call::RebindDevice_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t Block::Call::RebindDevice(zx::unowned_channel _client_end, int32_t* out_status) {
+zx_status_t Block::Call::RebindDevice_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindDeviceRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<RebindDeviceRequest*>(_write_bytes);
@@ -589,11 +589,11 @@ zx_status_t Block::Call::RebindDevice(zx::unowned_channel _client_end, int32_t* 
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Block::RebindDeviceResponse> Block::SyncClient::RebindDevice(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Block::Call::RebindDevice(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Block::RebindDeviceResponse> Block::SyncClient::RebindDevice_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Block::Call::RebindDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Block::RebindDeviceResponse> Block::Call::RebindDevice(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Block::RebindDeviceResponse> Block::Call::RebindDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(RebindDeviceRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<RebindDeviceRequest*>(_request_buffer.data());
@@ -618,11 +618,11 @@ zx_status_t Block::Call::RebindDevice(zx::unowned_channel _client_end, int32_t* 
   return _decode_result;
 }
 
-::fidl::DecodeResult<Block::RebindDeviceResponse> Block::SyncClient::RebindDevice(::fidl::BytePart response_buffer) {
-  return Block::Call::RebindDevice(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Block::RebindDeviceResponse> Block::SyncClient::RebindDevice_Deprecated(::fidl::BytePart response_buffer) {
+  return Block::Call::RebindDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Block::RebindDeviceResponse> Block::Call::RebindDevice(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Block::RebindDeviceResponse> Block::Call::RebindDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(RebindDeviceRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(RebindDeviceRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);

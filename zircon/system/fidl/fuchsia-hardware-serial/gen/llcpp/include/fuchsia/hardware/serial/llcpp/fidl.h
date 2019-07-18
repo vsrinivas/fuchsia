@@ -132,28 +132,28 @@ class Device final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Lookup what type of serial device this is.
-    zx_status_t GetClass(Class* out_device_class);
+    zx_status_t GetClass_Deprecated(Class* out_device_class);
 
     // Lookup what type of serial device this is.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetClassResponse> GetClass(::fidl::BytePart _response_buffer, Class* out_device_class);
+    ::fidl::DecodeResult<GetClassResponse> GetClass_Deprecated(::fidl::BytePart _response_buffer, Class* out_device_class);
 
     // Lookup what type of serial device this is.
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetClassResponse> GetClass(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<GetClassResponse> GetClass_Deprecated(::fidl::BytePart response_buffer);
 
     // Set the configuration of this serial device.
-    zx_status_t SetConfig(Config config, int32_t* out_s);
+    zx_status_t SetConfig_Deprecated(Config config, int32_t* out_s);
 
     // Set the configuration of this serial device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<SetConfigResponse> SetConfig(::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    ::fidl::DecodeResult<SetConfigResponse> SetConfig_Deprecated(::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Set the configuration of this serial device.
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<SetConfigResponse> SetConfig(::fidl::DecodedMessage<SetConfigRequest> params, ::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<SetConfigResponse> SetConfig_Deprecated(::fidl::DecodedMessage<SetConfigRequest> params, ::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -164,28 +164,28 @@ class Device final {
    public:
 
     // Lookup what type of serial device this is.
-    static zx_status_t GetClass(zx::unowned_channel _client_end, Class* out_device_class);
+    static zx_status_t GetClass_Deprecated(zx::unowned_channel _client_end, Class* out_device_class);
 
     // Lookup what type of serial device this is.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetClassResponse> GetClass(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, Class* out_device_class);
+    static ::fidl::DecodeResult<GetClassResponse> GetClass_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, Class* out_device_class);
 
     // Lookup what type of serial device this is.
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetClassResponse> GetClass(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetClassResponse> GetClass_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Set the configuration of this serial device.
-    static zx_status_t SetConfig(zx::unowned_channel _client_end, Config config, int32_t* out_s);
+    static zx_status_t SetConfig_Deprecated(zx::unowned_channel _client_end, Config config, int32_t* out_s);
 
     // Set the configuration of this serial device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<SetConfigResponse> SetConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    static ::fidl::DecodeResult<SetConfigResponse> SetConfig_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Set the configuration of this serial device.
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<SetConfigResponse> SetConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetConfigResponse> SetConfig_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

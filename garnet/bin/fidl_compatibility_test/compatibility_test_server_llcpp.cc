@@ -34,7 +34,7 @@ class EchoClientApp {
       ::fidl::BytePart request_buffer, Struct value,
       ::fidl::StringView forward_to_server, ::fidl::BytePart response_buffer,
       Struct* out_value) {
-    return client_.EchoStruct(std::move(request_buffer), std::move(value),
+    return client_.EchoStruct_Deprecated(std::move(request_buffer), std::move(value),
                               forward_to_server, std::move(response_buffer),
                               out_value);
   }
@@ -43,7 +43,7 @@ class EchoClientApp {
                                  ::fidl::StringView forward_to_server,
                                  Echo::EventHandlers event_handlers) {
     auto status =
-        client_.EchoStructNoRetVal(std::move(value), forward_to_server);
+        client_.EchoStructNoRetVal_Deprecated(std::move(value), forward_to_server);
     if (status != ZX_OK) {
       return status;
     }
@@ -54,7 +54,7 @@ class EchoClientApp {
       ::fidl::BytePart request_buffer, ArraysStruct value,
       ::fidl::StringView forward_to_server, ::fidl::BytePart response_buffer,
       ArraysStruct* out_value) {
-    return client_.EchoArrays(std::move(request_buffer), std::move(value),
+    return client_.EchoArrays_Deprecated(std::move(request_buffer), std::move(value),
                               forward_to_server, std::move(response_buffer),
                               out_value);
   }
@@ -63,7 +63,7 @@ class EchoClientApp {
       ::fidl::BytePart request_buffer, VectorsStruct value,
       ::fidl::StringView forward_to_server, ::fidl::BytePart response_buffer,
       VectorsStruct* out_value) {
-    return client_.EchoVectors(std::move(request_buffer), std::move(value),
+    return client_.EchoVectors_Deprecated(std::move(request_buffer), std::move(value),
                                forward_to_server, std::move(response_buffer),
                                out_value);
   }
@@ -72,7 +72,7 @@ class EchoClientApp {
       ::fidl::BytePart request_buffer, AllTypesTable value,
       ::fidl::StringView forward_to_server, ::fidl::BytePart response_buffer,
       AllTypesTable* out_value) {
-    return client_.EchoTable(std::move(request_buffer), std::move(value),
+    return client_.EchoTable_Deprecated(std::move(request_buffer), std::move(value),
                              forward_to_server, std::move(response_buffer),
                              out_value);
   }
@@ -81,7 +81,7 @@ class EchoClientApp {
       ::fidl::BytePart request_buffer, ::fidl::VectorView<AllTypesXunion> value,
       ::fidl::StringView forward_to_server, ::fidl::BytePart response_buffer,
       ::fidl::VectorView<AllTypesXunion>* out_value) {
-    return client_.EchoXunions(std::move(request_buffer), std::move(value),
+    return client_.EchoXunions_Deprecated(std::move(request_buffer), std::move(value),
                                forward_to_server, std::move(response_buffer),
                                out_value);
   }

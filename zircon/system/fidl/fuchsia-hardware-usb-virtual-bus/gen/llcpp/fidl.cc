@@ -28,11 +28,11 @@ extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisconnectRespo
 
 }  // namespace
 
-zx_status_t Bus::SyncClient::Enable(int32_t* out_s) {
-  return Bus::Call::Enable(zx::unowned_channel(this->channel_), out_s);
+zx_status_t Bus::SyncClient::Enable_Deprecated(int32_t* out_s) {
+  return Bus::Call::Enable_Deprecated(zx::unowned_channel(this->channel_), out_s);
 }
 
-zx_status_t Bus::Call::Enable(zx::unowned_channel _client_end, int32_t* out_s) {
+zx_status_t Bus::Call::Enable_Deprecated(zx::unowned_channel _client_end, int32_t* out_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<EnableRequest*>(_write_bytes);
@@ -60,11 +60,11 @@ zx_status_t Bus::Call::Enable(zx::unowned_channel _client_end, int32_t* out_s) {
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Bus::EnableResponse> Bus::SyncClient::Enable(::fidl::BytePart _response_buffer, int32_t* out_s) {
-  return Bus::Call::Enable(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
+::fidl::DecodeResult<Bus::EnableResponse> Bus::SyncClient::Enable_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s) {
+  return Bus::Call::Enable_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
 }
 
-::fidl::DecodeResult<Bus::EnableResponse> Bus::Call::Enable(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
+::fidl::DecodeResult<Bus::EnableResponse> Bus::Call::Enable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(EnableRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<EnableRequest*>(_request_buffer.data());
@@ -89,11 +89,11 @@ zx_status_t Bus::Call::Enable(zx::unowned_channel _client_end, int32_t* out_s) {
   return _decode_result;
 }
 
-::fidl::DecodeResult<Bus::EnableResponse> Bus::SyncClient::Enable(::fidl::BytePart response_buffer) {
-  return Bus::Call::Enable(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Bus::EnableResponse> Bus::SyncClient::Enable_Deprecated(::fidl::BytePart response_buffer) {
+  return Bus::Call::Enable_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Bus::EnableResponse> Bus::Call::Enable(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Bus::EnableResponse> Bus::Call::Enable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(EnableRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(EnableRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -119,11 +119,11 @@ zx_status_t Bus::Call::Enable(zx::unowned_channel _client_end, int32_t* out_s) {
 }
 
 
-zx_status_t Bus::SyncClient::Disable(int32_t* out_s) {
-  return Bus::Call::Disable(zx::unowned_channel(this->channel_), out_s);
+zx_status_t Bus::SyncClient::Disable_Deprecated(int32_t* out_s) {
+  return Bus::Call::Disable_Deprecated(zx::unowned_channel(this->channel_), out_s);
 }
 
-zx_status_t Bus::Call::Disable(zx::unowned_channel _client_end, int32_t* out_s) {
+zx_status_t Bus::Call::Disable_Deprecated(zx::unowned_channel _client_end, int32_t* out_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<DisableRequest*>(_write_bytes);
@@ -151,11 +151,11 @@ zx_status_t Bus::Call::Disable(zx::unowned_channel _client_end, int32_t* out_s) 
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Bus::DisableResponse> Bus::SyncClient::Disable(::fidl::BytePart _response_buffer, int32_t* out_s) {
-  return Bus::Call::Disable(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
+::fidl::DecodeResult<Bus::DisableResponse> Bus::SyncClient::Disable_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s) {
+  return Bus::Call::Disable_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
 }
 
-::fidl::DecodeResult<Bus::DisableResponse> Bus::Call::Disable(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
+::fidl::DecodeResult<Bus::DisableResponse> Bus::Call::Disable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DisableRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<DisableRequest*>(_request_buffer.data());
@@ -180,11 +180,11 @@ zx_status_t Bus::Call::Disable(zx::unowned_channel _client_end, int32_t* out_s) 
   return _decode_result;
 }
 
-::fidl::DecodeResult<Bus::DisableResponse> Bus::SyncClient::Disable(::fidl::BytePart response_buffer) {
-  return Bus::Call::Disable(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Bus::DisableResponse> Bus::SyncClient::Disable_Deprecated(::fidl::BytePart response_buffer) {
+  return Bus::Call::Disable_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Bus::DisableResponse> Bus::Call::Disable(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Bus::DisableResponse> Bus::Call::Disable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DisableRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(DisableRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -210,11 +210,11 @@ zx_status_t Bus::Call::Disable(zx::unowned_channel _client_end, int32_t* out_s) 
 }
 
 
-zx_status_t Bus::SyncClient::Connect(int32_t* out_s) {
-  return Bus::Call::Connect(zx::unowned_channel(this->channel_), out_s);
+zx_status_t Bus::SyncClient::Connect_Deprecated(int32_t* out_s) {
+  return Bus::Call::Connect_Deprecated(zx::unowned_channel(this->channel_), out_s);
 }
 
-zx_status_t Bus::Call::Connect(zx::unowned_channel _client_end, int32_t* out_s) {
+zx_status_t Bus::Call::Connect_Deprecated(zx::unowned_channel _client_end, int32_t* out_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ConnectRequest*>(_write_bytes);
@@ -242,11 +242,11 @@ zx_status_t Bus::Call::Connect(zx::unowned_channel _client_end, int32_t* out_s) 
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Bus::ConnectResponse> Bus::SyncClient::Connect(::fidl::BytePart _response_buffer, int32_t* out_s) {
-  return Bus::Call::Connect(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
+::fidl::DecodeResult<Bus::ConnectResponse> Bus::SyncClient::Connect_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s) {
+  return Bus::Call::Connect_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
 }
 
-::fidl::DecodeResult<Bus::ConnectResponse> Bus::Call::Connect(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
+::fidl::DecodeResult<Bus::ConnectResponse> Bus::Call::Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ConnectRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<ConnectRequest*>(_request_buffer.data());
@@ -271,11 +271,11 @@ zx_status_t Bus::Call::Connect(zx::unowned_channel _client_end, int32_t* out_s) 
   return _decode_result;
 }
 
-::fidl::DecodeResult<Bus::ConnectResponse> Bus::SyncClient::Connect(::fidl::BytePart response_buffer) {
-  return Bus::Call::Connect(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Bus::ConnectResponse> Bus::SyncClient::Connect_Deprecated(::fidl::BytePart response_buffer) {
+  return Bus::Call::Connect_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Bus::ConnectResponse> Bus::Call::Connect(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Bus::ConnectResponse> Bus::Call::Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ConnectRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(ConnectRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -301,11 +301,11 @@ zx_status_t Bus::Call::Connect(zx::unowned_channel _client_end, int32_t* out_s) 
 }
 
 
-zx_status_t Bus::SyncClient::Disconnect(int32_t* out_s) {
-  return Bus::Call::Disconnect(zx::unowned_channel(this->channel_), out_s);
+zx_status_t Bus::SyncClient::Disconnect_Deprecated(int32_t* out_s) {
+  return Bus::Call::Disconnect_Deprecated(zx::unowned_channel(this->channel_), out_s);
 }
 
-zx_status_t Bus::Call::Disconnect(zx::unowned_channel _client_end, int32_t* out_s) {
+zx_status_t Bus::Call::Disconnect_Deprecated(zx::unowned_channel _client_end, int32_t* out_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisconnectRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<DisconnectRequest*>(_write_bytes);
@@ -333,11 +333,11 @@ zx_status_t Bus::Call::Disconnect(zx::unowned_channel _client_end, int32_t* out_
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Bus::DisconnectResponse> Bus::SyncClient::Disconnect(::fidl::BytePart _response_buffer, int32_t* out_s) {
-  return Bus::Call::Disconnect(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
+::fidl::DecodeResult<Bus::DisconnectResponse> Bus::SyncClient::Disconnect_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s) {
+  return Bus::Call::Disconnect_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_s);
 }
 
-::fidl::DecodeResult<Bus::DisconnectResponse> Bus::Call::Disconnect(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
+::fidl::DecodeResult<Bus::DisconnectResponse> Bus::Call::Disconnect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DisconnectRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<DisconnectRequest*>(_request_buffer.data());
@@ -362,11 +362,11 @@ zx_status_t Bus::Call::Disconnect(zx::unowned_channel _client_end, int32_t* out_
   return _decode_result;
 }
 
-::fidl::DecodeResult<Bus::DisconnectResponse> Bus::SyncClient::Disconnect(::fidl::BytePart response_buffer) {
-  return Bus::Call::Disconnect(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Bus::DisconnectResponse> Bus::SyncClient::Disconnect_Deprecated(::fidl::BytePart response_buffer) {
+  return Bus::Call::Disconnect_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Bus::DisconnectResponse> Bus::Call::Disconnect(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Bus::DisconnectResponse> Bus::Call::Disconnect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DisconnectRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(DisconnectRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);

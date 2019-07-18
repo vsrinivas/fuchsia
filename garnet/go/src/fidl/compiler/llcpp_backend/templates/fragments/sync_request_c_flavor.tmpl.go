@@ -25,23 +25,23 @@ const SyncRequestCFlavor = `
 
 {{- define "SyncRequestCFlavorMethodSignature" -}}
   {{- if .Response -}}
-{{ .Name }}({{ template "Params" .Request }}{{ if .Request }}, {{ end }}{{ template "OutParams" .Response }})
+{{ .Name }}_Deprecated({{ template "Params" .Request }}{{ if .Request }}, {{ end }}{{ template "OutParams" .Response }})
   {{- else -}}
-{{ .Name }}({{ template "Params" .Request }})
+{{ .Name }}_Deprecated({{ template "Params" .Request }})
   {{- end -}}
 {{- end }}
 
 {{- define "StaticCallSyncRequestCFlavorMethodSignature" -}}
   {{- if .Response -}}
-{{ .Name }}(zx::unowned_channel _client_end, {{ template "Params" .Request }}{{ if .Request }}, {{ end }}{{ template "OutParams" .Response }})
+{{ .Name }}_Deprecated(zx::unowned_channel _client_end, {{ template "Params" .Request }}{{ if .Request }}, {{ end }}{{ template "OutParams" .Response }})
   {{- else -}}
-{{ .Name }}(zx::unowned_channel _client_end {{- if .Request }}, {{ end }}{{ template "Params" .Request }})
+{{ .Name }}_Deprecated(zx::unowned_channel _client_end {{- if .Request }}, {{ end }}{{ template "Params" .Request }})
   {{- end -}}
 {{- end }}
 
 {{- define "SyncRequestCFlavorMethodDefinition" }}
 zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCFlavorMethodSignature" . }} {
-  return {{ .LLProps.InterfaceName }}::Call::{{ .Name }}(zx::unowned_channel(this->channel_)
+  return {{ .LLProps.InterfaceName }}::Call::{{ .Name }}_Deprecated(zx::unowned_channel(this->channel_)
     {{- if or .Request .Response }}, {{ end }}
     {{- template "SyncClientMoveParams" .Request }}
     {{- if and .Request .Response }}, {{ end }}

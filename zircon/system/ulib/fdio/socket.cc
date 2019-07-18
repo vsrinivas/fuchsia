@@ -275,7 +275,7 @@ static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf, size_t i
   uint8_t response_buffer[fidl::MaxSizeInChannel<fsocket::Control::IoctlPOSIXResponse>()];
   int16_t out_code;
   fidl::VectorView<uint8_t> out;
-  fidl::DecodeResult result = fdio_get_zxio_socket(io)->socket.control.IoctlPOSIX(
+  fidl::DecodeResult result = fdio_get_zxio_socket(io)->socket.control.IoctlPOSIX_Deprecated(
       fidl::BytePart::WrapEmpty(request_buffer), static_cast<uint16_t>(op),
       fidl::VectorView(in_len, const_cast<uint8_t*>(static_cast<const uint8_t*>(in_buf))),
       fidl::BytePart::WrapEmpty(response_buffer), &out_code, &out);

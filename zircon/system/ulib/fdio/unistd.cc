@@ -2473,7 +2473,7 @@ static int fs_stat(int fd, struct statfs* buf) {
         return ERRNO(ENOTSUP);
     }
     uint8_t response_buffer[fidl::MaxSizeInChannel<fio::DirectoryAdmin::QueryFilesystemResponse>()];
-    fidl::DecodeResult result = fio::DirectoryAdmin::Call::QueryFilesystem(
+    fidl::DecodeResult result = fio::DirectoryAdmin::Call::QueryFilesystem_Deprecated(
         zx::unowned_channel(handle),
         fidl::BytePart::WrapEmpty(response_buffer));
     fdio_release(io);

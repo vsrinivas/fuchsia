@@ -151,7 +151,7 @@ zx_status_t OpenBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* 
         partition::GUID* guid;
         zx_status_t status;
         if (type_guid) {
-            auto decoded = partition::Partition::Call::GetTypeGuid(
+            auto decoded = partition::Partition::Call::GetTypeGuid_Deprecated(
                 caller.channel(), fidl::BytePart::WrapEmpty(out_buffer), &status, &guid);
             if (decoded.status != ZX_OK || status != ZX_OK ||
                 memcmp(guid->value.data(), type_guid, partition::GUID_LENGTH) != 0) {
@@ -159,7 +159,7 @@ zx_status_t OpenBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* 
             }
         }
         if (unique_guid) {
-            auto decoded = partition::Partition::Call::GetInstanceGuid(
+            auto decoded = partition::Partition::Call::GetInstanceGuid_Deprecated(
                 caller.channel(), fidl::BytePart::WrapEmpty(out_buffer), &status, &guid);
             if (decoded.status != ZX_OK || status != ZX_OK ||
                 memcmp(guid->value.data(), unique_guid, partition::GUID_LENGTH) != 0) {
@@ -183,7 +183,7 @@ zx_status_t OpenSkipBlockPartition(const fbl::unique_fd& devfs_root, const uint8
 
         zx_status_t status;
         skipblock::PartitionInfo info;
-        auto io_status = skipblock::SkipBlock::Call::GetPartitionInfo(caller.channel(), &status,
+        auto io_status = skipblock::SkipBlock::Call::GetPartitionInfo_Deprecated(caller.channel(), &status,
                                                                       &info);
 
         if (io_status != ZX_OK || status != ZX_OK ||
@@ -220,7 +220,7 @@ zx_status_t WipeBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* 
     fzl::UnownedFdioCaller caller(fd.get());
     uint8_t out_buffer[fidl::MaxSizeInChannel<block::Block::GetInfoResponse>()];
     block::BlockInfo* info;
-    auto decoded = block::Block::Call::GetInfo(
+    auto decoded = block::Block::Call::GetInfo_Deprecated(
         caller.channel(), fidl::BytePart::WrapEmpty(out_buffer), &status, &info);
     if (decoded.status != ZX_OK) {
         status = decoded.status;
@@ -322,7 +322,7 @@ bool GptDevicePartitioner::FindTargetGptPath(const fbl::unique_fd& devfs_root, s
         )];
         block::BlockInfo* info;
 
-        auto decoded = block::Block::Call::GetInfo(
+        auto decoded = block::Block::Call::GetInfo_Deprecated(
             zx::unowned(dev), fidl::BytePart::WrapEmpty(out_buffer), &status, &info);
         if (decoded.status != ZX_OK || status != ZX_OK) {
             continue;
@@ -331,7 +331,7 @@ bool GptDevicePartitioner::FindTargetGptPath(const fbl::unique_fd& devfs_root, s
             continue;
         }
         fidl::StringView path;
-        auto decoded2 = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
+        auto decoded2 = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath_Deprecated(
             zx::unowned(dev), fidl::BytePart::WrapEmpty(out_buffer), &status, &path);
         if (decoded2.status != ZX_OK || status != ZX_OK) {
             continue;
@@ -376,7 +376,7 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
     uint8_t out_buffer[fidl::MaxSizeInChannel<block::Block::GetInfoResponse>()];
     block::BlockInfo* block_info;
     zx_status_t status;
-    auto decoded = block::Block::Call::GetInfo(
+    auto decoded = block::Block::Call::GetInfo_Deprecated(
         caller.channel(), fidl::BytePart::WrapEmpty(out_buffer), &status, &block_info);
     if (decoded.status != ZX_OK) {
         status = decoded.status;
@@ -406,7 +406,7 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
         // Try to rebind the GPT, in case a prior GPT driver was actually
         // up and running.
         zx_status_t io_status =
-            block::Block::Call::RebindDevice(caller.channel(), &status);
+            block::Block::Call::RebindDevice_Deprecated(caller.channel(), &status);
         if (io_status != ZX_OK) {
             status = io_status;
         }
@@ -417,7 +417,7 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
 
         // Manually re-bind the GPT driver, since it is almost certainly
         // too late to be noticed by the block watcher.
-        io_status = ::llcpp::fuchsia::device::Controller::Call::Bind(
+        io_status = ::llcpp::fuchsia::device::Controller::Call::Bind_Deprecated(
             caller.channel(), fidl::StringView(strlen(kGptDriverName), kGptDriverName),
             &status);
         if (io_status != ZX_OK || status != ZX_OK) {
@@ -515,7 +515,7 @@ zx_status_t GptDevicePartitioner::CreateGptPartition(const char* name, uint8_t* 
         ERROR("Failed to clear first block of new partition\n");
         return status;
     }
-    zx_status_t io_status = block::Block::Call::RebindDevice(Channel(), &status);
+    zx_status_t io_status = block::Block::Call::RebindDevice_Deprecated(Channel(), &status);
     if (io_status != ZX_OK) {
         status = io_status;
     }
@@ -651,7 +651,7 @@ zx_status_t GptDevicePartitioner::WipeFvm() const {
         LOG("Immediate reboot strongly recommended\n");
     }
     zx_status_t status;
-    block::Block::Call::RebindDevice(Channel(), &status);
+    block::Block::Call::RebindDevice_Deprecated(Channel(), &status);
     return ZX_OK;
 }
 
@@ -812,7 +812,7 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch ar
             ERROR("Failed to sync CrOS for Fuchsia.\n");
             return status;
         }
-        block::Block::Call::RebindDevice(gpt_partitioner->Channel(), &status);
+        block::Block::Call::RebindDevice_Deprecated(gpt_partitioner->Channel(), &status);
     }
 
     LOG("Successfully initialized CrOS Device Partitioner\n");
@@ -1054,7 +1054,7 @@ zx_status_t FixedDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd
     block::BlockInfo* block_info;
 
     zx_status_t status;
-    auto decoded = block::Block::Call::GetInfo(
+    auto decoded = block::Block::Call::GetInfo_Deprecated(
         caller.channel(), fidl::BytePart::WrapEmpty(out_buffer), &status, &block_info);
     if (decoded.status != ZX_OK) {
         status = decoded.status;
@@ -1162,7 +1162,7 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
     uint8_t out_buffer[
         fidl::MaxSizeInChannel<::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse>()];
     fidl::StringView name;
-    auto decoded = block_client.GetTopologicalPath(fidl::BytePart::WrapEmpty(out_buffer), &status,
+    auto decoded = block_client.GetTopologicalPath_Deprecated(fidl::BytePart::WrapEmpty(out_buffer), &status,
                                                    &name);
     if (decoded.status != ZX_OK) {
         status = decoded.status;
@@ -1191,7 +1191,7 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
         return status;
     }
     block::Ftl::SyncClient client(std::move(svc));
-    auto io_status = client.Format(&status);
+    auto io_status = client.Format_Deprecated(&status);
 
     return io_status == ZX_OK ? status : io_status;
 }
@@ -1207,14 +1207,14 @@ zx_status_t SkipBlockDevicePartitioner::GetBlockSize(const fbl::unique_fd& devic
     // Clone ahead of time; if it is NOT a block device, the connection will be terminated.
     block::Block::SyncClient maybe_block(zx::channel(fdio_service_clone(caller.borrow_channel())));
     zx_status_t status;
-    auto decoded = maybe_block.GetInfo(fidl::BytePart::WrapEmpty(out_buffer), &status, &block_info);
+    auto decoded = maybe_block.GetInfo_Deprecated(fidl::BytePart::WrapEmpty(out_buffer), &status, &block_info);
     if (decoded.status == ZX_OK && status == ZX_OK) {
         *block_size = block_info->block_size;
         return ZX_OK;
     }
 
     skipblock::PartitionInfo part_info;
-    zx_status_t io_status = skipblock::SkipBlock::Call::GetPartitionInfo(
+    zx_status_t io_status = skipblock::SkipBlock::Call::GetPartitionInfo_Deprecated(
         caller.channel(), &status, &part_info);
     if (io_status != ZX_OK) {
         status = io_status;

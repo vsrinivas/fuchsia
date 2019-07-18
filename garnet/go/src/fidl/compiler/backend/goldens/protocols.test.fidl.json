@@ -1170,6 +1170,7 @@
       ]
     }
   ],
+  "service_declarations": [],
   "struct_declarations": [
     {
       "name": "test.name/WithErrorSyntax_ErrorAsPrimitive_Response",

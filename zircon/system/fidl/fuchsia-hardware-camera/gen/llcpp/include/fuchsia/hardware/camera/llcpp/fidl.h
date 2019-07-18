@@ -76,7 +76,7 @@ class Device final {
     // system has been updated to use FIDL as its serialization format instead
     // of the legacy custom format, this method can be updated to use an
     // interface request instead of returning a channel.
-    zx_status_t GetChannel(::zx::channel ch);
+    zx_status_t GetChannel_Deprecated(::zx::channel ch);
 
     // Note: this method obtains a channel to the codec device which
     // communicates using a legacy custom binary serialized format.  Once the
@@ -84,7 +84,7 @@ class Device final {
     // of the legacy custom format, this method can be updated to use an
     // interface request instead of returning a channel.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t GetChannel(::fidl::BytePart _request_buffer, ::zx::channel ch);
+    zx_status_t GetChannel_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel ch);
 
     // Note: this method obtains a channel to the codec device which
     // communicates using a legacy custom binary serialized format.  Once the
@@ -92,7 +92,7 @@ class Device final {
     // of the legacy custom format, this method can be updated to use an
     // interface request instead of returning a channel.
     // Messages are encoded and decoded in-place.
-    zx_status_t GetChannel(::fidl::DecodedMessage<GetChannelRequest> params);
+    zx_status_t GetChannel_Deprecated(::fidl::DecodedMessage<GetChannelRequest> params);
 
    private:
     ::zx::channel channel_;
@@ -107,7 +107,7 @@ class Device final {
     // system has been updated to use FIDL as its serialization format instead
     // of the legacy custom format, this method can be updated to use an
     // interface request instead of returning a channel.
-    static zx_status_t GetChannel(zx::unowned_channel _client_end, ::zx::channel ch);
+    static zx_status_t GetChannel_Deprecated(zx::unowned_channel _client_end, ::zx::channel ch);
 
     // Note: this method obtains a channel to the codec device which
     // communicates using a legacy custom binary serialized format.  Once the
@@ -115,7 +115,7 @@ class Device final {
     // of the legacy custom format, this method can be updated to use an
     // interface request instead of returning a channel.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t GetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel ch);
+    static zx_status_t GetChannel_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel ch);
 
     // Note: this method obtains a channel to the codec device which
     // communicates using a legacy custom binary serialized format.  Once the
@@ -123,7 +123,7 @@ class Device final {
     // of the legacy custom format, this method can be updated to use an
     // interface request instead of returning a channel.
     // Messages are encoded and decoded in-place.
-    static zx_status_t GetChannel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params);
+    static zx_status_t GetChannel_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params);
 
   };
 
@@ -245,17 +245,17 @@ class Stream final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    zx_status_t Start();
+    zx_status_t Start_Deprecated();
 
-    zx_status_t Stop();
+    zx_status_t Stop_Deprecated();
 
-    zx_status_t ReleaseFrame(uint32_t buffer_id);
+    zx_status_t ReleaseFrame_Deprecated(uint32_t buffer_id);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t ReleaseFrame(::fidl::BytePart _request_buffer, uint32_t buffer_id);
+    zx_status_t ReleaseFrame_Deprecated(::fidl::BytePart _request_buffer, uint32_t buffer_id);
 
     // Messages are encoded and decoded in-place.
-    zx_status_t ReleaseFrame(::fidl::DecodedMessage<ReleaseFrameRequest> params);
+    zx_status_t ReleaseFrame_Deprecated(::fidl::DecodedMessage<ReleaseFrameRequest> params);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -270,17 +270,17 @@ class Stream final {
   class Call final {
    public:
 
-    static zx_status_t Start(zx::unowned_channel _client_end);
+    static zx_status_t Start_Deprecated(zx::unowned_channel _client_end);
 
-    static zx_status_t Stop(zx::unowned_channel _client_end);
+    static zx_status_t Stop_Deprecated(zx::unowned_channel _client_end);
 
-    static zx_status_t ReleaseFrame(zx::unowned_channel _client_end, uint32_t buffer_id);
+    static zx_status_t ReleaseFrame_Deprecated(zx::unowned_channel _client_end, uint32_t buffer_id);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t ReleaseFrame(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t buffer_id);
+    static zx_status_t ReleaseFrame_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t buffer_id);
 
     // Messages are encoded and decoded in-place.
-    static zx_status_t ReleaseFrame(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseFrameRequest> params);
+    static zx_status_t ReleaseFrame_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseFrameRequest> params);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
@@ -467,7 +467,7 @@ class Control final {
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
-    zx_status_t GetFormats(uint32_t index, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
+    zx_status_t GetFormats_Deprecated(uint32_t index, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
@@ -476,7 +476,7 @@ class Control final {
     // `total_format_count` is the total number of formats supported by the camera.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetFormatsResponse> GetFormats(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
+    ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
@@ -484,24 +484,24 @@ class Control final {
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetFormatsResponse> GetFormats(::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
 
-    zx_status_t CreateStream(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+    zx_status_t CreateStream_Deprecated(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t CreateStream(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+    zx_status_t CreateStream_Deprecated(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Messages are encoded and decoded in-place.
-    zx_status_t CreateStream(::fidl::DecodedMessage<CreateStreamRequest> params);
+    zx_status_t CreateStream_Deprecated(::fidl::DecodedMessage<CreateStreamRequest> params);
 
-    zx_status_t GetDeviceInfo(DeviceInfo* out_device_info);
+    zx_status_t GetDeviceInfo_Deprecated(DeviceInfo* out_device_info);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(::fidl::BytePart _response_buffer, DeviceInfo* out_device_info);
+    ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo_Deprecated(::fidl::BytePart _response_buffer, DeviceInfo* out_device_info);
 
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo_Deprecated(::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -516,7 +516,7 @@ class Control final {
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
-    static zx_status_t GetFormats(zx::unowned_channel _client_end, uint32_t index, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
+    static zx_status_t GetFormats_Deprecated(zx::unowned_channel _client_end, uint32_t index, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
@@ -525,7 +525,7 @@ class Control final {
     // `total_format_count` is the total number of formats supported by the camera.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetFormatsResponse> GetFormats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
+    static ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
@@ -533,24 +533,24 @@ class Control final {
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetFormatsResponse> GetFormats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
 
-    static zx_status_t CreateStream(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+    static zx_status_t CreateStream_Deprecated(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t CreateStream(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+    static zx_status_t CreateStream_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Messages are encoded and decoded in-place.
-    static zx_status_t CreateStream(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateStreamRequest> params);
+    static zx_status_t CreateStream_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateStreamRequest> params);
 
-    static zx_status_t GetDeviceInfo(zx::unowned_channel _client_end, DeviceInfo* out_device_info);
+    static zx_status_t GetDeviceInfo_Deprecated(zx::unowned_channel _client_end, DeviceInfo* out_device_info);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, DeviceInfo* out_device_info);
+    static ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, DeviceInfo* out_device_info);
 
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -709,7 +709,7 @@ class ControlV2 final {
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
-    zx_status_t GetFormats(uint32_t index, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
+    zx_status_t GetFormats_Deprecated(uint32_t index, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
@@ -718,7 +718,7 @@ class ControlV2 final {
     // `total_format_count` is the total number of formats supported by the camera.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetFormatsResponse> GetFormats(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
+    ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
@@ -726,24 +726,24 @@ class ControlV2 final {
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetFormatsResponse> GetFormats(::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
 
-    zx_status_t CreateStream(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+    zx_status_t CreateStream_Deprecated(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t CreateStream(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+    zx_status_t CreateStream_Deprecated(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Messages are encoded and decoded in-place.
-    zx_status_t CreateStream(::fidl::DecodedMessage<CreateStreamRequest> params);
+    zx_status_t CreateStream_Deprecated(::fidl::DecodedMessage<CreateStreamRequest> params);
 
-    zx_status_t GetDeviceInfo(DeviceInfo* out_device_info);
+    zx_status_t GetDeviceInfo_Deprecated(DeviceInfo* out_device_info);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(::fidl::BytePart _response_buffer, DeviceInfo* out_device_info);
+    ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo_Deprecated(::fidl::BytePart _response_buffer, DeviceInfo* out_device_info);
 
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo_Deprecated(::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -758,7 +758,7 @@ class ControlV2 final {
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
-    static zx_status_t GetFormats(zx::unowned_channel _client_end, uint32_t index, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
+    static zx_status_t GetFormats_Deprecated(zx::unowned_channel _client_end, uint32_t index, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
@@ -767,7 +767,7 @@ class ControlV2 final {
     // `total_format_count` is the total number of formats supported by the camera.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetFormatsResponse> GetFormats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
+    static ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
@@ -775,24 +775,24 @@ class ControlV2 final {
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetFormatsResponse> GetFormats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
 
-    static zx_status_t CreateStream(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+    static zx_status_t CreateStream_Deprecated(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t CreateStream(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+    static zx_status_t CreateStream_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Messages are encoded and decoded in-place.
-    static zx_status_t CreateStream(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateStreamRequest> params);
+    static zx_status_t CreateStream_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateStreamRequest> params);
 
-    static zx_status_t GetDeviceInfo(zx::unowned_channel _client_end, DeviceInfo* out_device_info);
+    static zx_status_t GetDeviceInfo_Deprecated(zx::unowned_channel _client_end, DeviceInfo* out_device_info);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, DeviceInfo* out_device_info);
+    static ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, DeviceInfo* out_device_info);
 
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

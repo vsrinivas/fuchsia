@@ -79,7 +79,7 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
         return ZX_ERR_UNAVAILABLE;
     }
     uint32_t flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
-    return fio::Directory::Call::Open(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
+    return fio::Directory::Call::Open_Deprecated(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
                                       fidl::StringView(length, path), std::move(request));
 }
 
@@ -108,7 +108,7 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    return fio::Directory::Call::Open(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
+    return fio::Directory::Call::Open_Deprecated(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
                                       fidl::StringView(length, path), std::move(request));
 }
 
@@ -123,7 +123,7 @@ zx_handle_t fdio_service_clone(zx_handle_t handle) {
         return ZX_HANDLE_INVALID;
     }
     uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
-    status = fio::Node::Call::Clone(zx::unowned_channel(handle), flags, std::move(request));
+    status = fio::Node::Call::Clone_Deprecated(zx::unowned_channel(handle), flags, std::move(request));
     if (status != ZX_OK) {
         return ZX_HANDLE_INVALID;
     }
@@ -137,7 +137,7 @@ zx_status_t fdio_service_clone_to(zx_handle_t handle, zx_handle_t request_raw) {
         return ZX_ERR_INVALID_ARGS;
     }
     uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
-    return fio::Node::Call::Clone(zx::unowned_channel(handle), flags, std::move(request));
+    return fio::Node::Call::Clone_Deprecated(zx::unowned_channel(handle), flags, std::move(request));
 }
 
 // Create an |fdio_t| from a |handle| and an |info|.
@@ -172,7 +172,7 @@ static zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, f
         case fio::NodeInfo::Tag::kVmofile: {
             zx_status_t status;
             uint64_t seek = 0u;
-            zx_status_t io_status = fio::File::Call::Seek(zx::unowned_channel(handle.get()), 0,
+            zx_status_t io_status = fio::File::Call::Seek_Deprecated(zx::unowned_channel(handle.get()), 0,
                                                           fio::SeekOrigin::START, &status, &seek);
             if (io_status != ZX_OK) {
                 status = io_status;
@@ -228,7 +228,7 @@ static zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, f
 // Always consumes |channel|.
 static zx_status_t fdio_from_channel(zx::channel channel, fdio_t** out_io) {
     fio::NodeInfo info;
-    zx_status_t status = fio::Node::Call::Describe(zx::unowned_channel(channel), &info);
+    zx_status_t status = fio::Node::Call::Describe_Deprecated(zx::unowned_channel(channel), &info);
     if (status != ZX_OK) {
         return status;
     }
@@ -281,7 +281,7 @@ zx_status_t fdio_remote_open_at(zx_handle_t dir, const char* path, uint32_t flag
         return status;
     }
 
-    status = fio::Directory::Call::Open(zx::unowned_channel(dir), flags, mode,
+    status = fio::Directory::Call::Open_Deprecated(zx::unowned_channel(dir), flags, mode,
                                         fidl::StringView(length, path), std::move(request));
     if (status != ZX_OK) {
         return status;

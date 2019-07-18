@@ -60,11 +60,11 @@ extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeDestroyResponse
 
 }  // namespace
 
-::fidl::DecodeResult<Volume::GetInfoResponse> Volume::SyncClient::GetInfo(::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::BlockInfo** out_info) {
-  return Volume::Call::GetInfo(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_info);
+::fidl::DecodeResult<Volume::GetInfoResponse> Volume::SyncClient::GetInfo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::BlockInfo** out_info) {
+  return Volume::Call::GetInfo_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_info);
 }
 
-::fidl::DecodeResult<Volume::GetInfoResponse> Volume::Call::GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::BlockInfo** out_info) {
+::fidl::DecodeResult<Volume::GetInfoResponse> Volume::Call::GetInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::BlockInfo** out_info) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetInfoRequest*>(_request_buffer.data());
@@ -90,11 +90,11 @@ extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeDestroyResponse
   return _decode_result;
 }
 
-::fidl::DecodeResult<Volume::GetInfoResponse> Volume::SyncClient::GetInfo(::fidl::BytePart response_buffer) {
-  return Volume::Call::GetInfo(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Volume::GetInfoResponse> Volume::SyncClient::GetInfo_Deprecated(::fidl::BytePart response_buffer) {
+  return Volume::Call::GetInfo_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Volume::GetInfoResponse> Volume::Call::GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Volume::GetInfoResponse> Volume::Call::GetInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInfoRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetInfoRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -120,11 +120,11 @@ extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeDestroyResponse
 }
 
 
-::fidl::DecodeResult<Volume::GetStatsResponse> Volume::SyncClient::GetStats(::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::BlockStats** out_stats) {
-  return Volume::Call::GetStats(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(clear), std::move(_response_buffer), out_status, out_stats);
+::fidl::DecodeResult<Volume::GetStatsResponse> Volume::SyncClient::GetStats_Deprecated(::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::BlockStats** out_stats) {
+  return Volume::Call::GetStats_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(clear), std::move(_response_buffer), out_status, out_stats);
 }
 
-::fidl::DecodeResult<Volume::GetStatsResponse> Volume::Call::GetStats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::BlockStats** out_stats) {
+::fidl::DecodeResult<Volume::GetStatsResponse> Volume::Call::GetStats_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::BlockStats** out_stats) {
   if (_request_buffer.capacity() < GetStatsRequest::PrimarySize) {
     return ::fidl::DecodeResult<GetStatsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -152,11 +152,11 @@ extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeDestroyResponse
   return _decode_result;
 }
 
-::fidl::DecodeResult<Volume::GetStatsResponse> Volume::SyncClient::GetStats(::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
-  return Volume::Call::GetStats(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Volume::GetStatsResponse> Volume::SyncClient::GetStats_Deprecated(::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
+  return Volume::Call::GetStats_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Volume::GetStatsResponse> Volume::Call::GetStats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Volume::GetStatsResponse> Volume::Call::GetStats_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kVolume_GetStats_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -178,11 +178,11 @@ extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeDestroyResponse
 }
 
 
-zx_status_t Volume::SyncClient::GetFifo(int32_t* out_status, ::zx::fifo* out_fifo) {
-  return Volume::Call::GetFifo(zx::unowned_channel(this->channel_), out_status, out_fifo);
+zx_status_t Volume::SyncClient::GetFifo_Deprecated(int32_t* out_status, ::zx::fifo* out_fifo) {
+  return Volume::Call::GetFifo_Deprecated(zx::unowned_channel(this->channel_), out_status, out_fifo);
 }
 
-zx_status_t Volume::Call::GetFifo(zx::unowned_channel _client_end, int32_t* out_status, ::zx::fifo* out_fifo) {
+zx_status_t Volume::Call::GetFifo_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::fifo* out_fifo) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFifoRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetFifoRequest*>(_write_bytes);
@@ -211,11 +211,11 @@ zx_status_t Volume::Call::GetFifo(zx::unowned_channel _client_end, int32_t* out_
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Volume::GetFifoResponse> Volume::SyncClient::GetFifo(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::fifo* out_fifo) {
-  return Volume::Call::GetFifo(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_fifo);
+::fidl::DecodeResult<Volume::GetFifoResponse> Volume::SyncClient::GetFifo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::fifo* out_fifo) {
+  return Volume::Call::GetFifo_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_fifo);
 }
 
-::fidl::DecodeResult<Volume::GetFifoResponse> Volume::Call::GetFifo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::fifo* out_fifo) {
+::fidl::DecodeResult<Volume::GetFifoResponse> Volume::Call::GetFifo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::fifo* out_fifo) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFifoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetFifoRequest*>(_request_buffer.data());
@@ -241,11 +241,11 @@ zx_status_t Volume::Call::GetFifo(zx::unowned_channel _client_end, int32_t* out_
   return _decode_result;
 }
 
-::fidl::DecodeResult<Volume::GetFifoResponse> Volume::SyncClient::GetFifo(::fidl::BytePart response_buffer) {
-  return Volume::Call::GetFifo(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Volume::GetFifoResponse> Volume::SyncClient::GetFifo_Deprecated(::fidl::BytePart response_buffer) {
+  return Volume::Call::GetFifo_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Volume::GetFifoResponse> Volume::Call::GetFifo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Volume::GetFifoResponse> Volume::Call::GetFifo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFifoRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetFifoRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -271,11 +271,11 @@ zx_status_t Volume::Call::GetFifo(zx::unowned_channel _client_end, int32_t* out_
 }
 
 
-::fidl::DecodeResult<Volume::AttachVmoResponse> Volume::SyncClient::AttachVmo(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::VmoID** out_vmoid) {
-  return Volume::Call::AttachVmo(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(vmo), std::move(_response_buffer), out_status, out_vmoid);
+::fidl::DecodeResult<Volume::AttachVmoResponse> Volume::SyncClient::AttachVmo_Deprecated(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::VmoID** out_vmoid) {
+  return Volume::Call::AttachVmo_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(vmo), std::move(_response_buffer), out_status, out_vmoid);
 }
 
-::fidl::DecodeResult<Volume::AttachVmoResponse> Volume::Call::AttachVmo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::VmoID** out_vmoid) {
+::fidl::DecodeResult<Volume::AttachVmoResponse> Volume::Call::AttachVmo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::VmoID** out_vmoid) {
   if (_request_buffer.capacity() < AttachVmoRequest::PrimarySize) {
     return ::fidl::DecodeResult<AttachVmoResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -303,11 +303,11 @@ zx_status_t Volume::Call::GetFifo(zx::unowned_channel _client_end, int32_t* out_
   return _decode_result;
 }
 
-::fidl::DecodeResult<Volume::AttachVmoResponse> Volume::SyncClient::AttachVmo(::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
-  return Volume::Call::AttachVmo(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Volume::AttachVmoResponse> Volume::SyncClient::AttachVmo_Deprecated(::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
+  return Volume::Call::AttachVmo_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Volume::AttachVmoResponse> Volume::Call::AttachVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Volume::AttachVmoResponse> Volume::Call::AttachVmo_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kVolume_AttachVmo_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -329,11 +329,11 @@ zx_status_t Volume::Call::GetFifo(zx::unowned_channel _client_end, int32_t* out_
 }
 
 
-zx_status_t Volume::SyncClient::CloseFifo(int32_t* out_status) {
-  return Volume::Call::CloseFifo(zx::unowned_channel(this->channel_), out_status);
+zx_status_t Volume::SyncClient::CloseFifo_Deprecated(int32_t* out_status) {
+  return Volume::Call::CloseFifo_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t Volume::Call::CloseFifo(zx::unowned_channel _client_end, int32_t* out_status) {
+zx_status_t Volume::Call::CloseFifo_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseFifoRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CloseFifoRequest*>(_write_bytes);
@@ -361,11 +361,11 @@ zx_status_t Volume::Call::CloseFifo(zx::unowned_channel _client_end, int32_t* ou
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Volume::CloseFifoResponse> Volume::SyncClient::CloseFifo(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Volume::Call::CloseFifo(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Volume::CloseFifoResponse> Volume::SyncClient::CloseFifo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Volume::Call::CloseFifo_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Volume::CloseFifoResponse> Volume::Call::CloseFifo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Volume::CloseFifoResponse> Volume::Call::CloseFifo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CloseFifoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<CloseFifoRequest*>(_request_buffer.data());
@@ -390,11 +390,11 @@ zx_status_t Volume::Call::CloseFifo(zx::unowned_channel _client_end, int32_t* ou
   return _decode_result;
 }
 
-::fidl::DecodeResult<Volume::CloseFifoResponse> Volume::SyncClient::CloseFifo(::fidl::BytePart response_buffer) {
-  return Volume::Call::CloseFifo(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Volume::CloseFifoResponse> Volume::SyncClient::CloseFifo_Deprecated(::fidl::BytePart response_buffer) {
+  return Volume::Call::CloseFifo_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Volume::CloseFifoResponse> Volume::Call::CloseFifo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Volume::CloseFifoResponse> Volume::Call::CloseFifo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CloseFifoRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(CloseFifoRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -420,11 +420,11 @@ zx_status_t Volume::Call::CloseFifo(zx::unowned_channel _client_end, int32_t* ou
 }
 
 
-zx_status_t Volume::SyncClient::RebindDevice(int32_t* out_status) {
-  return Volume::Call::RebindDevice(zx::unowned_channel(this->channel_), out_status);
+zx_status_t Volume::SyncClient::RebindDevice_Deprecated(int32_t* out_status) {
+  return Volume::Call::RebindDevice_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t Volume::Call::RebindDevice(zx::unowned_channel _client_end, int32_t* out_status) {
+zx_status_t Volume::Call::RebindDevice_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindDeviceRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<RebindDeviceRequest*>(_write_bytes);
@@ -452,11 +452,11 @@ zx_status_t Volume::Call::RebindDevice(zx::unowned_channel _client_end, int32_t*
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Volume::RebindDeviceResponse> Volume::SyncClient::RebindDevice(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Volume::Call::RebindDevice(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Volume::RebindDeviceResponse> Volume::SyncClient::RebindDevice_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Volume::Call::RebindDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Volume::RebindDeviceResponse> Volume::Call::RebindDevice(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Volume::RebindDeviceResponse> Volume::Call::RebindDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(RebindDeviceRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<RebindDeviceRequest*>(_request_buffer.data());
@@ -481,11 +481,11 @@ zx_status_t Volume::Call::RebindDevice(zx::unowned_channel _client_end, int32_t*
   return _decode_result;
 }
 
-::fidl::DecodeResult<Volume::RebindDeviceResponse> Volume::SyncClient::RebindDevice(::fidl::BytePart response_buffer) {
-  return Volume::Call::RebindDevice(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Volume::RebindDeviceResponse> Volume::SyncClient::RebindDevice_Deprecated(::fidl::BytePart response_buffer) {
+  return Volume::Call::RebindDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Volume::RebindDeviceResponse> Volume::Call::RebindDevice(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Volume::RebindDeviceResponse> Volume::Call::RebindDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(RebindDeviceRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(RebindDeviceRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -511,11 +511,11 @@ zx_status_t Volume::Call::RebindDevice(zx::unowned_channel _client_end, int32_t*
 }
 
 
-::fidl::DecodeResult<Volume::GetTypeGuidResponse> Volume::SyncClient::GetTypeGuid(::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::partition::GUID** out_guid) {
-  return Volume::Call::GetTypeGuid(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_guid);
+::fidl::DecodeResult<Volume::GetTypeGuidResponse> Volume::SyncClient::GetTypeGuid_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::partition::GUID** out_guid) {
+  return Volume::Call::GetTypeGuid_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_guid);
 }
 
-::fidl::DecodeResult<Volume::GetTypeGuidResponse> Volume::Call::GetTypeGuid(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::partition::GUID** out_guid) {
+::fidl::DecodeResult<Volume::GetTypeGuidResponse> Volume::Call::GetTypeGuid_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::partition::GUID** out_guid) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetTypeGuidRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetTypeGuidRequest*>(_request_buffer.data());
@@ -541,11 +541,11 @@ zx_status_t Volume::Call::RebindDevice(zx::unowned_channel _client_end, int32_t*
   return _decode_result;
 }
 
-::fidl::DecodeResult<Volume::GetTypeGuidResponse> Volume::SyncClient::GetTypeGuid(::fidl::BytePart response_buffer) {
-  return Volume::Call::GetTypeGuid(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Volume::GetTypeGuidResponse> Volume::SyncClient::GetTypeGuid_Deprecated(::fidl::BytePart response_buffer) {
+  return Volume::Call::GetTypeGuid_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Volume::GetTypeGuidResponse> Volume::Call::GetTypeGuid(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Volume::GetTypeGuidResponse> Volume::Call::GetTypeGuid_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetTypeGuidRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetTypeGuidRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -571,11 +571,11 @@ zx_status_t Volume::Call::RebindDevice(zx::unowned_channel _client_end, int32_t*
 }
 
 
-::fidl::DecodeResult<Volume::GetInstanceGuidResponse> Volume::SyncClient::GetInstanceGuid(::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::partition::GUID** out_guid) {
-  return Volume::Call::GetInstanceGuid(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_guid);
+::fidl::DecodeResult<Volume::GetInstanceGuidResponse> Volume::SyncClient::GetInstanceGuid_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::partition::GUID** out_guid) {
+  return Volume::Call::GetInstanceGuid_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_guid);
 }
 
-::fidl::DecodeResult<Volume::GetInstanceGuidResponse> Volume::Call::GetInstanceGuid(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::partition::GUID** out_guid) {
+::fidl::DecodeResult<Volume::GetInstanceGuidResponse> Volume::Call::GetInstanceGuid_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::partition::GUID** out_guid) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInstanceGuidRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetInstanceGuidRequest*>(_request_buffer.data());
@@ -601,11 +601,11 @@ zx_status_t Volume::Call::RebindDevice(zx::unowned_channel _client_end, int32_t*
   return _decode_result;
 }
 
-::fidl::DecodeResult<Volume::GetInstanceGuidResponse> Volume::SyncClient::GetInstanceGuid(::fidl::BytePart response_buffer) {
-  return Volume::Call::GetInstanceGuid(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Volume::GetInstanceGuidResponse> Volume::SyncClient::GetInstanceGuid_Deprecated(::fidl::BytePart response_buffer) {
+  return Volume::Call::GetInstanceGuid_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Volume::GetInstanceGuidResponse> Volume::Call::GetInstanceGuid(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Volume::GetInstanceGuidResponse> Volume::Call::GetInstanceGuid_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInstanceGuidRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetInstanceGuidRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -631,11 +631,11 @@ zx_status_t Volume::Call::RebindDevice(zx::unowned_channel _client_end, int32_t*
 }
 
 
-::fidl::DecodeResult<Volume::GetNameResponse> Volume::SyncClient::GetName(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name) {
-  return Volume::Call::GetName(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_name);
+::fidl::DecodeResult<Volume::GetNameResponse> Volume::SyncClient::GetName_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name) {
+  return Volume::Call::GetName_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_name);
 }
 
-::fidl::DecodeResult<Volume::GetNameResponse> Volume::Call::GetName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name) {
+::fidl::DecodeResult<Volume::GetNameResponse> Volume::Call::GetName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetNameRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<GetNameRequest*>(_request_buffer.data());
@@ -661,11 +661,11 @@ zx_status_t Volume::Call::RebindDevice(zx::unowned_channel _client_end, int32_t*
   return _decode_result;
 }
 
-::fidl::DecodeResult<Volume::GetNameResponse> Volume::SyncClient::GetName(::fidl::BytePart response_buffer) {
-  return Volume::Call::GetName(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Volume::GetNameResponse> Volume::SyncClient::GetName_Deprecated(::fidl::BytePart response_buffer) {
+  return Volume::Call::GetName_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Volume::GetNameResponse> Volume::Call::GetName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Volume::GetNameResponse> Volume::Call::GetName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetNameRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(GetNameRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -691,11 +691,11 @@ zx_status_t Volume::Call::RebindDevice(zx::unowned_channel _client_end, int32_t*
 }
 
 
-::fidl::DecodeResult<Volume::QueryResponse> Volume::SyncClient::Query(::fidl::BytePart _response_buffer, int32_t* out_status, VolumeInfo** out_info) {
-  return Volume::Call::Query(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_info);
+::fidl::DecodeResult<Volume::QueryResponse> Volume::SyncClient::Query_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, VolumeInfo** out_info) {
+  return Volume::Call::Query_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_info);
 }
 
-::fidl::DecodeResult<Volume::QueryResponse> Volume::Call::Query(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, VolumeInfo** out_info) {
+::fidl::DecodeResult<Volume::QueryResponse> Volume::Call::Query_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, VolumeInfo** out_info) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(QueryRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<QueryRequest*>(_request_buffer.data());
@@ -721,11 +721,11 @@ zx_status_t Volume::Call::RebindDevice(zx::unowned_channel _client_end, int32_t*
   return _decode_result;
 }
 
-::fidl::DecodeResult<Volume::QueryResponse> Volume::SyncClient::Query(::fidl::BytePart response_buffer) {
-  return Volume::Call::Query(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Volume::QueryResponse> Volume::SyncClient::Query_Deprecated(::fidl::BytePart response_buffer) {
+  return Volume::Call::Query_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Volume::QueryResponse> Volume::Call::Query(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Volume::QueryResponse> Volume::Call::Query_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(QueryRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(QueryRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -751,11 +751,11 @@ zx_status_t Volume::Call::RebindDevice(zx::unowned_channel _client_end, int32_t*
 }
 
 
-zx_status_t Volume::SyncClient::QuerySlices(::fidl::VectorView<uint64_t> start_slices, int32_t* out_status, ::fidl::Array<VsliceRange, 16>* out_response, uint64_t* out_response_count) {
-  return Volume::Call::QuerySlices(zx::unowned_channel(this->channel_), std::move(start_slices), out_status, out_response, out_response_count);
+zx_status_t Volume::SyncClient::QuerySlices_Deprecated(::fidl::VectorView<uint64_t> start_slices, int32_t* out_status, ::fidl::Array<VsliceRange, 16>* out_response, uint64_t* out_response_count) {
+  return Volume::Call::QuerySlices_Deprecated(zx::unowned_channel(this->channel_), std::move(start_slices), out_status, out_response, out_response_count);
 }
 
-zx_status_t Volume::Call::QuerySlices(zx::unowned_channel _client_end, ::fidl::VectorView<uint64_t> start_slices, int32_t* out_status, ::fidl::Array<VsliceRange, 16>* out_response, uint64_t* out_response_count) {
+zx_status_t Volume::Call::QuerySlices_Deprecated(zx::unowned_channel _client_end, ::fidl::VectorView<uint64_t> start_slices, int32_t* out_status, ::fidl::Array<VsliceRange, 16>* out_response, uint64_t* out_response_count) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QuerySlicesRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   QuerySlicesRequest _request = {};
@@ -790,11 +790,11 @@ zx_status_t Volume::Call::QuerySlices(zx::unowned_channel _client_end, ::fidl::V
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Volume::QuerySlicesResponse> Volume::SyncClient::QuerySlices(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint64_t> start_slices, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::Array<VsliceRange, 16>* out_response, uint64_t* out_response_count) {
-  return Volume::Call::QuerySlices(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(start_slices), std::move(_response_buffer), out_status, out_response, out_response_count);
+::fidl::DecodeResult<Volume::QuerySlicesResponse> Volume::SyncClient::QuerySlices_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint64_t> start_slices, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::Array<VsliceRange, 16>* out_response, uint64_t* out_response_count) {
+  return Volume::Call::QuerySlices_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(start_slices), std::move(_response_buffer), out_status, out_response, out_response_count);
 }
 
-::fidl::DecodeResult<Volume::QuerySlicesResponse> Volume::Call::QuerySlices(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint64_t> start_slices, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::Array<VsliceRange, 16>* out_response, uint64_t* out_response_count) {
+::fidl::DecodeResult<Volume::QuerySlicesResponse> Volume::Call::QuerySlices_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint64_t> start_slices, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::Array<VsliceRange, 16>* out_response, uint64_t* out_response_count) {
   if (_request_buffer.capacity() < QuerySlicesRequest::PrimarySize) {
     return ::fidl::DecodeResult<QuerySlicesResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -826,11 +826,11 @@ zx_status_t Volume::Call::QuerySlices(zx::unowned_channel _client_end, ::fidl::V
   return _decode_result;
 }
 
-::fidl::DecodeResult<Volume::QuerySlicesResponse> Volume::SyncClient::QuerySlices(::fidl::DecodedMessage<QuerySlicesRequest> params, ::fidl::BytePart response_buffer) {
-  return Volume::Call::QuerySlices(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Volume::QuerySlicesResponse> Volume::SyncClient::QuerySlices_Deprecated(::fidl::DecodedMessage<QuerySlicesRequest> params, ::fidl::BytePart response_buffer) {
+  return Volume::Call::QuerySlices_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Volume::QuerySlicesResponse> Volume::Call::QuerySlices(zx::unowned_channel _client_end, ::fidl::DecodedMessage<QuerySlicesRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Volume::QuerySlicesResponse> Volume::Call::QuerySlices_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<QuerySlicesRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kVolume_QuerySlices_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -852,11 +852,11 @@ zx_status_t Volume::Call::QuerySlices(zx::unowned_channel _client_end, ::fidl::V
 }
 
 
-zx_status_t Volume::SyncClient::Extend(uint64_t start_slice, uint64_t slice_count, int32_t* out_status) {
-  return Volume::Call::Extend(zx::unowned_channel(this->channel_), std::move(start_slice), std::move(slice_count), out_status);
+zx_status_t Volume::SyncClient::Extend_Deprecated(uint64_t start_slice, uint64_t slice_count, int32_t* out_status) {
+  return Volume::Call::Extend_Deprecated(zx::unowned_channel(this->channel_), std::move(start_slice), std::move(slice_count), out_status);
 }
 
-zx_status_t Volume::Call::Extend(zx::unowned_channel _client_end, uint64_t start_slice, uint64_t slice_count, int32_t* out_status) {
+zx_status_t Volume::Call::Extend_Deprecated(zx::unowned_channel _client_end, uint64_t start_slice, uint64_t slice_count, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ExtendRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ExtendRequest*>(_write_bytes);
@@ -886,11 +886,11 @@ zx_status_t Volume::Call::Extend(zx::unowned_channel _client_end, uint64_t start
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Volume::ExtendResponse> Volume::SyncClient::Extend(::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Volume::Call::Extend(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(start_slice), std::move(slice_count), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Volume::ExtendResponse> Volume::SyncClient::Extend_Deprecated(::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Volume::Call::Extend_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(start_slice), std::move(slice_count), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Volume::ExtendResponse> Volume::Call::Extend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Volume::ExtendResponse> Volume::Call::Extend_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   if (_request_buffer.capacity() < ExtendRequest::PrimarySize) {
     return ::fidl::DecodeResult<ExtendResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -918,11 +918,11 @@ zx_status_t Volume::Call::Extend(zx::unowned_channel _client_end, uint64_t start
   return _decode_result;
 }
 
-::fidl::DecodeResult<Volume::ExtendResponse> Volume::SyncClient::Extend(::fidl::DecodedMessage<ExtendRequest> params, ::fidl::BytePart response_buffer) {
-  return Volume::Call::Extend(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Volume::ExtendResponse> Volume::SyncClient::Extend_Deprecated(::fidl::DecodedMessage<ExtendRequest> params, ::fidl::BytePart response_buffer) {
+  return Volume::Call::Extend_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Volume::ExtendResponse> Volume::Call::Extend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ExtendRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Volume::ExtendResponse> Volume::Call::Extend_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ExtendRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kVolume_Extend_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -944,11 +944,11 @@ zx_status_t Volume::Call::Extend(zx::unowned_channel _client_end, uint64_t start
 }
 
 
-zx_status_t Volume::SyncClient::Shrink(uint64_t start_slice, uint64_t slice_count, int32_t* out_status) {
-  return Volume::Call::Shrink(zx::unowned_channel(this->channel_), std::move(start_slice), std::move(slice_count), out_status);
+zx_status_t Volume::SyncClient::Shrink_Deprecated(uint64_t start_slice, uint64_t slice_count, int32_t* out_status) {
+  return Volume::Call::Shrink_Deprecated(zx::unowned_channel(this->channel_), std::move(start_slice), std::move(slice_count), out_status);
 }
 
-zx_status_t Volume::Call::Shrink(zx::unowned_channel _client_end, uint64_t start_slice, uint64_t slice_count, int32_t* out_status) {
+zx_status_t Volume::Call::Shrink_Deprecated(zx::unowned_channel _client_end, uint64_t start_slice, uint64_t slice_count, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ShrinkRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ShrinkRequest*>(_write_bytes);
@@ -978,11 +978,11 @@ zx_status_t Volume::Call::Shrink(zx::unowned_channel _client_end, uint64_t start
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Volume::ShrinkResponse> Volume::SyncClient::Shrink(::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Volume::Call::Shrink(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(start_slice), std::move(slice_count), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Volume::ShrinkResponse> Volume::SyncClient::Shrink_Deprecated(::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Volume::Call::Shrink_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(start_slice), std::move(slice_count), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Volume::ShrinkResponse> Volume::Call::Shrink(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Volume::ShrinkResponse> Volume::Call::Shrink_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   if (_request_buffer.capacity() < ShrinkRequest::PrimarySize) {
     return ::fidl::DecodeResult<ShrinkResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -1010,11 +1010,11 @@ zx_status_t Volume::Call::Shrink(zx::unowned_channel _client_end, uint64_t start
   return _decode_result;
 }
 
-::fidl::DecodeResult<Volume::ShrinkResponse> Volume::SyncClient::Shrink(::fidl::DecodedMessage<ShrinkRequest> params, ::fidl::BytePart response_buffer) {
-  return Volume::Call::Shrink(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<Volume::ShrinkResponse> Volume::SyncClient::Shrink_Deprecated(::fidl::DecodedMessage<ShrinkRequest> params, ::fidl::BytePart response_buffer) {
+  return Volume::Call::Shrink_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Volume::ShrinkResponse> Volume::Call::Shrink(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ShrinkRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Volume::ShrinkResponse> Volume::Call::Shrink_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ShrinkRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kVolume_Shrink_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -1036,11 +1036,11 @@ zx_status_t Volume::Call::Shrink(zx::unowned_channel _client_end, uint64_t start
 }
 
 
-zx_status_t Volume::SyncClient::Destroy(int32_t* out_status) {
-  return Volume::Call::Destroy(zx::unowned_channel(this->channel_), out_status);
+zx_status_t Volume::SyncClient::Destroy_Deprecated(int32_t* out_status) {
+  return Volume::Call::Destroy_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t Volume::Call::Destroy(zx::unowned_channel _client_end, int32_t* out_status) {
+zx_status_t Volume::Call::Destroy_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DestroyRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<DestroyRequest*>(_write_bytes);
@@ -1068,11 +1068,11 @@ zx_status_t Volume::Call::Destroy(zx::unowned_channel _client_end, int32_t* out_
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Volume::DestroyResponse> Volume::SyncClient::Destroy(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Volume::Call::Destroy(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Volume::DestroyResponse> Volume::SyncClient::Destroy_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Volume::Call::Destroy_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Volume::DestroyResponse> Volume::Call::Destroy(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Volume::DestroyResponse> Volume::Call::Destroy_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DestroyRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<DestroyRequest*>(_request_buffer.data());
@@ -1097,11 +1097,11 @@ zx_status_t Volume::Call::Destroy(zx::unowned_channel _client_end, int32_t* out_
   return _decode_result;
 }
 
-::fidl::DecodeResult<Volume::DestroyResponse> Volume::SyncClient::Destroy(::fidl::BytePart response_buffer) {
-  return Volume::Call::Destroy(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<Volume::DestroyResponse> Volume::SyncClient::Destroy_Deprecated(::fidl::BytePart response_buffer) {
+  return Volume::Call::Destroy_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<Volume::DestroyResponse> Volume::Call::Destroy(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Volume::DestroyResponse> Volume::Call::Destroy_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DestroyRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(DestroyRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -1814,11 +1814,11 @@ extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerActivate
 
 }  // namespace
 
-zx_status_t VolumeManager::SyncClient::AllocatePartition(uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags, int32_t* out_status) {
-  return VolumeManager::Call::AllocatePartition(zx::unowned_channel(this->channel_), std::move(slice_count), std::move(type), std::move(instance), std::move(name), std::move(flags), out_status);
+zx_status_t VolumeManager::SyncClient::AllocatePartition_Deprecated(uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags, int32_t* out_status) {
+  return VolumeManager::Call::AllocatePartition_Deprecated(zx::unowned_channel(this->channel_), std::move(slice_count), std::move(type), std::move(instance), std::move(name), std::move(flags), out_status);
 }
 
-zx_status_t VolumeManager::Call::AllocatePartition(zx::unowned_channel _client_end, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags, int32_t* out_status) {
+zx_status_t VolumeManager::Call::AllocatePartition_Deprecated(zx::unowned_channel _client_end, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AllocatePartitionRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   AllocatePartitionRequest _request = {};
@@ -1855,11 +1855,11 @@ zx_status_t VolumeManager::Call::AllocatePartition(zx::unowned_channel _client_e
   return ZX_OK;
 }
 
-::fidl::DecodeResult<VolumeManager::AllocatePartitionResponse> VolumeManager::SyncClient::AllocatePartition(::fidl::BytePart _request_buffer, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return VolumeManager::Call::AllocatePartition(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(slice_count), std::move(type), std::move(instance), std::move(name), std::move(flags), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<VolumeManager::AllocatePartitionResponse> VolumeManager::SyncClient::AllocatePartition_Deprecated(::fidl::BytePart _request_buffer, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return VolumeManager::Call::AllocatePartition_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(slice_count), std::move(type), std::move(instance), std::move(name), std::move(flags), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<VolumeManager::AllocatePartitionResponse> VolumeManager::Call::AllocatePartition(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<VolumeManager::AllocatePartitionResponse> VolumeManager::Call::AllocatePartition_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   if (_request_buffer.capacity() < AllocatePartitionRequest::PrimarySize) {
     return ::fidl::DecodeResult<AllocatePartitionResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -1893,11 +1893,11 @@ zx_status_t VolumeManager::Call::AllocatePartition(zx::unowned_channel _client_e
   return _decode_result;
 }
 
-::fidl::DecodeResult<VolumeManager::AllocatePartitionResponse> VolumeManager::SyncClient::AllocatePartition(::fidl::DecodedMessage<AllocatePartitionRequest> params, ::fidl::BytePart response_buffer) {
-  return VolumeManager::Call::AllocatePartition(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<VolumeManager::AllocatePartitionResponse> VolumeManager::SyncClient::AllocatePartition_Deprecated(::fidl::DecodedMessage<AllocatePartitionRequest> params, ::fidl::BytePart response_buffer) {
+  return VolumeManager::Call::AllocatePartition_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<VolumeManager::AllocatePartitionResponse> VolumeManager::Call::AllocatePartition(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocatePartitionRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<VolumeManager::AllocatePartitionResponse> VolumeManager::Call::AllocatePartition_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocatePartitionRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kVolumeManager_AllocatePartition_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -1919,11 +1919,11 @@ zx_status_t VolumeManager::Call::AllocatePartition(zx::unowned_channel _client_e
 }
 
 
-::fidl::DecodeResult<VolumeManager::QueryResponse> VolumeManager::SyncClient::Query(::fidl::BytePart _response_buffer, int32_t* out_status, VolumeInfo** out_info) {
-  return VolumeManager::Call::Query(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_info);
+::fidl::DecodeResult<VolumeManager::QueryResponse> VolumeManager::SyncClient::Query_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, VolumeInfo** out_info) {
+  return VolumeManager::Call::Query_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_info);
 }
 
-::fidl::DecodeResult<VolumeManager::QueryResponse> VolumeManager::Call::Query(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, VolumeInfo** out_info) {
+::fidl::DecodeResult<VolumeManager::QueryResponse> VolumeManager::Call::Query_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, VolumeInfo** out_info) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(QueryRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   auto& _request = *reinterpret_cast<QueryRequest*>(_request_buffer.data());
@@ -1949,11 +1949,11 @@ zx_status_t VolumeManager::Call::AllocatePartition(zx::unowned_channel _client_e
   return _decode_result;
 }
 
-::fidl::DecodeResult<VolumeManager::QueryResponse> VolumeManager::SyncClient::Query(::fidl::BytePart response_buffer) {
-  return VolumeManager::Call::Query(zx::unowned_channel(this->channel_), std::move(response_buffer));
+::fidl::DecodeResult<VolumeManager::QueryResponse> VolumeManager::SyncClient::Query_Deprecated(::fidl::BytePart response_buffer) {
+  return VolumeManager::Call::Query_Deprecated(zx::unowned_channel(this->channel_), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<VolumeManager::QueryResponse> VolumeManager::Call::Query(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<VolumeManager::QueryResponse> VolumeManager::Call::Query_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(QueryRequest)] = {};
   constexpr uint32_t _write_num_bytes = sizeof(QueryRequest);
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
@@ -1979,11 +1979,11 @@ zx_status_t VolumeManager::Call::AllocatePartition(zx::unowned_channel _client_e
 }
 
 
-zx_status_t VolumeManager::SyncClient::Activate(::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid, int32_t* out_status) {
-  return VolumeManager::Call::Activate(zx::unowned_channel(this->channel_), std::move(old_guid), std::move(new_guid), out_status);
+zx_status_t VolumeManager::SyncClient::Activate_Deprecated(::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid, int32_t* out_status) {
+  return VolumeManager::Call::Activate_Deprecated(zx::unowned_channel(this->channel_), std::move(old_guid), std::move(new_guid), out_status);
 }
 
-zx_status_t VolumeManager::Call::Activate(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid, int32_t* out_status) {
+zx_status_t VolumeManager::Call::Activate_Deprecated(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ActivateRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ActivateRequest*>(_write_bytes);
@@ -2013,11 +2013,11 @@ zx_status_t VolumeManager::Call::Activate(zx::unowned_channel _client_end, ::llc
   return ZX_OK;
 }
 
-::fidl::DecodeResult<VolumeManager::ActivateResponse> VolumeManager::SyncClient::Activate(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return VolumeManager::Call::Activate(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(old_guid), std::move(new_guid), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<VolumeManager::ActivateResponse> VolumeManager::SyncClient::Activate_Deprecated(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return VolumeManager::Call::Activate_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(old_guid), std::move(new_guid), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<VolumeManager::ActivateResponse> VolumeManager::Call::Activate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<VolumeManager::ActivateResponse> VolumeManager::Call::Activate_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   if (_request_buffer.capacity() < ActivateRequest::PrimarySize) {
     return ::fidl::DecodeResult<ActivateResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -2045,11 +2045,11 @@ zx_status_t VolumeManager::Call::Activate(zx::unowned_channel _client_end, ::llc
   return _decode_result;
 }
 
-::fidl::DecodeResult<VolumeManager::ActivateResponse> VolumeManager::SyncClient::Activate(::fidl::DecodedMessage<ActivateRequest> params, ::fidl::BytePart response_buffer) {
-  return VolumeManager::Call::Activate(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
+::fidl::DecodeResult<VolumeManager::ActivateResponse> VolumeManager::SyncClient::Activate_Deprecated(::fidl::DecodedMessage<ActivateRequest> params, ::fidl::BytePart response_buffer) {
+  return VolumeManager::Call::Activate_Deprecated(zx::unowned_channel(this->channel_), std::move(params), std::move(response_buffer));
 }
 
-::fidl::DecodeResult<VolumeManager::ActivateResponse> VolumeManager::Call::Activate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ActivateRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<VolumeManager::ActivateResponse> VolumeManager::Call::Activate_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ActivateRequest> params, ::fidl::BytePart response_buffer) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kVolumeManager_Activate_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));

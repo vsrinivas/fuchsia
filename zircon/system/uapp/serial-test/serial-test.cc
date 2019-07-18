@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
 
         fuchsia::hardware::serial::Class device_class;
         fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
-        zx_status_t status = fuchsia::hardware::serial::Device::Call::GetClass(zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)), &device_class);
+        zx_status_t status = fuchsia::hardware::serial::Device::Call::GetClass_Deprecated(zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)), &device_class);
         fdio_unsafe_release(fdio);
         if (status != ZX_OK || device_class != fuchsia::hardware::serial::Class::GENERIC) {
             close(fd);

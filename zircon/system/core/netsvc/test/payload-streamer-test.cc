@@ -42,7 +42,7 @@ TEST_F(PayloadStreamerTest, RegisterVmo) {
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
 
     zx_status_t status;
-    ASSERT_OK(client_->RegisterVmo(std::move(vmo), &status));
+    ASSERT_OK(client_->RegisterVmo_Deprecated(std::move(vmo), &status));
     ASSERT_OK(status);
 }
 
@@ -53,12 +53,12 @@ TEST_F(PayloadStreamerTest, RegisterVmoTwice) {
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
 
     zx_status_t status;
-    ASSERT_OK(client_->RegisterVmo(std::move(vmo), &status));
+    ASSERT_OK(client_->RegisterVmo_Deprecated(std::move(vmo), &status));
     ASSERT_OK(status);
 
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
 
-    ASSERT_OK(client_->RegisterVmo(std::move(vmo), &status));
+    ASSERT_OK(client_->RegisterVmo_Deprecated(std::move(vmo), &status));
     ASSERT_OK(status);
 }
 
@@ -69,11 +69,11 @@ TEST_F(PayloadStreamerTest, ReadData) {
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
 
     zx_status_t status;
-    ASSERT_OK(client_->RegisterVmo(std::move(vmo), &status));
+    ASSERT_OK(client_->RegisterVmo_Deprecated(std::move(vmo), &status));
     ASSERT_OK(status);
 
     ::llcpp::fuchsia::paver::ReadResult result;
-    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_OK(client_->ReadData_Deprecated(&result));
     ASSERT_TRUE(result.is_info());
     ASSERT_EQ(result.info().offset, 0);
     ASSERT_EQ(result.info().size, ZX_PAGE_SIZE);
@@ -83,7 +83,7 @@ TEST_F(PayloadStreamerTest, ReadDataWithoutRegisterVmo) {
     StartStreamer();
 
     ::llcpp::fuchsia::paver::ReadResult result;
-    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_OK(client_->ReadData_Deprecated(&result));
     ASSERT_TRUE(result.is_err());
     ASSERT_NE(result.err(), ZX_OK);
 }
@@ -98,11 +98,11 @@ TEST_F(PayloadStreamerTest, ReadDataHalfFull) {
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
 
     zx_status_t status;
-    ASSERT_OK(client_->RegisterVmo(std::move(vmo), &status));
+    ASSERT_OK(client_->RegisterVmo_Deprecated(std::move(vmo), &status));
     ASSERT_OK(status);
 
     ::llcpp::fuchsia::paver::ReadResult result;
-    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_OK(client_->ReadData_Deprecated(&result));
     ASSERT_TRUE(result.is_info());
     ASSERT_EQ(result.info().offset, 0);
     ASSERT_EQ(result.info().size, ZX_PAGE_SIZE / 2);
@@ -118,11 +118,11 @@ TEST_F(PayloadStreamerTest, ReadEof) {
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
 
     zx_status_t status;
-    ASSERT_OK(client_->RegisterVmo(std::move(vmo), &status));
+    ASSERT_OK(client_->RegisterVmo_Deprecated(std::move(vmo), &status));
     ASSERT_OK(status);
 
     ::llcpp::fuchsia::paver::ReadResult result;
-    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_OK(client_->ReadData_Deprecated(&result));
     ASSERT_TRUE(result.is_eof());
 }
 
@@ -135,11 +135,11 @@ TEST_F(PayloadStreamerTest, ReadFailure) {
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
 
     zx_status_t status;
-    ASSERT_OK(client_->RegisterVmo(std::move(vmo), &status));
+    ASSERT_OK(client_->RegisterVmo_Deprecated(std::move(vmo), &status));
     ASSERT_OK(status);
 
     ::llcpp::fuchsia::paver::ReadResult result;
-    ASSERT_OK(client_->ReadData(&result));
+    ASSERT_OK(client_->ReadData_Deprecated(&result));
     ASSERT_TRUE(result.is_err());
     ASSERT_NE(result.err(), ZX_OK);
 }

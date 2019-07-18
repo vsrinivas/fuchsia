@@ -233,7 +233,7 @@ static zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf,
     zx_status_t status;
     fidl::VectorView<::zx::handle> handles;
     fidl::VectorView<uint8_t> out;
-    fidl::DecodeResult result = fio::Node::Call::Ioctl(
+    fidl::DecodeResult result = fio::Node::Call::Ioctl_Deprecated(
         zx::unowned_channel(h),
         fidl::BytePart::WrapEmpty(request_buffer),
         op,
@@ -315,7 +315,7 @@ static zx_status_t fdio_zxio_remote_get_vmo(fdio_t* io, int flags, zx_handle_t* 
         fidl::BytePart::WrapFull(request_buffer));
     uint8_t response_buffer[fidl::MaxSizeInChannel<fio::File::GetBufferResponse>()];
     request.message()->flags = flags;
-    fidl::DecodeResult result = fio::File::Call::GetBuffer(
+    fidl::DecodeResult result = fio::File::Call::GetBuffer_Deprecated(
         zx::unowned_channel(rio->control),
         std::move(request),
         fidl::BytePart::WrapEmpty(response_buffer));
@@ -337,7 +337,7 @@ static zx_status_t fdio_zxio_remote_get_token(fdio_t* io, zx_handle_t* out_token
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
     zx_status_t status;
     zx::handle out_handle;
-    zx_status_t io_status = fio::Directory::Call::GetToken(
+    zx_status_t io_status = fio::Directory::Call::GetToken_Deprecated(
         zx::unowned_channel(rio->control),
         &status,
         &out_handle);
@@ -358,7 +358,7 @@ static zx_status_t fdio_zxio_remote_readdir(fdio_t* io, void* ptr, size_t max, s
         fidl::BytePart::WrapFull(request_buffer));
     uint8_t response_buffer[fidl::MaxSizeInChannel<fio::Directory::ReadDirentsResponse>()];
     request.message()->max_bytes = max;
-    fidl::DecodeResult result = fio::Directory::Call::ReadDirents(
+    fidl::DecodeResult result = fio::Directory::Call::ReadDirents_Deprecated(
         zx::unowned_channel(rio->control),
         std::move(request),
         fidl::BytePart::WrapEmpty(response_buffer));
@@ -381,7 +381,7 @@ static zx_status_t fdio_zxio_remote_readdir(fdio_t* io, void* ptr, size_t max, s
 static zx_status_t fdio_zxio_remote_rewind(fdio_t* io) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
     zx_status_t status;
-    zx_status_t io_status = fio::Directory::Call::Rewind(
+    zx_status_t io_status = fio::Directory::Call::Rewind_Deprecated(
         zx::unowned_channel(rio->control),
         &status);
     return io_status != ZX_OK ? io_status : status;
@@ -390,7 +390,7 @@ static zx_status_t fdio_zxio_remote_rewind(fdio_t* io) {
 static zx_status_t fdio_zxio_remote_unlink(fdio_t* io, const char* path, size_t len) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
     zx_status_t status;
-    zx_status_t io_status = fio::Directory::Call::Unlink(
+    zx_status_t io_status = fio::Directory::Call::Unlink_Deprecated(
         zx::unowned_channel(rio->control),
         fidl::StringView(len, path),
         &status);
@@ -401,7 +401,7 @@ static zx_status_t fdio_zxio_remote_rename(fdio_t* io, const char* src, size_t s
                                            zx_handle_t dst_token, const char* dst, size_t dstlen) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
     zx_status_t status;
-    zx_status_t io_status = fio::Directory::Call::Rename(
+    zx_status_t io_status = fio::Directory::Call::Rename_Deprecated(
         zx::unowned_channel(rio->control),
         fidl::StringView(srclen, src),
         zx::handle(dst_token),
@@ -414,7 +414,7 @@ static zx_status_t fdio_zxio_remote_link(fdio_t* io, const char* src, size_t src
                                          zx_handle_t dst_token, const char* dst, size_t dstlen) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
     zx_status_t status;
-    zx_status_t io_status = fio::Directory::Call::Link(
+    zx_status_t io_status = fio::Directory::Call::Link_Deprecated(
         zx::unowned_channel(rio->control),
         fidl::StringView(srclen, src),
         zx::handle(dst_token),

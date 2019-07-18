@@ -151,7 +151,7 @@ class SkipBlock final {
     //
     // The block count can shrink in the event that a bad block is grown. It is
     // recommended to call this again after a bad block is grown.
-    zx_status_t GetPartitionInfo(int32_t* out_status, PartitionInfo* out_partition_info);
+    zx_status_t GetPartitionInfo_Deprecated(int32_t* out_status, PartitionInfo* out_partition_info);
 
     // Returns information about the skip-block partition.
     //
@@ -159,26 +159,26 @@ class SkipBlock final {
     // recommended to call this again after a bad block is grown.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetPartitionInfoResponse> GetPartitionInfo(::fidl::BytePart _response_buffer, int32_t* out_status, PartitionInfo* out_partition_info);
+    ::fidl::DecodeResult<GetPartitionInfoResponse> GetPartitionInfo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, PartitionInfo* out_partition_info);
 
     // Returns information about the skip-block partition.
     //
     // The block count can shrink in the event that a bad block is grown. It is
     // recommended to call this again after a bad block is grown.
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetPartitionInfoResponse> GetPartitionInfo(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<GetPartitionInfoResponse> GetPartitionInfo_Deprecated(::fidl::BytePart response_buffer);
 
     // Reads the specified blocks into the provided vmo.
-    zx_status_t Read(ReadWriteOperation op, int32_t* out_status);
+    zx_status_t Read_Deprecated(ReadWriteOperation op, int32_t* out_status);
 
     // Reads the specified blocks into the provided vmo.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ReadResponse> Read(::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status);
+    ::fidl::DecodeResult<ReadResponse> Read_Deprecated(::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Reads the specified blocks into the provided vmo.
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ReadResponse> Read(::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<ReadResponse> Read_Deprecated(::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
 
     // Erases and writes the specified blocks from the provided vmo.
     //
@@ -187,7 +187,7 @@ class SkipBlock final {
     // physical block map to change, all previously written blocks at logical
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
-    zx_status_t Write(ReadWriteOperation op, int32_t* out_status, bool* out_bad_block_grown);
+    zx_status_t Write_Deprecated(ReadWriteOperation op, int32_t* out_status, bool* out_bad_block_grown);
 
     // Erases and writes the specified blocks from the provided vmo.
     //
@@ -198,7 +198,7 @@ class SkipBlock final {
     // and rewritten if applicable.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<WriteResponse> Write(::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status, bool* out_bad_block_grown);
+    ::fidl::DecodeResult<WriteResponse> Write_Deprecated(::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status, bool* out_bad_block_grown);
 
     // Erases and writes the specified blocks from the provided vmo.
     //
@@ -208,7 +208,7 @@ class SkipBlock final {
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<WriteResponse> Write(::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<WriteResponse> Write_Deprecated(::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -222,7 +222,7 @@ class SkipBlock final {
     //
     // The block count can shrink in the event that a bad block is grown. It is
     // recommended to call this again after a bad block is grown.
-    static zx_status_t GetPartitionInfo(zx::unowned_channel _client_end, int32_t* out_status, PartitionInfo* out_partition_info);
+    static zx_status_t GetPartitionInfo_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, PartitionInfo* out_partition_info);
 
     // Returns information about the skip-block partition.
     //
@@ -230,26 +230,26 @@ class SkipBlock final {
     // recommended to call this again after a bad block is grown.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetPartitionInfoResponse> GetPartitionInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, PartitionInfo* out_partition_info);
+    static ::fidl::DecodeResult<GetPartitionInfoResponse> GetPartitionInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, PartitionInfo* out_partition_info);
 
     // Returns information about the skip-block partition.
     //
     // The block count can shrink in the event that a bad block is grown. It is
     // recommended to call this again after a bad block is grown.
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetPartitionInfoResponse> GetPartitionInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetPartitionInfoResponse> GetPartitionInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Reads the specified blocks into the provided vmo.
-    static zx_status_t Read(zx::unowned_channel _client_end, ReadWriteOperation op, int32_t* out_status);
+    static zx_status_t Read_Deprecated(zx::unowned_channel _client_end, ReadWriteOperation op, int32_t* out_status);
 
     // Reads the specified blocks into the provided vmo.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ReadResponse> Read(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status);
+    static ::fidl::DecodeResult<ReadResponse> Read_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Reads the specified blocks into the provided vmo.
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ReadResponse> Read(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ReadResponse> Read_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
 
     // Erases and writes the specified blocks from the provided vmo.
     //
@@ -258,7 +258,7 @@ class SkipBlock final {
     // physical block map to change, all previously written blocks at logical
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
-    static zx_status_t Write(zx::unowned_channel _client_end, ReadWriteOperation op, int32_t* out_status, bool* out_bad_block_grown);
+    static zx_status_t Write_Deprecated(zx::unowned_channel _client_end, ReadWriteOperation op, int32_t* out_status, bool* out_bad_block_grown);
 
     // Erases and writes the specified blocks from the provided vmo.
     //
@@ -269,7 +269,7 @@ class SkipBlock final {
     // and rewritten if applicable.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<WriteResponse> Write(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status, bool* out_bad_block_grown);
+    static ::fidl::DecodeResult<WriteResponse> Write_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer, int32_t* out_status, bool* out_bad_block_grown);
 
     // Erases and writes the specified blocks from the provided vmo.
     //
@@ -279,7 +279,7 @@ class SkipBlock final {
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<WriteResponse> Write(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WriteResponse> Write_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

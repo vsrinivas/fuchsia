@@ -94,41 +94,41 @@ class Bus final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    zx_status_t Enable(int32_t* out_s);
+    zx_status_t Enable_Deprecated(int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<EnableResponse> Enable(::fidl::BytePart _response_buffer, int32_t* out_s);
+    ::fidl::DecodeResult<EnableResponse> Enable_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<EnableResponse> Enable(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<EnableResponse> Enable_Deprecated(::fidl::BytePart response_buffer);
 
-    zx_status_t Disable(int32_t* out_s);
+    zx_status_t Disable_Deprecated(int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<DisableResponse> Disable(::fidl::BytePart _response_buffer, int32_t* out_s);
+    ::fidl::DecodeResult<DisableResponse> Disable_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<DisableResponse> Disable(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<DisableResponse> Disable_Deprecated(::fidl::BytePart response_buffer);
 
-    zx_status_t Connect(int32_t* out_s);
+    zx_status_t Connect_Deprecated(int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<ConnectResponse> Connect(::fidl::BytePart _response_buffer, int32_t* out_s);
+    ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<ConnectResponse> Connect(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(::fidl::BytePart response_buffer);
 
-    zx_status_t Disconnect(int32_t* out_s);
+    zx_status_t Disconnect_Deprecated(int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<DisconnectResponse> Disconnect(::fidl::BytePart _response_buffer, int32_t* out_s);
+    ::fidl::DecodeResult<DisconnectResponse> Disconnect_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<DisconnectResponse> Disconnect(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<DisconnectResponse> Disconnect_Deprecated(::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -138,41 +138,41 @@ class Bus final {
   class Call final {
    public:
 
-    static zx_status_t Enable(zx::unowned_channel _client_end, int32_t* out_s);
+    static zx_status_t Enable_Deprecated(zx::unowned_channel _client_end, int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<EnableResponse> Enable(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    static ::fidl::DecodeResult<EnableResponse> Enable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<EnableResponse> Enable(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<EnableResponse> Enable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static zx_status_t Disable(zx::unowned_channel _client_end, int32_t* out_s);
+    static zx_status_t Disable_Deprecated(zx::unowned_channel _client_end, int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<DisableResponse> Disable(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    static ::fidl::DecodeResult<DisableResponse> Disable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<DisableResponse> Disable(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<DisableResponse> Disable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static zx_status_t Connect(zx::unowned_channel _client_end, int32_t* out_s);
+    static zx_status_t Connect_Deprecated(zx::unowned_channel _client_end, int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<ConnectResponse> Connect(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    static ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<ConnectResponse> Connect(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static zx_status_t Disconnect(zx::unowned_channel _client_end, int32_t* out_s);
+    static zx_status_t Disconnect_Deprecated(zx::unowned_channel _client_end, int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<DisconnectResponse> Disconnect(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
+    static ::fidl::DecodeResult<DisconnectResponse> Disconnect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<DisconnectResponse> Disconnect(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<DisconnectResponse> Disconnect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

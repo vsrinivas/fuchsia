@@ -6,17 +6,17 @@ package fragments
 
 const SyncRequestInPlace = `
 {{- define "SyncRequestInPlaceMethodSignature" -}}
-{{ .Name }}({{ if .Request }}::fidl::DecodedMessage<{{ .Name }}Request> params{{ if .Response }}, {{ end }}{{ end }}{{ if .Response }}::fidl::BytePart response_buffer{{ end }})
+{{ .Name }}_Deprecated({{ if .Request }}::fidl::DecodedMessage<{{ .Name }}Request> params{{ if .Response }}, {{ end }}{{ end }}{{ if .Response }}::fidl::BytePart response_buffer{{ end }})
 {{- end }}
 
 {{- define "StaticCallSyncRequestInPlaceMethodSignature" -}}
-{{ .Name }}(zx::unowned_channel _client_end, {{ if .Request }}::fidl::DecodedMessage<{{ .Name }}Request> params{{ if .Response }}, {{ end }}{{ end }}{{ if .Response }}::fidl::BytePart response_buffer{{ end }})
+{{ .Name }}_Deprecated(zx::unowned_channel _client_end, {{ if .Request }}::fidl::DecodedMessage<{{ .Name }}Request> params{{ if .Response }}, {{ end }}{{ end }}{{ if .Response }}::fidl::BytePart response_buffer{{ end }})
 {{- end }}
 
 {{- define "SyncRequestInPlaceMethodDefinition" }}
 {{- $interface_name := .LLProps.InterfaceName }}
 {{ if .Response }}::fidl::DecodeResult<{{ $interface_name }}::{{ .Name }}Response>{{ else }}zx_status_t{{ end }} {{ $interface_name }}::SyncClient::{{ template "SyncRequestInPlaceMethodSignature" . }} {
-  return {{ .LLProps.InterfaceName }}::Call::{{ .Name }}(zx::unowned_channel(this->channel_)
+  return {{ .LLProps.InterfaceName }}::Call::{{ .Name }}_Deprecated(zx::unowned_channel(this->channel_)
     {{- if or .Request .Response }}, {{ end }}
     {{- if .Request }}std::move(params){{ end -}}
     {{- if and .Request .Response }}, {{ end -}}
