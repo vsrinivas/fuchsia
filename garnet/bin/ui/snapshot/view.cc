@@ -112,7 +112,7 @@ void View::LoadShape(scenic::EntityNode& parent_node, const snapshot::Node* flat
     LoadMaterial(shape_node, flat_node);
   }
 
-  parent_node.AddPart(shape_node);
+  parent_node.AddChild(shape_node);
 }
 
 void View::LoadMaterial(scenic::ShapeNode& shape_node, const snapshot::Node* flat_node) {

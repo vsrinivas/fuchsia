@@ -201,7 +201,7 @@ void App::CreateScene(float display_width, float display_height) {
   } else {
     root_node.SetTranslation(0.f, 0.f, -1.f);
   }
-  root_node.AddPart(background_node);
+  root_node.AddChild(background_node);
 
   if (view_id_ != 0) {
     if (type_ == AppType::CONTAINER) {

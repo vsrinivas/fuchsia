@@ -137,7 +137,7 @@ void TileView::AddChildView(std::string label,
 
   container_node_.AddChild(view_data->host_node);
 
-  view_data->host_node.AddPart(view_data->clip_shape_node);
+  view_data->host_node.AddChild(view_data->clip_shape_node);
   view_data->host_node.SetClip(0, true);
   view_data->host_node.Attach(view_data->view_holder);
 

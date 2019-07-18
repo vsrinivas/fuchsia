@@ -251,7 +251,7 @@ void App::CreateScene(float display_width, float display_height) {
     scenic::Material material(session);
     material.SetColor(0, 191, 255, 255);  // Light blue
     shape.SetMaterial(material);
-    root_node->AddPart(shape);
+    root_node->AddChild(shape);
 
     if (view_) {
       view_->AddChild(*root_node);
@@ -281,25 +281,25 @@ void App::CreateScene(float display_width, float display_height) {
     top_bar.SetTranslation(0.f, -kTranslateY, -kElevation);
     top_bar.SetShape(horizontal_bar);
     top_bar.SetMaterial(material);
-    frame->AddPart(top_bar);
+    frame->AddChild(top_bar);
 
     scenic::ShapeNode bottom_bar(session);
     bottom_bar.SetTranslation(0.f, kTranslateY, -kElevation);
     bottom_bar.SetShape(horizontal_bar);
     bottom_bar.SetMaterial(material);
-    frame->AddPart(bottom_bar);
+    frame->AddChild(bottom_bar);
 
     scenic::ShapeNode left_bar(session);
     left_bar.SetTranslation(-kTranslateX, 0, -kElevation);
     left_bar.SetShape(vertical_bar);
     left_bar.SetMaterial(material);
-    frame->AddPart(left_bar);
+    frame->AddChild(left_bar);
 
     scenic::ShapeNode right_bar(session);
     right_bar.SetTranslation(kTranslateX, 0, -kElevation);
     right_bar.SetShape(vertical_bar);
     right_bar.SetMaterial(material);
-    frame->AddPart(right_bar);
+    frame->AddChild(right_bar);
 
     focus_frame_ = std::move(frame);
     FXL_LOG(INFO) << "Child - focus frame prepared.";
