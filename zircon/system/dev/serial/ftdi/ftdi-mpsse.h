@@ -5,13 +5,18 @@
 #ifndef ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_MPSSE_H_
 #define ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_MPSSE_H_
 
+#include <stdint.h>
+#include <threads.h>
+
+#include <vector>
+
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/protocol/serialimpl.h>
-#include <stdint.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/event.h>
+#include <lib/zx/time.h>
 #include <zircon/types.h>
-
-#include <vector>
 
 namespace ftdi_mpsse {
 
@@ -32,6 +37,7 @@ class Mpsse {
 
   Mpsse(zx_device_t* parent) : ftdi_(parent) {}
 
+  zx_status_t Init();
   zx_status_t IsValid() { return ftdi_.is_valid(); }
   zx_status_t Sync();
   zx_status_t Read(uint8_t* buf, size_t len);
@@ -44,6 +50,8 @@ class Mpsse {
   zx_status_t SetClock(bool adaptive, bool three_phase, int hz);
 
  private:
+  static void NotifyCallback(void* ctx, serial_state_t state);
+
   // Commands to set the GPIO pins levels and directions. Must be followed
   // by one byte of gpio levels and one byte of gpio directions. Lower pins
   // are pins 0-7 and higher pins are pins 8-15.
@@ -59,9 +67,17 @@ class Mpsse {
 
   static constexpr uint8_t kMpsseErrorInvalidCommand = 0xFA;
 
+  static constexpr zx::duration kSerialReadWriteTimeout = zx::sec(1);
+  static constexpr zx_signals_t kMpsseSignalReadable = ZX_USER_SIGNAL_0;
+  static constexpr zx_signals_t kMpsseSignalWritable = ZX_USER_SIGNAL_1;
+
   ddk::SerialImplProtocolClient ftdi_ = {};
   uint16_t gpio_levels_ = 0;
   uint16_t gpio_directions_ = 0;
+
+  sync_completion_t serial_readable_;
+  sync_completion_t serial_writable_;
+  serial_notify_t notify_cb_ = {};
 };
 
 }  // namespace ftdi_mpsse

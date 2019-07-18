@@ -4,6 +4,14 @@
 
 #include "ftdi.h"
 
+#include <fcntl.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
+#include <unistd.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
@@ -13,14 +21,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fcntl.h>
 #include <fuchsia/hardware/serial/c/fidl.h>
-#include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <threads.h>
-#include <unistd.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
 #include <zircon/hw/usb.h>
@@ -65,7 +66,7 @@ void FtdiDevice::CheckStateLocked() {
 
   state |= free_write_queue_.is_empty() ? 0 : SERIAL_STATE_WRITABLE;
 
-  state |= free_read_queue_.is_empty() ? 0 : SERIAL_STATE_READABLE;
+  state |= completed_reads_queue_.is_empty() ? 0 : SERIAL_STATE_READABLE;
 
   if (state != state_) {
     state_ = state;

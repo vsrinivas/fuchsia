@@ -4,29 +4,35 @@
 
 #include "ftdi-i2c.h"
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
-#include <ddk/metadata/i2c.h>
-#include <fuchsia/hardware/ftdi/c/fidl.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #include <vector>
 
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/i2c.h>
+#include <fuchsia/hardware/ftdi/c/fidl.h>
+
 #include "ftdi.h"
 
 namespace ftdi_mpsse {
 
 zx_status_t FtdiI2c::Enable() {
+  zx_status_t status;
+  status = mpsse_.Init();
+  if (status != ZX_OK) {
+    return status;
+  }
   if (!mpsse_.IsValid()) {
     zxlogf(ERROR, "ftdi_i2c: mpsse is invalid!\n");
     return ZX_ERR_INTERNAL;
   }
 
-  zx_status_t status = mpsse_.Sync();
+  status = mpsse_.Sync();
   if (status != ZX_OK) {
     zxlogf(ERROR, "ftdi_i2c: mpsse failed to sync %d\n", status);
     return status;

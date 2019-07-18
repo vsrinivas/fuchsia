@@ -19,6 +19,7 @@ test("ftdi-i2c-test") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zxtest",
   ]
 }
@@ -42,6 +43,7 @@ source_set("common") {
     "$zx/system/fidl/fuchsia-hardware-ftdi:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
   ]
 }
