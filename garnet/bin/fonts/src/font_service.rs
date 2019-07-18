@@ -455,23 +455,23 @@ impl FontService {
     }
 
     /// Helper that runs the "match by family name" step of [`list_typefaces`].
-    /// Returns a vector of all available font families whose name or alias contains (or exactly
-    /// matches, if the `ExactFamily` flag is set) the name requested in `query`.
+    /// Returns a vector of all available font families whose name or alias equals (or contains, if
+    /// the `MatchFamilyNameSubstring` flag is set) the name requested in `query`.
     /// If `query` or `query.family` is `None`, all families are matched.
     fn list_typefaces_match_families<'a>(
         &'a self,
-        flags: fonts_exp::ListTypefacesRequestFlags,
-        query: Option<&fonts_exp::ListTypefacesQuery>,
+        flags: fonts_exp::ListTypefacesFlags,
+        request: &fonts_exp::ListTypefacesRequest,
     ) -> Box<Iterator<Item = &FontFamily> + 'a> {
-        match query.and_then(|q| q.family.as_ref()) {
+        match request.family.as_ref() {
             Some(fonts::FamilyName { name }) => {
-                if flags.contains(fonts_exp::ListTypefacesRequestFlags::ExactFamily) {
+                if flags.contains(fonts_exp::ListTypefacesFlags::MatchFamilyNameSubstring) {
+                    Box::new(self.match_families_substr(name.clone()))
+                } else {
                     match self.match_family(&UniCase::new(name.clone())) {
                         Some(matched) => Box::new(iter::once(matched)),
                         None => Box::new(iter::empty()),
                     }
-                } else {
-                    Box::new(self.match_families_substr(name.clone()))
                 }
             }
             None => Box::new(self.families.iter().filter_map(move |(_, value)| match value {
@@ -485,16 +485,15 @@ impl FontService {
         &self,
         request: fonts_exp::ListTypefacesRequest,
     ) -> Result<Vec<fonts_exp::TypefaceInfo>, fonts_exp::Error> {
-        let query = request.query.as_ref();
-        let flags = request.flags.unwrap_or(fonts_exp::ListTypefacesRequestFlags::new_empty());
+        let flags = request.flags.unwrap_or(fonts_exp::ListTypefacesFlags::new_empty());
 
-        let matched_families = self.list_typefaces_match_families(flags, query);
+        let matched_families = self.list_typefaces_match_families(flags, &request);
 
         // Flatten matches into Iter<TypefaceInfoAndCharSet>
         let matched_faces = matched_families.flat_map(|family| family.extract_faces());
 
         let styles_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
-            match query.and_then(|q| q.styles.as_ref()) {
+            match request.styles.as_ref() {
                 Some(styles) => {
                     // Unwraps are safe because manifest loading assigns default values if needed
                     let face_slant = face.style.slant.as_ref().unwrap();
@@ -511,33 +510,23 @@ impl FontService {
         };
 
         let lang_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
-            match query.and_then(|q| q.languages.as_ref()) {
-                Some(langs) => {
-                    // This is O(face_langs.len() * fonts.MAX_FACE_QUERY_LANGUAGES). As of 06/2019,
-                    // MAX_FACE_QUERY_LANGAUGES == 8. face_langs.len() *should* be small as well.
-                    match flags.contains(fonts_exp::ListTypefacesRequestFlags::AllLanguages) {
-                        true => langs.iter().all(|lang| face.languages.contains(&lang)),
-                        false => langs.iter().any(|lang| face.languages.contains(&lang)),
-                    }
-                }
+            match request.languages.as_ref() {
+                // This is O(face_langs.len() * fonts.MAX_FACE_QUERY_LANGUAGES). As of 06/2019,
+                // MAX_FACE_QUERY_LANGAUGES == 8. face_langs.len() *should* be small as well.
+                Some(langs) => langs.iter().all(|lang| face.languages.contains(&lang)),
                 None => true,
             }
         };
 
         let code_point_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
-            match query.and_then(|q| q.code_points.as_ref()) {
-                Some(points) => {
-                    match flags.contains(fonts_exp::ListTypefacesRequestFlags::AllCodePoints) {
-                        true => points.iter().all(|point| face.char_set.contains(*point)),
-                        false => points.iter().any(|point| face.char_set.contains(*point)),
-                    }
-                }
+            match request.code_points.as_ref() {
+                Some(points) => points.iter().all(|point| face.char_set.contains(*point)),
                 None => true,
             }
         };
 
         let generic_family_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
-            match query.and_then(|q| q.generic_families.as_ref()) {
+            match request.generic_families.as_ref() {
                 Some(generic_families) => {
                     face.generic_family.map_or(false, |gf| generic_families.contains(&gf))
                 }

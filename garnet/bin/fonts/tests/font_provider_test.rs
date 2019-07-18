@@ -670,13 +670,23 @@ mod experimental_api {
         Ok(())
     }
 
+    fn empty_list_typefaces_request() -> fonts_exp::ListTypefacesRequest {
+        fonts_exp::ListTypefacesRequest {
+            flags: None,
+            family: None,
+            styles: None,
+            languages: None,
+            code_points: None,
+            generic_families: None,
+        }
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_list_typefaces_empty_request_gets_all() -> Result<(), Error> {
         let (_app, font_provider) = start_provider_with_test_fonts()?;
         let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
 
-        let request =
-            fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query: None };
+        let request = empty_list_typefaces_request();
 
         await!(font_provider.list_typefaces(request, iterator))?
             .expect("ListTypefaces request failed");
@@ -693,8 +703,7 @@ mod experimental_api {
         let (_app, font_provider) = start_provider_with_default_fonts()?;
         let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
 
-        let request =
-            fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query: None };
+        let request = empty_list_typefaces_request();
 
         await!(font_provider.list_typefaces(request, iterator.into()))?
             .expect("ListTypefaces request failed");
@@ -713,8 +722,7 @@ mod experimental_api {
         let (_app, font_provider) = start_provider_with_all_fonts()?;
         let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
 
-        let request =
-            fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query: None };
+        let request = empty_list_typefaces_request();
 
         await!(font_provider.list_typefaces(request, iterator.into()))?
             .expect("ListTypefaces request failed");
@@ -740,15 +748,15 @@ mod experimental_api {
         Ok(())
     }
 
-    fn name_query(name: &str) -> Option<fonts_exp::ListTypefacesQuery> {
-        let query = fonts_exp::ListTypefacesQuery {
+    fn name_query(name: &str) -> fonts_exp::ListTypefacesRequest {
+        fonts_exp::ListTypefacesRequest {
+            flags: None,
             family: Some(fonts::FamilyName { name: String::from(name) }),
             styles: None,
             languages: None,
             code_points: None,
             generic_families: None,
-        };
-        Some(query)
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -756,8 +764,7 @@ mod experimental_api {
         let (_app, font_provider) = start_provider_with_test_fonts()?;
         let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
 
-        let query = name_query("404FontNotFound");
-        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
+        let request = name_query("404FontNotFound");
 
         await!(font_provider.list_typefaces(request, iterator.into()))?
             .expect("ListTypefaces request failed");
@@ -774,8 +781,7 @@ mod experimental_api {
         let (_app, font_provider) = start_provider_with_test_fonts()?;
         let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
 
-        let query = name_query("Noto");
-        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
+        let request = name_query("Roboto");
 
         await!(font_provider.list_typefaces(request, iterator.into()))?
             .expect("ListTypefaces request failed");
@@ -783,9 +789,9 @@ mod experimental_api {
         let response = await!(client.get_next())?;
         let results = response.results.unwrap();
 
-        assert_eq!(results.len(), 8, "{:?}", results);
+        assert_eq!(results.len(), 3, "{:?}", results);
         for result in &results {
-            assert!(result.family.as_ref().unwrap().name.contains("Noto"));
+            assert_eq!(result.family.as_ref().unwrap().name, "Roboto");
         }
         Ok(())
     }
@@ -795,8 +801,7 @@ mod experimental_api {
         let (_app, font_provider) = start_provider_with_test_fonts()?;
         let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
 
-        let query = name_query("MaterialIcons");
-        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
+        let request = name_query("MaterialIcons");
 
         await!(font_provider.list_typefaces(request, iterator.into()))?
             .expect("ListTypefaces request failed");
@@ -814,30 +819,7 @@ mod experimental_api {
         let (_app, font_provider) = start_provider_with_test_fonts()?;
         let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
 
-        let query = name_query("noto");
-        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
-
-        await!(font_provider.list_typefaces(request, iterator.into()))?
-            .expect("ListTypefaces request failed");
-
-        let response = await!(client.get_next())?;
-        let results = response.results.unwrap();
-
-        assert_eq!(results.len(), 8, "{:?}", results);
-        for result in &results {
-            assert!(result.family.as_ref().unwrap().name.contains("Noto"));
-        }
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_list_typefaces_by_name_exact() -> Result<(), Error> {
-        let (_app, font_provider) = start_provider_with_test_fonts()?;
-        let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
-
-        let query = name_query("Roboto");
-        let flags = Some(fonts_exp::ListTypefacesRequestFlags::ExactFamily);
-        let request = fonts_exp::ListTypefacesRequest { flags, max_results: None, query };
+        let request = name_query("roboto");
 
         await!(font_provider.list_typefaces(request, iterator.into()))?
             .expect("ListTypefaces request failed");
@@ -852,19 +834,40 @@ mod experimental_api {
         Ok(())
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_name_substring() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+        let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
+
+        let mut request = name_query("Noto");
+        request.flags = Some(fonts_exp::ListTypefacesFlags::MatchFamilyNameSubstring);
+
+        await!(font_provider.list_typefaces(request, iterator.into()))?
+            .expect("ListTypefaces request failed");
+
+        let response = await!(client.get_next())?;
+        let results = response.results.unwrap();
+
+        assert_eq!(results.len(), 8, "{:?}", results);
+        for result in results {
+            assert!(result.family.as_ref().unwrap().name.contains("Noto"));
+        }
+        Ok(())
+    }
+
     fn style_query(
         slant: Option<fonts::Slant>,
         weight: Option<u16>,
         width: Option<fonts::Width>,
-    ) -> Option<fonts_exp::ListTypefacesQuery> {
-        let query = fonts_exp::ListTypefacesQuery {
+    ) -> fonts_exp::ListTypefacesRequest {
+        fonts_exp::ListTypefacesRequest {
+            flags: None,
             family: None,
             styles: Some(vec![fonts::Style2 { slant, weight, width }]),
             languages: None,
             code_points: None,
             generic_families: None,
-        };
-        Some(query)
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -872,8 +875,7 @@ mod experimental_api {
         let (_app, font_provider) = start_provider_with_test_fonts()?;
         let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
 
-        let query = style_query(None, Some(300), None);
-        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
+        let request = style_query(None, Some(300), None);
 
         await!(font_provider.list_typefaces(request, iterator.into()))?
             .expect("ListTypefaces request failed");
@@ -892,14 +894,15 @@ mod experimental_api {
         LocaleId { id: String::from(lang) }
     }
 
-    fn lang_query(langs: Vec<LocaleId>) -> Option<fonts_exp::ListTypefacesQuery> {
-        Some(fonts_exp::ListTypefacesQuery {
+    fn lang_query(langs: Vec<LocaleId>) -> fonts_exp::ListTypefacesRequest {
+        fonts_exp::ListTypefacesRequest {
+            flags: None,
             family: None,
             styles: None,
             languages: Some(langs),
             code_points: None,
             generic_families: None,
-        })
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -907,8 +910,7 @@ mod experimental_api {
         let (_app, font_provider) = start_provider_with_test_fonts()?;
         let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
 
-        let query = lang_query(vec![locale("ja")]);
-        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
+        let request = lang_query(vec![locale("ja")]);
 
         await!(font_provider.list_typefaces(request, iterator.into()))?
             .expect("ListTypefaces request failed");
@@ -923,38 +925,15 @@ mod experimental_api {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_list_typefaces_by_language_all_flag() -> Result<(), Error> {
-        let (_app, font_provider) = start_provider_with_test_fonts()?;
-        let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
-
-        let query = lang_query(vec![locale("zh-Hant"), locale("zh-Bopo")]);
-        let flags = Some(fonts_exp::ListTypefacesRequestFlags::AllLanguages);
-        let request = fonts_exp::ListTypefacesRequest { flags, max_results: None, query };
-
-        await!(font_provider.list_typefaces(request, iterator.into()))?
-            .expect("ListTypefaces request failed");
-
-        let response = await!(client.get_next())?;
-        let results = response.results.unwrap();
-
-        assert_eq!(results.len(), 2, "{:?}", results);
-        for result in results {
-            assert!(result.languages.as_ref().unwrap().contains(&locale("zh-Hant")));
-            assert!(result.languages.as_ref().unwrap().contains(&locale("zh-Bopo")));
-        }
-        Ok(())
-    }
-
-    fn code_point_query(points: Vec<u32>) -> Option<fonts_exp::ListTypefacesQuery> {
-        let query = fonts_exp::ListTypefacesQuery {
+    fn code_point_query(points: Vec<u32>) -> fonts_exp::ListTypefacesRequest {
+        fonts_exp::ListTypefacesRequest {
+            flags: None,
             family: None,
             styles: None,
             languages: None,
             code_points: Some(points),
             generic_families: None,
-        };
-        Some(query)
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -962,30 +941,7 @@ mod experimental_api {
         let (_app, font_provider) = start_provider_with_test_fonts()?;
         let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
 
-        let query = code_point_query(vec!['な' as u32]);
-        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
-
-        await!(font_provider.list_typefaces(request, iterator.into()))?
-            .expect("ListTypefaces request failed");
-
-        let response = await!(client.get_next())?;
-        let results = response.results.unwrap();
-
-        assert!(!results.is_empty());
-        for result in results {
-            assert!(result.family.as_ref().unwrap().name.contains("CJK"));
-        }
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_list_typefaces_by_code_point_all_flag() -> Result<(), Error> {
-        let (_app, font_provider) = start_provider_with_test_fonts()?;
-        let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
-
-        let query = code_point_query(vec!['な' as u32, '워' as u32]);
-        let flags = Some(fonts_exp::ListTypefacesRequestFlags::AllCodePoints);
-        let request = fonts_exp::ListTypefacesRequest { flags, max_results: None, query };
+        let request = code_point_query(vec!['な' as u32]);
 
         await!(font_provider.list_typefaces(request, iterator.into()))?
             .expect("ListTypefaces request failed");
@@ -1002,15 +958,15 @@ mod experimental_api {
 
     fn generic_family_query(
         families: Vec<fonts::GenericFontFamily>,
-    ) -> Option<fonts_exp::ListTypefacesQuery> {
-        let query = fonts_exp::ListTypefacesQuery {
+    ) -> fonts_exp::ListTypefacesRequest {
+        fonts_exp::ListTypefacesRequest {
+            flags: None,
             family: None,
             styles: None,
             languages: None,
             code_points: None,
             generic_families: Some(families),
-        };
-        Some(query)
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1018,8 +974,7 @@ mod experimental_api {
         let (_app, font_provider) = start_provider_with_test_fonts()?;
         let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
 
-        let query = generic_family_query(vec![fonts::GenericFontFamily::SansSerif]);
-        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
+        let request = generic_family_query(vec![fonts::GenericFontFamily::SansSerif]);
 
         await!(font_provider.list_typefaces(request, iterator.into()))?
             .expect("ListTypefaces request failed");

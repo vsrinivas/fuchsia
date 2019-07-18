@@ -60,63 +60,46 @@ protocol ListTypefacesIterator {
     GetNext() -> (TypefaceInfoResponse response);
 };
 
-table ListTypefacesRequest {
-    /// Optional parameters to request only families that match the query.
-    /// If omitted, all families are matched.
-    1: ListTypefacesQuery query;
-
-    /// Optional maximum number of families to return.
-    /// In a future revision, this might be replaced with pagination and
-    /// collation parameters.
-    2: uint32 max_results;
-
-    /// Optional flags to modify matching behavior. Ignored if `query` is not
-    /// set.
-    3: ListTypefacesRequestFlags flags;
-};
-
-bits ListTypefacesRequestFlags : uint32 {
-    /// Match only families whose name or alias exactly matches the requested
-    /// `FamilyName`.
-    EXACT_FAMILY = 0x00000001;
-    /// Require results to support all requested `languages`.
-    ALL_LANGUAGES = 0x00000002;
-    /// Require results to contain all requested `code_points`.
-    ALL_CODE_POINTS = 0x00000004;
-};
-
-/// Query parameters for `ListTypefaces`. By default, results must match all
+/// Query parameters for `ListTypefaces`. Results must match all included
 /// fields. All fields are optional; omitted fields will match any font.
-/// Vector fields will match fonts that match any element of the vector.
-/// Essentially:
-/// `font.family.contains(family) && styles.contains(font.style) && ...`
-table ListTypefacesQuery {
+table ListTypefacesRequest {
+    /// Optional flags to modify matching behavior. Ignored if no other fields
+    /// are set.
+    1: ListTypefacesFlags flags;
+
     /// The name or alias of a font family. By default, families whose name
-    /// contains `family`. For exact matching, set the request's `EXACT_FAMILY`
-    /// flag.
-    1: ff.FamilyName family;
+    /// exactly matches`family`. For substring matching, set the request's
+    /// `MATCH_FAMILY_NAME_SUBSTRING` flag.
+    2: ff.FamilyName family;
 
     /// Styles to match. Note that combining styles will change results.
     /// For example, `[{slant: UPRIGHT}, {weight: WEIGHT_BOLD}]` matches fonts
     /// that are upright *or* bold but `[{slant: UPRIGHT, weight: WEIGHT_BOLD}]`
     /// only matches fonts that are both upright *and* bold.
-    2: vector<ff.Style2>:ff.MAX_FAMILY_STYLES styles;
+    3: vector<ff.Style2>:ff.MAX_FAMILY_STYLES styles;
 
-    /// Languages to match. By default, a font will match if it supports *any*
-    /// element of `languages`. To require results to match *all* elements,
-    /// set the `ALL_LANGUAGES` flag.
-    3: vector<fuchsia.intl.LocaleId>:ff.MAX_FACE_QUERY_LANGUAGES languages;
+    /// Languages that results must support.
+    /// Each result must support all requested languages.
+    4: vector<fuchsia.intl.LocaleId>:ff.MAX_FACE_QUERY_LANGUAGES languages;
 
-    /// Code points which results should cover. By default, a font will match
-    /// if it supports *any* requested code point. To require results to match
-    /// *all* code points, set the `ALL_CODE_POINTS` flag.
-    4: vector<uint32> code_points;
+    /// Code points that results must include.
+    /// Each result must include all requested code points.
+    5: vector<uint32> code_points;
 
     /// Generic font families to match. Results will include fonts belonging to
     /// any requested generic family. Note that a font can only belong to one
     /// generic family, so there is no way to request a font belonging to
     /// all requested generic families.
-    5: vector<ff.GenericFontFamily> generic_families;
+    6: vector<ff.GenericFontFamily> generic_families;
+};
+
+bits ListTypefacesFlags : uint32 {
+    /// Match families whose name or alias exactly contains the requested
+    /// `FamilyName`. If not set, match families whose name or alias exactly
+    /// matches `FamilyName`.
+    ///
+    /// Note: Matching will always ignore case.
+    MATCH_FAMILY_NAME_SUBSTRING = 0x00000001;
 };
 
 table TypefaceInfoResponse {
