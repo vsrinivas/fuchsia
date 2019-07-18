@@ -123,7 +123,8 @@ struct MyStruct {
   END_TEST;
 }
 
-bool GoodLegacyEnumMemberReference() {
+// The old-style of enum-referencing should no longer work.
+bool BadLegacyEnumMemberReference() {
   BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
@@ -135,7 +136,7 @@ struct MyStruct {
     MyEnum field = A;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_FALSE(library.Compile());
 
   END_TEST;
 }
@@ -153,6 +154,6 @@ RUN_TEST(GoodPrimitiveDefaultValueEnumMemberReference)
 
 RUN_TEST(GoodEnumDefaultValueBitsMemberReference)
 RUN_TEST(GoodPrimitiveDefaultValueBitsMemberReference)
-RUN_TEST(GoodLegacyEnumMemberReference)
+RUN_TEST(BadLegacyEnumMemberReference)
 
 END_TEST_CASE(structs_tests)

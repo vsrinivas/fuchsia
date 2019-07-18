@@ -2436,20 +2436,6 @@ bool Library::ParseNumericLiteral(const raw::NumericLiteral* literal,
   return result == utils::ParseNumericResult::kSuccess;
 }
 
-Decl* Library::LookupConstantLegacy(const Name& name) {
-  for (auto& decl : declarations_) {
-    if (decl.second->kind == Decl::Kind::kEnum) {
-      auto enum_decl = static_cast<Enum*>(decl.second);
-      for (auto& member : enum_decl->members) {
-        if (member.name.data() == name.name_part()) {
-          return enum_decl;
-        }
-      }
-    }
-  }
-  return nullptr;
-}
-
 // Calculating declaration dependencies is largely serving the C/C++ family of languages bindings.
 // For instance, the declaration of a struct member type must be defined before the containing
 // struct if that member is stored inline.
@@ -2498,13 +2484,9 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
         auto identifier = static_cast<const flat::IdentifierConstant*>(constant);
         auto decl = LookupDeclByName(identifier->name.memberless_name());
         if (decl == nullptr) {
-          // TODO(FIDL-299) Remove this fallback lookup.
-          decl = LookupConstantLegacy(identifier->name);
-          if (decl == nullptr) {
-            std::string message("Unable to find the constant named: ");
-            message += identifier->name.name_full();
-            return Fail(identifier->name, message.data());
-          }
+          std::string message("Unable to find the constant named: ");
+          message += identifier->name.name_full();
+          return Fail(identifier->name, message.data());
         }
         edges.insert(decl);
         break;

@@ -1239,11 +1239,6 @@ class Library {
   std::unique_ptr<TypeConstructor> IdentifierTypeForDecl(const Decl* decl,
                                                          types::Nullability nullability);
 
-  // Given a const declaration of the form
-  //     const type foo = name;
-  // return the declaration corresponding to name.
-  Decl* LookupConstantLegacy(const Name& name);
-
   bool DeclDependencies(Decl* decl, std::set<Decl*>* out_edges);
 
   bool SortDeclarations();
