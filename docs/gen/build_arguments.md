@@ -962,17 +962,17 @@ List of kernel command line arguments to bake into the boot image.
 See also //zircon/docs/kernel_cmdline.md and
 [`devmgr_config`](#devmgr_config).
 
-**Current value for `target_cpu = "arm64"`:** `["dummy=arg"]`
+**Current value for `target_cpu = "arm64"`:** `["bootsvc.next=bin/component_manager,fuchsia-boot:///#meta/root.cm,--use-builtin-process-launcher"]`
 
-From //products/bringup.gni:12
+From //products/bringup.gni:13
 
 **Overridden from the default:** `[]`
 
 From //build/images/BUILD.gn:478
 
-**Current value for `target_cpu = "x64"`:** `["dummy=arg"]`
+**Current value for `target_cpu = "x64"`:** `["bootsvc.next=bin/component_manager,fuchsia-boot:///#meta/root.cm,--use-builtin-process-launcher"]`
 
-From //products/bringup.gni:12
+From //products/bringup.gni:13
 
 **Overridden from the default:** `[]`
 
@@ -2402,7 +2402,7 @@ arguments to fx flash script
 From //build/images/BUILD.gn:40
 
 ### zircon_args
-[Zircon GN build arguments](../../../zircon/docs/gen/build_arguments.md).
+[Zircon GN build arguments](../../zircon/docs/gen/build_arguments.md).
 The default passes through GOMA settings and
 [`select_variant`](#select_variant) shorthand selectors.
 **Only set this if you want to wipe out all the defaults that
@@ -2491,14 +2491,14 @@ From //products/core.gni:10
 From //BUILD.gn:54
 
 ### zircon_extra_args
-[Zircon GN build arguments](../../../zircon/docs/gen/build_arguments.md).
+[Zircon GN build arguments](../../zircon/docs/gen/build_arguments.md).
 This is included in the default value of [`zircon_args`](#zircon_args) so
 you can set this to add things there without wiping out the defaults.
 When you set `zircon_args` directly, then this has no effect at all.
 Arguments you set here override any arguments in the default
 `zircon_args`.  There is no way to append to a value from the defaults.
 Note that for just setting simple (string-only) values in Zircon GN's
-[`variants`](../../../zircon/docs/gen/build_arguments.md#variants), the
+[`variants`](../../zircon/docs/gen/build_arguments.md#variants), the
 default [`zircon_args`](#zircon_args) uses a `variants` value derived from
 [`select_variant`](#select_variant) so for simple cases there is no need
 to explicitly set Zircon's `variants` here.
