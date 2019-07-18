@@ -10,6 +10,7 @@ library("zx") {
   sdk_headers = [
     "lib/zx/bti.h",
     "lib/zx/channel.h",
+    "lib/zx/clock.h",
     "lib/zx/debuglog.h",
     "lib/zx/event.h",
     "lib/zx/eventpair.h",
