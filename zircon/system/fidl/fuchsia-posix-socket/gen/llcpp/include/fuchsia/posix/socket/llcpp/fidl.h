@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
@@ -59,19 +60,66 @@ class Provider final {
   };
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    template <typename ResponseType>
+    class Socket_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Socket_Impl(zx::unowned_channel _client_end, int16_t domain, int16_t type, int16_t protocol);
+      ~Socket_Impl() = default;
+      Socket_Impl(Socket_Impl&& other) = default;
+      Socket_Impl& operator=(Socket_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using Socket = Socket_Impl<SocketResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    template <typename ResponseType>
+    class Socket_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Socket_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t domain, int16_t type, int16_t protocol, ::fidl::BytePart _response_buffer);
+      ~Socket_Impl() = default;
+      Socket_Impl(Socket_Impl&& other) = default;
+      Socket_Impl& operator=(Socket_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using Socket = Socket_Impl<SocketResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Requests a socket with the specified parameters. Values for `code` are defined in
+    // errno.h.
+    ResultOf::Socket Socket(int16_t domain, int16_t type, int16_t protocol);
+
+    // Requests a socket with the specified parameters. Values for `code` are defined in
+    // errno.h.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Socket Socket(::fidl::BytePart _request_buffer, int16_t domain, int16_t type, int16_t protocol, ::fidl::BytePart _response_buffer);
 
     // Requests a socket with the specified parameters. Values for `code` are defined in
     // errno.h.
@@ -95,6 +143,15 @@ class Provider final {
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
    public:
+
+    // Requests a socket with the specified parameters. Values for `code` are defined in
+    // errno.h.
+    static ResultOf::Socket Socket(zx::unowned_channel _client_end, int16_t domain, int16_t type, int16_t protocol);
+
+    // Requests a socket with the specified parameters. Values for `code` are defined in
+    // errno.h.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Socket Socket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t domain, int16_t type, int16_t protocol, ::fidl::BytePart _response_buffer);
 
     // Requests a socket with the specified parameters. Values for `code` are defined in
     // errno.h.
@@ -514,19 +571,480 @@ class Control final {
     fit::function<zx_status_t()> unknown;
   };
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    class Clone_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      Clone_Impl(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
+      ~Clone_Impl() = default;
+      Clone_Impl(Clone_Impl&& other) = default;
+      Clone_Impl& operator=(Clone_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class Close_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Close_Impl(zx::unowned_channel _client_end);
+      ~Close_Impl() = default;
+      Close_Impl(Close_Impl&& other) = default;
+      Close_Impl& operator=(Close_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Describe_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Describe_Impl(zx::unowned_channel _client_end);
+      ~Describe_Impl() = default;
+      Describe_Impl(Describe_Impl&& other) = default;
+      Describe_Impl& operator=(Describe_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Sync_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Sync_Impl(zx::unowned_channel _client_end);
+      ~Sync_Impl() = default;
+      Sync_Impl(Sync_Impl&& other) = default;
+      Sync_Impl& operator=(Sync_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class GetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetAttr_Impl(zx::unowned_channel _client_end);
+      ~GetAttr_Impl() = default;
+      GetAttr_Impl(GetAttr_Impl&& other) = default;
+      GetAttr_Impl& operator=(GetAttr_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class SetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
+      ~SetAttr_Impl() = default;
+      SetAttr_Impl(SetAttr_Impl&& other) = default;
+      SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Ioctl_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Ioctl_Impl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
+      ~Ioctl_Impl() = default;
+      Ioctl_Impl(Ioctl_Impl&& other) = default;
+      Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Bind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Bind_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr);
+      ~Bind_Impl() = default;
+      Bind_Impl(Bind_Impl&& other) = default;
+      Bind_Impl& operator=(Bind_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Connect_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Connect_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr);
+      ~Connect_Impl() = default;
+      Connect_Impl(Connect_Impl&& other) = default;
+      Connect_Impl& operator=(Connect_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Listen_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Listen_Impl(zx::unowned_channel _client_end, int16_t backlog);
+      ~Listen_Impl() = default;
+      Listen_Impl(Listen_Impl&& other) = default;
+      Listen_Impl& operator=(Listen_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Accept_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Accept_Impl(zx::unowned_channel _client_end, int16_t flags);
+      ~Accept_Impl() = default;
+      Accept_Impl(Accept_Impl&& other) = default;
+      Accept_Impl& operator=(Accept_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class GetSockName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetSockName_Impl(zx::unowned_channel _client_end);
+      ~GetSockName_Impl() = default;
+      GetSockName_Impl(GetSockName_Impl&& other) = default;
+      GetSockName_Impl& operator=(GetSockName_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class GetPeerName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetPeerName_Impl(zx::unowned_channel _client_end);
+      ~GetPeerName_Impl() = default;
+      GetPeerName_Impl(GetPeerName_Impl&& other) = default;
+      GetPeerName_Impl& operator=(GetPeerName_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class SetSockOpt_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      SetSockOpt_Impl(zx::unowned_channel _client_end, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval);
+      ~SetSockOpt_Impl() = default;
+      SetSockOpt_Impl(SetSockOpt_Impl&& other) = default;
+      SetSockOpt_Impl& operator=(SetSockOpt_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class GetSockOpt_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetSockOpt_Impl(zx::unowned_channel _client_end, int16_t level, int16_t optname);
+      ~GetSockOpt_Impl() = default;
+      GetSockOpt_Impl(GetSockOpt_Impl&& other) = default;
+      GetSockOpt_Impl& operator=(GetSockOpt_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class IoctlPOSIX_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      IoctlPOSIX_Impl(zx::unowned_channel _client_end, int16_t req, ::fidl::VectorView<uint8_t> in);
+      ~IoctlPOSIX_Impl() = default;
+      IoctlPOSIX_Impl(IoctlPOSIX_Impl&& other) = default;
+      IoctlPOSIX_Impl& operator=(IoctlPOSIX_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using Clone = Clone_Impl;
+    using Close = Close_Impl<CloseResponse>;
+    using Describe = Describe_Impl<DescribeResponse>;
+    using Sync = Sync_Impl<SyncResponse>;
+    using GetAttr = GetAttr_Impl<GetAttrResponse>;
+    using SetAttr = SetAttr_Impl<SetAttrResponse>;
+    using Ioctl = Ioctl_Impl<IoctlResponse>;
+    using Bind = Bind_Impl<BindResponse>;
+    using Connect = Connect_Impl<ConnectResponse>;
+    using Listen = Listen_Impl<ListenResponse>;
+    using Accept = Accept_Impl<AcceptResponse>;
+    using GetSockName = GetSockName_Impl<GetSockNameResponse>;
+    using GetPeerName = GetPeerName_Impl<GetPeerNameResponse>;
+    using SetSockOpt = SetSockOpt_Impl<SetSockOptResponse>;
+    using GetSockOpt = GetSockOpt_Impl<GetSockOptResponse>;
+    using IoctlPOSIX = IoctlPOSIX_Impl<IoctlPOSIXResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    class Clone_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      Clone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
+      ~Clone_Impl() = default;
+      Clone_Impl(Clone_Impl&& other) = default;
+      Clone_Impl& operator=(Clone_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class Close_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Close_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~Close_Impl() = default;
+      Close_Impl(Close_Impl&& other) = default;
+      Close_Impl& operator=(Close_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Describe_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Describe_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~Describe_Impl() = default;
+      Describe_Impl(Describe_Impl&& other) = default;
+      Describe_Impl& operator=(Describe_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Sync_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Sync_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~Sync_Impl() = default;
+      Sync_Impl(Sync_Impl&& other) = default;
+      Sync_Impl& operator=(Sync_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class GetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetAttr_Impl() = default;
+      GetAttr_Impl(GetAttr_Impl&& other) = default;
+      GetAttr_Impl& operator=(GetAttr_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class SetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+      ~SetAttr_Impl() = default;
+      SetAttr_Impl(SetAttr_Impl&& other) = default;
+      SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Ioctl_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Ioctl_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
+      ~Ioctl_Impl() = default;
+      Ioctl_Impl(Ioctl_Impl&& other) = default;
+      Ioctl_Impl& operator=(Ioctl_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Bind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Bind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer);
+      ~Bind_Impl() = default;
+      Bind_Impl(Bind_Impl&& other) = default;
+      Bind_Impl& operator=(Bind_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Connect_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Connect_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer);
+      ~Connect_Impl() = default;
+      Connect_Impl(Connect_Impl&& other) = default;
+      Connect_Impl& operator=(Connect_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Listen_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Listen_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer);
+      ~Listen_Impl() = default;
+      Listen_Impl(Listen_Impl&& other) = default;
+      Listen_Impl& operator=(Listen_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Accept_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Accept_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t flags, ::fidl::BytePart _response_buffer);
+      ~Accept_Impl() = default;
+      Accept_Impl(Accept_Impl&& other) = default;
+      Accept_Impl& operator=(Accept_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class GetSockName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetSockName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetSockName_Impl() = default;
+      GetSockName_Impl(GetSockName_Impl&& other) = default;
+      GetSockName_Impl& operator=(GetSockName_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class GetPeerName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetPeerName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetPeerName_Impl() = default;
+      GetPeerName_Impl(GetPeerName_Impl&& other) = default;
+      GetPeerName_Impl& operator=(GetPeerName_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class SetSockOpt_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      SetSockOpt_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, ::fidl::BytePart _response_buffer);
+      ~SetSockOpt_Impl() = default;
+      SetSockOpt_Impl(SetSockOpt_Impl&& other) = default;
+      SetSockOpt_Impl& operator=(SetSockOpt_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class GetSockOpt_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetSockOpt_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer);
+      ~GetSockOpt_Impl() = default;
+      GetSockOpt_Impl(GetSockOpt_Impl&& other) = default;
+      GetSockOpt_Impl& operator=(GetSockOpt_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class IoctlPOSIX_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      IoctlPOSIX_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
+      ~IoctlPOSIX_Impl() = default;
+      IoctlPOSIX_Impl(IoctlPOSIX_Impl&& other) = default;
+      IoctlPOSIX_Impl& operator=(IoctlPOSIX_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using Clone = Clone_Impl;
+    using Close = Close_Impl<CloseResponse>;
+    using Describe = Describe_Impl<DescribeResponse>;
+    using Sync = Sync_Impl<SyncResponse>;
+    using GetAttr = GetAttr_Impl<GetAttrResponse>;
+    using SetAttr = SetAttr_Impl<SetAttrResponse>;
+    using Ioctl = Ioctl_Impl<IoctlResponse>;
+    using Bind = Bind_Impl<BindResponse>;
+    using Connect = Connect_Impl<ConnectResponse>;
+    using Listen = Listen_Impl<ListenResponse>;
+    using Accept = Accept_Impl<AcceptResponse>;
+    using GetSockName = GetSockName_Impl<GetSockNameResponse>;
+    using GetPeerName = GetPeerName_Impl<GetPeerNameResponse>;
+    using SetSockOpt = SetSockOpt_Impl<SetSockOptResponse>;
+    using GetSockOpt = GetSockOpt_Impl<GetSockOptResponse>;
+    using IoctlPOSIX = IoctlPOSIX_Impl<IoctlPOSIXResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Create another connection to the same remote object.
+    //
+    // `flags` may be any of:
+    // - OPEN_RIGHT_*
+    // - OPEN_FLAG_APPEND
+    // - OPEN_FLAG_NO_REMOTE
+    // - OPEN_FLAG_DESCRIBE
+    // - CLONE_FLAG_SAME_RIGHTS
+    //
+    // All other flags are ignored.
+    //
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // cloned object.
+    // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
+
+    // Create another connection to the same remote object.
+    //
+    // `flags` may be any of:
+    // - OPEN_RIGHT_*
+    // - OPEN_FLAG_APPEND
+    // - OPEN_FLAG_NO_REMOTE
+    // - OPEN_FLAG_DESCRIBE
+    // - CLONE_FLAG_SAME_RIGHTS
+    //
+    // All other flags are ignored.
+    //
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // cloned object.
+    // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Clone Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
@@ -587,6 +1105,17 @@ class Control final {
     // Terminates connection with object.
     //
     // This method does not require any rights.
+    ResultOf::Close Close();
+
+    // Terminates connection with object.
+    //
+    // This method does not require any rights.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Close Close(::fidl::BytePart _response_buffer);
+
+    // Terminates connection with object.
+    //
+    // This method does not require any rights.
     zx_status_t Close_Deprecated(int32_t* out_s);
 
     // Terminates connection with object.
@@ -601,6 +1130,19 @@ class Control final {
     // This method does not require any rights.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<CloseResponse> Close_Deprecated(::fidl::BytePart response_buffer);
+
+    // Returns extra information about the type of the object.
+    // If the `Describe` operation fails, the connection is closed.
+    //
+    // This method does not require any rights.
+    ResultOf::Describe Describe();
+
+    // Returns extra information about the type of the object.
+    // If the `Describe` operation fails, the connection is closed.
+    //
+    // This method does not require any rights.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Describe Describe(::fidl::BytePart _response_buffer);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
@@ -626,6 +1168,17 @@ class Control final {
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
+    ResultOf::Sync Sync();
+
+    // Synchronizes updates to the node to the underlying media, if it exists.
+    //
+    // This method does not require any rights.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Sync Sync(::fidl::BytePart _response_buffer);
+
+    // Synchronizes updates to the node to the underlying media, if it exists.
+    //
+    // This method does not require any rights.
     zx_status_t Sync_Deprecated(int32_t* out_s);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
@@ -640,6 +1193,17 @@ class Control final {
     // This method does not require any rights.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(::fidl::BytePart response_buffer);
+
+    // Acquires information about the node.
+    //
+    // This method does not require any rights.
+    ResultOf::GetAttr GetAttr();
+
+    // Acquires information about the node.
+    //
+    // This method does not require any rights.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetAttr GetAttr(::fidl::BytePart _response_buffer);
 
     // Acquires information about the node.
     //
@@ -663,6 +1227,19 @@ class Control final {
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    ResultOf::SetAttr SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
+
+    // Updates information about the node.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SetAttr SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+
+    // Updates information about the node.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
     zx_status_t SetAttr_Deprecated(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
@@ -680,6 +1257,13 @@ class Control final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
+    // Deprecated. Only for use with compatibility with devhost.
+    ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
+
+    // Deprecated. Only for use with compatibility with devhost.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Ioctl Ioctl(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
+
 
     // Deprecated. Only for use with compatibility with devhost.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -689,6 +1273,13 @@ class Control final {
     // Deprecated. Only for use with compatibility with devhost.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
+
+    // Sets the local address used for the socket.
+    ResultOf::Bind Bind(::fidl::VectorView<uint8_t> addr);
+
+    // Sets the local address used for the socket.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Bind Bind(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer);
 
     // Sets the local address used for the socket.
     zx_status_t Bind_Deprecated(::fidl::VectorView<uint8_t> addr, int16_t* out_code);
@@ -703,6 +1294,13 @@ class Control final {
     ::fidl::DecodeResult<BindResponse> Bind_Deprecated(::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer);
 
     // Initiates a connection to a network endpoint.
+    ResultOf::Connect Connect(::fidl::VectorView<uint8_t> addr);
+
+    // Initiates a connection to a network endpoint.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Connect Connect(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer);
+
+    // Initiates a connection to a network endpoint.
     zx_status_t Connect_Deprecated(::fidl::VectorView<uint8_t> addr, int16_t* out_code);
 
     // Initiates a connection to a network endpoint.
@@ -713,6 +1311,15 @@ class Control final {
     // Initiates a connection to a network endpoint.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer);
+
+    // Begin listening for new connections from network endpoints. At most `backlog` connections
+    // will be buffered.
+    ResultOf::Listen Listen(int16_t backlog);
+
+    // Begin listening for new connections from network endpoints. At most `backlog` connections
+    // will be buffered.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Listen Listen(::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer);
 
     // Begin listening for new connections from network endpoints. At most `backlog` connections
     // will be buffered.
@@ -730,6 +1337,13 @@ class Control final {
     ::fidl::DecodeResult<ListenResponse> Listen_Deprecated(::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer);
 
     // Accepts an incoming connection from a network endpoint.
+    ResultOf::Accept Accept(int16_t flags);
+
+    // Accepts an incoming connection from a network endpoint.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Accept Accept(::fidl::BytePart _request_buffer, int16_t flags, ::fidl::BytePart _response_buffer);
+
+    // Accepts an incoming connection from a network endpoint.
     zx_status_t Accept_Deprecated(int16_t flags, int16_t* out_code, ::zx::channel* out_s);
 
     // Accepts an incoming connection from a network endpoint.
@@ -741,6 +1355,13 @@ class Control final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<AcceptResponse> Accept_Deprecated(::fidl::DecodedMessage<AcceptRequest> params, ::fidl::BytePart response_buffer);
 
+    // Retrieves the local socket address.
+    ResultOf::GetSockName GetSockName();
+
+    // Retrieves the local socket address.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetSockName GetSockName(::fidl::BytePart _response_buffer);
+
 
     // Retrieves the local socket address.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -751,6 +1372,13 @@ class Control final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetSockNameResponse> GetSockName_Deprecated(::fidl::BytePart response_buffer);
 
+    // Retrieves the remote socket address.
+    ResultOf::GetPeerName GetPeerName();
+
+    // Retrieves the remote socket address.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetPeerName GetPeerName(::fidl::BytePart _response_buffer);
+
 
     // Retrieves the remote socket address.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -760,6 +1388,13 @@ class Control final {
     // Retrieves the remote socket address.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetPeerNameResponse> GetPeerName_Deprecated(::fidl::BytePart response_buffer);
+
+    // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
+    ResultOf::SetSockOpt SetSockOpt(int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval);
+
+    // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SetSockOpt SetSockOpt(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, ::fidl::BytePart _response_buffer);
 
     // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
     zx_status_t SetSockOpt_Deprecated(int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, int16_t* out_code);
@@ -773,6 +1408,13 @@ class Control final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<SetSockOptResponse> SetSockOpt_Deprecated(::fidl::DecodedMessage<SetSockOptRequest> params, ::fidl::BytePart response_buffer);
 
+    // Retrieves the current value of a socket option.
+    ResultOf::GetSockOpt GetSockOpt(int16_t level, int16_t optname);
+
+    // Retrieves the current value of a socket option.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetSockOpt GetSockOpt(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer);
+
 
     // Retrieves the current value of a socket option.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -782,6 +1424,13 @@ class Control final {
     // Retrieves the current value of a socket option.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetSockOptResponse> GetSockOpt_Deprecated(::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer);
+
+    // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
+    ResultOf::IoctlPOSIX IoctlPOSIX(int16_t req, ::fidl::VectorView<uint8_t> in);
+
+    // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::IoctlPOSIX IoctlPOSIX(::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
 
     // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
@@ -805,6 +1454,43 @@ class Control final {
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
    public:
+
+    // Create another connection to the same remote object.
+    //
+    // `flags` may be any of:
+    // - OPEN_RIGHT_*
+    // - OPEN_FLAG_APPEND
+    // - OPEN_FLAG_NO_REMOTE
+    // - OPEN_FLAG_DESCRIBE
+    // - CLONE_FLAG_SAME_RIGHTS
+    //
+    // All other flags are ignored.
+    //
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // cloned object.
+    // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
+
+    // Create another connection to the same remote object.
+    //
+    // `flags` may be any of:
+    // - OPEN_RIGHT_*
+    // - OPEN_FLAG_APPEND
+    // - OPEN_FLAG_NO_REMOTE
+    // - OPEN_FLAG_DESCRIBE
+    // - CLONE_FLAG_SAME_RIGHTS
+    //
+    // All other flags are ignored.
+    //
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
+    // cloned object.
+    // The cloned object must have rights less than or equal to the original object.
+    // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
+    // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
@@ -865,6 +1551,17 @@ class Control final {
     // Terminates connection with object.
     //
     // This method does not require any rights.
+    static ResultOf::Close Close(zx::unowned_channel _client_end);
+
+    // Terminates connection with object.
+    //
+    // This method does not require any rights.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Close Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Terminates connection with object.
+    //
+    // This method does not require any rights.
     static zx_status_t Close_Deprecated(zx::unowned_channel _client_end, int32_t* out_s);
 
     // Terminates connection with object.
@@ -879,6 +1576,19 @@ class Control final {
     // This method does not require any rights.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<CloseResponse> Close_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Returns extra information about the type of the object.
+    // If the `Describe` operation fails, the connection is closed.
+    //
+    // This method does not require any rights.
+    static ResultOf::Describe Describe(zx::unowned_channel _client_end);
+
+    // Returns extra information about the type of the object.
+    // If the `Describe` operation fails, the connection is closed.
+    //
+    // This method does not require any rights.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Describe Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
@@ -904,6 +1614,17 @@ class Control final {
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
+    static ResultOf::Sync Sync(zx::unowned_channel _client_end);
+
+    // Synchronizes updates to the node to the underlying media, if it exists.
+    //
+    // This method does not require any rights.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Sync Sync(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Synchronizes updates to the node to the underlying media, if it exists.
+    //
+    // This method does not require any rights.
     static zx_status_t Sync_Deprecated(zx::unowned_channel _client_end, int32_t* out_s);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
@@ -918,6 +1639,17 @@ class Control final {
     // This method does not require any rights.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<SyncResponse> Sync_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Acquires information about the node.
+    //
+    // This method does not require any rights.
+    static ResultOf::GetAttr GetAttr(zx::unowned_channel _client_end);
+
+    // Acquires information about the node.
+    //
+    // This method does not require any rights.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetAttr GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Acquires information about the node.
     //
@@ -941,6 +1673,19 @@ class Control final {
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
+
+    // Updates information about the node.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+
+    // Updates information about the node.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
+    //
+    // This method requires following rights: OPEN_RIGHT_WRITABLE.
     static zx_status_t SetAttr_Deprecated(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
@@ -958,6 +1703,13 @@ class Control final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
+    // Deprecated. Only for use with compatibility with devhost.
+    static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
+
+    // Deprecated. Only for use with compatibility with devhost.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
+
 
     // Deprecated. Only for use with compatibility with devhost.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -967,6 +1719,13 @@ class Control final {
     // Deprecated. Only for use with compatibility with devhost.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<IoctlRequest> params, ::fidl::BytePart response_buffer);
+
+    // Sets the local address used for the socket.
+    static ResultOf::Bind Bind(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr);
+
+    // Sets the local address used for the socket.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Bind Bind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer);
 
     // Sets the local address used for the socket.
     static zx_status_t Bind_Deprecated(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr, int16_t* out_code);
@@ -981,6 +1740,13 @@ class Control final {
     static ::fidl::DecodeResult<BindResponse> Bind_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer);
 
     // Initiates a connection to a network endpoint.
+    static ResultOf::Connect Connect(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr);
+
+    // Initiates a connection to a network endpoint.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Connect Connect(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer);
+
+    // Initiates a connection to a network endpoint.
     static zx_status_t Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr, int16_t* out_code);
 
     // Initiates a connection to a network endpoint.
@@ -991,6 +1757,15 @@ class Control final {
     // Initiates a connection to a network endpoint.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer);
+
+    // Begin listening for new connections from network endpoints. At most `backlog` connections
+    // will be buffered.
+    static ResultOf::Listen Listen(zx::unowned_channel _client_end, int16_t backlog);
+
+    // Begin listening for new connections from network endpoints. At most `backlog` connections
+    // will be buffered.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Listen Listen(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer);
 
     // Begin listening for new connections from network endpoints. At most `backlog` connections
     // will be buffered.
@@ -1008,6 +1783,13 @@ class Control final {
     static ::fidl::DecodeResult<ListenResponse> Listen_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer);
 
     // Accepts an incoming connection from a network endpoint.
+    static ResultOf::Accept Accept(zx::unowned_channel _client_end, int16_t flags);
+
+    // Accepts an incoming connection from a network endpoint.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Accept Accept(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t flags, ::fidl::BytePart _response_buffer);
+
+    // Accepts an incoming connection from a network endpoint.
     static zx_status_t Accept_Deprecated(zx::unowned_channel _client_end, int16_t flags, int16_t* out_code, ::zx::channel* out_s);
 
     // Accepts an incoming connection from a network endpoint.
@@ -1019,6 +1801,13 @@ class Control final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<AcceptResponse> Accept_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AcceptRequest> params, ::fidl::BytePart response_buffer);
 
+    // Retrieves the local socket address.
+    static ResultOf::GetSockName GetSockName(zx::unowned_channel _client_end);
+
+    // Retrieves the local socket address.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetSockName GetSockName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
 
     // Retrieves the local socket address.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1029,6 +1818,13 @@ class Control final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetSockNameResponse> GetSockName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Retrieves the remote socket address.
+    static ResultOf::GetPeerName GetPeerName(zx::unowned_channel _client_end);
+
+    // Retrieves the remote socket address.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetPeerName GetPeerName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
 
     // Retrieves the remote socket address.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1038,6 +1834,13 @@ class Control final {
     // Retrieves the remote socket address.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetPeerNameResponse> GetPeerName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
+    static ResultOf::SetSockOpt SetSockOpt(zx::unowned_channel _client_end, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval);
+
+    // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SetSockOpt SetSockOpt(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, ::fidl::BytePart _response_buffer);
 
     // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
     static zx_status_t SetSockOpt_Deprecated(zx::unowned_channel _client_end, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, int16_t* out_code);
@@ -1051,6 +1854,13 @@ class Control final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<SetSockOptResponse> SetSockOpt_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSockOptRequest> params, ::fidl::BytePart response_buffer);
 
+    // Retrieves the current value of a socket option.
+    static ResultOf::GetSockOpt GetSockOpt(zx::unowned_channel _client_end, int16_t level, int16_t optname);
+
+    // Retrieves the current value of a socket option.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetSockOpt GetSockOpt(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer);
+
 
     // Retrieves the current value of a socket option.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1060,6 +1870,13 @@ class Control final {
     // Retrieves the current value of a socket option.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetSockOptResponse> GetSockOpt_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSockOptRequest> params, ::fidl::BytePart response_buffer);
+
+    // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
+    static ResultOf::IoctlPOSIX IoctlPOSIX(zx::unowned_channel _client_end, int16_t req, ::fidl::VectorView<uint8_t> in);
+
+    // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::IoctlPOSIX IoctlPOSIX(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t req, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer);
 
 
     // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.

@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
@@ -145,15 +146,27 @@ class Connectivity final {
     fit::function<zx_status_t()> unknown;
   };
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+
+   public:
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+
+   public:
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
@@ -639,19 +652,94 @@ class NameLookup final {
   };
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    template <typename ResponseType>
+    class LookupIp_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      LookupIp_Impl(zx::unowned_channel _client_end, ::fidl::StringView hostname, LookupIpOptions options);
+      ~LookupIp_Impl() = default;
+      LookupIp_Impl(LookupIp_Impl&& other) = default;
+      LookupIp_Impl& operator=(LookupIp_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class LookupHostname_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      LookupHostname_Impl(zx::unowned_channel _client_end, IpAddress addr);
+      ~LookupHostname_Impl() = default;
+      LookupHostname_Impl(LookupHostname_Impl&& other) = default;
+      LookupHostname_Impl& operator=(LookupHostname_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using LookupIp = LookupIp_Impl<LookupIpResponse>;
+    using LookupHostname = LookupHostname_Impl<LookupHostnameResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    template <typename ResponseType>
+    class LookupIp_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      LookupIp_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, LookupIpOptions options, ::fidl::BytePart _response_buffer);
+      ~LookupIp_Impl() = default;
+      LookupIp_Impl(LookupIp_Impl&& other) = default;
+      LookupIp_Impl& operator=(LookupIp_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class LookupHostname_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      LookupHostname_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, IpAddress addr, ::fidl::BytePart _response_buffer);
+      ~LookupHostname_Impl() = default;
+      LookupHostname_Impl(LookupHostname_Impl&& other) = default;
+      LookupHostname_Impl& operator=(LookupHostname_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using LookupIp = LookupIp_Impl<LookupIpResponse>;
+    using LookupHostname = LookupHostname_Impl<LookupHostnameResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Look up a list of IP addresses by hostname.
+    //
+    // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    ResultOf::LookupIp LookupIp(::fidl::StringView hostname, LookupIpOptions options);
+
+    // Look up a list of IP addresses by hostname.
+    //
+    // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::LookupIp LookupIp(::fidl::BytePart _request_buffer, ::fidl::StringView hostname, LookupIpOptions options, ::fidl::BytePart _response_buffer);
 
 
     // Look up a list of IP addresses by hostname.
@@ -666,6 +754,13 @@ class NameLookup final {
     // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<LookupIpResponse> LookupIp_Deprecated(::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer);
+
+    // Look up a hostname by IP address.
+    ResultOf::LookupHostname LookupHostname(IpAddress addr);
+
+    // Look up a hostname by IP address.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::LookupHostname LookupHostname(::fidl::BytePart _request_buffer, IpAddress addr, ::fidl::BytePart _response_buffer);
 
 
     // Look up a hostname by IP address.
@@ -685,6 +780,17 @@ class NameLookup final {
   class Call final {
    public:
 
+    // Look up a list of IP addresses by hostname.
+    //
+    // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    static ResultOf::LookupIp LookupIp(zx::unowned_channel _client_end, ::fidl::StringView hostname, LookupIpOptions options);
+
+    // Look up a list of IP addresses by hostname.
+    //
+    // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::LookupIp LookupIp(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, LookupIpOptions options, ::fidl::BytePart _response_buffer);
+
 
     // Look up a list of IP addresses by hostname.
     //
@@ -698,6 +804,13 @@ class NameLookup final {
     // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<LookupIpResponse> LookupIp_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer);
+
+    // Look up a hostname by IP address.
+    static ResultOf::LookupHostname LookupHostname(zx::unowned_channel _client_end, IpAddress addr);
+
+    // Look up a hostname by IP address.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::LookupHostname LookupHostname(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, IpAddress addr, ::fidl::BytePart _response_buffer);
 
 
     // Look up a hostname by IP address.
@@ -859,19 +972,66 @@ class SocketProvider final {
   };
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    template <typename ResponseType>
+    class GetAddrInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetAddrInfo_Impl(zx::unowned_channel _client_end, ::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints);
+      ~GetAddrInfo_Impl() = default;
+      GetAddrInfo_Impl(GetAddrInfo_Impl&& other) = default;
+      GetAddrInfo_Impl& operator=(GetAddrInfo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using GetAddrInfo = GetAddrInfo_Impl<GetAddrInfoResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    template <typename ResponseType>
+    class GetAddrInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetAddrInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints, ::fidl::BytePart _response_buffer);
+      ~GetAddrInfo_Impl() = default;
+      GetAddrInfo_Impl(GetAddrInfo_Impl&& other) = default;
+      GetAddrInfo_Impl& operator=(GetAddrInfo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using GetAddrInfo = GetAddrInfo_Impl<GetAddrInfoResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Retrieves information about the address of a node and/or service. The number of valid
+    // results in `res` is given by the `count` return value.
+    ResultOf::GetAddrInfo GetAddrInfo(::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints);
+
+    // Retrieves information about the address of a node and/or service. The number of valid
+    // results in `res` is given by the `count` return value.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetAddrInfo GetAddrInfo(::fidl::BytePart _request_buffer, ::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints, ::fidl::BytePart _response_buffer);
 
     // Retrieves information about the address of a node and/or service. The number of valid
     // results in `res` is given by the `count` return value.
@@ -895,6 +1055,15 @@ class SocketProvider final {
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
    public:
+
+    // Retrieves information about the address of a node and/or service. The number of valid
+    // results in `res` is given by the `count` return value.
+    static ResultOf::GetAddrInfo GetAddrInfo(zx::unowned_channel _client_end, ::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints);
+
+    // Retrieves information about the address of a node and/or service. The number of valid
+    // results in `res` is given by the `count` return value.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetAddrInfo GetAddrInfo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints, ::fidl::BytePart _response_buffer);
 
     // Retrieves information about the address of a node and/or service. The number of valid
     // results in `res` is given by the `count` return value.

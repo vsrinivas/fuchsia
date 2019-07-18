@@ -124,15 +124,79 @@ class {{ .Name }} final {
   };
   {{- end }}
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    {{- range FilterMethodsWithoutReqs .Methods -}}
+    {{- if .HasResponse -}}
+{{ "" }}
+    template <typename ResponseType>
+    {{- end }}
+    class {{ .Name }}_Impl final : private ::fidl::internal::{{ if .HasResponse -}} OwnedSyncCallBase<ResponseType> {{- else -}} StatusAndError {{- end }} {
+      using Super = ::fidl::internal::{{ if .HasResponse -}} OwnedSyncCallBase<ResponseType> {{- else -}} StatusAndError {{- end }};
+     public:
+      {{ .Name }}_Impl({{ template "StaticCallSyncRequestCFlavorMethodArgumentsNew" . }});
+      ~{{ .Name }}_Impl() = default;
+      {{ .Name }}_Impl({{ .Name }}_Impl&& other) = default;
+      {{ .Name }}_Impl& operator=({{ .Name }}_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      {{- if .HasResponse }}
+      using Super::Unwrap;
+      {{- end }}
+    };
+    {{- end }}
+
+   public:
+    {{- range FilterMethodsWithoutReqs .Methods -}}
+      {{- if .HasResponse }}
+    using {{ .Name }} = {{ .Name }}_Impl<{{ .Name }}Response>;
+      {{- else }}
+    using {{ .Name }} = {{ .Name }}_Impl;
+      {{- end }}
+    {{- end }}
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    {{- range FilterMethodsWithoutReqs .Methods -}}
+    {{- if .HasResponse -}}
+{{ "" }}
+    template <typename ResponseType>
+    {{- end }}
+    class {{ .Name }}_Impl final : private ::fidl::internal::{{ if .HasResponse -}} UnownedSyncCallBase<ResponseType> {{- else -}} StatusAndError {{- end }} {
+      using Super = ::fidl::internal::{{ if .HasResponse -}} UnownedSyncCallBase<ResponseType> {{- else -}} StatusAndError {{- end }};
+     public:
+      {{ .Name }}_Impl({{ template "StaticCallSyncRequestCallerAllocateMethodArgumentsNew" . }});
+      ~{{ .Name }}_Impl() = default;
+      {{ .Name }}_Impl({{ .Name }}_Impl&& other) = default;
+      {{ .Name }}_Impl& operator=({{ .Name }}_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      {{- if .HasResponse }}
+      using Super::Unwrap;
+      {{- end }}
+    };
+    {{- end }}
+
+   public:
+    {{- range FilterMethodsWithoutReqs .Methods -}}
+      {{- if .HasResponse }}
+    using {{ .Name }} = {{ .Name }}_Impl<{{ .Name }}Response>;
+      {{- else }}
+    using {{ .Name }} = {{ .Name }}_Impl;
+      {{- end }}
+    {{- end }}
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
@@ -140,6 +204,19 @@ class {{ .Name }} final {
 {{ "" }}
     {{- /* Client-calling functions do not apply to events. */}}
     {{- range FilterMethodsWithoutReqs .Methods -}}
+      {{- range .DocComments }}
+    //{{ . }}
+      {{- end }}
+    ResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestCFlavorMethodArgumentsNew" . }});
+{{ "" }}
+      {{- if or .Request .Response }}
+        {{- range .DocComments }}
+    //{{ . }}
+        {{- end }}
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArgumentsNew" . }});
+      {{- end }}
+{{ "" }}
       {{- if .LLProps.CBindingCompatible }}
         {{- range .DocComments }}
     //{{ . }}
@@ -188,6 +265,19 @@ class {{ .Name }} final {
 {{ "" }}
     {{- /* Client-calling functions do not apply to events. */}}
     {{- range FilterMethodsWithoutReqs .Methods -}}
+      {{- range .DocComments }}
+    //{{ . }}
+      {{- end }}
+    static ResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestCFlavorMethodArgumentsNew" . }});
+{{ "" }}
+      {{- if or .Request .Response }}
+        {{- range .DocComments }}
+    //{{ . }}
+        {{- end }}
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestCallerAllocateMethodArgumentsNew" . }});
+      {{- end }}
+{{ "" }}
       {{- if .LLProps.CBindingCompatible }}
         {{- range .DocComments }}
     //{{ . }}
@@ -388,6 +478,16 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 
 {{- /* Client-calling functions do not apply to events. */}}
 {{- range FilterMethodsWithoutReqs .Methods -}}
+{{ "" }}
+    {{- template "SyncRequestCFlavorMethodDefinitionNew" . }}
+{{ "" }}
+  {{- template "StaticCallSyncRequestCFlavorMethodDefinitionNew" . }}
+  {{- if or .Request .Response }}
+{{ "" }}
+    {{- template "SyncRequestCallerAllocateMethodDefinitionNew" . }}
+{{ "" }}
+    {{- template "StaticCallSyncRequestCallerAllocateMethodDefinitionNew" . }}
+  {{- end }}
   {{- if .LLProps.CBindingCompatible }}
 {{ "" }}
     {{- template "SyncRequestCFlavorMethodDefinition" . }}

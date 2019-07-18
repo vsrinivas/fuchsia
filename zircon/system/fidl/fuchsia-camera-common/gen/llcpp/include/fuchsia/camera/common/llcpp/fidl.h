@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
@@ -131,25 +132,118 @@ class Stream final {
     fit::function<zx_status_t()> unknown;
   };
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    class Start_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      Start_Impl(zx::unowned_channel _client_end);
+      ~Start_Impl() = default;
+      Start_Impl(Start_Impl&& other) = default;
+      Start_Impl& operator=(Start_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    class Stop_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      Stop_Impl(zx::unowned_channel _client_end);
+      ~Stop_Impl() = default;
+      Stop_Impl(Stop_Impl&& other) = default;
+      Stop_Impl& operator=(Stop_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    class ReleaseFrame_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      ReleaseFrame_Impl(zx::unowned_channel _client_end, uint32_t buffer_id);
+      ~ReleaseFrame_Impl() = default;
+      ReleaseFrame_Impl(ReleaseFrame_Impl&& other) = default;
+      ReleaseFrame_Impl& operator=(ReleaseFrame_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+
+   public:
+    using Start = Start_Impl;
+    using Stop = Stop_Impl;
+    using ReleaseFrame = ReleaseFrame_Impl;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    class Start_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      Start_Impl(zx::unowned_channel _client_end);
+      ~Start_Impl() = default;
+      Start_Impl(Start_Impl&& other) = default;
+      Start_Impl& operator=(Start_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    class Stop_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      Stop_Impl(zx::unowned_channel _client_end);
+      ~Stop_Impl() = default;
+      Stop_Impl(Stop_Impl&& other) = default;
+      Stop_Impl& operator=(Stop_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    class ReleaseFrame_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      ReleaseFrame_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t buffer_id);
+      ~ReleaseFrame_Impl() = default;
+      ReleaseFrame_Impl(ReleaseFrame_Impl&& other) = default;
+      ReleaseFrame_Impl& operator=(ReleaseFrame_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+
+   public:
+    using Start = Start_Impl;
+    using Stop = Stop_Impl;
+    using ReleaseFrame = ReleaseFrame_Impl;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Starts the streaming of frames.
+    ResultOf::Start Start();
+
+
+    // Starts the streaming of frames.
     zx_status_t Start_Deprecated();
 
     // Stops the streaming of frames.
+    ResultOf::Stop Stop();
+
+
+    // Stops the streaming of frames.
     zx_status_t Stop_Deprecated();
+
+    // Unlocks the specified frame, allowing the driver to reuse the memory.
+    ResultOf::ReleaseFrame ReleaseFrame(uint32_t buffer_id);
+
+    // Unlocks the specified frame, allowing the driver to reuse the memory.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::ReleaseFrame ReleaseFrame(::fidl::BytePart _request_buffer, uint32_t buffer_id);
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
     zx_status_t ReleaseFrame_Deprecated(uint32_t buffer_id);
@@ -176,10 +270,25 @@ class Stream final {
    public:
 
     // Starts the streaming of frames.
+    static ResultOf::Start Start(zx::unowned_channel _client_end);
+
+
+    // Starts the streaming of frames.
     static zx_status_t Start_Deprecated(zx::unowned_channel _client_end);
 
     // Stops the streaming of frames.
+    static ResultOf::Stop Stop(zx::unowned_channel _client_end);
+
+
+    // Stops the streaming of frames.
     static zx_status_t Stop_Deprecated(zx::unowned_channel _client_end);
+
+    // Unlocks the specified frame, allowing the driver to reuse the memory.
+    static ResultOf::ReleaseFrame ReleaseFrame(zx::unowned_channel _client_end, uint32_t buffer_id);
+
+    // Unlocks the specified frame, allowing the driver to reuse the memory.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::ReleaseFrame ReleaseFrame(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t buffer_id);
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
     static zx_status_t ReleaseFrame_Deprecated(zx::unowned_channel _client_end, uint32_t buffer_id);
@@ -433,19 +542,62 @@ class VirtualCameraFactory final {
   };
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    class CreateDevice_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      CreateDevice_Impl(zx::unowned_channel _client_end, VirtualCameraConfig config);
+      ~CreateDevice_Impl() = default;
+      CreateDevice_Impl(CreateDevice_Impl&& other) = default;
+      CreateDevice_Impl& operator=(CreateDevice_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+
+   public:
+    using CreateDevice = CreateDevice_Impl;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    class CreateDevice_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      CreateDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, VirtualCameraConfig config);
+      ~CreateDevice_Impl() = default;
+      CreateDevice_Impl(CreateDevice_Impl&& other) = default;
+      CreateDevice_Impl& operator=(CreateDevice_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+
+   public:
+    using CreateDevice = CreateDevice_Impl;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Creates a new VirtualCameraDevice based on the configuration passed in.
+    // `config`: a VirtualCameraConfig defining how the new device should behave.
+    ResultOf::CreateDevice CreateDevice(VirtualCameraConfig config);
+
+    // Creates a new VirtualCameraDevice based on the configuration passed in.
+    // `config`: a VirtualCameraConfig defining how the new device should behave.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::CreateDevice CreateDevice(::fidl::BytePart _request_buffer, VirtualCameraConfig config);
 
     // Creates a new VirtualCameraDevice based on the configuration passed in.
     // `config`: a VirtualCameraConfig defining how the new device should behave.
@@ -468,6 +620,15 @@ class VirtualCameraFactory final {
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
    public:
+
+    // Creates a new VirtualCameraDevice based on the configuration passed in.
+    // `config`: a VirtualCameraConfig defining how the new device should behave.
+    static ResultOf::CreateDevice CreateDevice(zx::unowned_channel _client_end, VirtualCameraConfig config);
+
+    // Creates a new VirtualCameraDevice based on the configuration passed in.
+    // `config`: a VirtualCameraConfig defining how the new device should behave.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::CreateDevice CreateDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, VirtualCameraConfig config);
 
     // Creates a new VirtualCameraDevice based on the configuration passed in.
     // `config`: a VirtualCameraConfig defining how the new device should behave.

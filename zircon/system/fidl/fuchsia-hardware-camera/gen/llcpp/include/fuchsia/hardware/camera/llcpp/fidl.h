@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
@@ -57,19 +58,68 @@ class Device final {
   };
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    class GetChannel_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      GetChannel_Impl(zx::unowned_channel _client_end, ::zx::channel ch);
+      ~GetChannel_Impl() = default;
+      GetChannel_Impl(GetChannel_Impl&& other) = default;
+      GetChannel_Impl& operator=(GetChannel_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+
+   public:
+    using GetChannel = GetChannel_Impl;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    class GetChannel_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      GetChannel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel ch);
+      ~GetChannel_Impl() = default;
+      GetChannel_Impl(GetChannel_Impl&& other) = default;
+      GetChannel_Impl& operator=(GetChannel_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+
+   public:
+    using GetChannel = GetChannel_Impl;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Note: this method obtains a channel to the codec device which
+    // communicates using a legacy custom binary serialized format.  Once the
+    // system has been updated to use FIDL as its serialization format instead
+    // of the legacy custom format, this method can be updated to use an
+    // interface request instead of returning a channel.
+    ResultOf::GetChannel GetChannel(::zx::channel ch);
+
+    // Note: this method obtains a channel to the codec device which
+    // communicates using a legacy custom binary serialized format.  Once the
+    // system has been updated to use FIDL as its serialization format instead
+    // of the legacy custom format, this method can be updated to use an
+    // interface request instead of returning a channel.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetChannel GetChannel(::fidl::BytePart _request_buffer, ::zx::channel ch);
 
     // Note: this method obtains a channel to the codec device which
     // communicates using a legacy custom binary serialized format.  Once the
@@ -101,6 +151,21 @@ class Device final {
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
    public:
+
+    // Note: this method obtains a channel to the codec device which
+    // communicates using a legacy custom binary serialized format.  Once the
+    // system has been updated to use FIDL as its serialization format instead
+    // of the legacy custom format, this method can be updated to use an
+    // interface request instead of returning a channel.
+    static ResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::zx::channel ch);
+
+    // Note: this method obtains a channel to the codec device which
+    // communicates using a legacy custom binary serialized format.  Once the
+    // system has been updated to use FIDL as its serialization format instead
+    // of the legacy custom format, this method can be updated to use an
+    // interface request instead of returning a channel.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel ch);
 
     // Note: this method obtains a channel to the codec device which
     // communicates using a legacy custom binary serialized format.  Once the
@@ -231,23 +296,112 @@ class Stream final {
     fit::function<zx_status_t()> unknown;
   };
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    class Start_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      Start_Impl(zx::unowned_channel _client_end);
+      ~Start_Impl() = default;
+      Start_Impl(Start_Impl&& other) = default;
+      Start_Impl& operator=(Start_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    class Stop_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      Stop_Impl(zx::unowned_channel _client_end);
+      ~Stop_Impl() = default;
+      Stop_Impl(Stop_Impl&& other) = default;
+      Stop_Impl& operator=(Stop_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    class ReleaseFrame_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      ReleaseFrame_Impl(zx::unowned_channel _client_end, uint32_t buffer_id);
+      ~ReleaseFrame_Impl() = default;
+      ReleaseFrame_Impl(ReleaseFrame_Impl&& other) = default;
+      ReleaseFrame_Impl& operator=(ReleaseFrame_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+
+   public:
+    using Start = Start_Impl;
+    using Stop = Stop_Impl;
+    using ReleaseFrame = ReleaseFrame_Impl;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    class Start_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      Start_Impl(zx::unowned_channel _client_end);
+      ~Start_Impl() = default;
+      Start_Impl(Start_Impl&& other) = default;
+      Start_Impl& operator=(Start_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    class Stop_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      Stop_Impl(zx::unowned_channel _client_end);
+      ~Stop_Impl() = default;
+      Stop_Impl(Stop_Impl&& other) = default;
+      Stop_Impl& operator=(Stop_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    class ReleaseFrame_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      ReleaseFrame_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t buffer_id);
+      ~ReleaseFrame_Impl() = default;
+      ReleaseFrame_Impl(ReleaseFrame_Impl&& other) = default;
+      ReleaseFrame_Impl& operator=(ReleaseFrame_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+
+   public:
+    using Start = Start_Impl;
+    using Stop = Stop_Impl;
+    using ReleaseFrame = ReleaseFrame_Impl;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
+    ResultOf::Start Start();
+
+
     zx_status_t Start_Deprecated();
 
+    ResultOf::Stop Stop();
+
+
     zx_status_t Stop_Deprecated();
+
+    ResultOf::ReleaseFrame ReleaseFrame(uint32_t buffer_id);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::ReleaseFrame ReleaseFrame(::fidl::BytePart _request_buffer, uint32_t buffer_id);
 
     zx_status_t ReleaseFrame_Deprecated(uint32_t buffer_id);
 
@@ -270,9 +424,20 @@ class Stream final {
   class Call final {
    public:
 
+    static ResultOf::Start Start(zx::unowned_channel _client_end);
+
+
     static zx_status_t Start_Deprecated(zx::unowned_channel _client_end);
 
+    static ResultOf::Stop Stop(zx::unowned_channel _client_end);
+
+
     static zx_status_t Stop_Deprecated(zx::unowned_channel _client_end);
+
+    static ResultOf::ReleaseFrame ReleaseFrame(zx::unowned_channel _client_end, uint32_t buffer_id);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::ReleaseFrame ReleaseFrame(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t buffer_id);
 
     static zx_status_t ReleaseFrame_Deprecated(zx::unowned_channel _client_end, uint32_t buffer_id);
 
@@ -448,19 +613,120 @@ class Control final {
   using GetDeviceInfoRequest = ::fidl::AnyZeroArgMessage;
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    template <typename ResponseType>
+    class GetFormats_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetFormats_Impl(zx::unowned_channel _client_end, uint32_t index);
+      ~GetFormats_Impl() = default;
+      GetFormats_Impl(GetFormats_Impl&& other) = default;
+      GetFormats_Impl& operator=(GetFormats_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    class CreateStream_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      CreateStream_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+      ~CreateStream_Impl() = default;
+      CreateStream_Impl(CreateStream_Impl&& other) = default;
+      CreateStream_Impl& operator=(CreateStream_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class GetDeviceInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetDeviceInfo_Impl(zx::unowned_channel _client_end);
+      ~GetDeviceInfo_Impl() = default;
+      GetDeviceInfo_Impl(GetDeviceInfo_Impl&& other) = default;
+      GetDeviceInfo_Impl& operator=(GetDeviceInfo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using GetFormats = GetFormats_Impl<GetFormatsResponse>;
+    using CreateStream = CreateStream_Impl;
+    using GetDeviceInfo = GetDeviceInfo_Impl<GetDeviceInfoResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    template <typename ResponseType>
+    class GetFormats_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetFormats_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
+      ~GetFormats_Impl() = default;
+      GetFormats_Impl(GetFormats_Impl&& other) = default;
+      GetFormats_Impl& operator=(GetFormats_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    class CreateStream_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      CreateStream_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+      ~CreateStream_Impl() = default;
+      CreateStream_Impl(CreateStream_Impl&& other) = default;
+      CreateStream_Impl& operator=(CreateStream_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class GetDeviceInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetDeviceInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetDeviceInfo_Impl() = default;
+      GetDeviceInfo_Impl(GetDeviceInfo_Impl&& other) = default;
+      GetDeviceInfo_Impl& operator=(GetDeviceInfo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using GetFormats = GetFormats_Impl<GetFormatsResponse>;
+    using CreateStream = CreateStream_Impl;
+    using GetDeviceInfo = GetDeviceInfo_Impl<GetDeviceInfoResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Get the available format types for this device
+    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // GetFormats need to be issued until total_format_count are received.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
+    ResultOf::GetFormats GetFormats(uint32_t index);
+
+    // Get the available format types for this device
+    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // GetFormats need to be issued until total_format_count are received.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetFormats GetFormats(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
@@ -486,6 +752,11 @@ class Control final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
 
+    ResultOf::CreateStream CreateStream(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::CreateStream CreateStream(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+
     zx_status_t CreateStream_Deprecated(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -493,6 +764,11 @@ class Control final {
 
     // Messages are encoded and decoded in-place.
     zx_status_t CreateStream_Deprecated(::fidl::DecodedMessage<CreateStreamRequest> params);
+
+    ResultOf::GetDeviceInfo GetDeviceInfo();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetDeviceInfo GetDeviceInfo(::fidl::BytePart _response_buffer);
 
     zx_status_t GetDeviceInfo_Deprecated(DeviceInfo* out_device_info);
 
@@ -510,6 +786,21 @@ class Control final {
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
    public:
+
+    // Get the available format types for this device
+    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // GetFormats need to be issued until total_format_count are received.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
+    static ResultOf::GetFormats GetFormats(zx::unowned_channel _client_end, uint32_t index);
+
+    // Get the available format types for this device
+    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // GetFormats need to be issued until total_format_count are received.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetFormats GetFormats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
@@ -535,6 +826,11 @@ class Control final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
 
+    static ResultOf::CreateStream CreateStream(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::CreateStream CreateStream(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+
     static zx_status_t CreateStream_Deprecated(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -542,6 +838,11 @@ class Control final {
 
     // Messages are encoded and decoded in-place.
     static zx_status_t CreateStream_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateStreamRequest> params);
+
+    static ResultOf::GetDeviceInfo GetDeviceInfo(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetDeviceInfo GetDeviceInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     static zx_status_t GetDeviceInfo_Deprecated(zx::unowned_channel _client_end, DeviceInfo* out_device_info);
 
@@ -690,19 +991,120 @@ class ControlV2 final {
   using GetDeviceInfoRequest = ::fidl::AnyZeroArgMessage;
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    template <typename ResponseType>
+    class GetFormats_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetFormats_Impl(zx::unowned_channel _client_end, uint32_t index);
+      ~GetFormats_Impl() = default;
+      GetFormats_Impl(GetFormats_Impl&& other) = default;
+      GetFormats_Impl& operator=(GetFormats_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    class CreateStream_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      CreateStream_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+      ~CreateStream_Impl() = default;
+      CreateStream_Impl(CreateStream_Impl&& other) = default;
+      CreateStream_Impl& operator=(CreateStream_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class GetDeviceInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetDeviceInfo_Impl(zx::unowned_channel _client_end);
+      ~GetDeviceInfo_Impl() = default;
+      GetDeviceInfo_Impl(GetDeviceInfo_Impl&& other) = default;
+      GetDeviceInfo_Impl& operator=(GetDeviceInfo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using GetFormats = GetFormats_Impl<GetFormatsResponse>;
+    using CreateStream = CreateStream_Impl;
+    using GetDeviceInfo = GetDeviceInfo_Impl<GetDeviceInfoResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    template <typename ResponseType>
+    class GetFormats_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetFormats_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
+      ~GetFormats_Impl() = default;
+      GetFormats_Impl(GetFormats_Impl&& other) = default;
+      GetFormats_Impl& operator=(GetFormats_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    class CreateStream_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      CreateStream_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+      ~CreateStream_Impl() = default;
+      CreateStream_Impl(CreateStream_Impl&& other) = default;
+      CreateStream_Impl& operator=(CreateStream_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class GetDeviceInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetDeviceInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetDeviceInfo_Impl() = default;
+      GetDeviceInfo_Impl(GetDeviceInfo_Impl&& other) = default;
+      GetDeviceInfo_Impl& operator=(GetDeviceInfo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using GetFormats = GetFormats_Impl<GetFormatsResponse>;
+    using CreateStream = CreateStream_Impl;
+    using GetDeviceInfo = GetDeviceInfo_Impl<GetDeviceInfoResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Get the available format types for this device
+    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // GetFormats need to be issued until total_format_count are received.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
+    ResultOf::GetFormats GetFormats(uint32_t index);
+
+    // Get the available format types for this device
+    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // GetFormats need to be issued until total_format_count are received.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetFormats GetFormats(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
@@ -728,6 +1130,11 @@ class ControlV2 final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
 
+    ResultOf::CreateStream CreateStream(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::CreateStream CreateStream(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+
     zx_status_t CreateStream_Deprecated(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -735,6 +1142,11 @@ class ControlV2 final {
 
     // Messages are encoded and decoded in-place.
     zx_status_t CreateStream_Deprecated(::fidl::DecodedMessage<CreateStreamRequest> params);
+
+    ResultOf::GetDeviceInfo GetDeviceInfo();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetDeviceInfo GetDeviceInfo(::fidl::BytePart _response_buffer);
 
     zx_status_t GetDeviceInfo_Deprecated(DeviceInfo* out_device_info);
 
@@ -752,6 +1164,21 @@ class ControlV2 final {
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
    public:
+
+    // Get the available format types for this device
+    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // GetFormats need to be issued until total_format_count are received.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
+    static ResultOf::GetFormats GetFormats(zx::unowned_channel _client_end, uint32_t index);
+
+    // Get the available format types for this device
+    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // GetFormats need to be issued until total_format_count are received.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetFormats GetFormats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
@@ -777,6 +1204,11 @@ class ControlV2 final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
 
+    static ResultOf::CreateStream CreateStream(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::CreateStream CreateStream(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+
     static zx_status_t CreateStream_Deprecated(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -784,6 +1216,11 @@ class ControlV2 final {
 
     // Messages are encoded and decoded in-place.
     static zx_status_t CreateStream_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateStreamRequest> params);
+
+    static ResultOf::GetDeviceInfo GetDeviceInfo(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetDeviceInfo GetDeviceInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     static zx_status_t GetDeviceInfo_Deprecated(zx::unowned_channel _client_end, DeviceInfo* out_device_info);
 

@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
@@ -225,19 +226,110 @@ class KitchenSink final {
     fit::function<zx_status_t()> unknown;
   };
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    class MethodA_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      MethodA_Impl(zx::unowned_channel _client_end, int64_t a, int64_t b);
+      ~MethodA_Impl() = default;
+      MethodA_Impl(MethodA_Impl&& other) = default;
+      MethodA_Impl& operator=(MethodA_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class MethodB_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      MethodB_Impl(zx::unowned_channel _client_end, int64_t a, int64_t b);
+      ~MethodB_Impl() = default;
+      MethodB_Impl(MethodB_Impl&& other) = default;
+      MethodB_Impl& operator=(MethodB_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class MutateSocket_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      MutateSocket_Impl(zx::unowned_channel _client_end, ::zx::socket a);
+      ~MutateSocket_Impl() = default;
+      MutateSocket_Impl(MutateSocket_Impl&& other) = default;
+      MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using MethodA = MethodA_Impl;
+    using MethodB = MethodB_Impl<MethodBResponse>;
+    using MutateSocket = MutateSocket_Impl<MutateSocketResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    class MethodA_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      MethodA_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+      ~MethodA_Impl() = default;
+      MethodA_Impl(MethodA_Impl&& other) = default;
+      MethodA_Impl& operator=(MethodA_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class MethodB_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      MethodB_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
+      ~MethodB_Impl() = default;
+      MethodB_Impl(MethodB_Impl&& other) = default;
+      MethodB_Impl& operator=(MethodB_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class MutateSocket_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      MutateSocket_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
+      ~MutateSocket_Impl() = default;
+      MutateSocket_Impl(MutateSocket_Impl&& other) = default;
+      MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using MethodA = MethodA_Impl;
+    using MethodB = MethodB_Impl<MethodBResponse>;
+    using MutateSocket = MutateSocket_Impl<MutateSocketResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    ResultOf::MethodA MethodA(int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::MethodA MethodA(::fidl::BytePart _request_buffer, int64_t a, int64_t b);
 
     zx_status_t MethodA_Deprecated(int64_t a, int64_t b);
 
@@ -247,6 +339,11 @@ class KitchenSink final {
     // Messages are encoded and decoded in-place.
     zx_status_t MethodA_Deprecated(::fidl::DecodedMessage<MethodARequest> params);
 
+    ResultOf::MethodB MethodB(int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::MethodB MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
+
     zx_status_t MethodB_Deprecated(int64_t a, int64_t b, int64_t* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -255,6 +352,11 @@ class KitchenSink final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MethodBResponse> MethodB_Deprecated(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+
+    ResultOf::MutateSocket MutateSocket(::zx::socket a);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::MutateSocket MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
 
     zx_status_t MutateSocket_Deprecated(::zx::socket a, ::zx::socket* out_b);
 
@@ -278,6 +380,11 @@ class KitchenSink final {
   class Call final {
    public:
 
+    static ResultOf::MethodA MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::MethodA MethodA(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+
     static zx_status_t MethodA_Deprecated(zx::unowned_channel _client_end, int64_t a, int64_t b);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -285,6 +392,11 @@ class KitchenSink final {
 
     // Messages are encoded and decoded in-place.
     static zx_status_t MethodA_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params);
+
+    static ResultOf::MethodB MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::MethodB MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
 
     static zx_status_t MethodB_Deprecated(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result);
 
@@ -294,6 +406,11 @@ class KitchenSink final {
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MethodBResponse> MethodB_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+
+    static ResultOf::MutateSocket MutateSocket(zx::unowned_channel _client_end, ::zx::socket a);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::MutateSocket MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
 
     static zx_status_t MutateSocket_Deprecated(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b);
 
@@ -464,19 +581,110 @@ class ChannelProtocol final {
     fit::function<zx_status_t()> unknown;
   };
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    class MethodA_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      MethodA_Impl(zx::unowned_channel _client_end, int64_t a, int64_t b);
+      ~MethodA_Impl() = default;
+      MethodA_Impl(MethodA_Impl&& other) = default;
+      MethodA_Impl& operator=(MethodA_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class MethodB_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      MethodB_Impl(zx::unowned_channel _client_end, int64_t a, int64_t b);
+      ~MethodB_Impl() = default;
+      MethodB_Impl(MethodB_Impl&& other) = default;
+      MethodB_Impl& operator=(MethodB_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class MutateSocket_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      MutateSocket_Impl(zx::unowned_channel _client_end, ::zx::socket a);
+      ~MutateSocket_Impl() = default;
+      MutateSocket_Impl(MutateSocket_Impl&& other) = default;
+      MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using MethodA = MethodA_Impl;
+    using MethodB = MethodB_Impl<MethodBResponse>;
+    using MutateSocket = MutateSocket_Impl<MutateSocketResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    class MethodA_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      MethodA_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+      ~MethodA_Impl() = default;
+      MethodA_Impl(MethodA_Impl&& other) = default;
+      MethodA_Impl& operator=(MethodA_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class MethodB_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      MethodB_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
+      ~MethodB_Impl() = default;
+      MethodB_Impl(MethodB_Impl&& other) = default;
+      MethodB_Impl& operator=(MethodB_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class MutateSocket_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      MutateSocket_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
+      ~MutateSocket_Impl() = default;
+      MutateSocket_Impl(MutateSocket_Impl&& other) = default;
+      MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using MethodA = MethodA_Impl;
+    using MethodB = MethodB_Impl<MethodBResponse>;
+    using MutateSocket = MutateSocket_Impl<MutateSocketResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    ResultOf::MethodA MethodA(int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::MethodA MethodA(::fidl::BytePart _request_buffer, int64_t a, int64_t b);
 
     zx_status_t MethodA_Deprecated(int64_t a, int64_t b);
 
@@ -486,6 +694,11 @@ class ChannelProtocol final {
     // Messages are encoded and decoded in-place.
     zx_status_t MethodA_Deprecated(::fidl::DecodedMessage<MethodARequest> params);
 
+    ResultOf::MethodB MethodB(int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::MethodB MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
+
     zx_status_t MethodB_Deprecated(int64_t a, int64_t b, int64_t* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -494,6 +707,11 @@ class ChannelProtocol final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MethodBResponse> MethodB_Deprecated(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+
+    ResultOf::MutateSocket MutateSocket(::zx::socket a);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::MutateSocket MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
 
     zx_status_t MutateSocket_Deprecated(::zx::socket a, ::zx::socket* out_b);
 
@@ -517,6 +735,11 @@ class ChannelProtocol final {
   class Call final {
    public:
 
+    static ResultOf::MethodA MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::MethodA MethodA(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+
     static zx_status_t MethodA_Deprecated(zx::unowned_channel _client_end, int64_t a, int64_t b);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -524,6 +747,11 @@ class ChannelProtocol final {
 
     // Messages are encoded and decoded in-place.
     static zx_status_t MethodA_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params);
+
+    static ResultOf::MethodB MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::MethodB MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
 
     static zx_status_t MethodB_Deprecated(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result);
 
@@ -533,6 +761,11 @@ class ChannelProtocol final {
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MethodBResponse> MethodB_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+
+    static ResultOf::MutateSocket MutateSocket(zx::unowned_channel _client_end, ::zx::socket a);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::MutateSocket MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
 
     static zx_status_t MutateSocket_Deprecated(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b);
 
@@ -703,19 +936,110 @@ class OvernetInternalProtocol final {
     fit::function<zx_status_t()> unknown;
   };
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    class MethodA_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      MethodA_Impl(zx::unowned_channel _client_end, int64_t a, int64_t b);
+      ~MethodA_Impl() = default;
+      MethodA_Impl(MethodA_Impl&& other) = default;
+      MethodA_Impl& operator=(MethodA_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class MethodB_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      MethodB_Impl(zx::unowned_channel _client_end, int64_t a, int64_t b);
+      ~MethodB_Impl() = default;
+      MethodB_Impl(MethodB_Impl&& other) = default;
+      MethodB_Impl& operator=(MethodB_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class MutateSocket_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      MutateSocket_Impl(zx::unowned_channel _client_end, ::zx::socket a);
+      ~MutateSocket_Impl() = default;
+      MutateSocket_Impl(MutateSocket_Impl&& other) = default;
+      MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using MethodA = MethodA_Impl;
+    using MethodB = MethodB_Impl<MethodBResponse>;
+    using MutateSocket = MutateSocket_Impl<MutateSocketResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    class MethodA_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      MethodA_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+      ~MethodA_Impl() = default;
+      MethodA_Impl(MethodA_Impl&& other) = default;
+      MethodA_Impl& operator=(MethodA_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class MethodB_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      MethodB_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
+      ~MethodB_Impl() = default;
+      MethodB_Impl(MethodB_Impl&& other) = default;
+      MethodB_Impl& operator=(MethodB_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class MutateSocket_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      MutateSocket_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
+      ~MutateSocket_Impl() = default;
+      MutateSocket_Impl(MutateSocket_Impl&& other) = default;
+      MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using MethodA = MethodA_Impl;
+    using MethodB = MethodB_Impl<MethodBResponse>;
+    using MutateSocket = MutateSocket_Impl<MutateSocketResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    ResultOf::MethodA MethodA(int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::MethodA MethodA(::fidl::BytePart _request_buffer, int64_t a, int64_t b);
 
     zx_status_t MethodA_Deprecated(int64_t a, int64_t b);
 
@@ -725,6 +1049,11 @@ class OvernetInternalProtocol final {
     // Messages are encoded and decoded in-place.
     zx_status_t MethodA_Deprecated(::fidl::DecodedMessage<MethodARequest> params);
 
+    ResultOf::MethodB MethodB(int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::MethodB MethodB(::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
+
     zx_status_t MethodB_Deprecated(int64_t a, int64_t b, int64_t* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -733,6 +1062,11 @@ class OvernetInternalProtocol final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<MethodBResponse> MethodB_Deprecated(::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+
+    ResultOf::MutateSocket MutateSocket(::zx::socket a);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::MutateSocket MutateSocket(::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
 
     zx_status_t MutateSocket_Deprecated(::zx::socket a, ::zx::socket* out_b);
 
@@ -756,6 +1090,11 @@ class OvernetInternalProtocol final {
   class Call final {
    public:
 
+    static ResultOf::MethodA MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::MethodA MethodA(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+
     static zx_status_t MethodA_Deprecated(zx::unowned_channel _client_end, int64_t a, int64_t b);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -763,6 +1102,11 @@ class OvernetInternalProtocol final {
 
     // Messages are encoded and decoded in-place.
     static zx_status_t MethodA_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params);
+
+    static ResultOf::MethodB MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::MethodB MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
 
     static zx_status_t MethodB_Deprecated(zx::unowned_channel _client_end, int64_t a, int64_t b, int64_t* out_result);
 
@@ -772,6 +1116,11 @@ class OvernetInternalProtocol final {
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<MethodBResponse> MethodB_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+
+    static ResultOf::MutateSocket MutateSocket(zx::unowned_channel _client_end, ::zx::socket a);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::MutateSocket MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
 
     static zx_status_t MutateSocket_Deprecated(zx::unowned_channel _client_end, ::zx::socket a, ::zx::socket* out_b);
 
@@ -953,23 +1302,194 @@ class WithAndWithoutRequestResponse final {
     fit::function<zx_status_t()> unknown;
   };
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    class NoRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      NoRequestNoResponse_Impl(zx::unowned_channel _client_end);
+      ~NoRequestNoResponse_Impl() = default;
+      NoRequestNoResponse_Impl(NoRequestNoResponse_Impl&& other) = default;
+      NoRequestNoResponse_Impl& operator=(NoRequestNoResponse_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class NoRequestEmptyResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      NoRequestEmptyResponse_Impl(zx::unowned_channel _client_end);
+      ~NoRequestEmptyResponse_Impl() = default;
+      NoRequestEmptyResponse_Impl(NoRequestEmptyResponse_Impl&& other) = default;
+      NoRequestEmptyResponse_Impl& operator=(NoRequestEmptyResponse_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class NoRequestWithResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      NoRequestWithResponse_Impl(zx::unowned_channel _client_end);
+      ~NoRequestWithResponse_Impl() = default;
+      NoRequestWithResponse_Impl(NoRequestWithResponse_Impl&& other) = default;
+      NoRequestWithResponse_Impl& operator=(NoRequestWithResponse_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    class WithRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      WithRequestNoResponse_Impl(zx::unowned_channel _client_end, ::fidl::StringView arg);
+      ~WithRequestNoResponse_Impl() = default;
+      WithRequestNoResponse_Impl(WithRequestNoResponse_Impl&& other) = default;
+      WithRequestNoResponse_Impl& operator=(WithRequestNoResponse_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class WithRequestEmptyResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      WithRequestEmptyResponse_Impl(zx::unowned_channel _client_end, ::fidl::StringView arg);
+      ~WithRequestEmptyResponse_Impl() = default;
+      WithRequestEmptyResponse_Impl(WithRequestEmptyResponse_Impl&& other) = default;
+      WithRequestEmptyResponse_Impl& operator=(WithRequestEmptyResponse_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class WithRequestWithResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      WithRequestWithResponse_Impl(zx::unowned_channel _client_end, ::fidl::StringView arg);
+      ~WithRequestWithResponse_Impl() = default;
+      WithRequestWithResponse_Impl(WithRequestWithResponse_Impl&& other) = default;
+      WithRequestWithResponse_Impl& operator=(WithRequestWithResponse_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using NoRequestNoResponse = NoRequestNoResponse_Impl;
+    using NoRequestEmptyResponse = NoRequestEmptyResponse_Impl<NoRequestEmptyResponseResponse>;
+    using NoRequestWithResponse = NoRequestWithResponse_Impl<NoRequestWithResponseResponse>;
+    using WithRequestNoResponse = WithRequestNoResponse_Impl;
+    using WithRequestEmptyResponse = WithRequestEmptyResponse_Impl<WithRequestEmptyResponseResponse>;
+    using WithRequestWithResponse = WithRequestWithResponse_Impl<WithRequestWithResponseResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    class NoRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      NoRequestNoResponse_Impl(zx::unowned_channel _client_end);
+      ~NoRequestNoResponse_Impl() = default;
+      NoRequestNoResponse_Impl(NoRequestNoResponse_Impl&& other) = default;
+      NoRequestNoResponse_Impl& operator=(NoRequestNoResponse_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class NoRequestEmptyResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      NoRequestEmptyResponse_Impl(zx::unowned_channel _client_end);
+      ~NoRequestEmptyResponse_Impl() = default;
+      NoRequestEmptyResponse_Impl(NoRequestEmptyResponse_Impl&& other) = default;
+      NoRequestEmptyResponse_Impl& operator=(NoRequestEmptyResponse_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class NoRequestWithResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      NoRequestWithResponse_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~NoRequestWithResponse_Impl() = default;
+      NoRequestWithResponse_Impl(NoRequestWithResponse_Impl&& other) = default;
+      NoRequestWithResponse_Impl& operator=(NoRequestWithResponse_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    class WithRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      WithRequestNoResponse_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
+      ~WithRequestNoResponse_Impl() = default;
+      WithRequestNoResponse_Impl(WithRequestNoResponse_Impl&& other) = default;
+      WithRequestNoResponse_Impl& operator=(WithRequestNoResponse_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class WithRequestEmptyResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      WithRequestEmptyResponse_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
+      ~WithRequestEmptyResponse_Impl() = default;
+      WithRequestEmptyResponse_Impl(WithRequestEmptyResponse_Impl&& other) = default;
+      WithRequestEmptyResponse_Impl& operator=(WithRequestEmptyResponse_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class WithRequestWithResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      WithRequestWithResponse_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
+      ~WithRequestWithResponse_Impl() = default;
+      WithRequestWithResponse_Impl(WithRequestWithResponse_Impl&& other) = default;
+      WithRequestWithResponse_Impl& operator=(WithRequestWithResponse_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using NoRequestNoResponse = NoRequestNoResponse_Impl;
+    using NoRequestEmptyResponse = NoRequestEmptyResponse_Impl<NoRequestEmptyResponseResponse>;
+    using NoRequestWithResponse = NoRequestWithResponse_Impl<NoRequestWithResponseResponse>;
+    using WithRequestNoResponse = WithRequestNoResponse_Impl;
+    using WithRequestEmptyResponse = WithRequestEmptyResponse_Impl<WithRequestEmptyResponseResponse>;
+    using WithRequestWithResponse = WithRequestWithResponse_Impl<WithRequestWithResponseResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
+    ResultOf::NoRequestNoResponse NoRequestNoResponse();
+
+
     zx_status_t NoRequestNoResponse_Deprecated();
 
+    ResultOf::NoRequestEmptyResponse NoRequestEmptyResponse();
+
+
     zx_status_t NoRequestEmptyResponse_Deprecated();
+
+    ResultOf::NoRequestWithResponse NoRequestWithResponse();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(::fidl::BytePart _response_buffer);
 
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -979,6 +1499,11 @@ class WithAndWithoutRequestResponse final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<NoRequestWithResponseResponse> NoRequestWithResponse_Deprecated(::fidl::BytePart response_buffer);
 
+    ResultOf::WithRequestNoResponse WithRequestNoResponse(::fidl::StringView arg);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::WithRequestNoResponse WithRequestNoResponse(::fidl::BytePart _request_buffer, ::fidl::StringView arg);
+
     zx_status_t WithRequestNoResponse_Deprecated(::fidl::StringView arg);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -986,6 +1511,11 @@ class WithAndWithoutRequestResponse final {
 
     // Messages are encoded and decoded in-place.
     zx_status_t WithRequestNoResponse_Deprecated(::fidl::DecodedMessage<WithRequestNoResponseRequest> params);
+
+    ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(::fidl::StringView arg);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(::fidl::BytePart _request_buffer, ::fidl::StringView arg);
 
     zx_status_t WithRequestEmptyResponse_Deprecated(::fidl::StringView arg);
 
@@ -995,6 +1525,11 @@ class WithAndWithoutRequestResponse final {
 
     // Messages are encoded and decoded in-place.
     zx_status_t WithRequestEmptyResponse_Deprecated(::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params);
+
+    ResultOf::WithRequestWithResponse WithRequestWithResponse(::fidl::StringView arg);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::WithRequestWithResponse WithRequestWithResponse(::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
 
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1017,9 +1552,20 @@ class WithAndWithoutRequestResponse final {
   class Call final {
    public:
 
+    static ResultOf::NoRequestNoResponse NoRequestNoResponse(zx::unowned_channel _client_end);
+
+
     static zx_status_t NoRequestNoResponse_Deprecated(zx::unowned_channel _client_end);
 
+    static ResultOf::NoRequestEmptyResponse NoRequestEmptyResponse(zx::unowned_channel _client_end);
+
+
     static zx_status_t NoRequestEmptyResponse_Deprecated(zx::unowned_channel _client_end);
+
+    static ResultOf::NoRequestWithResponse NoRequestWithResponse(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1029,6 +1575,11 @@ class WithAndWithoutRequestResponse final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<NoRequestWithResponseResponse> NoRequestWithResponse_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    static ResultOf::WithRequestNoResponse WithRequestNoResponse(zx::unowned_channel _client_end, ::fidl::StringView arg);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::WithRequestNoResponse WithRequestNoResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
+
     static zx_status_t WithRequestNoResponse_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView arg);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1036,6 +1587,11 @@ class WithAndWithoutRequestResponse final {
 
     // Messages are encoded and decoded in-place.
     static zx_status_t WithRequestNoResponse_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestNoResponseRequest> params);
+
+    static ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::StringView arg);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
 
     static zx_status_t WithRequestEmptyResponse_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView arg);
 
@@ -1045,6 +1601,11 @@ class WithAndWithoutRequestResponse final {
 
     // Messages are encoded and decoded in-place.
     static zx_status_t WithRequestEmptyResponse_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params);
+
+    static ResultOf::WithRequestWithResponse WithRequestWithResponse(zx::unowned_channel _client_end, ::fidl::StringView arg);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::WithRequestWithResponse WithRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
 
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1275,19 +1836,88 @@ class WithErrorSyntax final {
   using ErrorAsEnumRequest = ::fidl::AnyZeroArgMessage;
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    template <typename ResponseType>
+    class ErrorAsPrimitive_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      ErrorAsPrimitive_Impl(zx::unowned_channel _client_end);
+      ~ErrorAsPrimitive_Impl() = default;
+      ErrorAsPrimitive_Impl(ErrorAsPrimitive_Impl&& other) = default;
+      ErrorAsPrimitive_Impl& operator=(ErrorAsPrimitive_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class ErrorAsEnum_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      ErrorAsEnum_Impl(zx::unowned_channel _client_end);
+      ~ErrorAsEnum_Impl() = default;
+      ErrorAsEnum_Impl(ErrorAsEnum_Impl&& other) = default;
+      ErrorAsEnum_Impl& operator=(ErrorAsEnum_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using ErrorAsPrimitive = ErrorAsPrimitive_Impl<ErrorAsPrimitiveResponse>;
+    using ErrorAsEnum = ErrorAsEnum_Impl<ErrorAsEnumResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    template <typename ResponseType>
+    class ErrorAsPrimitive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      ErrorAsPrimitive_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~ErrorAsPrimitive_Impl() = default;
+      ErrorAsPrimitive_Impl(ErrorAsPrimitive_Impl&& other) = default;
+      ErrorAsPrimitive_Impl& operator=(ErrorAsPrimitive_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class ErrorAsEnum_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      ErrorAsEnum_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~ErrorAsEnum_Impl() = default;
+      ErrorAsEnum_Impl(ErrorAsEnum_Impl&& other) = default;
+      ErrorAsEnum_Impl& operator=(ErrorAsEnum_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using ErrorAsPrimitive = ErrorAsPrimitive_Impl<ErrorAsPrimitiveResponse>;
+    using ErrorAsEnum = ErrorAsEnum_Impl<ErrorAsEnumResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    ResultOf::ErrorAsPrimitive ErrorAsPrimitive();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(::fidl::BytePart _response_buffer);
 
     zx_status_t ErrorAsPrimitive_Deprecated(WithErrorSyntax_ErrorAsPrimitive_Result* out_result);
 
@@ -1297,6 +1927,11 @@ class WithErrorSyntax final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive_Deprecated(::fidl::BytePart response_buffer);
+
+    ResultOf::ErrorAsEnum ErrorAsEnum();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::ErrorAsEnum ErrorAsEnum(::fidl::BytePart _response_buffer);
 
     zx_status_t ErrorAsEnum_Deprecated(WithErrorSyntax_ErrorAsEnum_Result* out_result);
 
@@ -1315,6 +1950,11 @@ class WithErrorSyntax final {
   class Call final {
    public:
 
+    static ResultOf::ErrorAsPrimitive ErrorAsPrimitive(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
     static zx_status_t ErrorAsPrimitive_Deprecated(zx::unowned_channel _client_end, WithErrorSyntax_ErrorAsPrimitive_Result* out_result);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1323,6 +1963,11 @@ class WithErrorSyntax final {
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ResultOf::ErrorAsEnum ErrorAsEnum(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::ErrorAsEnum ErrorAsEnum(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     static zx_status_t ErrorAsEnum_Deprecated(zx::unowned_channel _client_end, WithErrorSyntax_ErrorAsEnum_Result* out_result);
 

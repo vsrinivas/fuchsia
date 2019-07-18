@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
@@ -32,19 +33,60 @@ class Events final {
   using FunctionRegisteredRequest = ::fidl::AnyZeroArgMessage;
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    template <typename ResponseType>
+    class FunctionRegistered_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      FunctionRegistered_Impl(zx::unowned_channel _client_end);
+      ~FunctionRegistered_Impl() = default;
+      FunctionRegistered_Impl(FunctionRegistered_Impl&& other) = default;
+      FunctionRegistered_Impl& operator=(FunctionRegistered_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using FunctionRegistered = FunctionRegistered_Impl<FunctionRegisteredResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    template <typename ResponseType>
+    class FunctionRegistered_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      FunctionRegistered_Impl(zx::unowned_channel _client_end);
+      ~FunctionRegistered_Impl() = default;
+      FunctionRegistered_Impl(FunctionRegistered_Impl&& other) = default;
+      FunctionRegistered_Impl& operator=(FunctionRegistered_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using FunctionRegistered = FunctionRegistered_Impl<FunctionRegisteredResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    ResultOf::FunctionRegistered FunctionRegistered();
+
 
     zx_status_t FunctionRegistered_Deprecated();
 
@@ -55,6 +97,9 @@ class Events final {
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
    public:
+
+    static ResultOf::FunctionRegistered FunctionRegistered(zx::unowned_channel _client_end);
+
 
     static zx_status_t FunctionRegistered_Deprecated(zx::unowned_channel _client_end);
 
@@ -306,19 +351,240 @@ class Device final {
   };
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    template <typename ResponseType>
+    class SetDeviceDescriptor_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      SetDeviceDescriptor_Impl(zx::unowned_channel _client_end, DeviceDescriptor desc);
+      ~SetDeviceDescriptor_Impl() = default;
+      SetDeviceDescriptor_Impl(SetDeviceDescriptor_Impl&& other) = default;
+      SetDeviceDescriptor_Impl& operator=(SetDeviceDescriptor_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class AllocStringDesc_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      AllocStringDesc_Impl(zx::unowned_channel _client_end, ::fidl::StringView name);
+      ~AllocStringDesc_Impl() = default;
+      AllocStringDesc_Impl(AllocStringDesc_Impl&& other) = default;
+      AllocStringDesc_Impl& operator=(AllocStringDesc_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class AddFunction_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      AddFunction_Impl(zx::unowned_channel _client_end, FunctionDescriptor desc);
+      ~AddFunction_Impl() = default;
+      AddFunction_Impl(AddFunction_Impl&& other) = default;
+      AddFunction_Impl& operator=(AddFunction_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class BindFunctions_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      BindFunctions_Impl(zx::unowned_channel _client_end);
+      ~BindFunctions_Impl() = default;
+      BindFunctions_Impl(BindFunctions_Impl&& other) = default;
+      BindFunctions_Impl& operator=(BindFunctions_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class ClearFunctions_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      ClearFunctions_Impl(zx::unowned_channel _client_end);
+      ~ClearFunctions_Impl() = default;
+      ClearFunctions_Impl(ClearFunctions_Impl&& other) = default;
+      ClearFunctions_Impl& operator=(ClearFunctions_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class GetMode_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetMode_Impl(zx::unowned_channel _client_end);
+      ~GetMode_Impl() = default;
+      GetMode_Impl(GetMode_Impl&& other) = default;
+      GetMode_Impl& operator=(GetMode_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class SetMode_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      SetMode_Impl(zx::unowned_channel _client_end, uint32_t mode);
+      ~SetMode_Impl() = default;
+      SetMode_Impl(SetMode_Impl&& other) = default;
+      SetMode_Impl& operator=(SetMode_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    class SetStateChangeListener_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      SetStateChangeListener_Impl(zx::unowned_channel _client_end, ::zx::channel listener);
+      ~SetStateChangeListener_Impl() = default;
+      SetStateChangeListener_Impl(SetStateChangeListener_Impl&& other) = default;
+      SetStateChangeListener_Impl& operator=(SetStateChangeListener_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+
+   public:
+    using SetDeviceDescriptor = SetDeviceDescriptor_Impl<SetDeviceDescriptorResponse>;
+    using AllocStringDesc = AllocStringDesc_Impl<AllocStringDescResponse>;
+    using AddFunction = AddFunction_Impl<AddFunctionResponse>;
+    using BindFunctions = BindFunctions_Impl<BindFunctionsResponse>;
+    using ClearFunctions = ClearFunctions_Impl<ClearFunctionsResponse>;
+    using GetMode = GetMode_Impl<GetModeResponse>;
+    using SetMode = SetMode_Impl<SetModeResponse>;
+    using SetStateChangeListener = SetStateChangeListener_Impl;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    template <typename ResponseType>
+    class SetDeviceDescriptor_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      SetDeviceDescriptor_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DeviceDescriptor desc, ::fidl::BytePart _response_buffer);
+      ~SetDeviceDescriptor_Impl() = default;
+      SetDeviceDescriptor_Impl(SetDeviceDescriptor_Impl&& other) = default;
+      SetDeviceDescriptor_Impl& operator=(SetDeviceDescriptor_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class AllocStringDesc_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      AllocStringDesc_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer);
+      ~AllocStringDesc_Impl() = default;
+      AllocStringDesc_Impl(AllocStringDesc_Impl&& other) = default;
+      AllocStringDesc_Impl& operator=(AllocStringDesc_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class AddFunction_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      AddFunction_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, FunctionDescriptor desc, ::fidl::BytePart _response_buffer);
+      ~AddFunction_Impl() = default;
+      AddFunction_Impl(AddFunction_Impl&& other) = default;
+      AddFunction_Impl& operator=(AddFunction_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class BindFunctions_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      BindFunctions_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~BindFunctions_Impl() = default;
+      BindFunctions_Impl(BindFunctions_Impl&& other) = default;
+      BindFunctions_Impl& operator=(BindFunctions_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class ClearFunctions_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      ClearFunctions_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~ClearFunctions_Impl() = default;
+      ClearFunctions_Impl(ClearFunctions_Impl&& other) = default;
+      ClearFunctions_Impl& operator=(ClearFunctions_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class GetMode_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetMode_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetMode_Impl() = default;
+      GetMode_Impl(GetMode_Impl&& other) = default;
+      GetMode_Impl& operator=(GetMode_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class SetMode_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      SetMode_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mode, ::fidl::BytePart _response_buffer);
+      ~SetMode_Impl() = default;
+      SetMode_Impl(SetMode_Impl&& other) = default;
+      SetMode_Impl& operator=(SetMode_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    class SetStateChangeListener_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      SetStateChangeListener_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener);
+      ~SetStateChangeListener_Impl() = default;
+      SetStateChangeListener_Impl(SetStateChangeListener_Impl&& other) = default;
+      SetStateChangeListener_Impl& operator=(SetStateChangeListener_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+
+   public:
+    using SetDeviceDescriptor = SetDeviceDescriptor_Impl<SetDeviceDescriptorResponse>;
+    using AllocStringDesc = AllocStringDesc_Impl<AllocStringDescResponse>;
+    using AddFunction = AddFunction_Impl<AddFunctionResponse>;
+    using BindFunctions = BindFunctions_Impl<BindFunctionsResponse>;
+    using ClearFunctions = ClearFunctions_Impl<ClearFunctionsResponse>;
+    using GetMode = GetMode_Impl<GetModeResponse>;
+    using SetMode = SetMode_Impl<SetModeResponse>;
+    using SetStateChangeListener = SetStateChangeListener_Impl;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    ResultOf::SetDeviceDescriptor SetDeviceDescriptor(DeviceDescriptor desc);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SetDeviceDescriptor SetDeviceDescriptor(::fidl::BytePart _request_buffer, DeviceDescriptor desc, ::fidl::BytePart _response_buffer);
 
     zx_status_t SetDeviceDescriptor_Deprecated(DeviceDescriptor desc, int32_t* out_s);
 
@@ -329,6 +595,11 @@ class Device final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor_Deprecated(::fidl::DecodedMessage<SetDeviceDescriptorRequest> params, ::fidl::BytePart response_buffer);
 
+    ResultOf::AllocStringDesc AllocStringDesc(::fidl::StringView name);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::AllocStringDesc AllocStringDesc(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer);
+
     zx_status_t AllocStringDesc_Deprecated(::fidl::StringView name, int32_t* out_s, uint8_t* out_index);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -337,6 +608,11 @@ class Device final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<AllocStringDescResponse> AllocStringDesc_Deprecated(::fidl::DecodedMessage<AllocStringDescRequest> params, ::fidl::BytePart response_buffer);
+
+    ResultOf::AddFunction AddFunction(FunctionDescriptor desc);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::AddFunction AddFunction(::fidl::BytePart _request_buffer, FunctionDescriptor desc, ::fidl::BytePart _response_buffer);
 
     zx_status_t AddFunction_Deprecated(FunctionDescriptor desc, int32_t* out_s);
 
@@ -347,6 +623,11 @@ class Device final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<AddFunctionResponse> AddFunction_Deprecated(::fidl::DecodedMessage<AddFunctionRequest> params, ::fidl::BytePart response_buffer);
 
+    ResultOf::BindFunctions BindFunctions();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::BindFunctions BindFunctions(::fidl::BytePart _response_buffer);
+
     zx_status_t BindFunctions_Deprecated(int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -355,6 +636,11 @@ class Device final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<BindFunctionsResponse> BindFunctions_Deprecated(::fidl::BytePart response_buffer);
+
+    ResultOf::ClearFunctions ClearFunctions();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::ClearFunctions ClearFunctions(::fidl::BytePart _response_buffer);
 
     zx_status_t ClearFunctions_Deprecated(int32_t* out_s);
 
@@ -365,6 +651,11 @@ class Device final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions_Deprecated(::fidl::BytePart response_buffer);
 
+    ResultOf::GetMode GetMode();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetMode GetMode(::fidl::BytePart _response_buffer);
+
     zx_status_t GetMode_Deprecated(int32_t* out_s, uint32_t* out_mode);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -374,6 +665,11 @@ class Device final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetModeResponse> GetMode_Deprecated(::fidl::BytePart response_buffer);
 
+    ResultOf::SetMode SetMode(uint32_t mode);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SetMode SetMode(::fidl::BytePart _request_buffer, uint32_t mode, ::fidl::BytePart _response_buffer);
+
     zx_status_t SetMode_Deprecated(uint32_t mode, int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -382,6 +678,11 @@ class Device final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<SetModeResponse> SetMode_Deprecated(::fidl::DecodedMessage<SetModeRequest> params, ::fidl::BytePart response_buffer);
+
+    ResultOf::SetStateChangeListener SetStateChangeListener(::zx::channel listener);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SetStateChangeListener SetStateChangeListener(::fidl::BytePart _request_buffer, ::zx::channel listener);
 
     zx_status_t SetStateChangeListener_Deprecated(::zx::channel listener);
 
@@ -399,6 +700,11 @@ class Device final {
   class Call final {
    public:
 
+    static ResultOf::SetDeviceDescriptor SetDeviceDescriptor(zx::unowned_channel _client_end, DeviceDescriptor desc);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SetDeviceDescriptor SetDeviceDescriptor(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DeviceDescriptor desc, ::fidl::BytePart _response_buffer);
+
     static zx_status_t SetDeviceDescriptor_Deprecated(zx::unowned_channel _client_end, DeviceDescriptor desc, int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -407,6 +713,11 @@ class Device final {
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDeviceDescriptorRequest> params, ::fidl::BytePart response_buffer);
+
+    static ResultOf::AllocStringDesc AllocStringDesc(zx::unowned_channel _client_end, ::fidl::StringView name);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::AllocStringDesc AllocStringDesc(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer);
 
     static zx_status_t AllocStringDesc_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView name, int32_t* out_s, uint8_t* out_index);
 
@@ -417,6 +728,11 @@ class Device final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<AllocStringDescResponse> AllocStringDesc_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocStringDescRequest> params, ::fidl::BytePart response_buffer);
 
+    static ResultOf::AddFunction AddFunction(zx::unowned_channel _client_end, FunctionDescriptor desc);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::AddFunction AddFunction(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, FunctionDescriptor desc, ::fidl::BytePart _response_buffer);
+
     static zx_status_t AddFunction_Deprecated(zx::unowned_channel _client_end, FunctionDescriptor desc, int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -425,6 +741,11 @@ class Device final {
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<AddFunctionResponse> AddFunction_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddFunctionRequest> params, ::fidl::BytePart response_buffer);
+
+    static ResultOf::BindFunctions BindFunctions(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::BindFunctions BindFunctions(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     static zx_status_t BindFunctions_Deprecated(zx::unowned_channel _client_end, int32_t* out_s);
 
@@ -435,6 +756,11 @@ class Device final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<BindFunctionsResponse> BindFunctions_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    static ResultOf::ClearFunctions ClearFunctions(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::ClearFunctions ClearFunctions(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
     static zx_status_t ClearFunctions_Deprecated(zx::unowned_channel _client_end, int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -443,6 +769,11 @@ class Device final {
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ResultOf::GetMode GetMode(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetMode GetMode(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     static zx_status_t GetMode_Deprecated(zx::unowned_channel _client_end, int32_t* out_s, uint32_t* out_mode);
 
@@ -453,6 +784,11 @@ class Device final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetModeResponse> GetMode_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    static ResultOf::SetMode SetMode(zx::unowned_channel _client_end, uint32_t mode);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SetMode SetMode(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mode, ::fidl::BytePart _response_buffer);
+
     static zx_status_t SetMode_Deprecated(zx::unowned_channel _client_end, uint32_t mode, int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -461,6 +797,11 @@ class Device final {
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<SetModeResponse> SetMode_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetModeRequest> params, ::fidl::BytePart response_buffer);
+
+    static ResultOf::SetStateChangeListener SetStateChangeListener(zx::unowned_channel _client_end, ::zx::channel listener);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SetStateChangeListener SetStateChangeListener(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener);
 
     static zx_status_t SetStateChangeListener_Deprecated(zx::unowned_channel _client_end, ::zx::channel listener);
 

@@ -20,6 +20,7 @@ namespace internal {
 
 // Predefined error messages in the binding
 constexpr char kErrorRequestBufferTooSmall[] = "request buffer too small";
+constexpr char kErrorWriteFailed[] = "failed writing to the underlying transport";
 
 }  // namespace internal
 

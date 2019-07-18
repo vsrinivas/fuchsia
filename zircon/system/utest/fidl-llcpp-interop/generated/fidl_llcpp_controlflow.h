@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
@@ -45,41 +46,155 @@ class ControlFlow final {
   using MustSendAccessDeniedEpitaphRequest = ::fidl::AnyZeroArgMessage;
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    class Shutdown_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      Shutdown_Impl(zx::unowned_channel _client_end);
+      ~Shutdown_Impl() = default;
+      Shutdown_Impl(Shutdown_Impl&& other) = default;
+      Shutdown_Impl& operator=(Shutdown_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    class NoReplyMustSendAccessDeniedEpitaph_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      NoReplyMustSendAccessDeniedEpitaph_Impl(zx::unowned_channel _client_end);
+      ~NoReplyMustSendAccessDeniedEpitaph_Impl() = default;
+      NoReplyMustSendAccessDeniedEpitaph_Impl(NoReplyMustSendAccessDeniedEpitaph_Impl&& other) = default;
+      NoReplyMustSendAccessDeniedEpitaph_Impl& operator=(NoReplyMustSendAccessDeniedEpitaph_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class MustSendAccessDeniedEpitaph_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      MustSendAccessDeniedEpitaph_Impl(zx::unowned_channel _client_end);
+      ~MustSendAccessDeniedEpitaph_Impl() = default;
+      MustSendAccessDeniedEpitaph_Impl(MustSendAccessDeniedEpitaph_Impl&& other) = default;
+      MustSendAccessDeniedEpitaph_Impl& operator=(MustSendAccessDeniedEpitaph_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using Shutdown = Shutdown_Impl;
+    using NoReplyMustSendAccessDeniedEpitaph = NoReplyMustSendAccessDeniedEpitaph_Impl;
+    using MustSendAccessDeniedEpitaph = MustSendAccessDeniedEpitaph_Impl<MustSendAccessDeniedEpitaphResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    class Shutdown_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      Shutdown_Impl(zx::unowned_channel _client_end);
+      ~Shutdown_Impl() = default;
+      Shutdown_Impl(Shutdown_Impl&& other) = default;
+      Shutdown_Impl& operator=(Shutdown_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    class NoReplyMustSendAccessDeniedEpitaph_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      NoReplyMustSendAccessDeniedEpitaph_Impl(zx::unowned_channel _client_end);
+      ~NoReplyMustSendAccessDeniedEpitaph_Impl() = default;
+      NoReplyMustSendAccessDeniedEpitaph_Impl(NoReplyMustSendAccessDeniedEpitaph_Impl&& other) = default;
+      NoReplyMustSendAccessDeniedEpitaph_Impl& operator=(NoReplyMustSendAccessDeniedEpitaph_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    template <typename ResponseType>
+    class MustSendAccessDeniedEpitaph_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      MustSendAccessDeniedEpitaph_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~MustSendAccessDeniedEpitaph_Impl() = default;
+      MustSendAccessDeniedEpitaph_Impl(MustSendAccessDeniedEpitaph_Impl&& other) = default;
+      MustSendAccessDeniedEpitaph_Impl& operator=(MustSendAccessDeniedEpitaph_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using Shutdown = Shutdown_Impl;
+    using NoReplyMustSendAccessDeniedEpitaph = NoReplyMustSendAccessDeniedEpitaph_Impl;
+    using MustSendAccessDeniedEpitaph = MustSendAccessDeniedEpitaph_Impl<MustSendAccessDeniedEpitaphResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
 
-    ~SyncClient() {}
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
 
     // Shutdown the server without a reply.
     // The server should unbind the channel from the dispatch loop, closing it.
-    zx_status_t Shutdown();
+    ResultOf::Shutdown Shutdown();
+
+
+    // Shutdown the server without a reply.
+    // The server should unbind the channel from the dispatch loop, closing it.
+    zx_status_t Shutdown_Deprecated();
 
     // Calling this method generates no reply and a epitaph with error set to
-    // |ZX_ERR_ACCESS_DENIED|. The channel will then be closed.
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     // This tests sending an epitaph from the one-way method call handler.
-    zx_status_t NoReplyMustSendAccessDeniedEpitaph();
+    ResultOf::NoReplyMustSendAccessDeniedEpitaph NoReplyMustSendAccessDeniedEpitaph();
+
+
+    // Calling this method generates no reply and a epitaph with error set to
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
+    // This tests sending an epitaph from the one-way method call handler.
+    zx_status_t NoReplyMustSendAccessDeniedEpitaph_Deprecated();
 
     // Despite the fact that a reply was defined in the method signature,
     // Calling this method generates no reply and a epitaph with error set to
-    // |ZX_ERR_ACCESS_DENIED|. The channel will then be closed.
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     // This tests sending an epitaph from a normal (two-way) method call handler.
-    zx_status_t MustSendAccessDeniedEpitaph(int32_t* out_reply);
+    ResultOf::MustSendAccessDeniedEpitaph MustSendAccessDeniedEpitaph();
 
     // Despite the fact that a reply was defined in the method signature,
     // Calling this method generates no reply and a epitaph with error set to
-    // |ZX_ERR_ACCESS_DENIED|. The channel will then be closed.
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
+    // This tests sending an epitaph from a normal (two-way) method call handler.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::MustSendAccessDeniedEpitaph MustSendAccessDeniedEpitaph(::fidl::BytePart _response_buffer);
+
+    // Despite the fact that a reply was defined in the method signature,
+    // Calling this method generates no reply and a epitaph with error set to
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
+    // This tests sending an epitaph from a normal (two-way) method call handler.
+    zx_status_t MustSendAccessDeniedEpitaph_Deprecated(int32_t* out_reply);
+
+    // Despite the fact that a reply was defined in the method signature,
+    // Calling this method generates no reply and a epitaph with error set to
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     // This tests sending an epitaph from a normal (two-way) method call handler.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<MustSendAccessDeniedEpitaphResponse> MustSendAccessDeniedEpitaph(::fidl::BytePart _response_buffer, int32_t* out_reply);
+    ::fidl::DecodeResult<MustSendAccessDeniedEpitaphResponse> MustSendAccessDeniedEpitaph_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_reply);
 
     // Despite the fact that a reply was defined in the method signature,
     // Calling this method generates no reply and a epitaph with error set to
-    // |ZX_ERR_ACCESS_DENIED|. The channel will then be closed.
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     // This tests sending an epitaph from a normal (two-way) method call handler.
     // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<MustSendAccessDeniedEpitaphResponse> MustSendAccessDeniedEpitaph(::fidl::BytePart response_buffer);
+    ::fidl::DecodeResult<MustSendAccessDeniedEpitaphResponse> MustSendAccessDeniedEpitaph_Deprecated(::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -91,33 +206,57 @@ class ControlFlow final {
 
     // Shutdown the server without a reply.
     // The server should unbind the channel from the dispatch loop, closing it.
-    static zx_status_t Shutdown(zx::unowned_channel _client_end);
+    static ResultOf::Shutdown Shutdown(zx::unowned_channel _client_end);
+
+
+    // Shutdown the server without a reply.
+    // The server should unbind the channel from the dispatch loop, closing it.
+    static zx_status_t Shutdown_Deprecated(zx::unowned_channel _client_end);
 
     // Calling this method generates no reply and a epitaph with error set to
-    // |ZX_ERR_ACCESS_DENIED|. The channel will then be closed.
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     // This tests sending an epitaph from the one-way method call handler.
-    static zx_status_t NoReplyMustSendAccessDeniedEpitaph(zx::unowned_channel _client_end);
+    static ResultOf::NoReplyMustSendAccessDeniedEpitaph NoReplyMustSendAccessDeniedEpitaph(zx::unowned_channel _client_end);
+
+
+    // Calling this method generates no reply and a epitaph with error set to
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
+    // This tests sending an epitaph from the one-way method call handler.
+    static zx_status_t NoReplyMustSendAccessDeniedEpitaph_Deprecated(zx::unowned_channel _client_end);
 
     // Despite the fact that a reply was defined in the method signature,
     // Calling this method generates no reply and a epitaph with error set to
-    // |ZX_ERR_ACCESS_DENIED|. The channel will then be closed.
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     // This tests sending an epitaph from a normal (two-way) method call handler.
-    static zx_status_t MustSendAccessDeniedEpitaph(zx::unowned_channel _client_end, int32_t* out_reply);
+    static ResultOf::MustSendAccessDeniedEpitaph MustSendAccessDeniedEpitaph(zx::unowned_channel _client_end);
 
     // Despite the fact that a reply was defined in the method signature,
     // Calling this method generates no reply and a epitaph with error set to
-    // |ZX_ERR_ACCESS_DENIED|. The channel will then be closed.
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
+    // This tests sending an epitaph from a normal (two-way) method call handler.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::MustSendAccessDeniedEpitaph MustSendAccessDeniedEpitaph(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Despite the fact that a reply was defined in the method signature,
+    // Calling this method generates no reply and a epitaph with error set to
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
+    // This tests sending an epitaph from a normal (two-way) method call handler.
+    static zx_status_t MustSendAccessDeniedEpitaph_Deprecated(zx::unowned_channel _client_end, int32_t* out_reply);
+
+    // Despite the fact that a reply was defined in the method signature,
+    // Calling this method generates no reply and a epitaph with error set to
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     // This tests sending an epitaph from a normal (two-way) method call handler.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<MustSendAccessDeniedEpitaphResponse> MustSendAccessDeniedEpitaph(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_reply);
+    static ::fidl::DecodeResult<MustSendAccessDeniedEpitaphResponse> MustSendAccessDeniedEpitaph_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_reply);
 
     // Despite the fact that a reply was defined in the method signature,
     // Calling this method generates no reply and a epitaph with error set to
-    // |ZX_ERR_ACCESS_DENIED|. The channel will then be closed.
+    // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     // This tests sending an epitaph from a normal (two-way) method call handler.
     // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<MustSendAccessDeniedEpitaphResponse> MustSendAccessDeniedEpitaph(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<MustSendAccessDeniedEpitaphResponse> MustSendAccessDeniedEpitaph_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

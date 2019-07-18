@@ -20,6 +20,80 @@ extern "C" const fidl_type_t fuchsia_debugdata_DebugDataLoadConfigResponseTable;
 
 }  // namespace
 
+DebugData::ResultOf::Publish_Impl::Publish_Impl(zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<PublishRequest>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  PublishRequest _request = {};
+  _request._hdr = {};
+  _request._hdr.ordinal = kDebugData_Publish_Ordinal;
+  _request.data_sink = std::move(data_sink);
+  _request.data = std::move(data);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<PublishRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+DebugData::ResultOf::Publish DebugData::SyncClient::Publish(::fidl::StringView data_sink, ::zx::vmo data) {
+  return ResultOf::Publish(zx::unowned_channel(this->channel_), std::move(data_sink), std::move(data));
+}
+
+DebugData::ResultOf::Publish DebugData::Call::Publish(zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data) {
+  return ResultOf::Publish(std::move(_client_end), std::move(data_sink), std::move(data));
+}
+
+
+DebugData::UnownedResultOf::Publish_Impl::Publish_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data) {
+  if (_request_buffer.capacity() < PublishRequest::PrimarySize) {
+    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
+    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    return;
+  }
+  PublishRequest _request = {};
+  _request._hdr.ordinal = kDebugData_Publish_Ordinal;
+  _request.data_sink = std::move(data_sink);
+  _request.data = std::move(data);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<PublishRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+DebugData::UnownedResultOf::Publish DebugData::SyncClient::Publish(::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data) {
+  return UnownedResultOf::Publish(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(data_sink), std::move(data));
+}
+
+DebugData::UnownedResultOf::Publish DebugData::Call::Publish(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data) {
+  return UnownedResultOf::Publish(std::move(_client_end), std::move(_request_buffer), std::move(data_sink), std::move(data));
+}
+
 zx_status_t DebugData::SyncClient::Publish_Deprecated(::fidl::StringView data_sink, ::zx::vmo data) {
   return DebugData::Call::Publish_Deprecated(zx::unowned_channel(this->channel_), std::move(data_sink), std::move(data));
 }
@@ -83,6 +157,79 @@ zx_status_t DebugData::Call::Publish_Deprecated(zx::unowned_channel _client_end,
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
+template <>
+DebugData::ResultOf::LoadConfig_Impl<DebugData::LoadConfigResponse>::LoadConfig_Impl(zx::unowned_channel _client_end, ::fidl::StringView config_name) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadConfigRequest>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  LoadConfigRequest _request = {};
+  _request._hdr = {};
+  _request._hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  _request.config_name = std::move(config_name);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<LoadConfigRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<LoadConfigRequest, LoadConfigResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+DebugData::ResultOf::LoadConfig DebugData::SyncClient::LoadConfig(::fidl::StringView config_name) {
+  return ResultOf::LoadConfig(zx::unowned_channel(this->channel_), std::move(config_name));
+}
+
+DebugData::ResultOf::LoadConfig DebugData::Call::LoadConfig(zx::unowned_channel _client_end, ::fidl::StringView config_name) {
+  return ResultOf::LoadConfig(std::move(_client_end), std::move(config_name));
+}
+
+template <>
+DebugData::UnownedResultOf::LoadConfig_Impl<DebugData::LoadConfigResponse>::LoadConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < LoadConfigRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<LoadConfigResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  LoadConfigRequest _request = {};
+  _request._hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  _request.config_name = std::move(config_name);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<LoadConfigRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<LoadConfigRequest, LoadConfigResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+DebugData::UnownedResultOf::LoadConfig DebugData::SyncClient::LoadConfig(::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::LoadConfig(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(config_name), std::move(_response_buffer));
+}
+
+DebugData::UnownedResultOf::LoadConfig DebugData::Call::LoadConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::LoadConfig(std::move(_client_end), std::move(_request_buffer), std::move(config_name), std::move(_response_buffer));
+}
 
 zx_status_t DebugData::SyncClient::LoadConfig_Deprecated(::fidl::StringView config_name, ::zx::vmo* out_config) {
   return DebugData::Call::LoadConfig_Deprecated(zx::unowned_channel(this->channel_), std::move(config_name), out_config);

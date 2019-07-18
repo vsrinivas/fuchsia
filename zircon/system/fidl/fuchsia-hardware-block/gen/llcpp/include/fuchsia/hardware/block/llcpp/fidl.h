@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
@@ -59,19 +60,62 @@ class Ftl final {
   using FormatRequest = ::fidl::AnyZeroArgMessage;
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    template <typename ResponseType>
+    class Format_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Format_Impl(zx::unowned_channel _client_end);
+      ~Format_Impl() = default;
+      Format_Impl(Format_Impl&& other) = default;
+      Format_Impl& operator=(Format_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using Format = Format_Impl<FormatResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    template <typename ResponseType>
+    class Format_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Format_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~Format_Impl() = default;
+      Format_Impl(Format_Impl&& other) = default;
+      Format_Impl& operator=(Format_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using Format = Format_Impl<FormatResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    ResultOf::Format Format();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Format Format(::fidl::BytePart _response_buffer);
 
     zx_status_t Format_Deprecated(int32_t* out_status);
 
@@ -89,6 +133,11 @@ class Ftl final {
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
    public:
+
+    static ResultOf::Format Format(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Format Format(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     static zx_status_t Format_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
 
@@ -254,19 +303,192 @@ class Block final {
   using RebindDeviceRequest = ::fidl::AnyZeroArgMessage;
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    template <typename ResponseType>
+    class GetInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetInfo_Impl(zx::unowned_channel _client_end);
+      ~GetInfo_Impl() = default;
+      GetInfo_Impl(GetInfo_Impl&& other) = default;
+      GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class GetStats_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetStats_Impl(zx::unowned_channel _client_end, bool clear);
+      ~GetStats_Impl() = default;
+      GetStats_Impl(GetStats_Impl&& other) = default;
+      GetStats_Impl& operator=(GetStats_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class GetFifo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetFifo_Impl(zx::unowned_channel _client_end);
+      ~GetFifo_Impl() = default;
+      GetFifo_Impl(GetFifo_Impl&& other) = default;
+      GetFifo_Impl& operator=(GetFifo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class AttachVmo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      AttachVmo_Impl(zx::unowned_channel _client_end, ::zx::vmo vmo);
+      ~AttachVmo_Impl() = default;
+      AttachVmo_Impl(AttachVmo_Impl&& other) = default;
+      AttachVmo_Impl& operator=(AttachVmo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class CloseFifo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      CloseFifo_Impl(zx::unowned_channel _client_end);
+      ~CloseFifo_Impl() = default;
+      CloseFifo_Impl(CloseFifo_Impl&& other) = default;
+      CloseFifo_Impl& operator=(CloseFifo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class RebindDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      RebindDevice_Impl(zx::unowned_channel _client_end);
+      ~RebindDevice_Impl() = default;
+      RebindDevice_Impl(RebindDevice_Impl&& other) = default;
+      RebindDevice_Impl& operator=(RebindDevice_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using GetInfo = GetInfo_Impl<GetInfoResponse>;
+    using GetStats = GetStats_Impl<GetStatsResponse>;
+    using GetFifo = GetFifo_Impl<GetFifoResponse>;
+    using AttachVmo = AttachVmo_Impl<AttachVmoResponse>;
+    using CloseFifo = CloseFifo_Impl<CloseFifoResponse>;
+    using RebindDevice = RebindDevice_Impl<RebindDeviceResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    template <typename ResponseType>
+    class GetInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetInfo_Impl() = default;
+      GetInfo_Impl(GetInfo_Impl&& other) = default;
+      GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class GetStats_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetStats_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer);
+      ~GetStats_Impl() = default;
+      GetStats_Impl(GetStats_Impl&& other) = default;
+      GetStats_Impl& operator=(GetStats_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class GetFifo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetFifo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetFifo_Impl() = default;
+      GetFifo_Impl(GetFifo_Impl&& other) = default;
+      GetFifo_Impl& operator=(GetFifo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class AttachVmo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      AttachVmo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer);
+      ~AttachVmo_Impl() = default;
+      AttachVmo_Impl(AttachVmo_Impl&& other) = default;
+      AttachVmo_Impl& operator=(AttachVmo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class CloseFifo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      CloseFifo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~CloseFifo_Impl() = default;
+      CloseFifo_Impl(CloseFifo_Impl&& other) = default;
+      CloseFifo_Impl& operator=(CloseFifo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class RebindDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      RebindDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~RebindDevice_Impl() = default;
+      RebindDevice_Impl(RebindDevice_Impl&& other) = default;
+      RebindDevice_Impl& operator=(RebindDevice_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using GetInfo = GetInfo_Impl<GetInfoResponse>;
+    using GetStats = GetStats_Impl<GetStatsResponse>;
+    using GetFifo = GetFifo_Impl<GetFifoResponse>;
+    using AttachVmo = AttachVmo_Impl<AttachVmoResponse>;
+    using CloseFifo = CloseFifo_Impl<CloseFifoResponse>;
+    using RebindDevice = RebindDevice_Impl<RebindDeviceResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    ResultOf::GetInfo GetInfo();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetInfo GetInfo(::fidl::BytePart _response_buffer);
 
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -276,6 +498,11 @@ class Block final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetInfoResponse> GetInfo_Deprecated(::fidl::BytePart response_buffer);
 
+    ResultOf::GetStats GetStats(bool clear);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetStats GetStats(::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer);
+
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
@@ -283,6 +510,11 @@ class Block final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetStatsResponse> GetStats_Deprecated(::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer);
+
+    ResultOf::GetFifo GetFifo();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetFifo GetFifo(::fidl::BytePart _response_buffer);
 
     zx_status_t GetFifo_Deprecated(int32_t* out_status, ::zx::fifo* out_fifo);
 
@@ -293,6 +525,11 @@ class Block final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetFifoResponse> GetFifo_Deprecated(::fidl::BytePart response_buffer);
 
+    ResultOf::AttachVmo AttachVmo(::zx::vmo vmo);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::AttachVmo AttachVmo(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer);
+
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
@@ -300,6 +537,11 @@ class Block final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<AttachVmoResponse> AttachVmo_Deprecated(::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer);
+
+    ResultOf::CloseFifo CloseFifo();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::CloseFifo CloseFifo(::fidl::BytePart _response_buffer);
 
     zx_status_t CloseFifo_Deprecated(int32_t* out_status);
 
@@ -309,6 +551,11 @@ class Block final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<CloseFifoResponse> CloseFifo_Deprecated(::fidl::BytePart response_buffer);
+
+    ResultOf::RebindDevice RebindDevice();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::RebindDevice RebindDevice(::fidl::BytePart _response_buffer);
 
     zx_status_t RebindDevice_Deprecated(int32_t* out_status);
 
@@ -327,6 +574,11 @@ class Block final {
   class Call final {
    public:
 
+    static ResultOf::GetInfo GetInfo(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetInfo GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
@@ -335,6 +587,11 @@ class Block final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetInfoResponse> GetInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    static ResultOf::GetStats GetStats(zx::unowned_channel _client_end, bool clear);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetStats GetStats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer);
+
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
@@ -342,6 +599,11 @@ class Block final {
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetStatsResponse> GetStats_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer);
+
+    static ResultOf::GetFifo GetFifo(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetFifo GetFifo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     static zx_status_t GetFifo_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, ::zx::fifo* out_fifo);
 
@@ -352,6 +614,11 @@ class Block final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetFifoResponse> GetFifo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    static ResultOf::AttachVmo AttachVmo(zx::unowned_channel _client_end, ::zx::vmo vmo);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::AttachVmo AttachVmo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer);
+
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
@@ -359,6 +626,11 @@ class Block final {
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<AttachVmoResponse> AttachVmo_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer);
+
+    static ResultOf::CloseFifo CloseFifo(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::CloseFifo CloseFifo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     static zx_status_t CloseFifo_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
 
@@ -368,6 +640,11 @@ class Block final {
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<CloseFifoResponse> CloseFifo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ResultOf::RebindDevice RebindDevice(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::RebindDevice RebindDevice(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     static zx_status_t RebindDevice_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
 

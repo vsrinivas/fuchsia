@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
@@ -80,19 +81,140 @@ class Bus final {
   using DisconnectRequest = ::fidl::AnyZeroArgMessage;
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    template <typename ResponseType>
+    class Enable_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Enable_Impl(zx::unowned_channel _client_end);
+      ~Enable_Impl() = default;
+      Enable_Impl(Enable_Impl&& other) = default;
+      Enable_Impl& operator=(Enable_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Disable_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Disable_Impl(zx::unowned_channel _client_end);
+      ~Disable_Impl() = default;
+      Disable_Impl(Disable_Impl&& other) = default;
+      Disable_Impl& operator=(Disable_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Connect_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Connect_Impl(zx::unowned_channel _client_end);
+      ~Connect_Impl() = default;
+      Connect_Impl(Connect_Impl&& other) = default;
+      Connect_Impl& operator=(Connect_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Disconnect_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Disconnect_Impl(zx::unowned_channel _client_end);
+      ~Disconnect_Impl() = default;
+      Disconnect_Impl(Disconnect_Impl&& other) = default;
+      Disconnect_Impl& operator=(Disconnect_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using Enable = Enable_Impl<EnableResponse>;
+    using Disable = Disable_Impl<DisableResponse>;
+    using Connect = Connect_Impl<ConnectResponse>;
+    using Disconnect = Disconnect_Impl<DisconnectResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    template <typename ResponseType>
+    class Enable_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Enable_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~Enable_Impl() = default;
+      Enable_Impl(Enable_Impl&& other) = default;
+      Enable_Impl& operator=(Enable_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Disable_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Disable_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~Disable_Impl() = default;
+      Disable_Impl(Disable_Impl&& other) = default;
+      Disable_Impl& operator=(Disable_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Connect_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Connect_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~Connect_Impl() = default;
+      Connect_Impl(Connect_Impl&& other) = default;
+      Connect_Impl& operator=(Connect_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Disconnect_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Disconnect_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~Disconnect_Impl() = default;
+      Disconnect_Impl(Disconnect_Impl&& other) = default;
+      Disconnect_Impl& operator=(Disconnect_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using Enable = Enable_Impl<EnableResponse>;
+    using Disable = Disable_Impl<DisableResponse>;
+    using Connect = Connect_Impl<ConnectResponse>;
+    using Disconnect = Disconnect_Impl<DisconnectResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    ResultOf::Enable Enable();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Enable Enable(::fidl::BytePart _response_buffer);
 
     zx_status_t Enable_Deprecated(int32_t* out_s);
 
@@ -103,6 +225,11 @@ class Bus final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<EnableResponse> Enable_Deprecated(::fidl::BytePart response_buffer);
 
+    ResultOf::Disable Disable();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Disable Disable(::fidl::BytePart _response_buffer);
+
     zx_status_t Disable_Deprecated(int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -112,6 +239,11 @@ class Bus final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<DisableResponse> Disable_Deprecated(::fidl::BytePart response_buffer);
 
+    ResultOf::Connect Connect();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Connect Connect(::fidl::BytePart _response_buffer);
+
     zx_status_t Connect_Deprecated(int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -120,6 +252,11 @@ class Bus final {
 
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(::fidl::BytePart response_buffer);
+
+    ResultOf::Disconnect Disconnect();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Disconnect Disconnect(::fidl::BytePart _response_buffer);
 
     zx_status_t Disconnect_Deprecated(int32_t* out_s);
 
@@ -138,6 +275,11 @@ class Bus final {
   class Call final {
    public:
 
+    static ResultOf::Enable Enable(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Enable Enable(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
     static zx_status_t Enable_Deprecated(zx::unowned_channel _client_end, int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -146,6 +288,11 @@ class Bus final {
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<EnableResponse> Enable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ResultOf::Disable Disable(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Disable Disable(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     static zx_status_t Disable_Deprecated(zx::unowned_channel _client_end, int32_t* out_s);
 
@@ -156,6 +303,11 @@ class Bus final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<DisableResponse> Disable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    static ResultOf::Connect Connect(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Connect Connect(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
     static zx_status_t Connect_Deprecated(zx::unowned_channel _client_end, int32_t* out_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -164,6 +316,11 @@ class Bus final {
 
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ResultOf::Disconnect Disconnect(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Disconnect Disconnect(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     static zx_status_t Disconnect_Deprecated(zx::unowned_channel _client_end, int32_t* out_s);
 

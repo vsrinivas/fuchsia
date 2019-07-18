@@ -25,6 +25,74 @@ extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpBindingProper
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpBindingPropertiesResponseTable;
 
 }  // namespace
+template <>
+DebugDumper::ResultOf::DumpTree_Impl<DebugDumper::DumpTreeResponse>::DumpTree_Impl(zx::unowned_channel _client_end, ::zx::vmo output) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DumpTreeRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, DumpTreeRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<DumpTreeRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kDebugDumper_DumpTree_Ordinal;
+  _request.output = std::move(output);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(DumpTreeRequest));
+  ::fidl::DecodedMessage<DumpTreeRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<DumpTreeRequest, DumpTreeResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+DebugDumper::ResultOf::DumpTree DebugDumper::SyncClient::DumpTree(::zx::vmo output) {
+  return ResultOf::DumpTree(zx::unowned_channel(this->channel_), std::move(output));
+}
+
+DebugDumper::ResultOf::DumpTree DebugDumper::Call::DumpTree(zx::unowned_channel _client_end, ::zx::vmo output) {
+  return ResultOf::DumpTree(std::move(_client_end), std::move(output));
+}
+
+template <>
+DebugDumper::UnownedResultOf::DumpTree_Impl<DebugDumper::DumpTreeResponse>::DumpTree_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < DumpTreeRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<DumpTreeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, DumpTreeRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<DumpTreeRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kDebugDumper_DumpTree_Ordinal;
+  _request.output = std::move(output);
+  _request_buffer.set_actual(sizeof(DumpTreeRequest));
+  ::fidl::DecodedMessage<DumpTreeRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<DumpTreeRequest, DumpTreeResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+DebugDumper::UnownedResultOf::DumpTree DebugDumper::SyncClient::DumpTree(::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::DumpTree(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(output), std::move(_response_buffer));
+}
+
+DebugDumper::UnownedResultOf::DumpTree DebugDumper::Call::DumpTree(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::DumpTree(std::move(_client_end), std::move(_request_buffer), std::move(output), std::move(_response_buffer));
+}
 
 zx_status_t DebugDumper::SyncClient::DumpTree_Deprecated(::zx::vmo output, int32_t* out_status, uint64_t* out_written, uint64_t* out_available) {
   return DebugDumper::Call::DumpTree_Deprecated(zx::unowned_channel(this->channel_), std::move(output), out_status, out_written, out_available);
@@ -119,6 +187,74 @@ zx_status_t DebugDumper::Call::DumpTree_Deprecated(zx::unowned_channel _client_e
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+DebugDumper::ResultOf::DumpDrivers_Impl<DebugDumper::DumpDriversResponse>::DumpDrivers_Impl(zx::unowned_channel _client_end, ::zx::vmo output) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DumpDriversRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, DumpDriversRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<DumpDriversRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kDebugDumper_DumpDrivers_Ordinal;
+  _request.output = std::move(output);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(DumpDriversRequest));
+  ::fidl::DecodedMessage<DumpDriversRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<DumpDriversRequest, DumpDriversResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+DebugDumper::ResultOf::DumpDrivers DebugDumper::SyncClient::DumpDrivers(::zx::vmo output) {
+  return ResultOf::DumpDrivers(zx::unowned_channel(this->channel_), std::move(output));
+}
+
+DebugDumper::ResultOf::DumpDrivers DebugDumper::Call::DumpDrivers(zx::unowned_channel _client_end, ::zx::vmo output) {
+  return ResultOf::DumpDrivers(std::move(_client_end), std::move(output));
+}
+
+template <>
+DebugDumper::UnownedResultOf::DumpDrivers_Impl<DebugDumper::DumpDriversResponse>::DumpDrivers_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < DumpDriversRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<DumpDriversResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, DumpDriversRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<DumpDriversRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kDebugDumper_DumpDrivers_Ordinal;
+  _request.output = std::move(output);
+  _request_buffer.set_actual(sizeof(DumpDriversRequest));
+  ::fidl::DecodedMessage<DumpDriversRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<DumpDriversRequest, DumpDriversResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+DebugDumper::UnownedResultOf::DumpDrivers DebugDumper::SyncClient::DumpDrivers(::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::DumpDrivers(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(output), std::move(_response_buffer));
+}
+
+DebugDumper::UnownedResultOf::DumpDrivers DebugDumper::Call::DumpDrivers(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::DumpDrivers(std::move(_client_end), std::move(_request_buffer), std::move(output), std::move(_response_buffer));
+}
 
 zx_status_t DebugDumper::SyncClient::DumpDrivers_Deprecated(::zx::vmo output, int32_t* out_status, uint64_t* out_written, uint64_t* out_available) {
   return DebugDumper::Call::DumpDrivers_Deprecated(zx::unowned_channel(this->channel_), std::move(output), out_status, out_written, out_available);
@@ -213,6 +349,74 @@ zx_status_t DebugDumper::Call::DumpDrivers_Deprecated(zx::unowned_channel _clien
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+DebugDumper::ResultOf::DumpBindingProperties_Impl<DebugDumper::DumpBindingPropertiesResponse>::DumpBindingProperties_Impl(zx::unowned_channel _client_end, ::zx::vmo output) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DumpBindingPropertiesRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, DumpBindingPropertiesRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<DumpBindingPropertiesRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kDebugDumper_DumpBindingProperties_Ordinal;
+  _request.output = std::move(output);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(DumpBindingPropertiesRequest));
+  ::fidl::DecodedMessage<DumpBindingPropertiesRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<DumpBindingPropertiesRequest, DumpBindingPropertiesResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+DebugDumper::ResultOf::DumpBindingProperties DebugDumper::SyncClient::DumpBindingProperties(::zx::vmo output) {
+  return ResultOf::DumpBindingProperties(zx::unowned_channel(this->channel_), std::move(output));
+}
+
+DebugDumper::ResultOf::DumpBindingProperties DebugDumper::Call::DumpBindingProperties(zx::unowned_channel _client_end, ::zx::vmo output) {
+  return ResultOf::DumpBindingProperties(std::move(_client_end), std::move(output));
+}
+
+template <>
+DebugDumper::UnownedResultOf::DumpBindingProperties_Impl<DebugDumper::DumpBindingPropertiesResponse>::DumpBindingProperties_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < DumpBindingPropertiesRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<DumpBindingPropertiesResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, DumpBindingPropertiesRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<DumpBindingPropertiesRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kDebugDumper_DumpBindingProperties_Ordinal;
+  _request.output = std::move(output);
+  _request_buffer.set_actual(sizeof(DumpBindingPropertiesRequest));
+  ::fidl::DecodedMessage<DumpBindingPropertiesRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<DumpBindingPropertiesRequest, DumpBindingPropertiesResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+DebugDumper::UnownedResultOf::DumpBindingProperties DebugDumper::SyncClient::DumpBindingProperties(::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::DumpBindingProperties(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(output), std::move(_response_buffer));
+}
+
+DebugDumper::UnownedResultOf::DumpBindingProperties DebugDumper::Call::DumpBindingProperties(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::DumpBindingProperties(std::move(_client_end), std::move(_request_buffer), std::move(output), std::move(_response_buffer));
+}
 
 zx_status_t DebugDumper::SyncClient::DumpBindingProperties_Deprecated(::zx::vmo output, int32_t* out_status, uint64_t* out_written, uint64_t* out_available) {
   return DebugDumper::Call::DumpBindingProperties_Deprecated(zx::unowned_channel(this->channel_), std::move(output), out_status, out_written, out_available);
@@ -475,6 +679,74 @@ extern "C" const fidl_type_t fuchsia_device_manager_AdministratorSuspendRequestT
 extern "C" const fidl_type_t fuchsia_device_manager_AdministratorSuspendResponseTable;
 
 }  // namespace
+template <>
+Administrator::ResultOf::Suspend_Impl<Administrator::SuspendResponse>::Suspend_Impl(zx::unowned_channel _client_end, uint32_t flags) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SuspendRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, SuspendRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<SuspendRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kAdministrator_Suspend_Ordinal;
+  _request.flags = std::move(flags);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SuspendRequest));
+  ::fidl::DecodedMessage<SuspendRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<SuspendRequest, SuspendResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Administrator::ResultOf::Suspend Administrator::SyncClient::Suspend(uint32_t flags) {
+  return ResultOf::Suspend(zx::unowned_channel(this->channel_), std::move(flags));
+}
+
+Administrator::ResultOf::Suspend Administrator::Call::Suspend(zx::unowned_channel _client_end, uint32_t flags) {
+  return ResultOf::Suspend(std::move(_client_end), std::move(flags));
+}
+
+template <>
+Administrator::UnownedResultOf::Suspend_Impl<Administrator::SuspendResponse>::Suspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < SuspendRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<SuspendResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, SuspendRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<SuspendRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kAdministrator_Suspend_Ordinal;
+  _request.flags = std::move(flags);
+  _request_buffer.set_actual(sizeof(SuspendRequest));
+  ::fidl::DecodedMessage<SuspendRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<SuspendRequest, SuspendResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Administrator::UnownedResultOf::Suspend Administrator::SyncClient::Suspend(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Suspend(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+}
+
+Administrator::UnownedResultOf::Suspend Administrator::Call::Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Suspend(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+}
 
 zx_status_t Administrator::SyncClient::Suspend_Deprecated(uint32_t flags, int32_t* out_status) {
   return Administrator::Call::Suspend_Deprecated(zx::unowned_channel(this->channel_), std::move(flags), out_status);
@@ -646,6 +918,77 @@ extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateCompo
 
 }  // namespace
 
+DevhostController::ResultOf::CreateDeviceStub_Impl::CreateDeviceStub_Impl(zx::unowned_channel _client_end, ::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateDeviceStubRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, CreateDeviceStubRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<CreateDeviceStubRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kDevhostController_CreateDeviceStub_Ordinal;
+  _request.rpc = std::move(rpc);
+  _request.protocol_id = std::move(protocol_id);
+  _request.local_device_id = std::move(local_device_id);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CreateDeviceStubRequest));
+  ::fidl::DecodedMessage<CreateDeviceStubRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+DevhostController::ResultOf::CreateDeviceStub DevhostController::SyncClient::CreateDeviceStub(::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id) {
+  return ResultOf::CreateDeviceStub(zx::unowned_channel(this->channel_), std::move(rpc), std::move(protocol_id), std::move(local_device_id));
+}
+
+DevhostController::ResultOf::CreateDeviceStub DevhostController::Call::CreateDeviceStub(zx::unowned_channel _client_end, ::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id) {
+  return ResultOf::CreateDeviceStub(std::move(_client_end), std::move(rpc), std::move(protocol_id), std::move(local_device_id));
+}
+
+
+DevhostController::UnownedResultOf::CreateDeviceStub_Impl::CreateDeviceStub_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id) {
+  if (_request_buffer.capacity() < CreateDeviceStubRequest::PrimarySize) {
+    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
+    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    return;
+  }
+  memset(_request_buffer.data(), 0, CreateDeviceStubRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<CreateDeviceStubRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kDevhostController_CreateDeviceStub_Ordinal;
+  _request.rpc = std::move(rpc);
+  _request.protocol_id = std::move(protocol_id);
+  _request.local_device_id = std::move(local_device_id);
+  _request_buffer.set_actual(sizeof(CreateDeviceStubRequest));
+  ::fidl::DecodedMessage<CreateDeviceStubRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+DevhostController::UnownedResultOf::CreateDeviceStub DevhostController::SyncClient::CreateDeviceStub(::fidl::BytePart _request_buffer, ::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id) {
+  return UnownedResultOf::CreateDeviceStub(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(rpc), std::move(protocol_id), std::move(local_device_id));
+}
+
+DevhostController::UnownedResultOf::CreateDeviceStub DevhostController::Call::CreateDeviceStub(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id) {
+  return UnownedResultOf::CreateDeviceStub(std::move(_client_end), std::move(_request_buffer), std::move(rpc), std::move(protocol_id), std::move(local_device_id));
+}
+
 zx_status_t DevhostController::SyncClient::CreateDeviceStub_Deprecated(::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id) {
   return DevhostController::Call::CreateDeviceStub_Deprecated(zx::unowned_channel(this->channel_), std::move(rpc), std::move(protocol_id), std::move(local_device_id));
 }
@@ -703,6 +1046,88 @@ zx_status_t DevhostController::Call::CreateDeviceStub_Deprecated(zx::unowned_cha
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
+
+DevhostController::ResultOf::CreateDevice_Impl::CreateDevice_Impl(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateDeviceRequest>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  CreateDeviceRequest _request = {};
+  _request._hdr = {};
+  _request._hdr.ordinal = kDevhostController_CreateDevice_Ordinal;
+  _request.rpc = std::move(rpc);
+  _request.driver_path = std::move(driver_path);
+  _request.driver = std::move(driver);
+  _request.parent_proxy = std::move(parent_proxy);
+  _request.proxy_args = std::move(proxy_args);
+  _request.local_device_id = std::move(local_device_id);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<CreateDeviceRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+DevhostController::ResultOf::CreateDevice DevhostController::SyncClient::CreateDevice(::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id) {
+  return ResultOf::CreateDevice(zx::unowned_channel(this->channel_), std::move(rpc), std::move(driver_path), std::move(driver), std::move(parent_proxy), std::move(proxy_args), std::move(local_device_id));
+}
+
+DevhostController::ResultOf::CreateDevice DevhostController::Call::CreateDevice(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id) {
+  return ResultOf::CreateDevice(std::move(_client_end), std::move(rpc), std::move(driver_path), std::move(driver), std::move(parent_proxy), std::move(proxy_args), std::move(local_device_id));
+}
+
+
+DevhostController::UnownedResultOf::CreateDevice_Impl::CreateDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id) {
+  if (_request_buffer.capacity() < CreateDeviceRequest::PrimarySize) {
+    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
+    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    return;
+  }
+  CreateDeviceRequest _request = {};
+  _request._hdr.ordinal = kDevhostController_CreateDevice_Ordinal;
+  _request.rpc = std::move(rpc);
+  _request.driver_path = std::move(driver_path);
+  _request.driver = std::move(driver);
+  _request.parent_proxy = std::move(parent_proxy);
+  _request.proxy_args = std::move(proxy_args);
+  _request.local_device_id = std::move(local_device_id);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<CreateDeviceRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+DevhostController::UnownedResultOf::CreateDevice DevhostController::SyncClient::CreateDevice(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id) {
+  return UnownedResultOf::CreateDevice(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(rpc), std::move(driver_path), std::move(driver), std::move(parent_proxy), std::move(proxy_args), std::move(local_device_id));
+}
+
+DevhostController::UnownedResultOf::CreateDevice DevhostController::Call::CreateDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id) {
+  return UnownedResultOf::CreateDevice(std::move(_client_end), std::move(_request_buffer), std::move(rpc), std::move(driver_path), std::move(driver), std::move(parent_proxy), std::move(proxy_args), std::move(local_device_id));
+}
 
 zx_status_t DevhostController::SyncClient::CreateDevice_Deprecated(::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id) {
   return DevhostController::Call::CreateDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(rpc), std::move(driver_path), std::move(driver), std::move(parent_proxy), std::move(proxy_args), std::move(local_device_id));
@@ -775,6 +1200,85 @@ zx_status_t DevhostController::Call::CreateDevice_Deprecated(zx::unowned_channel
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
+template <>
+DevhostController::ResultOf::CreateCompositeDevice_Impl<DevhostController::CreateCompositeDeviceResponse>::CreateCompositeDevice_Impl(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateCompositeDeviceRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  CreateCompositeDeviceRequest _request = {};
+  _request._hdr = {};
+  _request._hdr.ordinal = kDevhostController_CreateCompositeDevice_Ordinal;
+  _request.rpc = std::move(rpc);
+  _request.components = std::move(components);
+  _request.name = std::move(name);
+  _request.local_device_id = std::move(local_device_id);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<CreateCompositeDeviceRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<CreateCompositeDeviceRequest, CreateCompositeDeviceResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+DevhostController::ResultOf::CreateCompositeDevice DevhostController::SyncClient::CreateCompositeDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id) {
+  return ResultOf::CreateCompositeDevice(zx::unowned_channel(this->channel_), std::move(rpc), std::move(components), std::move(name), std::move(local_device_id));
+}
+
+DevhostController::ResultOf::CreateCompositeDevice DevhostController::Call::CreateCompositeDevice(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id) {
+  return ResultOf::CreateCompositeDevice(std::move(_client_end), std::move(rpc), std::move(components), std::move(name), std::move(local_device_id));
+}
+
+template <>
+DevhostController::UnownedResultOf::CreateCompositeDevice_Impl<DevhostController::CreateCompositeDeviceResponse>::CreateCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < CreateCompositeDeviceRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<CreateCompositeDeviceResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  CreateCompositeDeviceRequest _request = {};
+  _request._hdr.ordinal = kDevhostController_CreateCompositeDevice_Ordinal;
+  _request.rpc = std::move(rpc);
+  _request.components = std::move(components);
+  _request.name = std::move(name);
+  _request.local_device_id = std::move(local_device_id);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<CreateCompositeDeviceRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<CreateCompositeDeviceRequest, CreateCompositeDeviceResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+DevhostController::UnownedResultOf::CreateCompositeDevice DevhostController::SyncClient::CreateCompositeDevice(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::CreateCompositeDevice(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(rpc), std::move(components), std::move(name), std::move(local_device_id), std::move(_response_buffer));
+}
+
+DevhostController::UnownedResultOf::CreateCompositeDevice DevhostController::Call::CreateCompositeDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::CreateCompositeDevice(std::move(_client_end), std::move(_request_buffer), std::move(rpc), std::move(components), std::move(name), std::move(local_device_id), std::move(_response_buffer));
+}
 
 zx_status_t DevhostController::SyncClient::CreateCompositeDevice_Deprecated(::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, int32_t* out_status) {
   return DevhostController::Call::CreateCompositeDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(rpc), std::move(components), std::move(name), std::move(local_device_id), out_status);
@@ -992,6 +1496,81 @@ constexpr uint64_t kDeviceController_CompleteCompatibilityTests_Ordinal = 0x475e
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequestTable;
 
 }  // namespace
+template <>
+DeviceController::ResultOf::BindDriver_Impl<DeviceController::BindDriverResponse>::BindDriver_Impl(zx::unowned_channel _client_end, ::fidl::StringView driver_path, ::zx::vmo driver) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindDriverRequest>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  BindDriverRequest _request = {};
+  _request._hdr = {};
+  _request._hdr.ordinal = kDeviceController_BindDriver_Ordinal;
+  _request.driver_path = std::move(driver_path);
+  _request.driver = std::move(driver);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<BindDriverRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<BindDriverRequest, BindDriverResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+DeviceController::ResultOf::BindDriver DeviceController::SyncClient::BindDriver(::fidl::StringView driver_path, ::zx::vmo driver) {
+  return ResultOf::BindDriver(zx::unowned_channel(this->channel_), std::move(driver_path), std::move(driver));
+}
+
+DeviceController::ResultOf::BindDriver DeviceController::Call::BindDriver(zx::unowned_channel _client_end, ::fidl::StringView driver_path, ::zx::vmo driver) {
+  return ResultOf::BindDriver(std::move(_client_end), std::move(driver_path), std::move(driver));
+}
+
+template <>
+DeviceController::UnownedResultOf::BindDriver_Impl<DeviceController::BindDriverResponse>::BindDriver_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < BindDriverRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<BindDriverResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  BindDriverRequest _request = {};
+  _request._hdr.ordinal = kDeviceController_BindDriver_Ordinal;
+  _request.driver_path = std::move(driver_path);
+  _request.driver = std::move(driver);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<BindDriverRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<BindDriverRequest, BindDriverResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+DeviceController::UnownedResultOf::BindDriver DeviceController::SyncClient::BindDriver(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::BindDriver(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(driver_path), std::move(driver), std::move(_response_buffer));
+}
+
+DeviceController::UnownedResultOf::BindDriver DeviceController::Call::BindDriver(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::BindDriver(std::move(_client_end), std::move(_request_buffer), std::move(driver_path), std::move(driver), std::move(_response_buffer));
+}
 
 zx_status_t DeviceController::SyncClient::BindDriver_Deprecated(::fidl::StringView driver_path, ::zx::vmo driver, int32_t* out_status, ::zx::channel* out_test_output) {
   return DeviceController::Call::BindDriver_Deprecated(zx::unowned_channel(this->channel_), std::move(driver_path), std::move(driver), out_status, out_test_output);
@@ -1095,6 +1674,73 @@ zx_status_t DeviceController::Call::BindDriver_Deprecated(zx::unowned_channel _c
 }
 
 
+DeviceController::ResultOf::ConnectProxy_Impl::ConnectProxy_Impl(zx::unowned_channel _client_end, ::zx::channel shadow) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectProxyRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, ConnectProxyRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ConnectProxyRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kDeviceController_ConnectProxy_Ordinal;
+  _request.shadow = std::move(shadow);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConnectProxyRequest));
+  ::fidl::DecodedMessage<ConnectProxyRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+DeviceController::ResultOf::ConnectProxy DeviceController::SyncClient::ConnectProxy(::zx::channel shadow) {
+  return ResultOf::ConnectProxy(zx::unowned_channel(this->channel_), std::move(shadow));
+}
+
+DeviceController::ResultOf::ConnectProxy DeviceController::Call::ConnectProxy(zx::unowned_channel _client_end, ::zx::channel shadow) {
+  return ResultOf::ConnectProxy(std::move(_client_end), std::move(shadow));
+}
+
+
+DeviceController::UnownedResultOf::ConnectProxy_Impl::ConnectProxy_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel shadow) {
+  if (_request_buffer.capacity() < ConnectProxyRequest::PrimarySize) {
+    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
+    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    return;
+  }
+  memset(_request_buffer.data(), 0, ConnectProxyRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ConnectProxyRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kDeviceController_ConnectProxy_Ordinal;
+  _request.shadow = std::move(shadow);
+  _request_buffer.set_actual(sizeof(ConnectProxyRequest));
+  ::fidl::DecodedMessage<ConnectProxyRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+DeviceController::UnownedResultOf::ConnectProxy DeviceController::SyncClient::ConnectProxy(::fidl::BytePart _request_buffer, ::zx::channel shadow) {
+  return UnownedResultOf::ConnectProxy(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(shadow));
+}
+
+DeviceController::UnownedResultOf::ConnectProxy DeviceController::Call::ConnectProxy(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel shadow) {
+  return UnownedResultOf::ConnectProxy(std::move(_client_end), std::move(_request_buffer), std::move(shadow));
+}
+
 zx_status_t DeviceController::SyncClient::ConnectProxy_Deprecated(::zx::channel shadow) {
   return DeviceController::Call::ConnectProxy_Deprecated(zx::unowned_channel(this->channel_), std::move(shadow));
 }
@@ -1149,6 +1795,38 @@ zx_status_t DeviceController::Call::ConnectProxy_Deprecated(zx::unowned_channel 
 }
 
 
+DeviceController::ResultOf::Unbind_Impl::Unbind_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnbindRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, UnbindRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<UnbindRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kDeviceController_Unbind_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(UnbindRequest));
+  ::fidl::DecodedMessage<UnbindRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+DeviceController::ResultOf::Unbind DeviceController::SyncClient::Unbind() {
+  return ResultOf::Unbind(zx::unowned_channel(this->channel_));
+}
+
+DeviceController::ResultOf::Unbind DeviceController::Call::Unbind(zx::unowned_channel _client_end) {
+  return ResultOf::Unbind(std::move(_client_end));
+}
+
 zx_status_t DeviceController::SyncClient::Unbind_Deprecated() {
   return DeviceController::Call::Unbind_Deprecated(zx::unowned_channel(this->channel_));
 }
@@ -1167,6 +1845,38 @@ zx_status_t DeviceController::Call::Unbind_Deprecated(zx::unowned_channel _clien
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
+
+DeviceController::ResultOf::CompleteRemoval_Impl::CompleteRemoval_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CompleteRemovalRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, CompleteRemovalRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<CompleteRemovalRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kDeviceController_CompleteRemoval_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CompleteRemovalRequest));
+  ::fidl::DecodedMessage<CompleteRemovalRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+DeviceController::ResultOf::CompleteRemoval DeviceController::SyncClient::CompleteRemoval() {
+  return ResultOf::CompleteRemoval(zx::unowned_channel(this->channel_));
+}
+
+DeviceController::ResultOf::CompleteRemoval DeviceController::Call::CompleteRemoval(zx::unowned_channel _client_end) {
+  return ResultOf::CompleteRemoval(std::move(_client_end));
+}
 
 zx_status_t DeviceController::SyncClient::CompleteRemoval_Deprecated() {
   return DeviceController::Call::CompleteRemoval_Deprecated(zx::unowned_channel(this->channel_));
@@ -1187,6 +1897,38 @@ zx_status_t DeviceController::Call::CompleteRemoval_Deprecated(zx::unowned_chann
 }
 
 
+DeviceController::ResultOf::RemoveDevice_Impl::RemoveDevice_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveDeviceRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, RemoveDeviceRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<RemoveDeviceRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kDeviceController_RemoveDevice_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveDeviceRequest));
+  ::fidl::DecodedMessage<RemoveDeviceRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+DeviceController::ResultOf::RemoveDevice DeviceController::SyncClient::RemoveDevice() {
+  return ResultOf::RemoveDevice(zx::unowned_channel(this->channel_));
+}
+
+DeviceController::ResultOf::RemoveDevice DeviceController::Call::RemoveDevice(zx::unowned_channel _client_end) {
+  return ResultOf::RemoveDevice(std::move(_client_end));
+}
+
 zx_status_t DeviceController::SyncClient::RemoveDevice_Deprecated() {
   return DeviceController::Call::RemoveDevice_Deprecated(zx::unowned_channel(this->channel_));
 }
@@ -1205,6 +1947,74 @@ zx_status_t DeviceController::Call::RemoveDevice_Deprecated(zx::unowned_channel 
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
+template <>
+DeviceController::ResultOf::Suspend_Impl<DeviceController::SuspendResponse>::Suspend_Impl(zx::unowned_channel _client_end, uint32_t flags) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SuspendRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, SuspendRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<SuspendRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kDeviceController_Suspend_Ordinal;
+  _request.flags = std::move(flags);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SuspendRequest));
+  ::fidl::DecodedMessage<SuspendRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<SuspendRequest, SuspendResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+DeviceController::ResultOf::Suspend DeviceController::SyncClient::Suspend(uint32_t flags) {
+  return ResultOf::Suspend(zx::unowned_channel(this->channel_), std::move(flags));
+}
+
+DeviceController::ResultOf::Suspend DeviceController::Call::Suspend(zx::unowned_channel _client_end, uint32_t flags) {
+  return ResultOf::Suspend(std::move(_client_end), std::move(flags));
+}
+
+template <>
+DeviceController::UnownedResultOf::Suspend_Impl<DeviceController::SuspendResponse>::Suspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < SuspendRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<SuspendResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, SuspendRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<SuspendRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kDeviceController_Suspend_Ordinal;
+  _request.flags = std::move(flags);
+  _request_buffer.set_actual(sizeof(SuspendRequest));
+  ::fidl::DecodedMessage<SuspendRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<SuspendRequest, SuspendResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+DeviceController::UnownedResultOf::Suspend DeviceController::SyncClient::Suspend(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Suspend(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+}
+
+DeviceController::UnownedResultOf::Suspend DeviceController::Call::Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Suspend(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+}
 
 zx_status_t DeviceController::SyncClient::Suspend_Deprecated(uint32_t flags, int32_t* out_status) {
   return DeviceController::Call::Suspend_Deprecated(zx::unowned_channel(this->channel_), std::move(flags), out_status);
@@ -1295,6 +2105,73 @@ zx_status_t DeviceController::Call::Suspend_Deprecated(zx::unowned_channel _clie
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+
+DeviceController::ResultOf::CompleteCompatibilityTests_Impl::CompleteCompatibilityTests_Impl(zx::unowned_channel _client_end, CompatibilityTestStatus status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CompleteCompatibilityTestsRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, CompleteCompatibilityTestsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<CompleteCompatibilityTestsRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kDeviceController_CompleteCompatibilityTests_Ordinal;
+  _request.status = std::move(status);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CompleteCompatibilityTestsRequest));
+  ::fidl::DecodedMessage<CompleteCompatibilityTestsRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+DeviceController::ResultOf::CompleteCompatibilityTests DeviceController::SyncClient::CompleteCompatibilityTests(CompatibilityTestStatus status) {
+  return ResultOf::CompleteCompatibilityTests(zx::unowned_channel(this->channel_), std::move(status));
+}
+
+DeviceController::ResultOf::CompleteCompatibilityTests DeviceController::Call::CompleteCompatibilityTests(zx::unowned_channel _client_end, CompatibilityTestStatus status) {
+  return ResultOf::CompleteCompatibilityTests(std::move(_client_end), std::move(status));
+}
+
+
+DeviceController::UnownedResultOf::CompleteCompatibilityTests_Impl::CompleteCompatibilityTests_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, CompatibilityTestStatus status) {
+  if (_request_buffer.capacity() < CompleteCompatibilityTestsRequest::PrimarySize) {
+    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
+    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    return;
+  }
+  memset(_request_buffer.data(), 0, CompleteCompatibilityTestsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<CompleteCompatibilityTestsRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kDeviceController_CompleteCompatibilityTests_Ordinal;
+  _request.status = std::move(status);
+  _request_buffer.set_actual(sizeof(CompleteCompatibilityTestsRequest));
+  ::fidl::DecodedMessage<CompleteCompatibilityTestsRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+DeviceController::UnownedResultOf::CompleteCompatibilityTests DeviceController::SyncClient::CompleteCompatibilityTests(::fidl::BytePart _request_buffer, CompatibilityTestStatus status) {
+  return UnownedResultOf::CompleteCompatibilityTests(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(status));
+}
+
+DeviceController::UnownedResultOf::CompleteCompatibilityTests DeviceController::Call::CompleteCompatibilityTests(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, CompatibilityTestStatus status) {
+  return UnownedResultOf::CompleteCompatibilityTests(std::move(_client_end), std::move(_request_buffer), std::move(status));
+}
 
 zx_status_t DeviceController::SyncClient::CompleteCompatibilityTests_Deprecated(CompatibilityTestStatus status) {
   return DeviceController::Call::CompleteCompatibilityTests_Deprecated(zx::unowned_channel(this->channel_), std::move(status));
@@ -1575,6 +2452,93 @@ constexpr uint64_t kCoordinator_RunCompatibilityTests_Ordinal = 0x167858fb000000
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRunCompatibilityTestsResponseTable;
 
 }  // namespace
+template <>
+Coordinator::ResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::AddDevice_Impl(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceRequest>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  AddDeviceRequest _request = {};
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_AddDevice_Ordinal;
+  _request.rpc = std::move(rpc);
+  _request.props = std::move(props);
+  _request.name = std::move(name);
+  _request.protocol_id = std::move(protocol_id);
+  _request.driver_path = std::move(driver_path);
+  _request.args = std::move(args);
+  _request.device_add_config = std::move(device_add_config);
+  _request.client_remote = std::move(client_remote);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<AddDeviceRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<AddDeviceRequest, AddDeviceResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::ResultOf::AddDevice Coordinator::SyncClient::AddDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote) {
+  return ResultOf::AddDevice(zx::unowned_channel(this->channel_), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote));
+}
+
+Coordinator::ResultOf::AddDevice Coordinator::Call::AddDevice(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote) {
+  return ResultOf::AddDevice(std::move(_client_end), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote));
+}
+
+template <>
+Coordinator::UnownedResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::AddDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < AddDeviceRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<AddDeviceResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  AddDeviceRequest _request = {};
+  _request._hdr.ordinal = kCoordinator_AddDevice_Ordinal;
+  _request.rpc = std::move(rpc);
+  _request.props = std::move(props);
+  _request.name = std::move(name);
+  _request.protocol_id = std::move(protocol_id);
+  _request.driver_path = std::move(driver_path);
+  _request.args = std::move(args);
+  _request.device_add_config = std::move(device_add_config);
+  _request.client_remote = std::move(client_remote);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<AddDeviceRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<AddDeviceRequest, AddDeviceResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::UnownedResultOf::AddDevice Coordinator::SyncClient::AddDevice(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddDevice(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::AddDevice Coordinator::Call::AddDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddDevice(std::move(_client_end), std::move(_request_buffer), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote), std::move(_response_buffer));
+}
 
 zx_status_t Coordinator::SyncClient::AddDevice_Deprecated(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote, int32_t* out_status, uint64_t* out_local_device_id) {
   return Coordinator::Call::AddDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote), out_status, out_local_device_id);
@@ -1689,6 +2653,91 @@ zx_status_t Coordinator::Call::AddDevice_Deprecated(zx::unowned_channel _client_
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Coordinator::ResultOf::AddDeviceInvisible_Impl<Coordinator::AddDeviceInvisibleResponse>::AddDeviceInvisible_Impl(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceInvisibleRequest>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  AddDeviceInvisibleRequest _request = {};
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_AddDeviceInvisible_Ordinal;
+  _request.rpc = std::move(rpc);
+  _request.props = std::move(props);
+  _request.name = std::move(name);
+  _request.protocol_id = std::move(protocol_id);
+  _request.driver_path = std::move(driver_path);
+  _request.args = std::move(args);
+  _request.client_remote = std::move(client_remote);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<AddDeviceInvisibleRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<AddDeviceInvisibleRequest, AddDeviceInvisibleResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::ResultOf::AddDeviceInvisible Coordinator::SyncClient::AddDeviceInvisible(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote) {
+  return ResultOf::AddDeviceInvisible(zx::unowned_channel(this->channel_), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(client_remote));
+}
+
+Coordinator::ResultOf::AddDeviceInvisible Coordinator::Call::AddDeviceInvisible(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote) {
+  return ResultOf::AddDeviceInvisible(std::move(_client_end), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(client_remote));
+}
+
+template <>
+Coordinator::UnownedResultOf::AddDeviceInvisible_Impl<Coordinator::AddDeviceInvisibleResponse>::AddDeviceInvisible_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < AddDeviceInvisibleRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<AddDeviceInvisibleResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  AddDeviceInvisibleRequest _request = {};
+  _request._hdr.ordinal = kCoordinator_AddDeviceInvisible_Ordinal;
+  _request.rpc = std::move(rpc);
+  _request.props = std::move(props);
+  _request.name = std::move(name);
+  _request.protocol_id = std::move(protocol_id);
+  _request.driver_path = std::move(driver_path);
+  _request.args = std::move(args);
+  _request.client_remote = std::move(client_remote);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<AddDeviceInvisibleRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<AddDeviceInvisibleRequest, AddDeviceInvisibleResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::UnownedResultOf::AddDeviceInvisible Coordinator::SyncClient::AddDeviceInvisible(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddDeviceInvisible(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(client_remote), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::AddDeviceInvisible Coordinator::Call::AddDeviceInvisible(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddDeviceInvisible(std::move(_client_end), std::move(_request_buffer), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(client_remote), std::move(_response_buffer));
+}
 
 zx_status_t Coordinator::SyncClient::AddDeviceInvisible_Deprecated(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, int32_t* out_status, uint64_t* out_local_device_id) {
   return Coordinator::Call::AddDeviceInvisible_Deprecated(zx::unowned_channel(this->channel_), std::move(rpc), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(client_remote), out_status, out_local_device_id);
@@ -1802,6 +2851,38 @@ zx_status_t Coordinator::Call::AddDeviceInvisible_Deprecated(zx::unowned_channel
 }
 
 
+Coordinator::ResultOf::ScheduleRemove_Impl::ScheduleRemove_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleRemoveRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, ScheduleRemoveRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ScheduleRemoveRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_ScheduleRemove_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ScheduleRemoveRequest));
+  ::fidl::DecodedMessage<ScheduleRemoveRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+Coordinator::ResultOf::ScheduleRemove Coordinator::SyncClient::ScheduleRemove() {
+  return ResultOf::ScheduleRemove(zx::unowned_channel(this->channel_));
+}
+
+Coordinator::ResultOf::ScheduleRemove Coordinator::Call::ScheduleRemove(zx::unowned_channel _client_end) {
+  return ResultOf::ScheduleRemove(std::move(_client_end));
+}
+
 zx_status_t Coordinator::SyncClient::ScheduleRemove_Deprecated() {
   return Coordinator::Call::ScheduleRemove_Deprecated(zx::unowned_channel(this->channel_));
 }
@@ -1821,6 +2902,38 @@ zx_status_t Coordinator::Call::ScheduleRemove_Deprecated(zx::unowned_channel _cl
 }
 
 
+Coordinator::ResultOf::UnbindDone_Impl::UnbindDone_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnbindDoneRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, UnbindDoneRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<UnbindDoneRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_UnbindDone_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(UnbindDoneRequest));
+  ::fidl::DecodedMessage<UnbindDoneRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  Super::status_ = _write_status;
+  if (_write_status != ZX_OK) {
+    Super::error_ = ::fidl::internal::kErrorWriteFailed;
+  }
+}
+
+Coordinator::ResultOf::UnbindDone Coordinator::SyncClient::UnbindDone() {
+  return ResultOf::UnbindDone(zx::unowned_channel(this->channel_));
+}
+
+Coordinator::ResultOf::UnbindDone Coordinator::Call::UnbindDone(zx::unowned_channel _client_end) {
+  return ResultOf::UnbindDone(std::move(_client_end));
+}
+
 zx_status_t Coordinator::SyncClient::UnbindDone_Deprecated() {
   return Coordinator::Call::UnbindDone_Deprecated(zx::unowned_channel(this->channel_));
 }
@@ -1839,6 +2952,70 @@ zx_status_t Coordinator::Call::UnbindDone_Deprecated(zx::unowned_channel _client
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
+template <>
+Coordinator::ResultOf::RemoveDevice_Impl<Coordinator::RemoveDeviceResponse>::RemoveDevice_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveDeviceRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, RemoveDeviceRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<RemoveDeviceRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_RemoveDevice_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveDeviceRequest));
+  ::fidl::DecodedMessage<RemoveDeviceRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<RemoveDeviceRequest, RemoveDeviceResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::ResultOf::RemoveDevice Coordinator::SyncClient::RemoveDevice() {
+  return ResultOf::RemoveDevice(zx::unowned_channel(this->channel_));
+}
+
+Coordinator::ResultOf::RemoveDevice Coordinator::Call::RemoveDevice(zx::unowned_channel _client_end) {
+  return ResultOf::RemoveDevice(std::move(_client_end));
+}
+
+template <>
+Coordinator::UnownedResultOf::RemoveDevice_Impl<Coordinator::RemoveDeviceResponse>::RemoveDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(RemoveDeviceRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, RemoveDeviceRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<RemoveDeviceRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kCoordinator_RemoveDevice_Ordinal;
+  _request_buffer.set_actual(sizeof(RemoveDeviceRequest));
+  ::fidl::DecodedMessage<RemoveDeviceRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<RemoveDeviceRequest, RemoveDeviceResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::UnownedResultOf::RemoveDevice Coordinator::SyncClient::RemoveDevice(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::RemoveDevice(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::RemoveDevice Coordinator::Call::RemoveDevice(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::RemoveDevice(std::move(_client_end), std::move(_response_buffer));
+}
 
 zx_status_t Coordinator::SyncClient::RemoveDevice_Deprecated(int32_t* out_status) {
   return Coordinator::Call::RemoveDevice_Deprecated(zx::unowned_channel(this->channel_), out_status);
@@ -1930,6 +3107,70 @@ zx_status_t Coordinator::Call::RemoveDevice_Deprecated(zx::unowned_channel _clie
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Coordinator::ResultOf::MakeVisible_Impl<Coordinator::MakeVisibleResponse>::MakeVisible_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MakeVisibleRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, MakeVisibleRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<MakeVisibleRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_MakeVisible_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(MakeVisibleRequest));
+  ::fidl::DecodedMessage<MakeVisibleRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<MakeVisibleRequest, MakeVisibleResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::ResultOf::MakeVisible Coordinator::SyncClient::MakeVisible() {
+  return ResultOf::MakeVisible(zx::unowned_channel(this->channel_));
+}
+
+Coordinator::ResultOf::MakeVisible Coordinator::Call::MakeVisible(zx::unowned_channel _client_end) {
+  return ResultOf::MakeVisible(std::move(_client_end));
+}
+
+template <>
+Coordinator::UnownedResultOf::MakeVisible_Impl<Coordinator::MakeVisibleResponse>::MakeVisible_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(MakeVisibleRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, MakeVisibleRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<MakeVisibleRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kCoordinator_MakeVisible_Ordinal;
+  _request_buffer.set_actual(sizeof(MakeVisibleRequest));
+  ::fidl::DecodedMessage<MakeVisibleRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<MakeVisibleRequest, MakeVisibleResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::UnownedResultOf::MakeVisible Coordinator::SyncClient::MakeVisible(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::MakeVisible(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::MakeVisible Coordinator::Call::MakeVisible(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::MakeVisible(std::move(_client_end), std::move(_response_buffer));
+}
 
 zx_status_t Coordinator::SyncClient::MakeVisible_Deprecated(int32_t* out_status) {
   return Coordinator::Call::MakeVisible_Deprecated(zx::unowned_channel(this->channel_), out_status);
@@ -2021,6 +3262,79 @@ zx_status_t Coordinator::Call::MakeVisible_Deprecated(zx::unowned_channel _clien
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Coordinator::ResultOf::BindDevice_Impl<Coordinator::BindDeviceResponse>::BindDevice_Impl(zx::unowned_channel _client_end, ::fidl::StringView driver_path) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindDeviceRequest>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  BindDeviceRequest _request = {};
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_BindDevice_Ordinal;
+  _request.driver_path = std::move(driver_path);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<BindDeviceRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<BindDeviceRequest, BindDeviceResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::ResultOf::BindDevice Coordinator::SyncClient::BindDevice(::fidl::StringView driver_path) {
+  return ResultOf::BindDevice(zx::unowned_channel(this->channel_), std::move(driver_path));
+}
+
+Coordinator::ResultOf::BindDevice Coordinator::Call::BindDevice(zx::unowned_channel _client_end, ::fidl::StringView driver_path) {
+  return ResultOf::BindDevice(std::move(_client_end), std::move(driver_path));
+}
+
+template <>
+Coordinator::UnownedResultOf::BindDevice_Impl<Coordinator::BindDeviceResponse>::BindDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < BindDeviceRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<BindDeviceResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  BindDeviceRequest _request = {};
+  _request._hdr.ordinal = kCoordinator_BindDevice_Ordinal;
+  _request.driver_path = std::move(driver_path);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<BindDeviceRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<BindDeviceRequest, BindDeviceResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::UnownedResultOf::BindDevice Coordinator::SyncClient::BindDevice(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::BindDevice(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(driver_path), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::BindDevice Coordinator::Call::BindDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::BindDevice(std::move(_client_end), std::move(_request_buffer), std::move(driver_path), std::move(_response_buffer));
+}
 
 zx_status_t Coordinator::SyncClient::BindDevice_Deprecated(::fidl::StringView driver_path, int32_t* out_status) {
   return Coordinator::Call::BindDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(driver_path), out_status);
@@ -2119,6 +3433,70 @@ zx_status_t Coordinator::Call::BindDevice_Deprecated(zx::unowned_channel _client
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Coordinator::ResultOf::GetTopologicalPath_Impl<Coordinator::GetTopologicalPathResponse>::GetTopologicalPath_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTopologicalPathRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetTopologicalPathRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<GetTopologicalPathRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_GetTopologicalPath_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetTopologicalPathRequest));
+  ::fidl::DecodedMessage<GetTopologicalPathRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<GetTopologicalPathRequest, GetTopologicalPathResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::ResultOf::GetTopologicalPath Coordinator::SyncClient::GetTopologicalPath() {
+  return ResultOf::GetTopologicalPath(zx::unowned_channel(this->channel_));
+}
+
+Coordinator::ResultOf::GetTopologicalPath Coordinator::Call::GetTopologicalPath(zx::unowned_channel _client_end) {
+  return ResultOf::GetTopologicalPath(std::move(_client_end));
+}
+
+template <>
+Coordinator::UnownedResultOf::GetTopologicalPath_Impl<Coordinator::GetTopologicalPathResponse>::GetTopologicalPath_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetTopologicalPathRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetTopologicalPathRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<GetTopologicalPathRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kCoordinator_GetTopologicalPath_Ordinal;
+  _request_buffer.set_actual(sizeof(GetTopologicalPathRequest));
+  ::fidl::DecodedMessage<GetTopologicalPathRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<GetTopologicalPathRequest, GetTopologicalPathResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::UnownedResultOf::GetTopologicalPath Coordinator::SyncClient::GetTopologicalPath(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetTopologicalPath(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::GetTopologicalPath Coordinator::Call::GetTopologicalPath(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetTopologicalPath(std::move(_client_end), std::move(_response_buffer));
+}
 
 ::fidl::DecodeResult<Coordinator::GetTopologicalPathResponse> Coordinator::SyncClient::GetTopologicalPath_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_path) {
   return Coordinator::Call::GetTopologicalPath_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status, out_path);
@@ -2179,6 +3557,79 @@ zx_status_t Coordinator::Call::BindDevice_Deprecated(zx::unowned_channel _client
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Coordinator::ResultOf::LoadFirmware_Impl<Coordinator::LoadFirmwareResponse>::LoadFirmware_Impl(zx::unowned_channel _client_end, ::fidl::StringView fw_path) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadFirmwareRequest>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  LoadFirmwareRequest _request = {};
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_LoadFirmware_Ordinal;
+  _request.fw_path = std::move(fw_path);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<LoadFirmwareRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<LoadFirmwareRequest, LoadFirmwareResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::ResultOf::LoadFirmware Coordinator::SyncClient::LoadFirmware(::fidl::StringView fw_path) {
+  return ResultOf::LoadFirmware(zx::unowned_channel(this->channel_), std::move(fw_path));
+}
+
+Coordinator::ResultOf::LoadFirmware Coordinator::Call::LoadFirmware(zx::unowned_channel _client_end, ::fidl::StringView fw_path) {
+  return ResultOf::LoadFirmware(std::move(_client_end), std::move(fw_path));
+}
+
+template <>
+Coordinator::UnownedResultOf::LoadFirmware_Impl<Coordinator::LoadFirmwareResponse>::LoadFirmware_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView fw_path, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < LoadFirmwareRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<LoadFirmwareResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  LoadFirmwareRequest _request = {};
+  _request._hdr.ordinal = kCoordinator_LoadFirmware_Ordinal;
+  _request.fw_path = std::move(fw_path);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<LoadFirmwareRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<LoadFirmwareRequest, LoadFirmwareResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::UnownedResultOf::LoadFirmware Coordinator::SyncClient::LoadFirmware(::fidl::BytePart _request_buffer, ::fidl::StringView fw_path, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::LoadFirmware(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(fw_path), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::LoadFirmware Coordinator::Call::LoadFirmware(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView fw_path, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::LoadFirmware(std::move(_client_end), std::move(_request_buffer), std::move(fw_path), std::move(_response_buffer));
+}
 
 zx_status_t Coordinator::SyncClient::LoadFirmware_Deprecated(::fidl::StringView fw_path, int32_t* out_status, ::zx::vmo* out_vmo, uint64_t* out_size) {
   return Coordinator::Call::LoadFirmware_Deprecated(zx::unowned_channel(this->channel_), std::move(fw_path), out_status, out_vmo, out_size);
@@ -2281,6 +3732,74 @@ zx_status_t Coordinator::Call::LoadFirmware_Deprecated(zx::unowned_channel _clie
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Coordinator::ResultOf::GetMetadata_Impl<Coordinator::GetMetadataResponse>::GetMetadata_Impl(zx::unowned_channel _client_end, uint32_t key) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMetadataRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetMetadataRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<GetMetadataRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_GetMetadata_Ordinal;
+  _request.key = std::move(key);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetMetadataRequest));
+  ::fidl::DecodedMessage<GetMetadataRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<GetMetadataRequest, GetMetadataResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::ResultOf::GetMetadata Coordinator::SyncClient::GetMetadata(uint32_t key) {
+  return ResultOf::GetMetadata(zx::unowned_channel(this->channel_), std::move(key));
+}
+
+Coordinator::ResultOf::GetMetadata Coordinator::Call::GetMetadata(zx::unowned_channel _client_end, uint32_t key) {
+  return ResultOf::GetMetadata(std::move(_client_end), std::move(key));
+}
+
+template <>
+Coordinator::UnownedResultOf::GetMetadata_Impl<Coordinator::GetMetadataResponse>::GetMetadata_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < GetMetadataRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<GetMetadataResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, GetMetadataRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<GetMetadataRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kCoordinator_GetMetadata_Ordinal;
+  _request.key = std::move(key);
+  _request_buffer.set_actual(sizeof(GetMetadataRequest));
+  ::fidl::DecodedMessage<GetMetadataRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<GetMetadataRequest, GetMetadataResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::UnownedResultOf::GetMetadata Coordinator::SyncClient::GetMetadata(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetMetadata(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(key), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::GetMetadata Coordinator::Call::GetMetadata(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetMetadata(std::move(_client_end), std::move(_request_buffer), std::move(key), std::move(_response_buffer));
+}
 
 ::fidl::DecodeResult<Coordinator::GetMetadataResponse> Coordinator::SyncClient::GetMetadata_Deprecated(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_data) {
   return Coordinator::Call::GetMetadata_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(key), std::move(_response_buffer), out_status, out_data);
@@ -2339,6 +3858,74 @@ zx_status_t Coordinator::Call::LoadFirmware_Deprecated(zx::unowned_channel _clie
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Coordinator::ResultOf::GetMetadataSize_Impl<Coordinator::GetMetadataSizeResponse>::GetMetadataSize_Impl(zx::unowned_channel _client_end, uint32_t key) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMetadataSizeRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetMetadataSizeRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<GetMetadataSizeRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_GetMetadataSize_Ordinal;
+  _request.key = std::move(key);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetMetadataSizeRequest));
+  ::fidl::DecodedMessage<GetMetadataSizeRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<GetMetadataSizeRequest, GetMetadataSizeResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::ResultOf::GetMetadataSize Coordinator::SyncClient::GetMetadataSize(uint32_t key) {
+  return ResultOf::GetMetadataSize(zx::unowned_channel(this->channel_), std::move(key));
+}
+
+Coordinator::ResultOf::GetMetadataSize Coordinator::Call::GetMetadataSize(zx::unowned_channel _client_end, uint32_t key) {
+  return ResultOf::GetMetadataSize(std::move(_client_end), std::move(key));
+}
+
+template <>
+Coordinator::UnownedResultOf::GetMetadataSize_Impl<Coordinator::GetMetadataSizeResponse>::GetMetadataSize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < GetMetadataSizeRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<GetMetadataSizeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, GetMetadataSizeRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<GetMetadataSizeRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kCoordinator_GetMetadataSize_Ordinal;
+  _request.key = std::move(key);
+  _request_buffer.set_actual(sizeof(GetMetadataSizeRequest));
+  ::fidl::DecodedMessage<GetMetadataSizeRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<GetMetadataSizeRequest, GetMetadataSizeResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::UnownedResultOf::GetMetadataSize Coordinator::SyncClient::GetMetadataSize(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetMetadataSize(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(key), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::GetMetadataSize Coordinator::Call::GetMetadataSize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetMetadataSize(std::move(_client_end), std::move(_request_buffer), std::move(key), std::move(_response_buffer));
+}
 
 zx_status_t Coordinator::SyncClient::GetMetadataSize_Deprecated(uint32_t key, int32_t* out_status, uint64_t* out_size) {
   return Coordinator::Call::GetMetadataSize_Deprecated(zx::unowned_channel(this->channel_), std::move(key), out_status, out_size);
@@ -2431,6 +4018,81 @@ zx_status_t Coordinator::Call::GetMetadataSize_Deprecated(zx::unowned_channel _c
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Coordinator::ResultOf::AddMetadata_Impl<Coordinator::AddMetadataResponse>::AddMetadata_Impl(zx::unowned_channel _client_end, uint32_t key, ::fidl::VectorView<uint8_t> data) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddMetadataRequest>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  AddMetadataRequest _request = {};
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_AddMetadata_Ordinal;
+  _request.key = std::move(key);
+  _request.data = std::move(data);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<AddMetadataRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<AddMetadataRequest, AddMetadataResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::ResultOf::AddMetadata Coordinator::SyncClient::AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data) {
+  return ResultOf::AddMetadata(zx::unowned_channel(this->channel_), std::move(key), std::move(data));
+}
+
+Coordinator::ResultOf::AddMetadata Coordinator::Call::AddMetadata(zx::unowned_channel _client_end, uint32_t key, ::fidl::VectorView<uint8_t> data) {
+  return ResultOf::AddMetadata(std::move(_client_end), std::move(key), std::move(data));
+}
+
+template <>
+Coordinator::UnownedResultOf::AddMetadata_Impl<Coordinator::AddMetadataResponse>::AddMetadata_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < AddMetadataRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<AddMetadataResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  AddMetadataRequest _request = {};
+  _request._hdr.ordinal = kCoordinator_AddMetadata_Ordinal;
+  _request.key = std::move(key);
+  _request.data = std::move(data);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<AddMetadataRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<AddMetadataRequest, AddMetadataResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::UnownedResultOf::AddMetadata Coordinator::SyncClient::AddMetadata(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddMetadata(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(key), std::move(data), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::AddMetadata Coordinator::Call::AddMetadata(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddMetadata(std::move(_client_end), std::move(_request_buffer), std::move(key), std::move(data), std::move(_response_buffer));
+}
 
 zx_status_t Coordinator::SyncClient::AddMetadata_Deprecated(uint32_t key, ::fidl::VectorView<uint8_t> data, int32_t* out_status) {
   return Coordinator::Call::AddMetadata_Deprecated(zx::unowned_channel(this->channel_), std::move(key), std::move(data), out_status);
@@ -2531,6 +4193,83 @@ zx_status_t Coordinator::Call::AddMetadata_Deprecated(zx::unowned_channel _clien
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Coordinator::ResultOf::PublishMetadata_Impl<Coordinator::PublishMetadataResponse>::PublishMetadata_Impl(zx::unowned_channel _client_end, ::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<PublishMetadataRequest>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  PublishMetadataRequest _request = {};
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_PublishMetadata_Ordinal;
+  _request.device_path = std::move(device_path);
+  _request.key = std::move(key);
+  _request.data = std::move(data);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<PublishMetadataRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<PublishMetadataRequest, PublishMetadataResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::ResultOf::PublishMetadata Coordinator::SyncClient::PublishMetadata(::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data) {
+  return ResultOf::PublishMetadata(zx::unowned_channel(this->channel_), std::move(device_path), std::move(key), std::move(data));
+}
+
+Coordinator::ResultOf::PublishMetadata Coordinator::Call::PublishMetadata(zx::unowned_channel _client_end, ::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data) {
+  return ResultOf::PublishMetadata(std::move(_client_end), std::move(device_path), std::move(key), std::move(data));
+}
+
+template <>
+Coordinator::UnownedResultOf::PublishMetadata_Impl<Coordinator::PublishMetadataResponse>::PublishMetadata_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < PublishMetadataRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<PublishMetadataResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  PublishMetadataRequest _request = {};
+  _request._hdr.ordinal = kCoordinator_PublishMetadata_Ordinal;
+  _request.device_path = std::move(device_path);
+  _request.key = std::move(key);
+  _request.data = std::move(data);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<PublishMetadataRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<PublishMetadataRequest, PublishMetadataResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::UnownedResultOf::PublishMetadata Coordinator::SyncClient::PublishMetadata(::fidl::BytePart _request_buffer, ::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::PublishMetadata(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(device_path), std::move(key), std::move(data), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::PublishMetadata Coordinator::Call::PublishMetadata(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::PublishMetadata(std::move(_client_end), std::move(_request_buffer), std::move(device_path), std::move(key), std::move(data), std::move(_response_buffer));
+}
 
 zx_status_t Coordinator::SyncClient::PublishMetadata_Deprecated(::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data, int32_t* out_status) {
   return Coordinator::Call::PublishMetadata_Deprecated(zx::unowned_channel(this->channel_), std::move(device_path), std::move(key), std::move(data), out_status);
@@ -2633,6 +4372,87 @@ zx_status_t Coordinator::Call::PublishMetadata_Deprecated(zx::unowned_channel _c
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Coordinator::ResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeDeviceResponse>::AddCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddCompositeDeviceRequest>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  AddCompositeDeviceRequest _request = {};
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_AddCompositeDevice_Ordinal;
+  _request.name = std::move(name);
+  _request.props = std::move(props);
+  _request.components = std::move(components);
+  _request.components_count = std::move(components_count);
+  _request.coresident_device_index = std::move(coresident_device_index);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<AddCompositeDeviceRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<AddCompositeDeviceRequest, AddCompositeDeviceResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::ResultOf::AddCompositeDevice Coordinator::SyncClient::AddCompositeDevice(::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index) {
+  return ResultOf::AddCompositeDevice(zx::unowned_channel(this->channel_), std::move(name), std::move(props), std::move(components), std::move(components_count), std::move(coresident_device_index));
+}
+
+Coordinator::ResultOf::AddCompositeDevice Coordinator::Call::AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index) {
+  return ResultOf::AddCompositeDevice(std::move(_client_end), std::move(name), std::move(props), std::move(components), std::move(components_count), std::move(coresident_device_index));
+}
+
+template <>
+Coordinator::UnownedResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeDeviceResponse>::AddCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < AddCompositeDeviceRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<AddCompositeDeviceResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  AddCompositeDeviceRequest _request = {};
+  _request._hdr.ordinal = kCoordinator_AddCompositeDevice_Ordinal;
+  _request.name = std::move(name);
+  _request.props = std::move(props);
+  _request.components = std::move(components);
+  _request.components_count = std::move(components_count);
+  _request.coresident_device_index = std::move(coresident_device_index);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<AddCompositeDeviceRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<AddCompositeDeviceRequest, AddCompositeDeviceResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::UnownedResultOf::AddCompositeDevice Coordinator::SyncClient::AddCompositeDevice(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddCompositeDevice(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(name), std::move(props), std::move(components), std::move(components_count), std::move(coresident_device_index), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::AddCompositeDevice Coordinator::Call::AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddCompositeDevice(std::move(_client_end), std::move(_request_buffer), std::move(name), std::move(props), std::move(components), std::move(components_count), std::move(coresident_device_index), std::move(_response_buffer));
+}
 
 zx_status_t Coordinator::SyncClient::AddCompositeDevice_Deprecated(::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index, int32_t* out_status) {
   return Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(name), std::move(props), std::move(components), std::move(components_count), std::move(coresident_device_index), out_status);
@@ -2739,6 +4559,78 @@ zx_status_t Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Coordinator::ResultOf::DirectoryWatch_Impl<Coordinator::DirectoryWatchResponse>::DirectoryWatch_Impl(zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DirectoryWatchRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, DirectoryWatchRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<DirectoryWatchRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_DirectoryWatch_Ordinal;
+  _request.mask = std::move(mask);
+  _request.options = std::move(options);
+  _request.watcher = std::move(watcher);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(DirectoryWatchRequest));
+  ::fidl::DecodedMessage<DirectoryWatchRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<DirectoryWatchRequest, DirectoryWatchResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::ResultOf::DirectoryWatch Coordinator::SyncClient::DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watcher) {
+  return ResultOf::DirectoryWatch(zx::unowned_channel(this->channel_), std::move(mask), std::move(options), std::move(watcher));
+}
+
+Coordinator::ResultOf::DirectoryWatch Coordinator::Call::DirectoryWatch(zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher) {
+  return ResultOf::DirectoryWatch(std::move(_client_end), std::move(mask), std::move(options), std::move(watcher));
+}
+
+template <>
+Coordinator::UnownedResultOf::DirectoryWatch_Impl<Coordinator::DirectoryWatchResponse>::DirectoryWatch_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < DirectoryWatchRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<DirectoryWatchResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, DirectoryWatchRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<DirectoryWatchRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kCoordinator_DirectoryWatch_Ordinal;
+  _request.mask = std::move(mask);
+  _request.options = std::move(options);
+  _request.watcher = std::move(watcher);
+  _request_buffer.set_actual(sizeof(DirectoryWatchRequest));
+  ::fidl::DecodedMessage<DirectoryWatchRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<DirectoryWatchRequest, DirectoryWatchResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::UnownedResultOf::DirectoryWatch Coordinator::SyncClient::DirectoryWatch(::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::DirectoryWatch(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(mask), std::move(options), std::move(watcher), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::DirectoryWatch Coordinator::Call::DirectoryWatch(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::DirectoryWatch(std::move(_client_end), std::move(_request_buffer), std::move(mask), std::move(options), std::move(watcher), std::move(_response_buffer));
+}
 
 zx_status_t Coordinator::SyncClient::DirectoryWatch_Deprecated(uint32_t mask, uint32_t options, ::zx::channel watcher, int32_t* out_s) {
   return Coordinator::Call::DirectoryWatch_Deprecated(zx::unowned_channel(this->channel_), std::move(mask), std::move(options), std::move(watcher), out_s);
@@ -2833,6 +4725,74 @@ zx_status_t Coordinator::Call::DirectoryWatch_Deprecated(zx::unowned_channel _cl
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+Coordinator::ResultOf::RunCompatibilityTests_Impl<Coordinator::RunCompatibilityTestsResponse>::RunCompatibilityTests_Impl(zx::unowned_channel _client_end, int64_t hook_wait_time) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, RunCompatibilityTestsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<RunCompatibilityTestsRequest*>(_write_bytes);
+  _request._hdr = {};
+  _request._hdr.ordinal = kCoordinator_RunCompatibilityTests_Ordinal;
+  _request.hook_wait_time = std::move(hook_wait_time);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(RunCompatibilityTestsRequest));
+  ::fidl::DecodedMessage<RunCompatibilityTestsRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<RunCompatibilityTestsRequest, RunCompatibilityTestsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), Super::response_buffer());
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::ResultOf::RunCompatibilityTests Coordinator::SyncClient::RunCompatibilityTests(int64_t hook_wait_time) {
+  return ResultOf::RunCompatibilityTests(zx::unowned_channel(this->channel_), std::move(hook_wait_time));
+}
+
+Coordinator::ResultOf::RunCompatibilityTests Coordinator::Call::RunCompatibilityTests(zx::unowned_channel _client_end, int64_t hook_wait_time) {
+  return ResultOf::RunCompatibilityTests(std::move(_client_end), std::move(hook_wait_time));
+}
+
+template <>
+Coordinator::UnownedResultOf::RunCompatibilityTests_Impl<Coordinator::RunCompatibilityTestsResponse>::RunCompatibilityTests_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < RunCompatibilityTestsRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<RunCompatibilityTestsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, RunCompatibilityTestsRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<RunCompatibilityTestsRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kCoordinator_RunCompatibilityTests_Ordinal;
+  _request.hook_wait_time = std::move(hook_wait_time);
+  _request_buffer.set_actual(sizeof(RunCompatibilityTestsRequest));
+  ::fidl::DecodedMessage<RunCompatibilityTestsRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_request_result));
+    return;
+  }
+  auto _call_result = ::fidl::Call<RunCompatibilityTestsRequest, RunCompatibilityTestsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_call_result));
+    return;
+  }
+  Super::SetResult(::fidl::Decode(std::move(_call_result.message)));
+}
+
+Coordinator::UnownedResultOf::RunCompatibilityTests Coordinator::SyncClient::RunCompatibilityTests(::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::RunCompatibilityTests(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(hook_wait_time), std::move(_response_buffer));
+}
+
+Coordinator::UnownedResultOf::RunCompatibilityTests Coordinator::Call::RunCompatibilityTests(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::RunCompatibilityTests(std::move(_client_end), std::move(_request_buffer), std::move(hook_wait_time), std::move(_response_buffer));
+}
 
 zx_status_t Coordinator::SyncClient::RunCompatibilityTests_Deprecated(int64_t hook_wait_time, int32_t* out_status) {
   return Coordinator::Call::RunCompatibilityTests_Deprecated(zx::unowned_channel(this->channel_), std::move(hook_wait_time), out_status);

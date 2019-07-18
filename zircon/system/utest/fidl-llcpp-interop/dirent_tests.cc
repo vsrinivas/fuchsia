@@ -483,18 +483,16 @@ void SimpleCountNumDirectories() {
   // Stress test linearizing dirents
   for (uint64_t iter = 0; iter < kNumIterations; iter++) {
     auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
-    int64_t num_dir;
-    zx_status_t status = client.CountNumDirectories(
-        fidl::VectorView<gen::DirEnt>{static_cast<uint64_t>(dirents.size()), dirents.data()},
-        &num_dir);
+    auto result = client.CountNumDirectories(
+        fidl::VectorView<gen::DirEnt>{static_cast<uint64_t>(dirents.size()), dirents.data()});
     int64_t expected_num_dir = 0;
     for (const auto& dirent : dirents) {
       if (dirent.is_dir) {
         expected_num_dir++;
       }
     }
-    ASSERT_OK(status);
-    ASSERT_EQ(expected_num_dir, num_dir);
+    ASSERT_OK(result.status());
+    ASSERT_EQ(expected_num_dir, result.Unwrap()->num_dir);
   }
   ASSERT_EQ(server.CountNumDirectoriesNumCalls(), kNumIterations);
 }
@@ -518,22 +516,21 @@ void CallerAllocateCountNumDirectories() {
   // Stress test linearizing dirents
   for (uint64_t iter = 0; iter < kNumIterations; iter++) {
     auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
-    int64_t num_dir;
     std::unique_ptr<uint8_t[]> request_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
     FIDL_ALIGNDECL uint8_t response_buf[128];
     auto result = client.CountNumDirectories(
         fidl::BytePart(request_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES),
         fidl::VectorView<gen::DirEnt>{static_cast<uint64_t>(dirents.size()), dirents.data()},
-        fidl::BytePart(response_buf, sizeof(response_buf)), &num_dir);
+        fidl::BytePart(response_buf, sizeof(response_buf)));
     int64_t expected_num_dir = 0;
     for (const auto& dirent : dirents) {
       if (dirent.is_dir) {
         expected_num_dir++;
       }
     }
-    ASSERT_OK(result.status);
-    ASSERT_NULL(result.error);
-    ASSERT_EQ(expected_num_dir, num_dir);
+    ASSERT_OK(result.status());
+    ASSERT_NULL(result.error());
+    ASSERT_EQ(expected_num_dir, result.Unwrap()->num_dir);
   }
   ASSERT_EQ(server.CountNumDirectoriesNumCalls(), kNumIterations);
 }
@@ -551,11 +548,11 @@ void CallerAllocateReadDir() {
   // Stress test server-linearizing dirents
   for (uint64_t iter = 0; iter < kNumIterations; iter++) {
     std::unique_ptr<uint8_t[]> response_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
-    fidl::VectorView<gen::DirEnt> dirents;
     auto result =
-        client.ReadDir(fidl::BytePart(response_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES), &dirents);
-    ASSERT_OK(result.status);
-    ASSERT_NULL(result.error, "%s", result.error);
+        client.ReadDir(fidl::BytePart(response_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES));
+    ASSERT_OK(result.status());
+    ASSERT_NULL(result.error(), "%s", result.error());
+    const auto& dirents = result.Unwrap()->dirents;
     ASSERT_EQ(dirents.count(), golden_dirents.count());
     for (uint64_t i = 0; i < dirents.count(); i++) {
       auto actual = dirents[i];
@@ -584,7 +581,8 @@ void InPlaceReadDir() {
   // Stress test server-linearizing dirents
   for (uint64_t iter = 0; iter < kNumIterations; iter++) {
     std::unique_ptr<uint8_t[]> response_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
-    auto result = client.ReadDir(fidl::BytePart(response_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES));
+    auto result = client.ReadDir_Deprecated(
+        fidl::BytePart(response_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES));
     ASSERT_OK(result.status);
     const auto& dirents = result.message.message()->dirents;
     ASSERT_EQ(dirents.count(), golden_dirents.count());
@@ -611,7 +609,7 @@ void SimpleConsumeDirectories() {
   gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
 
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 0);
-  ASSERT_OK(client.ConsumeDirectories(golden_dirents));
+  ASSERT_OK(client.ConsumeDirectories(golden_dirents).status());
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
 }
 
@@ -627,8 +625,8 @@ void CallerAllocateConsumeDirectories() {
   std::unique_ptr<uint8_t[]> request_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
   auto result = client.ConsumeDirectories(
       fidl::BytePart(request_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES), golden_dirents);
-  ASSERT_OK(result.status);
-  ASSERT_NULL(result.error, "%s", result.error);
+  ASSERT_OK(result.status());
+  ASSERT_NULL(result.error(), "%s", result.error());
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
 }
 
@@ -647,7 +645,7 @@ void InPlaceConsumeDirectories() {
   auto linearize_result =
       fidl::Linearize(&request, fidl::BytePart(request_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES));
   ASSERT_OK(linearize_result.status);
-  ASSERT_OK(client.ConsumeDirectories(std::move(linearize_result.message)));
+  ASSERT_OK(client.ConsumeDirectories_Deprecated(std::move(linearize_result.message)));
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
 }
 
@@ -662,7 +660,7 @@ void SimpleOneWayDirents() {
   zx::eventpair client_ep, server_ep;
   ASSERT_OK(zx::eventpair::create(0, &client_ep, &server_ep));
   ASSERT_EQ(server.OneWayDirentsNumCalls(), 0);
-  ASSERT_OK(client.OneWayDirents(golden_dirents, std::move(server_ep)));
+  ASSERT_OK(client.OneWayDirents(golden_dirents, std::move(server_ep)).status());
   zx_signals_t signals = 0;
   client_ep.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);
   ASSERT_EQ(signals & ZX_EVENTPAIR_SIGNALED, ZX_EVENTPAIR_SIGNALED);
@@ -683,7 +681,7 @@ void CallerAllocateOneWayDirents() {
   uint8_t request_buf[512];
   ASSERT_OK(client.OneWayDirents(fidl::BytePart(request_buf, sizeof(request_buf)),
                                  golden_dirents,
-                                 std::move(server_ep)));
+                                 std::move(server_ep)).status());
   zx_signals_t signals = 0;
   client_ep.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);
   ASSERT_EQ(signals & ZX_EVENTPAIR_SIGNALED, ZX_EVENTPAIR_SIGNALED);
@@ -710,7 +708,7 @@ void InPlaceOneWayDirents() {
     auto linearize_result =
         fidl::Linearize(&request, fidl::BytePart(request_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES));
     ASSERT_OK(linearize_result.status);
-    ASSERT_OK(client.OneWayDirents(std::move(linearize_result.message)));
+    ASSERT_OK(client.OneWayDirents_Deprecated(std::move(linearize_result.message)));
     zx_signals_t signals = 0;
     client_ep.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);
     ASSERT_EQ(signals & ZX_EVENTPAIR_SIGNALED, ZX_EVENTPAIR_SIGNALED);

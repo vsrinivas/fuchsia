@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
@@ -117,19 +118,90 @@ class Device final {
   };
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    template <typename ResponseType>
+    class GetClass_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetClass_Impl(zx::unowned_channel _client_end);
+      ~GetClass_Impl() = default;
+      GetClass_Impl(GetClass_Impl&& other) = default;
+      GetClass_Impl& operator=(GetClass_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class SetConfig_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      SetConfig_Impl(zx::unowned_channel _client_end, Config config);
+      ~SetConfig_Impl() = default;
+      SetConfig_Impl(SetConfig_Impl&& other) = default;
+      SetConfig_Impl& operator=(SetConfig_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using GetClass = GetClass_Impl<GetClassResponse>;
+    using SetConfig = SetConfig_Impl<SetConfigResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    template <typename ResponseType>
+    class GetClass_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetClass_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetClass_Impl() = default;
+      GetClass_Impl(GetClass_Impl&& other) = default;
+      GetClass_Impl& operator=(GetClass_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class SetConfig_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      SetConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer);
+      ~SetConfig_Impl() = default;
+      SetConfig_Impl(SetConfig_Impl&& other) = default;
+      SetConfig_Impl& operator=(SetConfig_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using GetClass = GetClass_Impl<GetClassResponse>;
+    using SetConfig = SetConfig_Impl<SetConfigResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Lookup what type of serial device this is.
+    ResultOf::GetClass GetClass();
+
+    // Lookup what type of serial device this is.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetClass GetClass(::fidl::BytePart _response_buffer);
 
     // Lookup what type of serial device this is.
     zx_status_t GetClass_Deprecated(Class* out_device_class);
@@ -142,6 +214,13 @@ class Device final {
     // Lookup what type of serial device this is.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetClassResponse> GetClass_Deprecated(::fidl::BytePart response_buffer);
+
+    // Set the configuration of this serial device.
+    ResultOf::SetConfig SetConfig(Config config);
+
+    // Set the configuration of this serial device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SetConfig SetConfig(::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer);
 
     // Set the configuration of this serial device.
     zx_status_t SetConfig_Deprecated(Config config, int32_t* out_s);
@@ -164,6 +243,13 @@ class Device final {
    public:
 
     // Lookup what type of serial device this is.
+    static ResultOf::GetClass GetClass(zx::unowned_channel _client_end);
+
+    // Lookup what type of serial device this is.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetClass GetClass(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Lookup what type of serial device this is.
     static zx_status_t GetClass_Deprecated(zx::unowned_channel _client_end, Class* out_device_class);
 
     // Lookup what type of serial device this is.
@@ -174,6 +260,13 @@ class Device final {
     // Lookup what type of serial device this is.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetClassResponse> GetClass_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Set the configuration of this serial device.
+    static ResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, Config config);
+
+    // Set the configuration of this serial device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, Config config, ::fidl::BytePart _response_buffer);
 
     // Set the configuration of this serial device.
     static zx_status_t SetConfig_Deprecated(zx::unowned_channel _client_end, Config config, int32_t* out_s);

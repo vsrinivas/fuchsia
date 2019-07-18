@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
@@ -140,19 +141,59 @@ class Interface final {
     fit::function<zx_status_t()> unknown;
   };
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    class Method_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      Method_Impl(zx::unowned_channel _client_end);
+      ~Method_Impl() = default;
+      Method_Impl(Method_Impl&& other) = default;
+      Method_Impl& operator=(Method_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+
+   public:
+    using Method = Method_Impl;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    class Method_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      Method_Impl(zx::unowned_channel _client_end);
+      ~Method_Impl() = default;
+      Method_Impl(Method_Impl&& other) = default;
+      Method_Impl& operator=(Method_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+
+   public:
+    using Method = Method_Impl;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    // method comment #1
+    //
+    // method comment #3
+    ResultOf::Method Method();
+
 
     // method comment #1
     //
@@ -171,6 +212,12 @@ class Interface final {
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
    public:
+
+    // method comment #1
+    //
+    // method comment #3
+    static ResultOf::Method Method(zx::unowned_channel _client_end);
+
 
     // method comment #1
     //

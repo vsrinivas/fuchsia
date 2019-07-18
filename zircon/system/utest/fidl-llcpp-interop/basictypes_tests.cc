@@ -232,8 +232,6 @@ TEST(BasicTypesTest, SyncCallStruct) {
   // generated interface API
   basictypes::TestInterface::SyncClient test(std::move(client));
 
-  int32_t out_status;
-  int32_t out_field;
   basictypes::SimpleStruct simple_struct = {};
   simple_struct.field = 123;
   // make sure array shape is as expected (5 by 4)
@@ -260,10 +258,10 @@ TEST(BasicTypesTest, SyncCallStruct) {
     }
   }
   // perform call
-  zx_status_t status = test.ConsumeSimpleStruct(std::move(simple_struct), &out_status, &out_field);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(out_status, ZX_OK);
-  ASSERT_EQ(out_field, 123);
+  auto result = test.ConsumeSimpleStruct(std::move(simple_struct));
+  ASSERT_EQ(result.status(), ZX_OK);
+  ASSERT_EQ(result.Unwrap()->status, ZX_OK);
+  ASSERT_EQ(result.Unwrap()->field, 123);
 
   TearDownAsyncCServerHelper(loop);
 }
@@ -278,8 +276,6 @@ TEST(BasicTypesTest, SyncCallerAllocateCallStruct) {
   // generated interface API
   basictypes::TestInterface::SyncClient test(std::move(client));
 
-  int32_t out_status;
-  int32_t out_field;
   basictypes::SimpleStruct simple_struct = {};
   simple_struct.field = 123;
   // make sure array shape is as expected (5 by 4)
@@ -311,11 +307,11 @@ TEST(BasicTypesTest, SyncCallerAllocateCallStruct) {
   FIDL_ALIGNDECL uint8_t response_buf[512] = {};
   auto result = test.ConsumeSimpleStruct(
       fidl::BytePart(request_buf, sizeof(request_buf)), std::move(simple_struct),
-      fidl::BytePart(response_buf, sizeof(response_buf)), &out_status, &out_field);
-  ASSERT_EQ(result.status, ZX_OK);
-  ASSERT_NULL(result.error, "%s", result.error);
-  ASSERT_EQ(out_status, ZX_OK);
-  ASSERT_EQ(out_field, 123);
+      fidl::BytePart(response_buf, sizeof(response_buf)));
+  ASSERT_EQ(result.status(), ZX_OK);
+  ASSERT_NULL(result.error(), "%s", result.error());
+  ASSERT_EQ(result.Unwrap()->status, ZX_OK);
+  ASSERT_EQ(result.Unwrap()->field, 123);
 
   TearDownAsyncCServerHelper(loop);
 }
@@ -330,16 +326,14 @@ TEST(BasicTypesTest, SyncCallUnion) {
   // generated interface API
   basictypes::TestInterface::SyncClient test(std::move(client));
 
-  uint32_t out_index;
-  int32_t out_field;
   basictypes::SimpleUnion simple_union;
   simple_union.mutable_field_b() = 456;
 
   // perform call
-  zx_status_t status = test.ConsumeSimpleUnion(std::move(simple_union), &out_index, &out_field);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(out_index, 1);
-  ASSERT_EQ(out_field, 456);
+  auto result = test.ConsumeSimpleUnion(std::move(simple_union));
+  ASSERT_EQ(result.status(), ZX_OK);
+  ASSERT_EQ(result.Unwrap()->index, 1);
+  ASSERT_EQ(result.Unwrap()->field, 456);
 
   TearDownAsyncCServerHelper(loop);
 }
@@ -354,8 +348,6 @@ TEST(BasicTypesTest, SyncCallerAllocateCallUnion) {
   // generated interface API
   basictypes::TestInterface::SyncClient test(std::move(client));
 
-  uint32_t out_index;
-  int32_t out_field;
   basictypes::SimpleUnion simple_union;
   simple_union.mutable_field_b() = 456;
 
@@ -364,11 +356,11 @@ TEST(BasicTypesTest, SyncCallerAllocateCallUnion) {
   FIDL_ALIGNDECL uint8_t response_buf[512] = {};
   auto result = test.ConsumeSimpleUnion(
       fidl::BytePart(request_buf, sizeof(request_buf)), std::move(simple_union),
-      fidl::BytePart(response_buf, sizeof(response_buf)), &out_index, &out_field);
-  ASSERT_EQ(result.status, ZX_OK);
-  ASSERT_NULL(result.error, "%s", result.error);
-  ASSERT_EQ(out_index, 1);
-  ASSERT_EQ(out_field, 456);
+      fidl::BytePart(response_buf, sizeof(response_buf)));
+  ASSERT_EQ(result.status(), ZX_OK);
+  ASSERT_NULL(result.error(), "%s", result.error());
+  ASSERT_EQ(result.Unwrap()->index, 1);
+  ASSERT_EQ(result.Unwrap()->field, 456);
 
   TearDownAsyncCServerHelper(loop);
 }

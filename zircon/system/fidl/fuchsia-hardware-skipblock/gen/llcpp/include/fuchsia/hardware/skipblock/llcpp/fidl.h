@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
@@ -133,19 +134,122 @@ class SkipBlock final {
   };
 
 
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+   private:
+    template <typename ResponseType>
+    class GetPartitionInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetPartitionInfo_Impl(zx::unowned_channel _client_end);
+      ~GetPartitionInfo_Impl() = default;
+      GetPartitionInfo_Impl(GetPartitionInfo_Impl&& other) = default;
+      GetPartitionInfo_Impl& operator=(GetPartitionInfo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Read_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Read_Impl(zx::unowned_channel _client_end, ReadWriteOperation op);
+      ~Read_Impl() = default;
+      Read_Impl(Read_Impl&& other) = default;
+      Read_Impl& operator=(Read_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Write_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Write_Impl(zx::unowned_channel _client_end, ReadWriteOperation op);
+      ~Write_Impl() = default;
+      Write_Impl(Write_Impl&& other) = default;
+      Write_Impl& operator=(Write_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using GetPartitionInfo = GetPartitionInfo_Impl<GetPartitionInfoResponse>;
+    using Read = Read_Impl<ReadResponse>;
+    using Write = Write_Impl<WriteResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+   private:
+    template <typename ResponseType>
+    class GetPartitionInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetPartitionInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetPartitionInfo_Impl() = default;
+      GetPartitionInfo_Impl(GetPartitionInfo_Impl&& other) = default;
+      GetPartitionInfo_Impl& operator=(GetPartitionInfo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Read_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Read_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer);
+      ~Read_Impl() = default;
+      Read_Impl(Read_Impl&& other) = default;
+      Read_Impl& operator=(Read_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+    template <typename ResponseType>
+    class Write_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Write_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer);
+      ~Write_Impl() = default;
+      Write_Impl(Write_Impl&& other) = default;
+      Write_Impl& operator=(Write_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::Unwrap;
+    };
+
+   public:
+    using GetPartitionInfo = GetPartitionInfo_Impl<GetPartitionInfoResponse>;
+    using Read = Read_Impl<ReadResponse>;
+    using Write = Write_Impl<WriteResponse>;
+  };
+
   class SyncClient final {
    public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
-
     SyncClient& operator=(SyncClient&&) = default;
-
-    ~SyncClient() {}
 
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Returns information about the skip-block partition.
+    //
+    // The block count can shrink in the event that a bad block is grown. It is
+    // recommended to call this again after a bad block is grown.
+    ResultOf::GetPartitionInfo GetPartitionInfo();
+
+    // Returns information about the skip-block partition.
+    //
+    // The block count can shrink in the event that a bad block is grown. It is
+    // recommended to call this again after a bad block is grown.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetPartitionInfo GetPartitionInfo(::fidl::BytePart _response_buffer);
 
     // Returns information about the skip-block partition.
     //
@@ -169,6 +273,13 @@ class SkipBlock final {
     ::fidl::DecodeResult<GetPartitionInfoResponse> GetPartitionInfo_Deprecated(::fidl::BytePart response_buffer);
 
     // Reads the specified blocks into the provided vmo.
+    ResultOf::Read Read(ReadWriteOperation op);
+
+    // Reads the specified blocks into the provided vmo.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Read Read(::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer);
+
+    // Reads the specified blocks into the provided vmo.
     zx_status_t Read_Deprecated(ReadWriteOperation op, int32_t* out_status);
 
     // Reads the specified blocks into the provided vmo.
@@ -179,6 +290,25 @@ class SkipBlock final {
     // Reads the specified blocks into the provided vmo.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<ReadResponse> Read_Deprecated(::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
+
+    // Erases and writes the specified blocks from the provided vmo.
+    //
+    // In the event that bad block is grown, the partition will shrink and
+    // `bad_block_grown` will be set to true. Since this causes the logical to
+    // physical block map to change, all previously written blocks at logical
+    // addresses after the section being written should be considered corrupted,
+    // and rewritten if applicable.
+    ResultOf::Write Write(ReadWriteOperation op);
+
+    // Erases and writes the specified blocks from the provided vmo.
+    //
+    // In the event that bad block is grown, the partition will shrink and
+    // `bad_block_grown` will be set to true. Since this causes the logical to
+    // physical block map to change, all previously written blocks at logical
+    // addresses after the section being written should be considered corrupted,
+    // and rewritten if applicable.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Write Write(::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer);
 
     // Erases and writes the specified blocks from the provided vmo.
     //
@@ -222,6 +352,19 @@ class SkipBlock final {
     //
     // The block count can shrink in the event that a bad block is grown. It is
     // recommended to call this again after a bad block is grown.
+    static ResultOf::GetPartitionInfo GetPartitionInfo(zx::unowned_channel _client_end);
+
+    // Returns information about the skip-block partition.
+    //
+    // The block count can shrink in the event that a bad block is grown. It is
+    // recommended to call this again after a bad block is grown.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetPartitionInfo GetPartitionInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Returns information about the skip-block partition.
+    //
+    // The block count can shrink in the event that a bad block is grown. It is
+    // recommended to call this again after a bad block is grown.
     static zx_status_t GetPartitionInfo_Deprecated(zx::unowned_channel _client_end, int32_t* out_status, PartitionInfo* out_partition_info);
 
     // Returns information about the skip-block partition.
@@ -240,6 +383,13 @@ class SkipBlock final {
     static ::fidl::DecodeResult<GetPartitionInfoResponse> GetPartitionInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Reads the specified blocks into the provided vmo.
+    static ResultOf::Read Read(zx::unowned_channel _client_end, ReadWriteOperation op);
+
+    // Reads the specified blocks into the provided vmo.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Read Read(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer);
+
+    // Reads the specified blocks into the provided vmo.
     static zx_status_t Read_Deprecated(zx::unowned_channel _client_end, ReadWriteOperation op, int32_t* out_status);
 
     // Reads the specified blocks into the provided vmo.
@@ -250,6 +400,25 @@ class SkipBlock final {
     // Reads the specified blocks into the provided vmo.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<ReadResponse> Read_Deprecated(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
+
+    // Erases and writes the specified blocks from the provided vmo.
+    //
+    // In the event that bad block is grown, the partition will shrink and
+    // `bad_block_grown` will be set to true. Since this causes the logical to
+    // physical block map to change, all previously written blocks at logical
+    // addresses after the section being written should be considered corrupted,
+    // and rewritten if applicable.
+    static ResultOf::Write Write(zx::unowned_channel _client_end, ReadWriteOperation op);
+
+    // Erases and writes the specified blocks from the provided vmo.
+    //
+    // In the event that bad block is grown, the partition will shrink and
+    // `bad_block_grown` will be set to true. Since this causes the logical to
+    // physical block map to change, all previously written blocks at logical
+    // addresses after the section being written should be considered corrupted,
+    // and rewritten if applicable.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Write Write(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer);
 
     // Erases and writes the specified blocks from the provided vmo.
     //
