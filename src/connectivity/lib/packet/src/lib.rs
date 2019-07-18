@@ -822,6 +822,130 @@ pub trait BufferMut: Buffer + ParseBufferMut {
     }
 }
 
+/// An empty buffer.
+///
+/// `EmptyBuf` is a buffer with 0 bytes of length or capacity. It implements
+/// all of the buffer traits ([`ParseBuffer`], [`Buffer`], [`ParseBufferMut`],
+/// and [`BufferMut`]) and the buffer view traits ([`BufferView`],
+/// [`BufferViewMut`]).
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct EmptyBuf;
+
+impl AsRef<[u8]> for EmptyBuf {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        &[]
+    }
+}
+impl AsMut<[u8]> for EmptyBuf {
+    #[inline]
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut []
+    }
+}
+impl ParseBuffer for EmptyBuf {
+    #[inline]
+    fn shrink_front(&mut self, n: usize) {
+        assert_eq!(n, 0);
+    }
+    #[inline]
+    fn shrink_back(&mut self, n: usize) {
+        assert_eq!(n, 0);
+    }
+    #[inline]
+    fn parse_with<'a, ParseArgs, P: ParsablePacket<&'a [u8], ParseArgs>>(
+        &'a mut self,
+        args: ParseArgs,
+    ) -> Result<P, P::Error> {
+        P::parse(EmptyBuf, args)
+    }
+    #[inline]
+    fn as_buf(&self) -> Buf<&[u8]> {
+        Buf::new(&[], ..)
+    }
+}
+impl ParseBufferMut for EmptyBuf {
+    #[inline]
+    fn parse_with_mut<'a, ParseArgs, P: ParsablePacket<&'a mut [u8], ParseArgs>>(
+        &'a mut self,
+        args: ParseArgs,
+    ) -> Result<P, P::Error> {
+        P::parse_mut(EmptyBuf, args)
+    }
+    #[inline]
+    fn as_buf_mut(&mut self) -> Buf<&mut [u8]> {
+        Buf::new(&mut [], ..)
+    }
+}
+impl Buffer for EmptyBuf {
+    #[inline]
+    fn prefix_len(&self) -> usize {
+        0
+    }
+    #[inline]
+    fn suffix_len(&self) -> usize {
+        0
+    }
+    #[inline]
+    fn grow_front(&mut self, n: usize) {
+        assert_eq!(n, 0);
+    }
+    #[inline]
+    fn grow_back(&mut self, n: usize) {
+        assert_eq!(n, 0);
+    }
+}
+impl BufferMut for EmptyBuf {}
+impl<'a> BufferView<&'a [u8]> for EmptyBuf {
+    #[inline]
+    fn len(&self) -> usize {
+        0
+    }
+    #[inline]
+    fn take_front(&mut self, n: usize) -> Option<&'a [u8]> {
+        if n > 0 {
+            return None;
+        }
+        Some(&[])
+    }
+    #[inline]
+    fn take_back(&mut self, n: usize) -> Option<&'a [u8]> {
+        if n > 0 {
+            return None;
+        }
+        Some(&[])
+    }
+    #[inline]
+    fn into_rest(self) -> &'a [u8] {
+        &[]
+    }
+}
+impl<'a> BufferView<&'a mut [u8]> for EmptyBuf {
+    #[inline]
+    fn len(&self) -> usize {
+        0
+    }
+    #[inline]
+    fn take_front(&mut self, n: usize) -> Option<&'a mut [u8]> {
+        if n > 0 {
+            return None;
+        }
+        Some(&mut [])
+    }
+    #[inline]
+    fn take_back(&mut self, n: usize) -> Option<&'a mut [u8]> {
+        if n > 0 {
+            return None;
+        }
+        Some(&mut [])
+    }
+    #[inline]
+    fn into_rest(self) -> &'a mut [u8] {
+        &mut []
+    }
+}
+impl<'a> BufferViewMut<&'a mut [u8]> for EmptyBuf {}
+
 impl ParseBuffer for Never {
     fn shrink_front(&mut self, _n: usize) {}
     fn shrink_back(&mut self, _n: usize) {}
@@ -1927,6 +2051,64 @@ mod tests {
         test(&[0, 1, 2, 3], 8, 4);
     }
 
+    #[test]
+    fn test_empty_buf() {
+        // Test ParseBuffer impl
+
+        assert_eq!(EmptyBuf.as_ref(), []);
+        assert_eq!(EmptyBuf.as_mut(), []);
+        EmptyBuf.shrink_front(0);
+        EmptyBuf.shrink_back(0);
+
+        struct DummyParsablePacket;
+        impl<B: ByteSlice> ParsablePacket<B, ()> for DummyParsablePacket {
+            type Error = Never;
+
+            fn parse<BV: BufferView<B>>(buffer: BV, _args: ()) -> Result<Self, Self::Error> {
+                assert_eq!(buffer.as_ref(), []);
+                Ok(DummyParsablePacket)
+            }
+
+            fn parse_mut<BV: BufferViewMut<B>>(
+                mut buffer: BV,
+                _args: (),
+            ) -> Result<Self, Self::Error>
+            where
+                B: ByteSliceMut,
+            {
+                assert_eq!(buffer.as_mut(), []);
+                Ok(DummyParsablePacket)
+            }
+
+            fn parse_metadata(&self) -> ParseMetadata {
+                unimplemented!()
+            }
+        }
+
+        let _ = EmptyBuf.parse::<DummyParsablePacket>();
+        assert_eq!(EmptyBuf.as_buf(), Buf::new(&[][..], ..));
+
+        // Test ParseBufferMut impl
+
+        let _ = EmptyBuf.parse_mut::<DummyParsablePacket>();
+        assert_eq!(EmptyBuf.as_buf_mut(), Buf::new(&mut [][..], ..));
+
+        // Test Buffer impl
+
+        assert_eq!(EmptyBuf.prefix_len(), 0);
+        assert_eq!(EmptyBuf.suffix_len(), 0);
+        EmptyBuf.grow_front(0);
+        EmptyBuf.grow_back(0);
+
+        // Test BufferView impl
+
+        assert_eq!(BufferView::<&[u8]>::take_front(&mut EmptyBuf, 0), Some(&[][..]));
+        assert_eq!(BufferView::<&[u8]>::take_front(&mut EmptyBuf, 1), None);
+        assert_eq!(BufferView::<&[u8]>::take_back(&mut EmptyBuf, 0), Some(&[][..]));
+        assert_eq!(BufferView::<&[u8]>::take_back(&mut EmptyBuf, 1), None);
+        assert_eq!(BufferView::<&[u8]>::into_rest(EmptyBuf), &[][..]);
+    }
+
     // Each panic test case needs to be in its own function, which results in an
     // explosion of test functions. These macros generates the appropriate
     // function definitions automatically for a given type, reducing the amount
@@ -1999,6 +2181,13 @@ mod tests {
         test_buf_nonsense_shrink_panics,
         test_buf_grow_front_panics,
         test_buf_grow_back_panics,
+    );
+    make_panic_tests!(
+        EmptyBuf,
+        test_empty_buf_shrink_panics,
+        test_empty_buf_nonsense_shrink_panics,
+        test_empty_buf_grow_front_panics,
+        test_empty_buf_grow_back_panics,
     );
 
     #[test]

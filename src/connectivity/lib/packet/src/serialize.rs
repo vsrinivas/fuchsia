@@ -11,7 +11,8 @@ use never::Never;
 
 use crate::{
     canonicalize_range, take_back, take_back_mut, take_front, take_front_mut, Buffer, BufferMut,
-    BufferView, BufferViewMut, ParsablePacket, ParseBuffer, ParseBufferMut, SerializeBuffer,
+    BufferView, BufferViewMut, EmptyBuf, ParsablePacket, ParseBuffer, ParseBufferMut,
+    SerializeBuffer,
 };
 
 const MAX_USIZE: usize = core::usize::MAX;
@@ -1459,11 +1460,10 @@ pub trait Serializer: Sized {
 pub struct InnerSerializer<I>(I);
 
 impl<B: InnerPacketBuilder> Serializer for InnerSerializer<B> {
-    // TODO(joshlf): Change this to an empty buffer type once we introduce one.
-    type Buffer = Buf<Vec<u8>>;
+    type Buffer = EmptyBuf;
 
     #[inline]
-    fn serialize<BB: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<Buf<Vec<u8>>, BB>>(
+    fn serialize<BB: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<EmptyBuf, BB>>(
         self,
         outer: PB,
         provider: P,
@@ -1492,7 +1492,7 @@ impl<B: InnerPacketBuilder> Serializer for InnerSerializer<B> {
         }
 
         let pb = InnerPacketBuilderWrapper(self.0);
-        match Buf::new(vec![], ..).encapsulate(&pb).serialize(outer, provider) {
+        match EmptyBuf.encapsulate(&pb).serialize(outer, provider) {
             Ok(buf) => Ok(buf),
             Err((err, _)) => Err((err, InnerSerializer(pb.0))),
         }
