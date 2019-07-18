@@ -244,9 +244,7 @@ bool StatFile(const char* path, off_t* length) {
 bool ReportContainer(const char* path, off_t offset) {
     BEGIN_HELPER;
     fbl::unique_ptr<Container> container;
-    off_t length;
-    ASSERT_TRUE(StatFile(path, &length));
-    ASSERT_EQ(Container::Create(path, offset, length - offset, 0, &container), ZX_OK,
+    ASSERT_EQ(Container::Create(path, offset, 0, &container), ZX_OK,
               "Failed to initialize container");
     ASSERT_EQ(container->Verify(), ZX_OK, "File check failed\n");
     END_HELPER;
@@ -287,7 +285,7 @@ bool CreateFvm(bool create_before, off_t offset, size_t slice_size, bool should_
     }
 
     fbl::unique_ptr<FvmContainer> fvmContainer;
-    ASSERT_EQ(FvmContainer::Create(fvm_path, slice_size, offset, length - offset, &fvmContainer),
+    ASSERT_EQ(FvmContainer::CreateNew(fvm_path, slice_size, offset, length - offset, &fvmContainer),
               ZX_OK, "Failed to initialize fvm container");
     ASSERT_TRUE(AddPartitions(fvmContainer.get(), enable_data, should_pass));
     if (should_pass) {
@@ -304,13 +302,12 @@ bool CreateFvmEnsure(bool create_before, off_t offset, size_t slice_size, bool e
 
 bool ExtendFvm(off_t length) {
     BEGIN_HELPER;
-    off_t current_length;
-    ASSERT_TRUE(StatFile(fvm_path, &current_length));
     fbl::unique_ptr<Container> container;
-    ASSERT_EQ(ZX_OK, Container::Create(fvm_path, 0, current_length, 0, &container),
+    ASSERT_EQ(ZX_OK, Container::Create(fvm_path, 0, 0, &container),
               "Failed to initialize fvm container");
     ASSERT_EQ(static_cast<FvmContainer*>(container.get())->Extend(length),
               ZX_OK, "Failed to write to fvm file");
+    off_t current_length;
     ASSERT_TRUE(StatFile(fvm_path, &current_length));
     ASSERT_EQ(current_length, length);
     END_HELPER;
@@ -654,9 +651,10 @@ bool TestPartitionsFailures() {
 
 bool VerifyFvmSize(size_t expected_size) {
     BEGIN_HELPER;
-    FvmContainer fvmContainer(fvm_path, 0, 0, 0);
-    size_t calculated_size = fvmContainer.CalculateDiskSize();
-    size_t actual_size = fvmContainer.GetDiskSize();
+    fbl::unique_ptr<FvmContainer> fvmContainer;
+    ASSERT_EQ(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer), ZX_OK);
+    size_t calculated_size = fvmContainer->CalculateDiskSize();
+    size_t actual_size = fvmContainer->GetDiskSize();
 
     ASSERT_EQ(calculated_size, actual_size);
     ASSERT_EQ(actual_size, expected_size);
@@ -856,6 +854,13 @@ bool CreateExistingSparseFails() {
     END_TEST;
 }
 
+bool CreateExistingFvmFails() {
+    BEGIN_TEST;
+    fbl::unique_ptr<FvmContainer> fvmContainer;
+    ASSERT_NE(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer), ZX_OK);
+    END_TEST;
+}
+
 // Attempts to re-create a sparse image at the same path with a different slice size, verifying
 // that the slice size is updated.
 bool RecreateSparseWithDifferentSliceSize() {
@@ -871,6 +876,27 @@ bool RecreateSparseWithDifferentSliceSize() {
     ASSERT_EQ(sparseContainer->SliceSize(), DEFAULT_SLICE_SIZE);
 
     ASSERT_TRUE(DestroySparse(0));
+    END_TEST;
+}
+
+bool RecreateFvmWithDifferentSliceSize() {
+    BEGIN_TEST;
+    fbl::unique_ptr<FvmContainer> fvmContainer;
+
+    // Create FVM with the larger slice size first, since this will result in a larger container
+    // size. Newly created FVM's will use the current container size if it already exists, so
+    // creation of this container will fail if a smaller one already exists.
+    // This is not an issue with the sparse test since the container is created from scratch every
+    // time.
+    ASSERT_TRUE(CreateFvm(false, 0, DEFAULT_SLICE_SIZE, true));
+    ASSERT_EQ(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer), ZX_OK);
+    ASSERT_EQ(fvmContainer->SliceSize(), DEFAULT_SLICE_SIZE);
+
+    ASSERT_TRUE(CreateFvm(false, 0, 8192, true));
+    ASSERT_EQ(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer), ZX_OK);
+    ASSERT_EQ(fvmContainer->SliceSize(), 8192);
+
+    ASSERT_TRUE(DestroyFvm());
     END_TEST;
 }
 
@@ -992,7 +1018,9 @@ RUN_ALL_PAVE(DEFAULT_SLICE_SIZE)
 RUN_TEST_MEDIUM(TestPaveZxcryptFail)
 RUN_TEST_MEDIUM(TestExtendChangesMetadataSize)
 RUN_TEST_MEDIUM(CreateExistingSparseFails)
+RUN_TEST_MEDIUM(CreateExistingFvmFails)
 RUN_TEST_MEDIUM(RecreateSparseWithDifferentSliceSize);
+RUN_TEST_MEDIUM(RecreateFvmWithDifferentSliceSize);
 
 // Too small total limit for inodes. Expect failure
 RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, false, 1, 0, 10)

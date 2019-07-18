@@ -304,7 +304,7 @@ int main(int argc, char** argv) {
         }
 
         fbl::unique_ptr<FvmContainer> fvmContainer;
-        if (FvmContainer::Create(path, slice_size, offset, length, &fvmContainer) != ZX_OK) {
+        if (FvmContainer::CreateNew(path, slice_size, offset, length, &fvmContainer) != ZX_OK) {
             return -1;
         }
 
@@ -316,8 +316,10 @@ int main(int argc, char** argv) {
             return -1;
         }
     } else if (!strcmp(command, "add")) {
-        fbl::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, slice_size, offset,
-                                                                    length));
+        fbl::unique_ptr<FvmContainer> fvmContainer;
+        if (FvmContainer::CreateExisting(path, offset, &fvmContainer) != ZX_OK) {
+            return -1;
+        }
 
         if (add_partitions(fvmContainer.get(), argc - i, argv + i) < 0) {
             return -1;
@@ -339,8 +341,10 @@ int main(int argc, char** argv) {
             usage();
         }
 
-        fbl::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, slice_size, offset,
-                                                                    disk_size));
+        fbl::unique_ptr<FvmContainer> fvmContainer;
+        if (FvmContainer::CreateExisting(path, offset, &fvmContainer) != ZX_OK) {
+            return -1;
+        }
 
         if (fvmContainer->Extend(length) != ZX_OK) {
             return -1;
@@ -365,7 +369,7 @@ int main(int argc, char** argv) {
         }
     } else if (!strcmp(command, "verify")) {
         fbl::unique_ptr<Container> containerData;
-        if (Container::Create(path, offset, length, flags, &containerData) != ZX_OK) {
+        if (Container::Create(path, offset, flags, &containerData) != ZX_OK) {
             return -1;
         }
 

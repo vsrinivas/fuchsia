@@ -28,10 +28,11 @@ constexpr size_t kZxcryptExtraSlices = 1;
 // FVM-recognizable format
 class Container {
 public:
-    // Returns a Container representation of the FVM within the given |path|, starting at |offset|
-    // bytes of length |length| bytes. Will return an error if the file does not exist or is not a
-    // valid Container type, or if flags is not zero or a valid combination of fvm::sparse_flags_t.
-    static zx_status_t Create(const char* path, off_t offset, off_t length, uint32_t flags,
+    // Returns a Container representation of an existing FVM or sparse container starting at |
+    // offset| within |path| (where offset is only valid for an FVM). Returns an error if the file
+    // does not exist or is not a valid Container type, or if flags is not zero or a valid
+    // combination of fvm::sparse_flags_t.
+    static zx_status_t Create(const char* path, off_t offset, uint32_t flags,
                               fbl::unique_ptr<Container>* out);
 
     Container(const char* path, size_t slice_size, uint32_t flags);
@@ -75,15 +76,17 @@ class FvmContainer final : public Container {
     };
 
 public:
-    // Creates an FVM container at the given path, creating a new file if one does not already
-    // exist. |offset| and |length| are provided to specify the offset (in bytes) and the length
-    // (in bytes) of the FVM within the file. For a file that has not yet been created, these
-    // should both be 0. For a file that exists, if not otherwise specified the offset should be 0
-    // and the length should be the size of the file.
-    static zx_status_t Create(const char* path, size_t slice_size, off_t offset, off_t length,
-                              fbl::unique_ptr<FvmContainer>* out);
+    // Creates a new FvmContainer at the given |path|, regardless of whether one already exists.
+    // Uses the provided |slice_size| to create the container starting at |offset| bytes within the
+    // file with a total length of |length| bytes, and returns the result in |out|.
+    static zx_status_t CreateNew(const char* path, size_t slice_size, off_t offset, off_t length,
+                                 fbl::unique_ptr<FvmContainer>* out);
 
-    FvmContainer(const char* path, size_t slice_size, off_t offset, off_t length);
+    // Creates an FvmContainer from the existing image located at |offset| bytes within |path|.
+    // Fails if a valid image  does not already exist.
+    static zx_status_t CreateExisting(const char* path, off_t offset,
+                                      fbl::unique_ptr<FvmContainer>* out);
+
     ~FvmContainer();
 
     // Resets the FvmContainer state so we are ready to add a new set of partitions
@@ -109,6 +112,18 @@ private:
     uint64_t disk_size_;
     fbl::Vector<FvmPartitionInfo> partitions_;
     FvmInfo info_;
+
+    FvmContainer(const char* path, size_t slice_size, off_t offset, off_t length);
+
+    // Resets the FvmContainer state so we are ready to add a new set of partitions.
+    zx_status_t InitNew();
+
+    // Reads fvm data from disk so we are able to inspect the existing container.
+    zx_status_t InitExisting();
+
+    // Verifies that the size of the existing file is valid based on the provided disk offset and
+    // length. Optionally returns the file size as |size_out|.
+    zx_status_t VerifyFileSize(uint64_t* size_out = nullptr);
 
     // Write the |part_index|th partition to disk
     zx_status_t WritePartition(unsigned part_index);

@@ -10,8 +10,8 @@
 
 #include "fvm-host/container.h"
 
-zx_status_t Container::Create(const char* path, off_t offset, off_t length,
-                              uint32_t flags, fbl::unique_ptr<Container>* container) {
+zx_status_t Container::Create(const char* path, off_t offset, uint32_t flags,
+                              fbl::unique_ptr<Container>* container) {
     if ((flags & ~fvm::kSparseFlagAllValid) != 0) {
         fprintf(stderr, "Invalid flags: %08" PRIx32 "\n", flags);
         return -1;
@@ -35,11 +35,13 @@ zx_status_t Container::Create(const char* path, off_t offset, off_t length,
     }
 
     if (!memcmp(data, fvm_magic, sizeof(fvm_magic))) {
-        fvm::fvm_t* sb = reinterpret_cast<fvm::fvm_t*>(data);
-
         // Found fvm container
-        fbl::unique_ptr<Container> fvmContainer(new FvmContainer(path, sb->slice_size,
-                                                                 offset, length));
+        fbl::unique_ptr<FvmContainer> fvmContainer;
+        zx_status_t status = FvmContainer::CreateExisting(path, offset, &fvmContainer);
+        if (status != ZX_OK) {
+            return status;
+        }
+
         *container = std::move(fvmContainer);
         return ZX_OK;
     }

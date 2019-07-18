@@ -23,12 +23,25 @@
 #define IOCTL_GET_BLOCK_COUNT BLKGETSIZE
 #endif
 
-zx_status_t FvmContainer::Create(const char* path, size_t slice_size, off_t offset, off_t length,
-                                 fbl::unique_ptr<FvmContainer>* out) {
+zx_status_t FvmContainer::CreateNew(const char* path, size_t slice_size, off_t offset, off_t length,
+                                    fbl::unique_ptr<FvmContainer>* out) {
     fbl::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, slice_size, offset, length));
 
     zx_status_t status;
-    if ((status = fvmContainer->Init()) != ZX_OK) {
+    if ((status = fvmContainer->InitNew()) != ZX_OK) {
+        return status;
+    }
+
+    *out = std::move(fvmContainer);
+    return ZX_OK;
+}
+
+zx_status_t FvmContainer::CreateExisting(const char* path, off_t offset,
+                                         fbl::unique_ptr<FvmContainer>* out) {
+    fbl::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, 0, offset, 0));
+
+    zx_status_t status;
+    if ((status = fvmContainer->InitExisting()) != ZX_OK) {
         return status;
     }
 
@@ -37,63 +50,117 @@ zx_status_t FvmContainer::Create(const char* path, size_t slice_size, off_t offs
 }
 
 FvmContainer::FvmContainer(const char* path, size_t slice_size, off_t offset, off_t length)
-    : Container(path, slice_size, 0), disk_offset_(offset), disk_size_(length) {
-    fd_.reset(open(path, O_RDWR, 0644));
+    : Container(path, slice_size, 0), disk_offset_(offset), disk_size_(length) {}
+
+FvmContainer::~FvmContainer() = default;
+
+zx_status_t FvmContainer::InitNew() {
+    fd_.reset(open(path_.data(), O_RDWR, 0644));
     if (!fd_) {
-        if (errno == ENOENT) {
-            fd_.reset(open(path, O_RDWR | O_CREAT | O_EXCL, 0644));
+        if (errno != ENOENT) {
+            fprintf(stderr, "Failed to open path %s: %s\n", path_.data(), strerror(errno));
+            return ZX_ERR_IO;
+        }
 
-            if (!fd_) {
-                fprintf(stderr, "Failed to create path %s\n", path);
-                exit(-1);
-            }
+        if (disk_offset_ > 0 || disk_size_ > 0) {
+            fprintf(stderr, "Invalid disk size for path %s", path_.data());
+            return ZX_ERR_INVALID_ARGS;
+        }
 
-            xprintf("Created path %s\n", path);
-        } else {
-            fprintf(stderr, "Failed to open path %s: %s\n", path, strerror(errno));
-            exit(-1);
+        fd_.reset(open(path_.data(), O_RDWR | O_CREAT | O_EXCL, 0644));
+
+        if (!fd_) {
+            fprintf(stderr, "Failed to create path %s\n", path_.data());
+            return ZX_ERR_IO;
+        }
+
+        xprintf("Created path %s\n", path_.data());
+    } else {
+        // If the file already exists, check its size and make sure it is valid given the user
+        // provided disk size and offset (if any).
+        uint64_t size;
+        zx_status_t status = VerifyFileSize(&size);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        if (disk_size_ == 0) {
+            disk_size_ = size;
         }
     }
 
-    struct stat s;
-    if (fstat(fd_.get(), &s) < 0) {
-        fprintf(stderr, "Failed to stat %s\n", path);
-        exit(-1);
+    return info_.Reset(disk_size_, slice_size_);
+}
+
+zx_status_t FvmContainer::VerifyFileSize(uint64_t* size_out) {
+    struct stat stats;
+    if (fstat(fd_.get(), &stats) < 0) {
+        fprintf(stderr, "Failed to stat %s\n", path_.data());
+        return ZX_ERR_IO;
     }
 
-    uint64_t size = s.st_size;
+    uint64_t size = stats.st_size;
 
-    if (S_ISBLK(s.st_mode)) {
+    if (S_ISBLK(stats.st_mode)) {
         uint64_t block_count;
         if (ioctl(fd_.get(), IOCTL_GET_BLOCK_COUNT, &block_count) >= 0) {
             size = block_count * 512;
         }
     }
 
-    if (disk_size_ == 0) {
-        disk_size_ = size;
+    if (disk_size_ > 0 && size < disk_offset_ + disk_size_) {
+        fprintf(stderr, "Invalid file size %" PRIu64 " for specified offset+length\n", size);
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    if (size < disk_offset_ + disk_size_) {
-        fprintf(stderr, "Invalid file size %" PRIu64 " for specified offset+length\n", size);
-        exit(-1);
+    if (size_out != nullptr) {
+        *size_out = size;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t FvmContainer::InitExisting() {
+    fd_.reset(open(path_.data(), O_RDWR, 0644));
+
+    if (!fd_) {
+        fprintf(stderr, "Failed to open path %s: %s\n", path_.data(), strerror(errno));
+        return ZX_ERR_IO;
+    }
+
+    fvm::fvm_t fvm_superblock;
+
+    if (pread(fd_.get(), &fvm_superblock, sizeof(fvm::fvm_t), disk_offset_) != sizeof(fvm::fvm_t)) {
+        fprintf(stderr, "Failed to read FVM metadata from disk\n");
+        return ZX_ERR_IO;
+    }
+
+    if (fvm_superblock.magic != fvm::kMagic) {
+        fprintf(stderr, "Found invalid FVM container\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    disk_size_ = fvm_superblock.fvm_partition_size;
+
+    zx_status_t status = VerifyFileSize();
+    if (status != ZX_OK) {
+        return status;
     }
 
     // Attempt to load metadata from disk
     fvm::host::FdWrapper wrapper = fvm::host::FdWrapper(fd_.get());
-    if (info_.Load(&wrapper, disk_offset_, disk_size_) != ZX_OK) {
-        exit(-1);
+    status = info_.Load(&wrapper, disk_offset_, disk_size_);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    if (info_.IsValid()) {
-        slice_size_ = info_.SliceSize();
+    if (!info_.IsValid()) {
+        fprintf(stderr, "Found invalid FVM container\n");
+        return ZX_ERR_INVALID_ARGS;
     }
-}
 
-FvmContainer::~FvmContainer() = default;
-
-zx_status_t FvmContainer::Init() {
-    return info_.Reset(disk_size_, slice_size_);
+    slice_size_ = info_.SliceSize();
+    return ZX_OK;
 }
 
 zx_status_t FvmContainer::Verify() const {
