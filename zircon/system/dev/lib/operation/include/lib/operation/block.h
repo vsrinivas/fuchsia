@@ -137,12 +137,12 @@ public:
 };
 
 template <typename Storage = void>
-class UnownedOperation : public operation::UnownedOperation<UnownedOperation<Storage>,
-                                                            OperationTraits, CallbackTraits,
-                                                            Storage> {
+class UnownedOperation : public operation::BorrowedOperation<UnownedOperation<Storage>,
+                                                             OperationTraits, CallbackTraits,
+                                                             Storage> {
 public:
-    using BaseClass = operation::UnownedOperation<UnownedOperation<Storage>, OperationTraits,
-                                                  CallbackTraits, Storage>;
+    using BaseClass = operation::BorrowedOperation<UnownedOperation<Storage>, OperationTraits,
+                                                   CallbackTraits, Storage>;
     using BaseClass::BaseClass;
 };
 
@@ -153,7 +153,7 @@ template <typename Storage = void>
 using OperationQueue = operation::OperationQueue<Operation<Storage>, OperationTraits, Storage>;
 
 template <typename Storage = void>
-using UnownedOperationQueue = operation::UnownedOperationQueue<UnownedOperation<Storage>,
+using UnownedOperationQueue = operation::BorrowedOperationQueue<UnownedOperation<Storage>,
                                                                OperationTraits, CallbackTraits,
                                                                Storage>;
 

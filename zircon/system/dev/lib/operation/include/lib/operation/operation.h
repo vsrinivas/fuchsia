@@ -47,7 +47,7 @@ namespace operation {
 // block_op_t, and others. Specialized wrappers for each of those types
 // can be built on top this library.
 //
-// operation::Operation and operation::UnownedOperation provide some additional
+// operation::Operation and operation::BorrowedOperation provide some additional
 // safety to prevent leaks and out of bounds accesses. They will ensure that the
 // underlying buffer is returned to the caller, or delete it if the current
 // owner was responsible for allocating the request. In addition, they help
@@ -57,13 +57,13 @@ namespace operation {
 // operation::OperationPool provides a simple pool that allows reuse of
 // pre-allocated operation::Operation objects.
 //
-// operation::{Unowned,}OperationQueue provide safe queues to place operations
+// operation::{Borrowed,}OperationQueue provide safe queues to place operations
 // in while they are pending. These queues rely on intrusive node data built
 // into the wrapper type, stored in the private storage section.
 //
-// operation::{Unowned,}OperationList provides lists to place operations in
+// operation::{Borrowed,}OperationList provides lists to place operations in
 // while they are pending. Operations cannot be stored in both an
-// operation::{Unowned,}OperationQueue and operation::{Unowned,}Operation:List
+// operation::{Borrowed,}OperationQueue and operation::{Borrowed,}Operation:List
 // in the same driver layer, as they both use the same memory to store
 // the intrusive node data.
 //
@@ -71,7 +71,7 @@ namespace operation {
 // type must be created which inherits from it like so:
 //
 // class Foo : public Operation<Foo, OperationTraits, void>;
-// class Bar : public UnownedOperation<Bar, OperationTraits, CallbackTraits, void>;
+// class Bar : public BorrowedOperation<Bar, OperationTraits, CallbackTraits, void>;
 //
 // OperationTraits must be a type which implements the following function
 // and type signatures:
@@ -89,10 +89,10 @@ namespace operation {
 // and type signatures:
 //
 //    // The type here can be anything. It should match the callback provided to
-//    // the UnownedOperation constructor.
+//    // the BorrowedOperation constructor.
 //    using CallbackType = void(void* ctx, ARGS, foo_operation_t*);
 //
-//    // In case Complete is not called by UnownedOperation owners, these are
+//    // In case Complete is not called by BorrowedOperation owners, these are
 //    // the args to trigger Complete with.
 //    static std::tuple<ARGS> AutoCompleteArgs();
 //
@@ -231,35 +231,35 @@ public:
 // drivers.
 // NOTE: This WILL auto-complete the request on destruction if allow_destruct is set.
 template <typename D, typename OperationTraits, typename CallbackTraits, typename Storage = void>
-class UnownedOperation : public OperationBase<D, OperationTraits, CallbackTraits, Storage> {
+class BorrowedOperation : public OperationBase<D, OperationTraits, CallbackTraits, Storage> {
 public:
     using BaseClass = OperationBase<D, OperationTraits, CallbackTraits, Storage>;
     using NodeType = OperationNode<D, OperationTraits, CallbackTraits, Storage>;
     using OperationType = typename OperationTraits::OperationType;
     using CallbackType = typename CallbackTraits::CallbackType;
 
-    UnownedOperation(OperationType* operation, const CallbackType* complete_cb, void* cookie,
+    BorrowedOperation(OperationType* operation, const CallbackType* complete_cb, void* cookie,
                      size_t parent_op_size, bool allow_destruct = true)
         : BaseClass(operation, parent_op_size, allow_destruct) {
         new (BaseClass::node()) NodeType(BaseClass::node_offset_, complete_cb, cookie);
     }
 
-    UnownedOperation(OperationType* operation, size_t parent_op_size, bool allow_destruct = true)
+    BorrowedOperation(OperationType* operation, size_t parent_op_size, bool allow_destruct = true)
         : BaseClass(operation, parent_op_size, allow_destruct) {
         ZX_DEBUG_ASSERT(BaseClass::node()->node_offset() != 0);
     }
 
-    UnownedOperation(UnownedOperation&& other)
+    BorrowedOperation(BorrowedOperation&& other)
         : BaseClass(other.operation_, other.node_offset_, other.allow_destruct_) {
         other.operation_ = nullptr;
     }
 
-    UnownedOperation& operator=(UnownedOperation&& other) {
+    BorrowedOperation& operator=(BorrowedOperation&& other) {
         BaseClass::operator=(std::move(other));
         return *this;
     }
 
-    ~UnownedOperation() {
+    ~BorrowedOperation() {
         if (!BaseClass::allow_destruct_) {
             return;
         }
@@ -286,7 +286,7 @@ public:
     }
 };
 
-// Node storage for operation::Operation and operation::UnownedOperation. Does not maintain
+// Node storage for operation::Operation and operation::BorrowedOperation. Does not maintain
 // ownership of underlying NodeType*. Must be transformed back into
 // appopriate wrapper type to maintain correct ownership.
 // It is strongly recommended to use operation::OperationPool and operation::OperationQueue to
@@ -516,7 +516,7 @@ protected:
 };
 
 template <typename D, typename OperationTraits, typename CallbackTraits, typename Storage = void>
-using UnownedOperationQueue = BaseQueue<D, OperationTraits, CallbackTraits, Storage>;
+using BorrowedOperationQueue = BaseQueue<D, OperationTraits, CallbackTraits, Storage>;
 
 template <typename D, typename OperationTraits, typename Storage = void>
 using OperationQueue = BaseQueue<D, OperationTraits, void, Storage>;
@@ -653,7 +653,7 @@ protected:
 };
 
 template <typename D, typename OperationTraits, typename CallbackTraits, typename Storage = void>
-using UnownedOperationList = BaseList<D, OperationTraits, CallbackTraits, Storage>;
+using BorrowedOperationList = BaseList<D, OperationTraits, CallbackTraits, Storage>;
 
 template <typename D, typename OperationTraits, typename Storage = void>
 using OperationList = BaseList<D, OperationTraits, void, Storage>;

@@ -319,12 +319,12 @@ struct CallbackTraits {
 // NOTE: Upon destruction, this UnownedRequest WILL invoke the completion
 // if allow_destruct is not set to false and Complete has not already been called on this request.
 template <typename Storage = void>
-class UnownedRequest : public operation::UnownedOperation<UnownedRequest<Storage>, OperationTraits,
-                                                          CallbackTraits, Storage>,
+class UnownedRequest : public operation::BorrowedOperation<UnownedRequest<Storage>, OperationTraits,
+                                                           CallbackTraits, Storage>,
                        public RequestBase {
 public:
-    using BaseClass = operation::UnownedOperation<UnownedRequest<Storage>,
-                                                  OperationTraits, CallbackTraits, Storage>;
+    using BaseClass = operation::BorrowedOperation<UnownedRequest<Storage>,
+                                                   OperationTraits, CallbackTraits, Storage>;
 
     UnownedRequest(usb_request_t* request, const usb_request_complete_t& complete_cb,
                    size_t parent_req_size, bool allow_destruct = true)
@@ -461,16 +461,16 @@ private:
 
 template <typename Storage = void>
 using UnownedRequestQueue =
-    operation::UnownedOperationQueue<UnownedRequest<Storage>, OperationTraits, CallbackTraits,
-                                     Storage>;
+    operation::BorrowedOperationQueue<UnownedRequest<Storage>, OperationTraits, CallbackTraits,
+                                      Storage>;
 
 template <typename Storage = void>
 using RequestQueue = operation::OperationQueue<Request<Storage>, OperationTraits, Storage>;
 
 template <typename Storage = void>
-using UnownedRequestList = operation::UnownedOperationList<UnownedRequest<Storage>,
-                                                           OperationTraits,
-                                                           CallbackTraits, Storage>;
+using UnownedRequestList = operation::BorrowedOperationList<UnownedRequest<Storage>,
+                                                            OperationTraits,
+                                                            CallbackTraits, Storage>;
 
 template <typename Storage = void>
 using RequestList = operation::OperationList<Request<Storage>, OperationTraits, Storage>;
