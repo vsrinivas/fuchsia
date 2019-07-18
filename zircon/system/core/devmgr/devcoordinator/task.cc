@@ -7,9 +7,11 @@
 
 namespace devmgr {
 
-Task::Task(async_dispatcher_t* dispatcher, Completion completion)
+Task::Task(async_dispatcher_t* dispatcher, Completion completion, bool post_on_create)
     : completion_(std::move(completion)), dispatcher_(dispatcher) {
-  ZX_ASSERT(async_task_.Post(dispatcher_) == ZX_OK);
+  if (post_on_create) {
+    ZX_ASSERT(async_task_.Post(dispatcher_) == ZX_OK);
+  }
 }
 
 Task::~Task() { ZX_ASSERT(dependents_.is_empty()); }

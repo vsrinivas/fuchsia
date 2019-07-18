@@ -32,6 +32,7 @@ struct Devnode;
 class SuspendContext;
 class SuspendTask;
 class UnbindTask;
+struct UnbindTaskOpts;
 
 // clang-format off
 
@@ -347,9 +348,9 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
   fbl::RefPtr<UnbindTask> GetActiveUnbind() { return active_unbind_; }
   // Creates a new unbind task if necessary and returns a reference to it.
   // If one is already in-progress, a reference to it is returned instead.
-  // If |do_unbind| is true, an |Unbind| request will be sent to the device,
-  // otherwise a |CompleteRemoval| request will be sent.
-  fbl::RefPtr<UnbindTask> RequestUnbindTask(bool do_unbind = true);
+  // |opts| are used to configure the unbind task.
+  fbl::RefPtr<UnbindTask> RequestUnbindTask(UnbindTaskOpts opts);
+
   // Run the completion for the outstanding unbind, if any.
   zx_status_t CompleteUnbind();
 

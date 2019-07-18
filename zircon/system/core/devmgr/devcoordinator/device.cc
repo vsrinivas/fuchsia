@@ -251,9 +251,17 @@ void Device::CompleteSuspend(zx_status_t status) {
   }
 }
 
-fbl::RefPtr<UnbindTask> Device::RequestUnbindTask(bool do_unbind) {
+fbl::RefPtr<UnbindTask> Device::RequestUnbindTask(UnbindTaskOpts opts) {
   if (active_unbind_ == nullptr) {
-    active_unbind_ = UnbindTask::Create(fbl::WrapRefPtr(this), do_unbind);
+    active_unbind_ = UnbindTask::Create(fbl::WrapRefPtr(this), opts);
+  } else if (state_ != Device::State::kUnbinding) {
+    // |do_unbind| may not match the stored field in the existing unbind task due to
+    // the current device_remove / unbind model.
+    // For closest compatibility with the current model, we should prioritize
+    // devhost calls to |ScheduleRemove| over our own scheduled unbind tasks for the children.
+    if (opts.devhost_requested && !active_unbind_->devhost_requested()) {
+      active_unbind_->set_do_unbind(opts.do_unbind);
+    }
   }
   return active_unbind_;
 }
@@ -811,7 +819,7 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
   zx_status_t status = parent->coordinator->AddDevice(
       parent, std::move(rpc), props_data, props_count, name, protocol_id, driver_path, args, true,
       std::move(client_remote), &device);
-  
+
   uint64_t local_id = device != nullptr ? device->local_id() : 0;
   return fuchsia_device_manager_CoordinatorAddDeviceInvisible_reply(txn, status, local_id);
 }
@@ -821,7 +829,7 @@ static zx_status_t fidl_ScheduleRemove(void* ctx) {
 
   log(DEVLC, "devcoordinator: schedule remove '%s'\n", dev->name().data());
 
-  dev->coordinator->ScheduleRemove(dev);
+  dev->coordinator->ScheduleDevhostRequestedRemove(dev);
 
   return ZX_OK;
 }

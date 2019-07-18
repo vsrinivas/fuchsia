@@ -535,6 +535,12 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
     return ZX_ERR_BAD_STATE;
   }
 
+  if (parent->state() == Device::State::kUnbinding) {
+    log(ERROR, "devcoordinator: rpc: add-device '%.*s' forbidden while parent is unbinding\n",
+        static_cast<int>(name.size()), name.data());
+    return ZX_ERR_BAD_STATE;
+  }
+
   log(RPC_IN, "devcoordinator: rpc: add-device '%.*s' args='%.*s'\n", static_cast<int>(name.size()),
       name.data(), static_cast<int>(args.size()), args.data());
 
@@ -619,7 +625,13 @@ zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
 }
 
 void Coordinator::ScheduleRemove(const fbl::RefPtr<Device>& dev) {
-  dev->RequestUnbindTask(false /* do_unbind */);
+  dev->RequestUnbindTask(
+      UnbindTaskOpts{.do_unbind = false, .post_on_create = true, .devhost_requested = false});
+}
+
+void Coordinator::ScheduleDevhostRequestedRemove(const fbl::RefPtr<Device>& dev) {
+  dev->RequestUnbindTask(
+      UnbindTaskOpts{.do_unbind = false, .post_on_create = true, .devhost_requested = true});
 }
 
 // Remove device from parent

@@ -160,6 +160,9 @@ class Coordinator {
                         bool invisible, zx::channel client_remote, fbl::RefPtr<Device>* new_device);
   // Begin scheduling for removal of the device and unbinding of its children.
   void ScheduleRemove(const fbl::RefPtr<Device>& dev);
+  // This is for scheduling the initial unbind task as a result of a devhost's |ScheduleRemove|
+  // request.
+  void ScheduleDevhostRequestedRemove(const fbl::RefPtr<Device>& dev);
   zx_status_t RemoveDevice(const fbl::RefPtr<Device>& dev, bool forced);
   zx_status_t MakeVisible(const fbl::RefPtr<Device>& dev);
   zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece drvlibname,

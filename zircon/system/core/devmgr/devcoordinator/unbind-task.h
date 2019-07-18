@@ -10,30 +10,44 @@
 
 namespace devmgr {
 
+// This is not nested so we can forward declare it in device.h.
+struct UnbindTaskOpts {
+  // Whether to call the unbind hook.
+  bool do_unbind;
+  // Whether to immediately post this task to the async dispatcher.
+  bool post_on_create;
+  // Whether the devhost (i.e. not the devcoordinator) called |ScheduleRemove| on the device.
+  bool devhost_requested;
+};
+
 // This is used for sending both |CompleteRemoval| and |Unbind| requests.
 // For compatibility with the current device lifecycle model, unbind is not invoked
 // on the device that |ScheduleRemove| was called on.
 class UnbindTask final : public Task {
  public:
-  static fbl::RefPtr<UnbindTask> Create(fbl::RefPtr<Device> device, bool do_unbind = true,
-                                        Completion completion = nullptr);
+  static fbl::RefPtr<UnbindTask> Create(
+      fbl::RefPtr<Device> device, UnbindTaskOpts opts, Completion completion = nullptr);
 
   // Don't invoke this, use Create
-  UnbindTask(fbl::RefPtr<Device> device, bool do_unbind, Completion completion);
+  UnbindTask(fbl::RefPtr<Device> device, UnbindTaskOpts opts, Completion completion);
 
   ~UnbindTask() final;
+
+  void set_do_unbind(bool do_unbind) { do_unbind_ = do_unbind; }
+
+  bool devhost_requested() const { return devhost_requested_; }
+
  private:
   void ScheduleUnbindChildren();
   void Run() final;
 
   // The device being removed or unbound.
   fbl::RefPtr<Device> device_;
-  // The immediate parent of |device_|. This is required as the device's parent reference
-  // will be cleared by the time the unbind task completes, and we need it for scheduling
-  // the unbind tasks for the children of proxies.
-  fbl::RefPtr<Device> device_parent_;
   // If true, |Unbind| will be sent to the devhost, otherwise |RemoveDevice|.
   bool do_unbind_;
+  // True if this task is for the device that had |ScheduleRemove| called on it by a devhost,
+  // false otherwise.
+  bool devhost_requested_;
 };
 
 } // namespace devmgr
