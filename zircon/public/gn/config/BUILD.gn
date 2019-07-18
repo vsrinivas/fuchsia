@@ -325,7 +325,11 @@ config("opt_level") {
 
   if (opt_level > 2) {
     # Enable optimal string merging.
-    ldflags += [ "-Wl,-O2" ]
+    if (current_os == "win") {
+      ldflags += [ "-Wl,/opt:lldtailmerge" ]
+    } else {
+      ldflags += [ "-Wl,-O2" ]
+    }
   }
 }
 
