@@ -448,7 +448,7 @@ mod tests {
 
     use net_types::ethernet::Mac;
     use net_types::ip::AddrSubnet;
-    use packet::serialize::{Buf, NestedPacketBuilder, Serializer};
+    use packet::serialize::{Buf, Serializer};
 
     use crate::device::ethernet::*;
     use crate::device::DeviceId;
@@ -517,11 +517,11 @@ mod tests {
         device: DeviceId,
         resp_time: Duration,
     ) {
-        let ser = IgmpPacketBuilder::<Buf<[u8; 8]>, IgmpMembershipQueryV2>::new_with_resp_time(
+        let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipQueryV2>::new_with_resp_time(
             GROUP_ADDR,
             resp_time.try_into().unwrap(),
         );
-        let mut buff = ser.into_serializer().serialize_vec(().with_min_body_len(8)).unwrap();
+        let mut buff = ser.into_serializer().serialize_vec_outer().unwrap();
         receive_igmp_packet(ctx, device, ROUTER_ADDR, MY_ADDR, buff);
     }
 
@@ -530,17 +530,17 @@ mod tests {
         device: DeviceId,
         resp_time: Duration,
     ) {
-        let ser = IgmpPacketBuilder::<Buf<[u8; 8]>, IgmpMembershipQueryV2>::new_with_resp_time(
+        let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipQueryV2>::new_with_resp_time(
             Ipv4Addr::new([0, 0, 0, 0]),
             resp_time.try_into().unwrap(),
         );
-        let mut buff = ser.into_serializer().serialize_vec(().with_min_body_len(8)).unwrap();
+        let mut buff = ser.into_serializer().serialize_vec_outer().unwrap();
         receive_igmp_packet(ctx, device, ROUTER_ADDR, MY_ADDR, buff);
     }
 
     fn receive_igmp_report<D: EventDispatcher>(ctx: &mut Context<D>, device: DeviceId) {
-        let ser = IgmpPacketBuilder::<Buf<[u8; 8]>, IgmpMembershipReportV2>::new(GROUP_ADDR);
-        let mut buff = ser.into_serializer().serialize_vec(().with_min_body_len(8)).unwrap();
+        let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipReportV2>::new(GROUP_ADDR);
+        let mut buff = ser.into_serializer().serialize_vec_outer().unwrap();
         receive_igmp_packet(ctx, device, OTHER_HOST_ADDR, MY_ADDR, buff);
     }
 

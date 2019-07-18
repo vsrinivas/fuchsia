@@ -661,8 +661,8 @@ pub trait NestedPacketBuilder {
         Nested { inner: self, outer }
     }
 
-    // TODO(joshlf): Clarify that the MTU and min_body_len apply outside of the
-    // NestedPacketBuilder.
+    // TODO(joshlf): Clarify that the MTU created by with_mtu apply outside of
+    // the NestedPacketBuilder.
 
     /// Construct a new `NestedPacketBuilder` with an additional MTU constraint.
     ///
@@ -675,20 +675,6 @@ pub trait NestedPacketBuilder {
         Self: Sized,
     {
         MtuPacketBuilder { mtu, inner: self }
-    }
-
-    /// Construct a new `NestedPacketBuilder` with an additional minimum body
-    /// length constraint.
-    ///
-    /// The returned `NestedPacketBuilder` will have a minimum body length
-    /// constraint equal to the minimum of its original minimum body length
-    /// requirement and `min_body_len`.
-    #[inline]
-    fn with_min_body_len(self, min_body_len: usize) -> MinBodyPacketBuilder<Self>
-    where
-        Self: Sized,
-    {
-        MinBodyPacketBuilder { min_body_len, inner: self }
     }
 }
 
@@ -892,42 +878,6 @@ impl<PB: NestedPacketBuilder> NestedPacketBuilder for MtuPacketBuilder<PB> {
         // PacketConstraint.
         let header_footer_len = c.header_len + c.footer_len;
         c.max_body_len = cmp::min(self.mtu.checked_sub(header_footer_len)?, c.max_body_len);
-        Some(c)
-    }
-
-    #[inline]
-    fn serialize_into<B: BufferMut>(&self, buffer: &mut B) {
-        self.inner.serialize_into(buffer)
-    }
-}
-
-/// A `PacketBuilder` with a specific minimum body length constraint.
-///
-/// `MinBodyPacketBuilder`s are constructed using the
-/// [`NestedPacketBuilder::with_min_body_len`] method.
-#[derive(Copy, Clone, Debug)]
-pub struct MinBodyPacketBuilder<B> {
-    min_body_len: usize,
-    inner: B,
-}
-
-impl<B> MinBodyPacketBuilder<B> {
-    /// Consume this `MinBodyPacketBuilder` and return the inner `PacketBuilder`.
-    #[inline]
-    pub fn into_inner(self) -> B {
-        self.inner
-    }
-}
-
-impl<PB: NestedPacketBuilder> NestedPacketBuilder for MinBodyPacketBuilder<PB> {
-    #[inline]
-    fn try_constraints(&self) -> Option<PacketConstraints> {
-        let mut c = self.inner.try_constraints()?;
-        // This is guaranteed not to overflow by the invariants on
-        // PacketConstraint.
-        let header_footer_len = c.header_len + c.footer_len;
-        c.min_body_len =
-            cmp::max(self.min_body_len.checked_sub(header_footer_len)?, c.min_body_len);
         Some(c)
     }
 
