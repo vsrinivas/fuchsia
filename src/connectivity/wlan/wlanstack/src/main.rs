@@ -51,14 +51,16 @@ pub struct ServiceCfg {
     /// |true| if WEP should be supported by the service instance.
     #[structopt(long = "wep_supported")]
     pub wep_supported: bool,
+    /// |true| if legacy WPA1 should be supported by the service instance.
+    #[structopt(long = "wpa1_supported")]
+    pub wpa1_supported: bool,
 }
 
 impl From<ServiceCfg> for wlan_sme::Config {
     fn from(cfg: ServiceCfg) -> Self {
-        if cfg.wep_supported {
-            Self::with_wep_support()
-        } else {
-            Self::default()
+        Self {
+            wep_supported: cfg.wep_supported,
+            wpa1_supported: cfg.wpa1_supported,
         }
     }
 }

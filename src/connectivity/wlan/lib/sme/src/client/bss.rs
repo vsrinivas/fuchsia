@@ -51,7 +51,7 @@ impl ClientConfig {
         match get_protection(bss) {
             Protection::Open => true,
             Protection::Wep => self.0.wep_supported,
-            Protection::Wpa1 => false,
+            Protection::Wpa1 => self.0.wpa1_supported,
             // If the BSS is an RSN, require the privacy bit to be set and verify the RSNE's
             // compatiblity.
             Protection::Rsna => match bss.rsn.as_ref() {
@@ -246,9 +246,9 @@ mod tests {
     }
 
     #[test]
-    fn compare_wep() {
-        let cfg = ClientConfig::from_config(Config::with_wep_support());
-        // Wep is supported, so currently better than wpa1.
+    fn compare_with_wep_supported() {
+        let cfg = ClientConfig::from_config(Config::default().with_wep());
+        // WEP is supported while WPA1 is not, so we prefer it.
         assert_bss_cmp(
             &cfg,
             &bss(-10, -10, ProtectionCfg::Wpa1),
@@ -258,6 +258,17 @@ mod tests {
             &cfg,
             &bss(-10, -10, ProtectionCfg::Wep),
             &bss(-50, -50, ProtectionCfg::Wpa2),
+        );
+    }
+
+    #[test]
+    fn compare_with_wep_and_wpa1_supported() {
+        let cfg = ClientConfig::from_config(Config::default().with_wep().with_wpa1());
+        // WEP is worse than WPA1 when both are supported.
+        assert_bss_cmp(
+            &cfg,
+            &bss(-50, -50, ProtectionCfg::Wep),
+            &bss(-10, -10, ProtectionCfg::Wpa1),
         );
     }
 
@@ -307,7 +318,7 @@ mod tests {
         assert!(!cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Eap)));
 
         // WEP support is configurable to be on or off:
-        let cfg = ClientConfig::from_config(Config::with_wep_support());
+        let cfg = ClientConfig::from_config(Config::default().with_wep());
         assert!(cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep)));
     }
 
@@ -338,7 +349,7 @@ mod tests {
             }
         );
 
-        let cfg = ClientConfig::from_config(Config::with_wep_support());
+        let cfg = ClientConfig::from_config(Config::default().with_wep());
         assert_eq!(
             cfg.convert_bss_description(&bss(-30, -10, ProtectionCfg::Wep)),
             BssInfo {

@@ -27,11 +27,18 @@ pub type MacAddr = [u8; 6];
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Config {
     pub wep_supported: bool,
+    pub wpa1_supported: bool,
 }
 
 impl Config {
-    pub fn with_wep_support() -> Self {
-        Self { wep_supported: true }
+    pub fn with_wep(mut self) -> Self {
+        self.wep_supported = true;
+        self
+    }
+
+    pub fn with_wpa1(mut self) -> Self {
+        self.wpa1_supported = true;
+        self
     }
 }
 

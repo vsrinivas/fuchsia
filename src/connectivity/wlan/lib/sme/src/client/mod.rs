@@ -565,7 +565,7 @@ mod tests {
         let inspector = finspect::Inspector::new();
         let sme_root_node = inspector.root().create_child("sme");
         let (mut sme, mut mlme_stream, _info_stream, _time_stream) = ClientSme::new(
-            ClientConfig::from_config(SmeConfig::with_wep_support()),
+            ClientConfig::from_config(SmeConfig::default().with_wep()),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
         );
