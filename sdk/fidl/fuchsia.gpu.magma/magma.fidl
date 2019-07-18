@@ -8,69 +8,69 @@ using zx;
 
 [Layout = "Simple"]
 protocol Device {
-    // Get a parameter.
+    /// Get a parameter.
     Query(uint64 query_id) -> (uint64 result);
 
-    // Get a parameter and store it in a new vmo.
+    /// Get a parameter and store it in a new vmo.
     QueryReturnsBuffer(uint64 query_id) -> (handle<vmo> result);
 
-    // Get the magma ipc channels.
+    /// Get the magma ipc channels.
     Connect(uint64 client_id) -> (handle<channel> primary_channel, handle<channel> notification_channel);
 
-    // Dumps driver and hardware state.
+    /// Dumps driver and hardware state.
     DumpState(uint32 dump_type);
 
-    // For testing only.
+    /// For testing only.
     TestRestart();
 };
 
-// Primary declarations.
+/// Primary declarations.
 const uint32 kReceiveBufferSize = 2048;
 
 protocol Primary {
-    // Imports a buffer for use in the system driver.
+    /// Imports a buffer for use in the system driver.
     ImportBuffer(handle<vmo> buffer);
 
-    // Destroys the buffer with `buffer_id` within this connection.
+    /// Destroys the buffer with `buffer_id` within this connection.
     ReleaseBuffer(zx.koid buffer_id);
 
-    // Imports an object for use in the system driver.
+    /// Imports an object for use in the system driver.
     ImportObject(handle object, uint32 object_type);
 
-    // Destroys the object with `object_id` within this connection.
+    /// Destroys the object with `object_id` within this connection.
     ReleaseObject(zx.koid object_id, uint32 object_type);
 
-    // Creates context `context_id`.
+    /// Creates context `context_id`.
     CreateContext(uint32 context_id);
 
-    // Destroys context `context_id`.
+    /// Destroys context `context_id`.
     DestroyContext(uint32 context_id);
 
-    // Submits a command buffer for execution on the GPU.
-    // Note that the buffer referred to by `command_buffer` must contain a valid
-    // magma_system_command_buffer and all associated data structures
-    // Transfers ownership of `command_buffer`.
+    /// Submits a command buffer for execution on the GPU.
+    /// Note that the buffer referred to by `command_buffer` must contain a valid
+    /// magma_system_command_buffer and all associated data structures
+    /// Transfers ownership of `command_buffer`.
     ExecuteCommandBuffer(handle command_buffer, uint32 context_id);
 
-    // Submits a series of commands for execution on the GPU without using a command buffer.
+    /// Submits a series of commands for execution on the GPU without using a command buffer.
     ExecuteImmediateCommands(uint32 context_id,
                              bytes:kReceiveBufferSize command_data,
                              vector<zx.koid> semaphores);
 
-    // Retrieve the current magma error status.
+    /// Retrieve the current magma error status.
     GetError() -> (int32 magma_status);
 
-    // Maps `page_count` pages of `buffer` from `page_offset` onto the GPU in the connection's
-    // address space at `gpu_va`.  `flags` is a set of flags from MAGMA_GPU_MAP_FLAGS that
-    // specify how the GPU can access the buffer.
+    /// Maps `page_count` pages of `buffer` from `page_offset` onto the GPU in the connection's
+    /// address space at `gpu_va`.  `flags` is a set of flags from MAGMA_GPU_MAP_FLAGS that
+    /// specify how the GPU can access the buffer.
     MapBufferGpu(zx.koid buffer_id, uint64 gpu_va, uint64 page_offset,
                  uint64 page_count, uint64 flags);
 
-    // Releases the mapping at `gpu_va` from the GPU.
-    // Buffers will also be implicitly unmapped when released.
+    /// Releases the mapping at `gpu_va` from the GPU.
+    /// Buffers will also be implicitly unmapped when released.
     UnmapBufferGpu(zx.koid buffer_id, uint64 gpu_va);
 
-    // Ensures that `page_count` pages starting at `page_offset` from the beginning of the
-    // buffer are backed by physical memory.
+    /// Ensures that `page_count` pages starting at `page_offset` from the beginning of the
+    /// buffer are backed by physical memory.
     CommitBuffer(zx.koid buffer_id, uint64 page_offset, uint64 page_count);
 };
