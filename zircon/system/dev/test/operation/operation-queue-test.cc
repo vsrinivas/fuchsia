@@ -263,4 +263,39 @@ TEST(OperationQueueTest, MultipleLayerWithCallback) {
     EXPECT_EQ(count, 10);
 }
 
+TEST(OperationQueueTest, ReverseQueue) {
+    struct FirstLayerOp : public operation::Operation<FirstLayerOp, TestOpTraits, int> {
+
+        using BaseClass = operation::Operation<FirstLayerOp, TestOpTraits, int>;
+        using BaseClass::BaseClass;
+    };
+
+    constexpr size_t kBaseOpSize = sizeof(TestOp);
+
+    operation::OperationQueue<FirstLayerOp, TestOpTraits, int> queue;
+    for (int i = 0; i < 10; i++) {
+        std::optional<FirstLayerOp> operation = FirstLayerOp::Alloc(kBaseOpSize);
+        ASSERT_TRUE(operation.has_value());
+        *operation->private_storage() = i;
+        EXPECT_EQ(*operation->private_storage(), i);
+        queue.push(*std::move(operation));
+    }
+
+    operation::OperationQueue<FirstLayerOp, TestOpTraits, int> reverse_queue;
+    int i = 9;
+    for (auto operation = queue.pop_last(); operation; operation = queue.pop_last()) {
+        EXPECT_EQ(*operation->private_storage(), i);
+        reverse_queue.push_next(std::move(*operation));
+        --i;
+    }
+    EXPECT_EQ(i, -1);
+
+    i = 0;
+    for (auto operation = reverse_queue.pop(); operation; operation = reverse_queue.pop()) {
+        EXPECT_EQ(*operation->private_storage(), i);
+        ++i;
+    }
+    EXPECT_EQ(i, 10);
+}
+
 } // namespace

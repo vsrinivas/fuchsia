@@ -480,6 +480,15 @@ public:
         return std::nullopt;
     }
 
+    std::optional<OpType> pop_last() {
+        fbl::AutoLock al(&lock_);
+        auto* node = queue_.pop_front();
+        if (node) {
+            return std::move(node->operation());
+        }
+        return std::nullopt;
+    }
+
     bool erase(OpType* op) {
         fbl::AutoLock al(&lock_);
         auto* node = op->node();
