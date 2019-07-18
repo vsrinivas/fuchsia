@@ -62,18 +62,8 @@ public:
     uint32_t RegRead(size_t offset);
     zx_status_t RegWrite(size_t offset, uint32_t val);
 
-    // Wait until all bits in |mask| are cleared in |reg| or timeout expires.
-    zx_status_t WaitForClear(size_t offset, uint32_t mask, zx::duration timeout);
-    // Wait until one bit in |mask| is set in |reg| or timeout expires.
-    zx_status_t WaitForSet(size_t offset, uint32_t mask, zx::duration timeout);
-
-
     static int WorkerThread(void* arg) {
         return static_cast<Controller*>(arg)->WorkerLoop();
-    }
-
-    static int WatchdogThread(void* arg) {
-        return static_cast<Controller*>(arg)->WatchdogLoop();
     }
 
     static int IrqThread(void* arg) {
@@ -98,13 +88,6 @@ public:
     void Queue(uint32_t portnr, sata_txn_t* txn);
 
     void SignalWorker() { sync_completion_signal(&worker_completion_); }
-    void SignalWatchdog() { sync_completion_signal(&watchdog_completion_); }
-
-    // Returns true if controller supports Native Command Queuing.
-    bool HasCommandQueue() { return cap_ & AHCI_CAP_NCQ; }
-
-    // Returns maximum number of simultaneous commands on each port.
-    uint32_t MaxCommands() { return static_cast<uint32_t>((cap_ >> 8) & 0x1f); }
 
     Bus* bus() { return bus_.get(); }
     zx_device_t** zxdev_ptr() { return &zxdev_; }
@@ -125,10 +108,8 @@ private:
 
     ThreadWrapper irq_thread_;
     ThreadWrapper worker_thread_;
-    ThreadWrapper watchdog_thread_;
 
     sync_completion_t worker_completion_;
-    sync_completion_t watchdog_completion_;
 
     std::unique_ptr<Bus> bus_;
     Port ports_[AHCI_MAX_PORTS];

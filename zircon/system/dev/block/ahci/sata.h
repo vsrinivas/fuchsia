@@ -5,6 +5,8 @@
 #pragma once
 
 #include <ddk/protocol/block.h>
+#include <lib/zx/time.h>
+
 #include "ahci.h"
 
 #define SATA_CMD_IDENTIFY_DEVICE      0xec
@@ -142,7 +144,7 @@ struct sata_txn_t {
     block_op_t bop;
     list_node_t node;
 
-    zx_time_t timeout;
+    zx::time timeout;
 
     uint8_t cmd;
     uint8_t device;

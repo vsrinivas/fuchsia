@@ -18,23 +18,25 @@
 #define AHCI_PRD_MAX_SIZE 0x400000 // 4mb
 static_assert(PAGE_SIZE <= AHCI_PRD_MAX_SIZE, "page size must be less than PRD max size\n");
 
-#define AHCI_PORT_INT_CPD (1u << 31)
-#define AHCI_PORT_INT_TFE (1u << 30)
-#define AHCI_PORT_INT_HBF (1u << 29)
-#define AHCI_PORT_INT_HBD (1u << 28)
-#define AHCI_PORT_INT_IF  (1u << 27)
-#define AHCI_PORT_INT_INF (1u << 26)
-#define AHCI_PORT_INT_OF  (1u << 24)
-#define AHCI_PORT_INT_IPM (1u << 23)
-#define AHCI_PORT_INT_PRC (1u << 22)
-#define AHCI_PORT_INT_DI  (1u << 7)
-#define AHCI_PORT_INT_PC  (1u << 6)
-#define AHCI_PORT_INT_DP  (1u << 5)
-#define AHCI_PORT_INT_UF  (1u << 4)
-#define AHCI_PORT_INT_SDB (1u << 3)
-#define AHCI_PORT_INT_DS  (1u << 2)
-#define AHCI_PORT_INT_PS  (1u << 1)
-#define AHCI_PORT_INT_DHR (1u << 0)
+#define AHCI_PORT_INT_CPD (1u << 31)    // Cold Port Detect Status.
+#define AHCI_PORT_INT_TFE (1u << 30)    // Task File Error status.
+#define AHCI_PORT_INT_HBF (1u << 29)    // Host Bus Fatal Error Status.
+#define AHCI_PORT_INT_HBD (1u << 28)    // Host Bus Data Error Status.
+#define AHCI_PORT_INT_IF  (1u << 27)    // Interface Fatal Error Status.
+#define AHCI_PORT_INT_INF (1u << 26)    // Interface Non-fatal Error Status.
+                                        // Reserved
+#define AHCI_PORT_INT_OF  (1u << 24)    // Overflow Status.
+#define AHCI_PORT_INT_IPM (1u << 23)    // Incorrect Port Multiplier Status.
+#define AHCI_PORT_INT_PRC (1u << 22)    // PhyRdy Change Status.
+                                        // Reserved
+#define AHCI_PORT_INT_DI  (1u << 7)     // Device Mechanical Presence Status.
+#define AHCI_PORT_INT_PC  (1u << 6)     // Port Connect Change Status.
+#define AHCI_PORT_INT_DP  (1u << 5)     // Descriptor Processed.
+#define AHCI_PORT_INT_UF  (1u << 4)     // Unknown FIS Interrupt.
+#define AHCI_PORT_INT_SDB (1u << 3)     // Set Device Bits Interrupt.
+#define AHCI_PORT_INT_DS  (1u << 2)     // DMA Setup FIS Interrupt.
+#define AHCI_PORT_INT_PS  (1u << 1)     // PIO Setup FIS Interrupt.
+#define AHCI_PORT_INT_DHR (1u << 0)     // Device to Host Register FIS Interrupt.
 
 #define AHCI_PORT_INT_ERROR (AHCI_PORT_INT_TFE | AHCI_PORT_INT_HBF | AHCI_PORT_INT_HBD | \
                              AHCI_PORT_INT_IF | AHCI_PORT_INT_INF | AHCI_PORT_INT_OF | \

@@ -46,28 +46,6 @@ zx_status_t Controller::RegWrite(size_t offset, uint32_t val) {
     return bus_->RegWrite(offset, val);
 }
 
-zx_status_t Controller::WaitForClear(size_t offset, uint32_t mask, zx::duration timeout) {
-    int i = 0;
-    zx::time deadline = zx::clock::get_monotonic() + timeout;
-    do {
-        if (!(RegRead(offset) & mask)) return ZX_OK;
-        usleep(10 * 1000);
-        i++;
-    } while (zx::clock::get_monotonic() < deadline);
-    return ZX_ERR_TIMED_OUT;
-}
-
-zx_status_t Controller::WaitForSet(size_t offset, uint32_t mask, zx::duration timeout) {
-    int i = 0;
-    zx::time deadline = zx::clock::get_monotonic() + timeout;
-    do {
-        if (RegRead(offset) & mask) return ZX_OK;
-        usleep(10 * 1000);
-        i++;
-    } while (zx::clock::get_monotonic() < deadline);
-    return ZX_ERR_TIMED_OUT;
-}
-
 void Controller::AhciEnable() {
     uint32_t ghc = RegRead(kHbaGlobalHostControl);
     if (ghc & AHCI_GHC_AE) return;
@@ -88,7 +66,7 @@ zx_status_t Controller::HbaReset() {
     ghc |= AHCI_GHC_HR;
     RegWrite(kHbaGlobalHostControl, ghc);
     // reset should complete within 1 second
-    zx_status_t status = WaitForClear(kHbaGlobalHostControl, AHCI_GHC_HR, zx::sec(1));
+    zx_status_t status = bus_->WaitForClear(kHbaGlobalHostControl, AHCI_GHC_HR, zx::sec(1));
     if (status) {
         zxlogf(ERROR, "ahci: hba reset timed out\n");
     }
@@ -154,27 +132,9 @@ int Controller::WorkerLoop() {
             return 0;
         }
 
-        // wait here until more commands are queued, or a port becomes idle
+        // Wait here until more commands are queued, or a port becomes idle.
         sync_completion_wait(&worker_completion_, ZX_TIME_INFINITE);
         sync_completion_reset(&worker_completion_);
-    }
-}
-
-int Controller::WatchdogLoop() {
-    for (;;) {
-        bool idle = true;
-        for (uint32_t i = 0; i < AHCI_MAX_PORTS; i++) {
-            bool txn_pending = ports_[i].HandleWatchdog();
-            if (txn_pending) idle = false;
-        }
-
-        // no need to run the watchdog if there are no active xfers
-        sync_completion_wait(&watchdog_completion_, idle ? ZX_TIME_INFINITE : ZX_SEC(5));
-        sync_completion_reset(&watchdog_completion_);
-
-        if (ShouldExit()) {
-            return 0;
-        }
     }
 }
 
@@ -238,7 +198,7 @@ int Controller::InitScan() {
     zx_status_t status;
     for (uint32_t i = 0; i < AHCI_MAX_PORTS; i++) {
         if (!(port_map & (1u << i))) continue; // port not implemented
-        status = ports_[i].Configure(i, this, kHbaPorts);
+        status = ports_[i].Configure(i, bus_.get(), kHbaPorts, cap_);
         if (status != ZX_OK) {
             return status;
         }
@@ -317,11 +277,6 @@ zx_status_t Controller::LaunchThreads() {
         zxlogf(ERROR, "ahci: error %d creating worker thread\n", status);
         return status;
     }
-    status = watchdog_thread_.CreateWithName(WatchdogThread, this, "ahci-watchdog");
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "ahci: error %d creating watchdog thread\n", status);
-        return status;
-    }
     return ZX_OK;
 }
 
@@ -334,10 +289,6 @@ void Controller::Shutdown() {
     // Signal the worker thread.
     sync_completion_signal(&worker_completion_);
     worker_thread_.Join();
-
-    // Signal watchdog.
-    sync_completion_signal(&watchdog_completion_);
-    watchdog_thread_.Join();
 
     // Signal the interrupt thread to exit.
     bus_->InterruptCancel();

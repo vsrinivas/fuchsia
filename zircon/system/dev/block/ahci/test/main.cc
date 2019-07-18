@@ -11,6 +11,47 @@
 
 namespace ahci {
 
+class AhciTestFixture : public zxtest::Test {
+public:
+
+protected:
+    void SetUp() override {}
+    void TearDown() override;
+
+    zx_status_t PortEnable(Port* port);
+
+    // If non-null, this pointer is owned by Controller::bus_
+    std::unique_ptr<FakeBus> fake_bus_;
+
+private:
+};
+
+void AhciTestFixture::TearDown() {
+    fake_bus_.reset();
+}
+
+zx_status_t AhciTestFixture::PortEnable(Port* port) {
+    zx_device_t* fake_parent = nullptr;
+    std::unique_ptr<FakeBus> bus(new FakeBus());
+    EXPECT_OK(bus->Configure(fake_parent));
+
+    uint32_t cap;
+    EXPECT_OK(bus->RegRead(kHbaCapabilities, &cap));
+    EXPECT_OK(port->Configure(0, bus.get(), kHbaPorts, cap));
+    EXPECT_OK(port->Enable());
+
+    // Fake detect of device.
+    port->set_present(true);
+
+    EXPECT_TRUE(port->is_present());
+    EXPECT_TRUE(port->is_implemented());
+    EXPECT_TRUE(port->is_valid());
+    EXPECT_FALSE(port->is_paused());
+
+    fake_bus_ = std::move(bus);
+    return ZX_OK;
+}
+
 void string_fix(uint16_t* buf, size_t size);
 
 TEST(SataTest, StringFixTest) {
@@ -111,6 +152,118 @@ TEST(AhciTest, HbaReset) {
     EXPECT_OK(con->HbaReset());
 
     con->Shutdown();
+}
+
+TEST_F(AhciTestFixture, PortTestEnable) {
+    Port port;
+    EXPECT_OK(PortEnable(&port));
+}
+
+void cb_status(void* cookie, zx_status_t status, block_op_t* bop) {
+    *static_cast<zx_status_t*>(cookie) = status;
+}
+
+void cb_assert(void* cookie, zx_status_t status, block_op_t* bop) {
+    EXPECT_TRUE(false);
+}
+
+TEST_F(AhciTestFixture, PortCompleteNone) {
+    Port port;
+    EXPECT_OK(PortEnable(&port));
+
+    // Complete with no running transactions.
+
+    EXPECT_FALSE(port.Complete());
+}
+
+TEST_F(AhciTestFixture, PortCompleteRunning) {
+    Port port;
+    EXPECT_OK(PortEnable(&port));
+
+    // Complete with running transaction. No completion should occur, cb_assert should not fire.
+
+    sata_txn_t txn = {};
+    txn.timeout = zx::clock::get_monotonic() + zx::sec(5);
+    txn.completion_cb = cb_assert;
+
+    uint32_t slot = 0;
+
+    // Set txn as running.
+    port.TestSetRunning(&txn, slot);
+    // Set the running bit in the bus.
+    fake_bus_->PortRegOverride(0, kPortSataActive, (1u << slot));
+
+    // Set interrupt for successful transfer completion, but keep the running bit set.
+    // Simulates a non-error interrupt that will cause the IRQ handler to examin the running
+    // transactions.
+    fake_bus_->PortRegOverride(0, kPortInterruptStatus, AHCI_PORT_INT_DP);
+    // Invoke interrupt handler.
+    port.HandleIrq();
+
+    EXPECT_TRUE(port.Complete());
+}
+
+TEST_F(AhciTestFixture, PortCompleteSuccess) {
+    Port port;
+    EXPECT_OK(PortEnable(&port));
+
+    // Transaction has successfully completed.
+
+    zx_status_t status = 100; // Bogus value to be overwritten by callback.
+
+    sata_txn_t txn = {};
+    txn.timeout = zx::clock::get_monotonic() + zx::sec(5);
+    txn.completion_cb = cb_status;
+    txn.cookie = &status;
+
+    uint32_t slot = 0;
+
+    // Set txn as running.
+    port.TestSetRunning(&txn, slot);
+    // Clear the running bit in the bus.
+    fake_bus_->PortRegOverride(0, kPortSataActive, 0);
+
+    // Set interrupt for successful transfer completion.
+    fake_bus_->PortRegOverride(0, kPortInterruptStatus, AHCI_PORT_INT_DP);
+    // Invoke interrupt handler.
+    port.HandleIrq();
+
+    // False means no more running commands.
+    EXPECT_FALSE(port.Complete());
+    // Set by completion callback.
+    EXPECT_OK(status);
+}
+
+TEST_F(AhciTestFixture, PortCompleteTimeout) {
+    Port port;
+    EXPECT_OK(PortEnable(&port));
+
+    // Transaction has successfully completed.
+
+    zx_status_t status = ZX_OK; // Value to be overwritten by callback.
+
+    sata_txn_t txn = {};
+    // Set timeout in the past.
+    txn.timeout = zx::clock::get_monotonic() - zx::sec(1);
+    txn.completion_cb = cb_status;
+    txn.cookie = &status;
+
+    uint32_t slot = 0;
+
+    // Set txn as running.
+    port.TestSetRunning(&txn, slot);
+    // Set the running bit in the bus.
+    fake_bus_->PortRegOverride(0, kPortSataActive, (1u << slot));
+
+    // Set interrupt for successful transfer completion.
+    fake_bus_->PortRegOverride(0, kPortInterruptStatus, AHCI_PORT_INT_DP);
+    // Invoke interrupt handler.
+    port.HandleIrq();
+
+    // False means no more running commands.
+    EXPECT_FALSE(port.Complete());
+    // Set by completion callback.
+    EXPECT_NOT_OK(status);
 }
 
 } // namespace ahci

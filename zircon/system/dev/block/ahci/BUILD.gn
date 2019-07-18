@@ -37,6 +37,7 @@ test("ahci-unittest") {
 source_set("shared") {
   visibility = [ "./*" ]
   sources = [
+    "bus.cc",
     "controller.cc",
     "pci-bus.cc",
     "port.cc",

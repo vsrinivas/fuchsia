@@ -48,6 +48,13 @@ public:
     // Ownership is retained by the bus, pointer is valid until bus is destroyed.
     virtual void* mmio() = 0;
 
+    // Non-virtual functions.
+
+    // Wait until all bits in |mask| are cleared in |reg| or timeout expires.
+    zx_status_t WaitForClear(size_t offset, uint32_t mask, zx::duration timeout);
+    // Wait until one bit in |mask| is set in |reg| or timeout expires.
+    zx_status_t WaitForSet(size_t offset, uint32_t mask, zx::duration timeout);
+
 protected:
     Bus() {}
 };
