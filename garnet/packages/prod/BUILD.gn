@@ -85,6 +85,7 @@ group("scenic") {
   public_deps = [
     "//garnet/bin/ui:root_presenter",
     "//garnet/bin/ui:scenic",
+    "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:sysmem_connector",
     "//garnet/packages/prod:vulkan",
     "//src/ui/bin/ime:ime_service",
@@ -219,6 +220,7 @@ group("all") {
     "//garnet/packages/prod:device_settings",
     "//garnet/packages/prod:display_manager",
     "//garnet/packages/prod:drivers",
+    "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:far",
     "//garnet/packages/prod:feedback_agent",
     "//garnet/packages/prod:fonts",
@@ -1061,5 +1063,13 @@ group("goldfish-vulkan") {
   testonly = true
   public_deps = [
     "//garnet/lib/goldfish-vulkan/gnbuild:goldfish-vulkan",
+  ]
+}
+
+group("factory_reset") {
+  testonly = true
+  public_deps = [
+    "//src/recovery/factory_reset",
+    "//src/recovery/factory_reset:configs",
   ]
 }

@@ -113,3 +113,11 @@ group("virtual_audio") {
     "//src/media/audio/virtual_audio_service:virtual_audio_config",
   ]
 }
+
+group("factory_reset") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/config:services",
+    "//src/recovery/factory_reset:configs",
+  ]
+}

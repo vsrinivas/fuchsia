@@ -6,6 +6,7 @@
 group("tools") {
   testonly = true
   public_deps = [
+    "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:fonts",
     "//garnet/packages/prod:iquery",
     "//garnet/packages/prod:media_audio",

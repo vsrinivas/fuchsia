@@ -13,3 +13,24 @@ protocol FactoryReset {
     // If unsuccessful will return an error.
     Reset() -> (zx.status status);
 };
+
+table FactoryResetState {
+    /// The deadline of when factory reset will be triggered. This field is populated if
+    // |counting_down| is true. The time is based on clock monotonic.
+    1: zx.time reset_deadline;
+
+    /// True if factory reset is counting down.
+    2: bool counting_down;
+};
+
+/// A protocol for observing changes to factory reset state, such as beginning or cancelling the
+/// count down to factory reset.
+[Discoverable]
+protocol FactoryResetStateNotifier {
+    SetWatcher(FactoryResetStateWatcher watcher);
+};
+
+[Discoverable]
+protocol FactoryResetStateWatcher {
+    OnStateChanged(FactoryResetState response) -> ();
+};
