@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <mutex>
+
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <fuchsia/gpu/magma/cpp/fidl.h>
 #include <lib/fdio/unsafe.h>
-
-#include <mutex>
 
 #include "platform_connection_client.h"
 
@@ -104,6 +104,44 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     zx::handle duplicate_handle(command_buffer_handle);
     magma_status_t result = MagmaChannelStatus(
         magma_fidl_->ExecuteCommandBuffer(std::move(duplicate_handle), context_id));
+    if (result != MAGMA_STATUS_OK)
+      SetError(result);
+  }
+
+  void ExecuteCommandBufferWithResources(uint32_t context_id,
+                                         magma_system_command_buffer* command_buffer,
+                                         magma_system_exec_resource* resources,
+                                         uint64_t* semaphores) override {
+    fuchsia::gpu::magma::CommandBuffer fidl_command_buffer = {
+        .batch_buffer_resource_index = command_buffer->batch_buffer_resource_index,
+        .batch_start_offset = command_buffer->batch_start_offset};
+
+    std::vector<fuchsia::gpu::magma::Resource> fidl_resources;
+
+    fidl_resources.reserve(command_buffer->num_resources);
+    for (uint32_t i = 0; i < command_buffer->num_resources; i++) {
+      fidl_resources.push_back({.buffer = resources[i].buffer_id,
+                                .offset = resources[i].offset,
+                                .length = resources[i].length});
+    }
+
+    std::vector<uint64_t> wait_semaphores;
+    std::vector<uint64_t> signal_semaphores;
+
+    wait_semaphores.reserve(command_buffer->wait_semaphore_count);
+    signal_semaphores.reserve(command_buffer->signal_semaphore_count);
+
+    uint32_t sem_index = 0;
+    for (uint32_t i = 0; i < command_buffer->wait_semaphore_count; i++) {
+      wait_semaphores.emplace_back(semaphores[sem_index++]);
+    }
+    for (uint32_t i = 0; i < command_buffer->signal_semaphore_count; i++) {
+      signal_semaphores.emplace_back(semaphores[sem_index++]);
+    }
+
+    magma_status_t result = MagmaChannelStatus(magma_fidl_->ExecuteCommandBufferWithResources(
+        context_id, std::move(fidl_command_buffer), std::move(fidl_resources),
+        std::move(wait_semaphores), std::move(signal_semaphores)));
     if (result != MAGMA_STATUS_OK)
       SetError(result);
   }

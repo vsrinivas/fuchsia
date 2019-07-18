@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include "magma_system_buffer.h"
 #include "magma_system_context.h"
@@ -50,6 +51,9 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
   std::shared_ptr<MagmaSystemSemaphore> LookupSemaphore(uint64_t id);
 
   magma::Status ExecuteCommandBuffer(uint32_t command_buffer_handle, uint32_t context_id) override;
+  magma::Status ExecuteCommandBufferWithResources(
+      uint32_t context_id, std::unique_ptr<magma_system_command_buffer> command_buffer,
+      std::vector<magma_system_exec_resource> resources, std::vector<uint64_t> semaphores) override;
 
   bool CreateContext(uint32_t context_id) override;
   bool DestroyContext(uint32_t context_id) override;

@@ -197,6 +197,42 @@ class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu:
       SetError(MAGMA_STATUS_INTERNAL_ERROR);
   }
 
+  void ExecuteCommandBufferWithResources(uint32_t context_id,
+                                         fuchsia::gpu::magma::CommandBuffer fidl_command_buffer,
+                                         std::vector<fuchsia::gpu::magma::Resource> fidl_resources,
+                                         std::vector<uint64_t> wait_semaphores,
+                                         std::vector<uint64_t> signal_semaphores) override {
+    auto command_buffer = std::make_unique<magma_system_command_buffer>();
+    *command_buffer = {
+        .batch_buffer_resource_index = fidl_command_buffer.batch_buffer_resource_index,
+        .batch_start_offset = fidl_command_buffer.batch_start_offset,
+        .num_resources = static_cast<uint32_t>(fidl_resources.size()),
+        .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()),
+        .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()),
+    };
+
+    std::vector<magma_system_exec_resource> resources;
+    resources.reserve(fidl_resources.size());
+
+    for (auto& resource : fidl_resources) {
+      resources.push_back({
+          resource.buffer,
+          resource.offset,
+          resource.length,
+      });
+    }
+
+    // Merge semaphores into one vector
+    wait_semaphores.insert(wait_semaphores.end(), signal_semaphores.begin(),
+                           signal_semaphores.end());
+
+    magma::Status status = delegate_->ExecuteCommandBufferWithResources(
+        context_id, std::move(command_buffer), std::move(resources), std::move(wait_semaphores));
+
+    if (!status)
+      SetError(status.get());
+  }
+
   void ExecuteImmediateCommands(uint32_t context_id, ::std::vector<uint8_t> command_data_vec,
                                 ::std::vector<uint64_t> semaphore_vec) override {
     DLOG("ZirconPlatformConnection: ExecuteImmediateCommands");

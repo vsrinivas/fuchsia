@@ -335,6 +335,19 @@ void magma_submit_command_buffer(magma_connection_t connection, magma_buffer_t c
   delete platform_buffer;
 }
 
+void magma_execute_command_buffer_with_resources(magma_connection_t connection, uint32_t context_id,
+                                                 struct magma_system_command_buffer* command_buffer,
+                                                 struct magma_system_exec_resource* resources,
+                                                 uint64_t* semaphore_ids) {
+  DASSERT(command_buffer->batch_buffer_resource_index < command_buffer->num_resources);
+
+  uint64_t ATTRIBUTE_UNUSED id = resources[command_buffer->batch_buffer_resource_index].buffer_id;
+  TRACE_FLOW_BEGIN("magma", "command_buffer", id);
+
+  magma::PlatformConnectionClient::cast(connection)
+      ->ExecuteCommandBufferWithResources(context_id, command_buffer, resources, semaphore_ids);
+}
+
 // TODO(MA-580): remove (deprecated)
 void magma_execute_immediate_commands(magma_connection_t connection, uint32_t context_id,
                                       uint64_t command_count,

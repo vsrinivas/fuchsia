@@ -27,6 +27,17 @@ protocol Device {
 /// Primary declarations.
 const uint32 kReceiveBufferSize = 2048;
 
+struct Resource {
+    zx.koid buffer;
+    uint64 offset;
+    uint64 length;
+};
+
+struct CommandBuffer {
+    uint32 batch_buffer_resource_index;
+    uint32 batch_start_offset;
+};
+
 protocol Primary {
     /// Imports a buffer for use in the system driver.
     ImportBuffer(handle<vmo> buffer);
@@ -51,6 +62,14 @@ protocol Primary {
     /// magma_system_command_buffer and all associated data structures
     /// Transfers ownership of `command_buffer`.
     ExecuteCommandBuffer(handle command_buffer, uint32 context_id);
+
+    /// Submits a command buffer for execution on the GPU, with associated resources.
+    ExecuteCommandBufferWithResources(
+        uint32 context_id,
+        CommandBuffer command_buffer,
+        vector<Resource> resources,
+        vector<zx.koid> wait_semaphores,
+        vector<zx.koid> signal_semaphores);
 
     /// Submits a series of commands for execution on the GPU without using a command buffer.
     ExecuteImmediateCommands(uint32 context_id,

@@ -398,6 +398,18 @@ class TestConnectionWithContext : public TestConnection {
     EXPECT_NE(MAGMA_STATUS_OK, magma_get_error(connection()));
   }
 
+  void ExecuteCommandBufferWithResources(uint32_t resource_count) {
+    magma_system_command_buffer command_buffer = {.num_resources = resource_count};
+    magma_system_exec_resource resources[resource_count];
+
+    memset(resources, 0, sizeof(magma_system_exec_resource) * resource_count);
+    magma_execute_command_buffer_with_resources(connection(), context_id(), &command_buffer,
+                                                resources, nullptr);
+
+    // Command buffer is mostly zeros, so we expect an error here
+    EXPECT_NE(MAGMA_STATUS_OK, magma_get_error(connection()));
+  }
+
  private:
   uint32_t context_id_;
 };
@@ -485,7 +497,11 @@ TEST(MagmaAbi, QueryReturnsBuffer) {
 
 TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c()); }
 
-TEST(MagmaAbi, SubmitCommandBuffer) { TestConnectionWithContext().SubmitCommandBuffer(10); }
+TEST(MagmaAbi, SubmitCommandBuffer) { TestConnectionWithContext().SubmitCommandBuffer(5); }
+
+TEST(MagmaAbi, ExecuteCommandBufferWithResources) {
+  TestConnectionWithContext().ExecuteCommandBufferWithResources(5);
+}
 
 TEST(MagmaAbiPerf, SubmitCommandBuffer) {
   TestConnectionWithContext test;
@@ -499,5 +515,21 @@ TEST(MagmaAbiPerf, SubmitCommandBuffer) {
       std::chrono::steady_clock::now() - start);
 
   magma::log(magma::LOG_INFO, "SubmitCommandBuffer: avg duration %lld ns",
+             duration.count() / kTestIterations);
+}
+
+TEST(MagmaAbiPerf, ExecuteCommandBufferWithResources) {
+  TestConnectionWithContext test;
+
+  auto start = std::chrono::steady_clock::now();
+  constexpr uint32_t kTestIterations = 10000;
+  for (uint32_t test_iter = kTestIterations; test_iter; --test_iter) {
+    test.ExecuteCommandBufferWithResources(10);
+  }
+
+  auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::steady_clock::now() - start);
+
+  magma::log(magma::LOG_INFO, "ExecuteCommandBufferWithResources: avg duration %lld ns",
              duration.count() / kTestIterations);
 }

@@ -89,6 +89,12 @@ class TestPlatformConnection {
     EXPECT_EQ(client_connection_->GetError(), 0);
   }
 
+  void TestExecuteCommandBufferWithResources() {
+    client_connection_->ExecuteCommandBufferWithResources(
+        test_context_id, &test_command_buffer, test_resources.data(), test_semaphores.data());
+    EXPECT_EQ(client_connection_->GetError(), 0);
+  }
+
   void TestGetError() {
     EXPECT_EQ(client_connection_->GetError(), 0);
     test_complete = true;
@@ -179,6 +185,9 @@ class TestPlatformConnection {
   static magma_status_t test_error;
   static bool test_complete;
   static std::unique_ptr<magma::PlatformSemaphore> test_semaphore;
+  static std::vector<magma_system_exec_resource> test_resources;
+  static std::vector<uint64_t> test_semaphores;
+  static magma_system_command_buffer test_command_buffer;
 
  private:
   static void IpcThreadFunc(std::shared_ptr<magma::PlatformConnection> connection) {
@@ -198,6 +207,14 @@ magma_status_t TestPlatformConnection::test_error;
 bool TestPlatformConnection::test_complete;
 std::unique_ptr<magma::PlatformSemaphore> TestPlatformConnection::test_semaphore;
 bool TestPlatformConnection::got_null_notification;
+std::vector<magma_system_exec_resource> TestPlatformConnection::test_resources = {
+    {.buffer_id = 10, .offset = 11, .length = 12}, {.buffer_id = 13, .offset = 14, .length = 15}};
+std::vector<uint64_t> TestPlatformConnection::test_semaphores = {{1000, 1001, 1002}};
+magma_system_command_buffer TestPlatformConnection::test_command_buffer = {
+    .num_resources = 2,
+    .wait_semaphore_count = 2,
+    .signal_semaphore_count = 3,
+};
 
 class TestDelegate : public magma::PlatformConnection::Delegate {
  public:
@@ -240,6 +257,23 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
     auto buffer = magma::PlatformBuffer::Import(command_buffer_handle);
     EXPECT_EQ(buffer->id(), TestPlatformConnection::test_buffer_id);
     EXPECT_EQ(context_id, TestPlatformConnection::test_context_id);
+    TestPlatformConnection::test_complete = true;
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status ExecuteCommandBufferWithResources(
+      uint32_t context_id, std::unique_ptr<magma_system_command_buffer> command_buffer,
+      std::vector<magma_system_exec_resource> resources,
+      std::vector<uint64_t> semaphores) override {
+    EXPECT_EQ(context_id, TestPlatformConnection::test_context_id);
+    EXPECT_EQ(0, memcmp(command_buffer.get(), &TestPlatformConnection::test_command_buffer,
+                        sizeof(magma_system_command_buffer)));
+    EXPECT_EQ(0, memcmp(resources.data(), TestPlatformConnection::test_resources.data(),
+                        TestPlatformConnection::test_resources.size() *
+                            sizeof(TestPlatformConnection::test_resources[0])));
+    EXPECT_EQ(0, memcmp(semaphores.data(), TestPlatformConnection::test_semaphores.data(),
+                        TestPlatformConnection::test_semaphores.size() *
+                            sizeof(TestPlatformConnection::test_semaphores[0])));
     TestPlatformConnection::test_complete = true;
     return MAGMA_STATUS_OK;
   }
@@ -375,6 +409,12 @@ TEST(PlatformConnection, ExecuteCommandBuffer) {
   auto Test = TestPlatformConnection::Create();
   ASSERT_NE(Test, nullptr);
   Test->TestExecuteCommandBuffer();
+}
+
+TEST(PlatformConnection, ExecuteCommandBufferWithResources) {
+  auto Test = TestPlatformConnection::Create();
+  ASSERT_NE(Test, nullptr);
+  Test->TestExecuteCommandBufferWithResources();
 }
 
 TEST(PlatformConnection, MapUnmapBuffer) {
