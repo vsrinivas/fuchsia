@@ -4,11 +4,11 @@
 
 library fuchsia.sys;
 
-// An interface for providing a job handle. Instances of this interface are
-// created in the context of an already-identified realm, so there is no need
-// to explicitly identify the realm below.
+/// An interface for providing a job handle. Instances of this interface are
+/// created in the context of an already-identified realm, so there is no need
+/// to explicitly identify the realm below.
 [Discoverable]
 protocol JobProvider {
-    // Gets the root job associated with the realm.
+    /// Gets the root job associated with the realm.
     GetJob() -> (handle<job> job);
 };

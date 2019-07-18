@@ -4,28 +4,28 @@
 
 library fuchsia.sys;
 
-// An interface for controlling an environment.
-//
-// Closing this interface implicitly kills the controlled environment unless
-// the `Detach` method has been called.
-//
-// If the environment is destroyed, this interface will be closed.
-//
-// Typically obtained via `Environment.CreateNestedEnvironment`.
+/// An interface for controlling an environment.
+///
+/// Closing this interface implicitly kills the controlled environment unless
+/// the `Detach` method has been called.
+///
+/// If the environment is destroyed, this interface will be closed.
+///
+/// Typically obtained via `Environment.CreateNestedEnvironment`.
 protocol EnvironmentController {
-    // Terminates the environment.
-    //
-    // When an `Environment` is terminated, all applications launched
-    // in the environment (and in all transitively nested environments) are also
-    // killed.
+    /// Terminates the environment.
+    ///
+    /// When an `Environment` is terminated, all applications launched
+    /// in the environment (and in all transitively nested environments) are also
+    /// killed.
     Kill() -> ();
 
-    // Decouples the lifetime of the environment from this controller.
-    //
-    // After calling `Detach`, the environment will not be implicitly killed when
-    // this interface is closed.
+    /// Decouples the lifetime of the environment from this controller.
+    ///
+    /// After calling `Detach`, the environment will not be implicitly killed when
+    /// this interface is closed.
     Detach();
 
-    // Event that is triggered when the environment is created.
+    /// Event that is triggered when the environment is created.
     -> OnCreated();
 };
