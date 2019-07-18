@@ -1799,9 +1799,6 @@ static void iwl_trans_pcie_configure(struct iwl_trans* trans,
            trans_pcie->n_no_reclaim_cmds * sizeof(uint8_t));
 
   trans_pcie->rx_buf_size = trans_cfg->rx_buf_size;
-#if 0   // NEEDS_PORTING
-    trans_pcie->rx_page_order = iwl_trans_get_rb_size_order(trans_pcie->rx_buf_size);
-#endif  // NEEDS_PORTING
 
   trans_pcie->bc_table_dword = trans_cfg->bc_table_dword;
   trans_pcie->scd_set_active = trans_cfg->scd_set_active;

@@ -318,24 +318,21 @@ enum iwl_trans_status {
   STATUS_TRANS_DEAD,
 };
 
-#if 0   // NEEDS_PORTING
-static inline int
-iwl_trans_get_rb_size_order(enum iwl_amsdu_size rb_size) {
-    switch (rb_size) {
+static inline size_t iwl_trans_get_rb_size(enum iwl_amsdu_size rb_size) {
+  switch (rb_size) {
     case IWL_AMSDU_2K:
-        return get_order(2 * 1024);
+      return 2 * 1024;
     case IWL_AMSDU_4K:
-        return get_order(4 * 1024);
+      return 4 * 1024;
     case IWL_AMSDU_8K:
-        return get_order(8 * 1024);
+      return 8 * 1024;
     case IWL_AMSDU_12K:
-        return get_order(12 * 1024);
+      return 12 * 1024;
     default:
-        WARN_ON(1);
-        return -1;
-    }
+      WARN_ON(1);
+      return 0;
+  }
 }
-#endif  // NEEDS_PORTING
 
 struct iwl_hcmd_names {
   uint8_t cmd_id;

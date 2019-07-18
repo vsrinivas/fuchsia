@@ -36,10 +36,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
 
+#include <threads.h>
+
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/pci.h>
 #include <lib/sync/completion.h>
-#include <threads.h>
 #include <zircon/listnode.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
@@ -494,7 +495,6 @@ struct cont_rec {
  * @scd_set_active: should the transport configure the SCD for HCMD queue
  * @sw_csum_tx: if true, then the transport will compute the csum of the TXed
  *  frame.
- * @rx_page_order: page order for receive buffer size
  * @reg_lock: protect hw register access
  * @mutex: to protect stop_device / start_fw / start_hw
  * @cmd_in_flight: true when we have a host command in flight
@@ -587,7 +587,6 @@ struct iwl_trans_pcie {
   bool scd_set_active;
   bool sw_csum_tx;
   bool pcie_dbg_dumped_once;
-  uint32_t rx_page_order;
 
   /*protect hw register */
   mtx_t reg_lock;
