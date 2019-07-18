@@ -23,7 +23,10 @@ pub enum Opt {
 pub enum IfCmd {
     #[structopt(name = "list")]
     /// lists network interfaces
-    List,
+    List {
+        /// name substring to be matched
+        name_pattern: Option<String>,
+    },
     #[structopt(name = "add")]
     /// adds a network interface by path
     Add {

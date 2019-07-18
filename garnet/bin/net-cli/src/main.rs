@@ -10,7 +10,7 @@ use fdio;
 use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_filter::{self as filter, FilterMarker, FilterProxy};
-use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
+use fidl_fuchsia_net_stack::{self as netstack, InterfaceInfo, StackMarker, StackProxy};
 use fidl_fuchsia_net_stack_ext as pretty;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_async as fasync;
@@ -39,11 +39,17 @@ fn main() -> Result<(), Error> {
     exec.run_singlethreaded(fut)
 }
 
+fn shortlist_interfaces(name_pattern: &str, ifaces: Vec<InterfaceInfo>) -> Vec<InterfaceInfo> {
+    ifaces.into_iter().filter(|i| i.properties.name.contains(name_pattern)).collect::<Vec<_>>()
+}
+
 async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
     match cmd {
-        IfCmd::List => {
+        IfCmd::List { name_pattern } => {
             let response = await!(stack.list_interfaces()).context("error getting response")?;
-            for info in response {
+            let pattern = name_pattern.unwrap_or("".to_string());
+            let ifaces_to_show = shortlist_interfaces(pattern.as_str(), response);
+            for info in ifaces_to_show {
                 println!("{}\n", pretty::InterfaceInfo::from(info));
             }
         }
@@ -281,9 +287,54 @@ async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Erro
 
 #[cfg(test)]
 mod tests {
+    use {
+        super::*,
+        fidl_fuchsia_net_stack::*,
+    };
+
+    fn get_fake_interface(id: u64, name: &str) -> InterfaceInfo {
+        InterfaceInfo {
+            id: id,
+            properties: InterfaceProperties {
+                name: name.to_string(),
+                topopath: "loopback".to_string(),
+                filepath: "[none]".to_string(),
+                mac: None,
+                mtu: 65536,
+                features: 4,
+                administrative_status: AdministrativeStatus::Enabled,
+                physical_status: PhysicalStatus::Up,
+                addresses: vec![],
+            }
+        }
+    }
+
+    fn get_fake_interfaces() -> Vec<InterfaceInfo> {
+        vec![
+            get_fake_interface(1, "lo"),
+            get_fake_interface(10, "eth001"),
+            get_fake_interface(20, "eth002"),
+            get_fake_interface(30, "eth003"),
+            get_fake_interface(100, "wlan001"),
+            get_fake_interface(200, "wlan002"),
+            get_fake_interface(300, "wlan003"),
+        ]
+    }
+
+    fn shortlist_ifaces_by_nicid(name_pattern: &str) -> Vec<u64> {
+        shortlist_interfaces(name_pattern, get_fake_interfaces()).iter().map(|i| i.id).collect::<Vec<_>>()
+    }
 
     #[test]
-    fn hello_world() {
-        println!("Hello world");
+    fn test_shortlist_interfaces() {
+
+        assert_eq!(vec![1, 10, 20, 30, 100, 200, 300], shortlist_ifaces_by_nicid(""));
+        assert_eq!(vec![0_u64; 0], shortlist_ifaces_by_nicid("no such thing"));
+
+        assert_eq!(vec![1], shortlist_ifaces_by_nicid("lo"));
+        assert_eq!(vec![10, 20, 30], shortlist_ifaces_by_nicid("eth"));
+        assert_eq!(vec![10, 20, 30], shortlist_ifaces_by_nicid("th"));
+        assert_eq!(vec![100, 200, 300], shortlist_ifaces_by_nicid("wlan"));
+        assert_eq!(vec![10, 100], shortlist_ifaces_by_nicid("001"));
     }
 }
