@@ -251,6 +251,9 @@ The bounds of the root view are defined by a min and a max point as follows:
 
 ## Timing Model
 
+[Life of a Pixel](life_of_a_pixel.md) shows how a client Present request is integrated into
+a Scenic frame.
+
 TODO(SCN-1202): Talk about scheduling frames, presentation timestamps, etc.
 
 ## Fences
