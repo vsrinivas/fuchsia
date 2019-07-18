@@ -23,8 +23,9 @@ class VirtioMagma
   explicit VirtioMagma(const PhysMem& phys_mem);
 
   zx_status_t Start(const zx::guest& guest, zx::vmar vmar,
-                    fuchsia::sys::Launcher* launcher,
-                    async_dispatcher_t* dispatcher);
+                    fidl::InterfaceHandle<fuchsia::virtualization::hardware::VirtioWaylandImporter>
+                        wayland_importer,
+                    fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
 
  private:
   fuchsia::sys::ComponentControllerPtr controller_;

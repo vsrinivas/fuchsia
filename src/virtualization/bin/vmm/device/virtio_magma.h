@@ -37,6 +37,8 @@ class VirtioMagma : public VirtioMagmaGeneric,
 
   // |fuchsia::virtualization::hardware::VirtioMagma|
   void Start(fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
+             fidl::InterfaceHandle<fuchsia::virtualization::hardware::VirtioWaylandImporter>
+                 wayland_importer,
              StartCallback callback) override;
 
  private:
@@ -66,6 +68,7 @@ class VirtioMagma : public VirtioMagmaGeneric,
   fbl::unique_fd device_fd_;
   zx::vmar vmar_;
   VirtioQueue out_queue_;
+  fuchsia::virtualization::hardware::VirtioWaylandImporterSyncPtr wayland_importer_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VirtioMagma);
 };

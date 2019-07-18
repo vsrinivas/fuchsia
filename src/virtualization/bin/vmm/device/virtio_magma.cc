@@ -20,9 +20,15 @@
 
 VirtioMagma::VirtioMagma(component::StartupContext* context) : DeviceBase(context) {}
 
-void VirtioMagma::Start(fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
-                        StartCallback callback) {
+void VirtioMagma::Start(
+    fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
+    fidl::InterfaceHandle<fuchsia::virtualization::hardware::VirtioWaylandImporter>
+        wayland_importer,
+    StartCallback callback) {
   auto deferred = fit::defer([&callback]() { callback(ZX_ERR_INTERNAL); });
+  if (wayland_importer) {
+    wayland_importer_ = wayland_importer.BindSync();
+  }
   PrepStart(std::move(start_info));
   vmar_ = std::move(vmar);
 
@@ -153,7 +159,34 @@ zx_status_t VirtioMagma::Handle_read_notification_channel(
 
 zx_status_t VirtioMagma::Handle_export(const virtio_magma_export_ctrl_t* request,
                                        virtio_magma_export_resp_t* response) {
-  return ZX_ERR_NOT_SUPPORTED;
+  if (!wayland_importer_) {
+    FXL_LOG(INFO) << "driver attempted to export a buffer without wayland present";
+    response->hdr.type = VIRTIO_MAGMA_RESP_EXPORT;
+    response->buffer_handle_out = 0;
+    response->result_return = MAGMA_STATUS_UNIMPLEMENTED;
+    return ZX_OK;
+  }
+  zx_status_t status = VirtioMagmaGeneric::Handle_export(request, response);
+  if (status != ZX_OK) {
+    return status;
+  }
+  // Handle_export calls magma_export, which in turn returns a native handle type
+  // of the caller's platform.
+  zx::vmo exported_vmo(static_cast<zx_handle_t>(response->buffer_handle_out));
+  response->buffer_handle_out = 0;
+  uint32_t vfd_id = 0;
+  // TODO(MA-657): improvement backlog
+  // Perform a blocking import of the VMO, then return the VFD ID in the response.
+  // Note that since the virtio-magma device is fully synchronous anyway, this does
+  // not impact performance. Ideally, the device would stash the response chain and
+  // return it only when the Import call returns, processing messages from other
+  // instances, or even other connections, in the meantime.
+  status = wayland_importer_->Import(std::move(exported_vmo), &vfd_id);
+  if (status != ZX_OK) {
+    return status;
+  }
+  response->buffer_handle_out = vfd_id;
+  return ZX_OK;
 }
 
 int main(int argc, char** argv) {

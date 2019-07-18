@@ -200,6 +200,35 @@ void VirtioWl::Start(fuchsia::virtualization::hardware::StartInfo start_info, zx
   }
 }
 
+void VirtioWl::GetImporter(
+    fidl::InterfaceRequest<fuchsia::virtualization::hardware::VirtioWaylandImporter> request) {
+  importer_bindings_.AddBinding(this, std::move(request));
+}
+
+void VirtioWl::Import(zx::vmo vmo, ImportCallback callback) {
+  TRACE_DURATION("machina", "VirtioWl::Import");
+  auto deferred = fit::defer([&]() {
+    callback(fuchsia::virtualization::hardware::kVirtioWaylandInvalidVfdId);
+  });
+  zx_info_handle_basic_t handle_basic_info{};
+  zx_status_t status = zx_object_get_info(vmo.get(), ZX_INFO_HANDLE_BASIC, &handle_basic_info,
+                                          sizeof(handle_basic_info), nullptr, nullptr);
+  if (status != ZX_OK || handle_basic_info.type != ZX_OBJ_TYPE_VMO) {
+    FXL_LOG(ERROR) << "failed to import VMO";
+    return;
+  }
+  uint32_t vfd_id = next_vfd_id_++;
+  PendingVfd pending_vfd{};
+  pending_vfd.handle_info.handle = vmo.release();
+  pending_vfd.handle_info.type = handle_basic_info.type;
+  pending_vfd.handle_info.rights = handle_basic_info.rights;
+  pending_vfd.vfd_id = vfd_id;
+  pending_vfds_.push_back(std::move(pending_vfd));
+  DispatchPendingEvents();
+  deferred.cancel();
+  callback(vfd_id);
+}
+
 void VirtioWl::Ready(uint32_t negotiated_features, ReadyCallback callback) {
   auto deferred = fit::defer(std::move(callback));
 }

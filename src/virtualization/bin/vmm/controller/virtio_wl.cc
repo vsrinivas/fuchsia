@@ -35,6 +35,11 @@ zx_status_t VirtioWl::Start(
   return status;
 }
 
+zx_status_t VirtioWl::GetImporter(
+    fidl::InterfaceRequest<fuchsia::virtualization::hardware::VirtioWaylandImporter> request) {
+  return wayland_->GetImporter(std::move(request));
+}
+
 zx_status_t VirtioWl::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                                      zx_gpaddr_t avail, zx_gpaddr_t used) {
   return wayland_->ConfigureQueue(queue, size, desc, avail, used);

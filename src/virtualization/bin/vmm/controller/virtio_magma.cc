@@ -12,13 +12,14 @@ static constexpr char kVirtioMagmaUrl[] =
     "fuchsia-pkg://fuchsia.com/virtio_magma#meta/virtio_magma.cmx";
 
 VirtioMagma::VirtioMagma(const PhysMem& phys_mem)
-    : VirtioComponentDevice(
-          phys_mem, 0, fit::bind_member(this, &VirtioMagma::ConfigureQueue),
-          fit::bind_member(this, &VirtioMagma::Ready)) {}
+    : VirtioComponentDevice(phys_mem, 0, fit::bind_member(this, &VirtioMagma::ConfigureQueue),
+                            fit::bind_member(this, &VirtioMagma::Ready)) {}
 
-zx_status_t VirtioMagma::Start(const zx::guest& guest, zx::vmar vmar,
-                               fuchsia::sys::Launcher* launcher,
-                               async_dispatcher_t* dispatcher) {
+zx_status_t VirtioMagma::Start(
+    const zx::guest& guest, zx::vmar vmar,
+    fidl::InterfaceHandle<fuchsia::virtualization::hardware::VirtioWaylandImporter>
+        wayland_importer,
+    fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{
       .url = kVirtioMagmaUrl,
@@ -32,16 +33,16 @@ zx_status_t VirtioMagma::Start(const zx::guest& guest, zx::vmar vmar,
     return status;
   }
   zx_status_t start_status = ZX_ERR_INTERNAL;
-  status = magma_->Start(std::move(start_info), std::move(vmar), &start_status);
+  status = magma_->Start(std::move(start_info), std::move(vmar), std::move(wayland_importer),
+                         &start_status);
   if (start_status != ZX_OK) {
     return start_status;
   }
   return status;
 }
 
-zx_status_t VirtioMagma::ConfigureQueue(uint16_t queue, uint16_t size,
-                                        zx_gpaddr_t desc, zx_gpaddr_t avail,
-                                        zx_gpaddr_t used) {
+zx_status_t VirtioMagma::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                                        zx_gpaddr_t avail, zx_gpaddr_t used) {
   return magma_->ConfigureQueue(queue, size, desc, avail, used);
 }
 

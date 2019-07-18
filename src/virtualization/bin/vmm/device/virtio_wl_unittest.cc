@@ -24,6 +24,7 @@ static constexpr uint16_t kNumQueues = 2;
 static constexpr uint16_t kQueueSize = 32;
 static constexpr uint32_t kVirtioWlVmarSize = 1 << 16;
 static constexpr uint32_t kAllocateFlags = ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE;
+static constexpr uint32_t kImportVmoSize = 4096;
 
 class TestWaylandDispatcher : public fuchsia::virtualization::WaylandDispatcher {
  public:
@@ -563,6 +564,19 @@ TEST_F(VirtioWlTest, Hup) {
   EXPECT_EQ(header->hdr.type, VIRTIO_WL_CMD_VFD_HUP);
   EXPECT_EQ(header->hdr.flags, 0u);
   EXPECT_EQ(header->vfd_id, 1u);
+}
+
+TEST_F(VirtioWlTest, Import) {
+  ASSERT_EQ(CreateConnection(1u), ZX_OK);
+  RunLoopUntilIdle();
+  ASSERT_EQ(channels_.size(), 1u);
+  fuchsia::virtualization::hardware::VirtioWaylandImporterSyncPtr importer;
+  ASSERT_EQ(wl_->GetImporter(importer.NewRequest()), ZX_OK);
+  zx::vmo vmo;
+  ASSERT_EQ(zx::vmo::create(kImportVmoSize, 0u, &vmo), ZX_OK);
+  uint32_t vfd_id = 0;
+  ASSERT_EQ(importer->Import(std::move(vmo), &vfd_id), ZX_OK);
+  ASSERT_NE(vfd_id, 0u);
 }
 
 }  // namespace

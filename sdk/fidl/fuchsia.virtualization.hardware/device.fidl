@@ -130,7 +130,9 @@ protocol VirtioMagma {
     compose VirtioDevice;
 
     // Start the magma device.
-    Start(StartInfo start_info, handle<vmar> vmar) -> (zx.status status);
+    Start(StartInfo start_info,
+          handle<vmar> vmar,
+          VirtioWaylandImporter? wayland_importer) -> (zx.status status);
 };
 
 [Discoverable]
@@ -149,6 +151,14 @@ protocol VirtioRng {
     Start(StartInfo start_info) -> ();
 };
 
+const uint32 kVirtioWaylandInvalidVfdId = 0;
+
+// Provides an interface to import VMOs into the wayland device.
+protocol VirtioWaylandImporter {
+    // Import a VMO into Wayland for use as a VFD.
+    Import(handle<vmo> vmo) -> (uint32 vfd_id);
+};
+
 [Discoverable]
 protocol VirtioWayland {
     compose VirtioDevice;
@@ -157,4 +167,7 @@ protocol VirtioWayland {
     Start(StartInfo start_info,
           handle<vmar> vmar,
           fuchsia.virtualization.WaylandDispatcher dispatcher) -> ();
+
+    // Get the VMO importer for this wayland device.
+    GetImporter(request<VirtioWaylandImporter> importer);
 };

@@ -394,8 +394,17 @@ int main(int argc, char** argv) {
       FXL_PLOG(INFO, status) << "Could not connect magma device";
       return status;
     }
-    status = magma.Start(guest.object(), std::move(magma_vmar),
-                      launcher.get(), device_loop.dispatcher());
+    fidl::InterfaceHandle<fuchsia::virtualization::hardware::VirtioWaylandImporter>
+        wayland_importer_handle = nullptr;
+    if (launch_info.wayland_device) {
+      status = wl.GetImporter(wayland_importer_handle.NewRequest());
+      if (status != ZX_OK) {
+        FXL_PLOG(INFO, status) << "Could not get wayland importer";
+        return status;
+      }
+    }
+    status = magma.Start(guest.object(), std::move(magma_vmar), std::move(wayland_importer_handle),
+                         launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
       FXL_PLOG(INFO, status) << "Could not start magma device";
       return status;

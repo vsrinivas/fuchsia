@@ -26,8 +26,9 @@
 #define VIRTWL_VFD_ID_HOST_MASK VIRTWL_NEXT_VFD_ID_BASE
 
 // Virtio wayland device.
-class VirtioWl : public DeviceBase<VirtioWl>,
-                 public fuchsia::virtualization::hardware::VirtioWayland {
+class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::VirtioWayland>,
+                 public fuchsia::virtualization::hardware::VirtioWayland,
+                 public fuchsia::virtualization::hardware::VirtioWaylandImporter {
  public:
   class Vfd {
    public:
@@ -94,6 +95,11 @@ class VirtioWl : public DeviceBase<VirtioWl>,
   void Start(fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
              fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> dispatcher,
              StartCallback callback) override;
+  void GetImporter(fidl::InterfaceRequest<fuchsia::virtualization::hardware::VirtioWaylandImporter>
+                       request) override;
+
+  // |fuchsia::virtualization::hardware::VirtioWaylandImporter|
+  void Import(zx::vmo vmo, ImportCallback callback) override;
 
  private:
   void HandleCommand(VirtioChain* chain);
@@ -145,6 +151,8 @@ class VirtioWl : public DeviceBase<VirtioWl>,
     VirtioChain payload;
   };
   std::deque<PendingVfd> pending_vfds_;
+
+  fidl::BindingSet<fuchsia::virtualization::hardware::VirtioWaylandImporter> importer_bindings_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_WL_H_

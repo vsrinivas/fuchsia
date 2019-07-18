@@ -25,6 +25,8 @@ class VirtioWl
       const zx::guest& guest, zx::vmar vmar,
       fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> dispatch_handle,
       fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
+  zx_status_t GetImporter(
+      fidl::InterfaceRequest<fuchsia::virtualization::hardware::VirtioWaylandImporter> request);
 
  private:
   fuchsia::sys::ComponentControllerPtr controller_;

@@ -17,7 +17,11 @@
 #include "src/virtualization/bin/vmm/device/config.h"
 #include "src/virtualization/bin/vmm/device/phys_mem.h"
 
-template <typename T>
+// DeviceBase exposes a single fidl interface for a given device. For cases where the device only
+// implements a single interface, the fidl interface can be derived from the class declaration
+// itself. In cases where the class implements multiple interfaces, the desired interface must be
+// explicitly specified.
+template <typename DeviceClass, typename Interface = DeviceClass>
 class DeviceBase {
  private:
   // Converts a device trap into queue notifications.
@@ -25,11 +29,11 @@ class DeviceBase {
                      zx_status_t status, const zx_packet_guest_bell_t* bell) {
     FXL_CHECK(status == ZX_OK) << "Device trap failed " << status;
     uint16_t queue = queue_from(trap_addr_, bell->addr);
-    static_cast<T*>(this)->NotifyQueue(queue);
+    static_cast<DeviceClass*>(this)->NotifyQueue(queue);
   }
 
  protected:
-  fidl::BindingSet<T> bindings_;
+  fidl::BindingSet<Interface> bindings_;
   zx_gpaddr_t trap_addr_;
   zx::event event_;
   zx_koid_t event_koid_;
@@ -37,7 +41,7 @@ class DeviceBase {
   async::GuestBellTrapMethod<DeviceBase, &DeviceBase::OnQueueNotify> trap_{this};
 
   DeviceBase(component::StartupContext* context) {
-    context->outgoing().AddPublicService(bindings_.GetHandler(static_cast<T*>(this)));
+    context->outgoing().AddPublicService(bindings_.GetHandler(static_cast<DeviceClass*>(this)));
   }
 
   // Prepares a device to start.
