@@ -14,10 +14,8 @@ use {
         MODE_TYPE_FILE, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
     },
     fuchsia_async as fasync,
-    fuchsia_zircon::{self as zx, HandleBased},
-    std::ffi::CString,
+    fuchsia_zircon as zx,
     std::path::{Component, Path},
-    std::ptr,
     std::str::from_utf8,
 };
 
@@ -97,41 +95,18 @@ pub fn connect_in_namespace(
     server_chan: zx::Channel,
     flags: u32,
 ) -> Result<(), zx::Status> {
-    let mut ns_ptr: *mut fdio::fdio_sys::fdio_ns_t = ptr::null_mut();
-    let status = unsafe { fdio::fdio_sys::fdio_ns_get_installed(&mut ns_ptr) };
-    if status != zx::sys::ZX_OK {
-        return Err(zx::Status::from_raw(status));
-    }
-
-    let cstr = CString::new(path)?;
-    let status = unsafe {
-        fdio::fdio_sys::fdio_ns_connect(ns_ptr, cstr.as_ptr(), flags, server_chan.into_raw())
-    };
-    if status != zx::sys::ZX_OK {
-        return Err(zx::Status::from_raw(status));
-    }
+    let namespace = fdio::Namespace::installed()?;
+    namespace.connect(path, flags, server_chan)?;
     Ok(())
 }
 
 /// open_node_in_namespace will return a NodeProxy to the given path by using the default namespace
 /// stored in fdio. The path argument must be an absolute path.
 pub fn open_node_in_namespace(path: &str, flags: u32) -> Result<NodeProxy, Error> {
-    let mut ns_ptr: *mut fdio::fdio_sys::fdio_ns_t = ptr::null_mut();
-    let status = unsafe { fdio::fdio_sys::fdio_ns_get_installed(&mut ns_ptr) };
-    if status != zx::sys::ZX_OK {
-        return Err(format_err!("fdio_ns_get_installed error: {}", status));
-    }
-
     let (proxy_chan, server_end) = zx::Channel::create()
         .map_err(|status| format_err!("zx::Channel::create error: {}", status))?;
 
-    let cstr = CString::new(path)?;
-    let status = unsafe {
-        fdio::fdio_sys::fdio_ns_connect(ns_ptr, cstr.as_ptr(), flags, server_end.into_raw())
-    };
-    if status != zx::sys::ZX_OK {
-        return Err(format_err!("fdio_ns_connect error: {}", status));
-    }
+    connect_in_namespace(path, server_end, flags)?;
 
     return Ok(NodeProxy::new(fasync::Channel::from_channel(proxy_chan)?));
 }
