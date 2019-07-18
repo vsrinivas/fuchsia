@@ -43,8 +43,8 @@ protocol Accessibility {
     /// Updates closed captions settings.
     ///
     /// + `settings` fields to update. Only values explicitly set are changed.
-    /// * see [`ClosedCaptionsSettings`] for their meaning.
-    SetClosedCaptionsSettings(ClosedCaptionsSettings settings) -> ();
+    /// * see [`CaptionsSettings`] for their meaning.
+    SetCaptionsSettings(CaptionsSettings settings) -> ();
 };
 
 /// Supported accessibility settings.
@@ -66,7 +66,7 @@ table AccessibilitySettings {
     5: ColorBlindnessType color_correction;
 
     /// What kind of sources get closed captions, and how they look.
-    6: ClosedCaptionsSettings closed_captions_settings;
+    6: CaptionsSettings captions_settings;
 };
 
 enum ColorBlindnessType {
@@ -84,7 +84,8 @@ enum ColorBlindnessType {
     TRITANOMALY = 3;
 };
 
-table ClosedCaptionsSettings {
+/// What kind of sources get closed captions, and how they look.
+table CaptionsSettings {
     /// Closed captions enabled for media sources of audio.
     1: bool for_media;
 
@@ -92,7 +93,7 @@ table ClosedCaptionsSettings {
     2: bool for_tts;
 
     /// Font style and color used for the closed captions text.
-    3: FontStyle font_style;
+    3: CaptionFontStyle font_style;
 
     /// Border color used around the closed captions window.
     4: Color window_color;
@@ -101,20 +102,21 @@ table ClosedCaptionsSettings {
     5: Color background_color;
 };
 
-table FontStyle {
-    1: GenericFontFamily family;
+/// Font, size, and color of closed captions text.
+table CaptionFontStyle {
+    1: CaptionFontFamily family;
+    /// 47 CFR §79.103(c)(2) requires at least 3-bit RGB for user override of
+    /// closed-captions color.
     2: Color color;
     /// Size of closed captions text relative to the default captions size. A
-    /// range of [0.5, 2] is guaranteed to be supported.
+    /// range of [0.5, 2] is guaranteed to be supported (as 47 CFR §79.103(c)(4)
+    /// establishes).
     3: float32 relative_size;
-    4: EdgeStyle char_edge_style;
+    4: CaptionEdgeStyle char_edge_style;
 };
 
-/// Font family group.
-// TODO: Transition to using `fuchsia.fonts/GenericFontFamily` instead. It
-// cannot represent all the values here, so the transition involves first
-// reconciling both enums and the components using each.
-enum GenericFontFamily {
+/// Font family groups for closed captions, specified by 47 CFR §79.102(k).
+enum CaptionFontFamily {
     UNKNOWN = 0;
     MONOSPACED_SERIF = 1;
     PROPORTIONAL_SERIF = 2;
@@ -137,7 +139,7 @@ struct Color {
 };
 
 /// Font edge style, for better visibility against the background.
-enum EdgeStyle {
+enum CaptionEdgeStyle {
     /// No border around characters.
     NONE = 0;
 
