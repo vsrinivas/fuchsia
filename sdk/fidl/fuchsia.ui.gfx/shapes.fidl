@@ -4,22 +4,22 @@
 
 library fuchsia.ui.gfx;
 
-// The shapes defined in this file can be used to define the rendered shape of
-// an `ObjectNode`, and to define the clip region of a `ClipNode`.
+/// The shapes defined in this file can be used to define the rendered shape of
+/// an `ObjectNode`, and to define the clip region of a `ClipNode`.
 
-// Rectangle centered at (0,0).
+/// Rectangle centered at (0,0).
 struct RectangleArgs {
     Value width; // float32
     Value height; // float32
 };
 
-// RoundedRectangle centered at (0,0).  Legal parameter values must satisfy the
-// constraint that the flat sides of the rectangle have non-negative length.
-// In other words, the following constraints must hold:
-//   - top_left_radius + top_right_radius <= width
-//   - bottom_left_radius + bottom_right_radius <= width
-//   - top_left_radius + bottom_left_radius <= height
-//   - top_right_radius + bottom_right_radius <= height
+/// RoundedRectangle centered at (0,0).  Legal parameter values must satisfy the
+/// constraint that the flat sides of the rectangle have non-negative length.
+/// In other words, the following constraints must hold:
+///   - top_left_radius + top_right_radius <= width
+///   - bottom_left_radius + bottom_right_radius <= width
+///   - top_left_radius + bottom_left_radius <= height
+///   - top_right_radius + bottom_right_radius <= height
 struct RoundedRectangleArgs {
     Value width; // float32
     Value height; // float32
@@ -33,7 +33,7 @@ struct CircleArgs {
     Value radius; // float32
 };
 
-// A Mesh cannot be rendered until it has been bound to vertex/index buffers;
-// see BindMeshBuffersCmd.
+/// A Mesh cannot be rendered until it has been bound to vertex/index buffers;
+/// see BindMeshBuffersCmd.
 struct MeshArgs {
 };

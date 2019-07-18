@@ -23,7 +23,7 @@ struct vec4 {
 };
 
 struct mat4 {
-    // Column major order.
+    /// Column major order.
     array<float32>:16 matrix;
 };
 
@@ -48,8 +48,8 @@ struct Quaternion {
     float32 w;
 };
 
-// Oriented plane described by a normal vector and a distance
-// from the origin along that vector.
+/// Oriented plane described by a normal vector and a distance
+/// from the origin along that vector.
 struct Plane3 {
     vec3 dir;
     float32 dist;
@@ -58,7 +58,7 @@ struct Plane3 {
 struct FactoredTransform {
     vec3 translation;
     vec3 scale;
-    // Point around which rotation and scaling occur.
+    /// Point around which rotation and scaling occur.
     vec3 anchor;
     Quaternion rotation;
 };
@@ -71,82 +71,82 @@ union Value {
     mat4 matrix4x4;
     ColorRgba color_rgba;
     ColorRgb color_rgb;
-    // Degrees of counter-clockwise rotation in the XY plane.
+    /// Degrees of counter-clockwise rotation in the XY plane.
     float32 degrees;
     Quaternion quaternion;
     FactoredTransform transform;
-    // ID of a value-producing resource (an animation or an expression).
-    // The type of this value matches the type produced by the named resource.
+    /// ID of a value-producing resource (an animation or an expression).
+    /// The type of this value matches the type produced by the named resource.
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by `value` if `variable_id` is zero,
-// or is the value produced by the resource identified by `variable_id`, e.g.
-// an animation or expression.  In the latter case, the value produced by the
-// resource must be a float32, and `value` is ignored.
+/// A value that is specified explicitly by `value` if `variable_id` is zero,
+/// or is the value produced by the resource identified by `variable_id`, e.g.
+/// an animation or expression.  In the latter case, the value produced by the
+/// resource must be a float32, and `value` is ignored.
 struct FloatValue {
     float32 value;
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by `value` if `variable_id` is zero,
-// or is the value produced by the resource identified by `variable_id`, e.g.
-// an animation or expression.  In the latter case, the value produced by the
-// resource must be a vec2, and `value` is ignored.
+/// A value that is specified explicitly by `value` if `variable_id` is zero,
+/// or is the value produced by the resource identified by `variable_id`, e.g.
+/// an animation or expression.  In the latter case, the value produced by the
+/// resource must be a vec2, and `value` is ignored.
 struct Vector2Value {
     vec2 value;
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by `value` if `variable_id` is zero,
-// or is the value produced by the resource identified by `variable_id`, e.g.
-// an animation or expression.  In the latter case, the value produced by the
-// resource must be a vec3, and `value` is ignored.
+/// A value that is specified explicitly by `value` if `variable_id` is zero,
+/// or is the value produced by the resource identified by `variable_id`, e.g.
+/// an animation or expression.  In the latter case, the value produced by the
+/// resource must be a vec3, and `value` is ignored.
 struct Vector3Value {
     vec3 value;
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by `value` if `variable_id` is zero,
-// or is the value produced by the resource identified by `variable_id`, e.g.
-// an animation or expression.  In the latter case, the value produced by the
-// resource must be a vec4, and `value` is ignored.
+/// A value that is specified explicitly by `value` if `variable_id` is zero,
+/// or is the value produced by the resource identified by `variable_id`, e.g.
+/// an animation or expression.  In the latter case, the value produced by the
+/// resource must be a vec4, and `value` is ignored.
 struct Vector4Value {
     vec4 value;
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by `value` if `variable_id` is zero,
-// or is the value produced by the resource identified by `variable_id`, e.g.
-// an animation or expression.  In the latter case, the value produced by the
-// resource must be a vec4, and `value` is ignored.
+/// A value that is specified explicitly by `value` if `variable_id` is zero,
+/// or is the value produced by the resource identified by `variable_id`, e.g.
+/// an animation or expression.  In the latter case, the value produced by the
+/// resource must be a vec4, and `value` is ignored.
 struct Matrix4Value {
     mat4 value;
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by `value` if `variable_id` is zero,
-// or is the value produced by the resource identified by `variable_id`, e.g.
-// an animation or expression.  In the latter case, the value produced by the
-// resource must be a ColorRgb, and `value` is ignored.
+/// A value that is specified explicitly by `value` if `variable_id` is zero,
+/// or is the value produced by the resource identified by `variable_id`, e.g.
+/// an animation or expression.  In the latter case, the value produced by the
+/// resource must be a ColorRgb, and `value` is ignored.
 struct ColorRgbValue {
     ColorRgb value;
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by `value` if `variable_id` is zero,
-// or is the value produced by the resource identified by `variable_id`, e.g.
-// an animation or expression.  In the latter case, the value produced by the
-// resource must be a ColorRgba, and `value` is ignored.
+/// A value that is specified explicitly by `value` if `variable_id` is zero,
+/// or is the value produced by the resource identified by `variable_id`, e.g.
+/// an animation or expression.  In the latter case, the value produced by the
+/// resource must be a ColorRgba, and `value` is ignored.
 struct ColorRgbaValue {
     ColorRgba value;
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by `value` if `variable_id` is zero,
-// or is the value produced by the resource identified by `variable_id`, e.g.
-// an animation or expression.  In the latter case, the value produced by the
-// resource must be a Quaternion, and `value` is ignored.
+/// A value that is specified explicitly by `value` if `variable_id` is zero,
+/// or is the value produced by the resource identified by `variable_id`, e.g.
+/// an animation or expression.  In the latter case, the value produced by the
+/// resource must be a Quaternion, and `value` is ignored.
 struct QuaternionValue {
     Quaternion value;
     uint32 variable_id;
@@ -165,79 +165,79 @@ enum ValueType {
     kFactoredTransform = 9;
 };
 
-// Describes how nodes interact with hit testings.
+/// Describes how nodes interact with hit testings.
 enum HitTestBehavior {
-    // Apply hit testing to the node's content, its parts, and its children.
+    /// Apply hit testing to the node's content, its parts, and its children.
     kDefault = 0;
 
-    // Suppress hit testing of the node and everything it contains.
+    /// Suppress hit testing of the node and everything it contains.
     kSuppress = 1;
 };
 
-// Rendering target metrics associated with a node.
-// See also `MetricsEvent`.
+/// Rendering target metrics associated with a node.
+/// See also `MetricsEvent`.
 struct Metrics {
-    // The ratio between the size of one logical pixel within the node's local
-    // coordinate system and the size of one physical pixel of the rendering
-    // target.
-    //
-    // This scale factors change in relation to the resolution of the rendering
-    // target and the scale transformations applied by containing nodes.
-    // They are always strictly positive and non-zero.
-    //
-    // For example, suppose the rendering target is a high resolution display
-    // with a device pixel ratio of 2.0 meaning that each logical pixel
-    // within the model corresponds to two physical pixels of the display.
-    // Assuming no scale transformations affect the node, then its metrics event
-    // will report a scale factor of 2.0.
-    //
-    // Building on this example, if instead the node's parent applies a
-    // scale transformation of 0.25 to the node, then the node's metrics event
-    // will report a scale factor of 0.5 indicating that the node should render
-    // its content at a reduced resolution and level of detail since a smaller
-    // area of physical pixels (half the size in each dimension) will be rendered.
+    /// The ratio between the size of one logical pixel within the node's local
+    /// coordinate system and the size of one physical pixel of the rendering
+    /// target.
+    ///
+    /// This scale factors change in relation to the resolution of the rendering
+    /// target and the scale transformations applied by containing nodes.
+    /// They are always strictly positive and non-zero.
+    ///
+    /// For example, suppose the rendering target is a high resolution display
+    /// with a device pixel ratio of 2.0 meaning that each logical pixel
+    /// within the model corresponds to two physical pixels of the display.
+    /// Assuming no scale transformations affect the node, then its metrics event
+    /// will report a scale factor of 2.0.
+    ///
+    /// Building on this example, if instead the node's parent applies a
+    /// scale transformation of 0.25 to the node, then the node's metrics event
+    /// will report a scale factor of 0.5 indicating that the node should render
+    /// its content at a reduced resolution and level of detail since a smaller
+    /// area of physical pixels (half the size in each dimension) will be rendered.
     float32 scale_x;
     float32 scale_y;
     float32 scale_z;
 };
 
-// Represents an axis-aligned bounding box.  If any of the dimensions has a
-// negative extent (e.g. max.x < min.x) then the bounding box is treated as
-// empty.
+/// Represents an axis-aligned bounding box.  If any of the dimensions has a
+/// negative extent (e.g. max.x < min.x) then the bounding box is treated as
+/// empty.
 struct BoundingBox {
     vec3 min;
     vec3 max;
 };
 
-// Represents the properties for a View.
+/// Represents the properties for a View.
 struct ViewProperties {
-    // The View's bounding box extents can be defined as:
-    //    { bounding_box.min + inset_from_min, bounding_box.max - inset_from_max }
-    // Content contained within the View is clipped to this bounding box.
-    //
+    /// The View's bounding box extents can be defined as:
+    ///    { bounding_box.min + inset_from_min, bounding_box.max - inset_from_max }
+    /// Content contained within the View is clipped to this bounding box.
+    ///
     // TODO(SCN-819): should we just have a vec3 extent instead of a bounding box
     // with a potentially non-zero min?
     BoundingBox bounding_box;
 
-    // `insets_from_min` and `insets_from_max` specify the distances between the
-    // view's bounding box and that of its parent.
+    /// `insets_from_min` and `insets_from_max` specify the distances between the
+    /// view's bounding box and that of its parent.
     vec3 inset_from_min;
     vec3 inset_from_max;
 
-    // Whether the View can receive a focus event; default is true.  When
-    // false, and this View is eligible to receive a focus event, no
-    // focus/unfocus event is actually sent to any View.
+    /// Whether the View can receive a focus event; default is true.  When
+    /// false, and this View is eligible to receive a focus event, no
+    /// focus/unfocus event is actually sent to any View.
     bool focus_change = true;
 
-    // Whether the View allows geometrically underlying Views to receive input;
-    // default is true. When false, Scenic does not send input events to
-    // underlying Views.
+    /// Whether the View allows geometrically underlying Views to receive input;
+    /// default is true. When false, Scenic does not send input events to
+    /// underlying Views.
     bool downward_input = true;
 };
 
-// Represents the state of a View in Scenic.
+/// Represents the state of a View in Scenic.
 struct ViewState {
-    // Whether the View is rendering. Default is false. Delivered to the View's
-    // corresponding ViewHolder after the View's first frame render request.
+    /// Whether the View is rendering. Default is false. Delivered to the View's
+    /// corresponding ViewHolder after the View's first frame render request.
     bool is_rendering;
 };

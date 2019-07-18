@@ -4,33 +4,33 @@
 
 library fuchsia.ui.gfx;
 
-// Describes where a hit occurred within the content of a node tagged
-// by this session.
-//
-// To compute the point of intersection within the node's local coordinate
-// system, perform the following calculation using the ray which was
-// originally passed to `Session.HitTest()`.
-//
-//   hit_point = ray.origin + (hit.distance * ray.direction)
-//   local_point = hit.inverse_transform * hit_point
+/// Describes where a hit occurred within the content of a node tagged
+/// by this session.
+///
+/// To compute the point of intersection within the node's local coordinate
+/// system, perform the following calculation using the ray which was
+/// originally passed to `Session.HitTest()`.
+///
+///   hit_point = ray.origin + (hit.distance * ray.direction)
+///   local_point = hit.inverse_transform * hit_point
 struct Hit {
-    // The node's tag value.
+    /// The node's tag value.
     uint32 tag_value;
 
-    // The origin of the ray that was used for the hit test, in the hit
-    // node's coordinate system.
+    /// The origin of the ray that was used for the hit test, in the hit
+    /// node's coordinate system.
     vec4 ray_origin;
 
-    // The direction of the ray that was used for the hit test, in the hit
-    // node's coordinate system.
+    /// The direction of the ray that was used for the hit test, in the hit
+    /// node's coordinate system.
     vec4 ray_direction;
 
-    // The inverse transformation matrix which maps the coordinate system of
-    // the node at which the hit test was initiated into the local coordinate
-    // system of the node which was hit.
+    /// The inverse transformation matrix which maps the coordinate system of
+    /// the node at which the hit test was initiated into the local coordinate
+    /// system of the node which was hit.
     mat4 inverse_transform;
 
-    // The distance from the ray's origin to the closest point of intersection
-    // in multiples of the ray's direction vector.
+    /// The distance from the ray's origin to the closest point of intersection
+    /// in multiples of the ray's direction vector.
     float32 distance;
 };

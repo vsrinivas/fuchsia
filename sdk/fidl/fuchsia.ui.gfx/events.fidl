@@ -4,20 +4,20 @@
 
 library fuchsia.ui.gfx;
 
-// Reports metrics information.
-// This event type is only reported for node resources.
+/// Reports metrics information.
+/// This event type is only reported for node resources.
 const uint32 kMetricsEventMask = 1;
 const uint32 kSizeChangeHintEventMask = 2;
 
-// These are all of the types of events which can be reported by a `Session`.
-// Use `SetEventMaskCmd` to enable event delivery for a resource.
+/// These are all of the types of events which can be reported by a `Session`.
+/// Use `SetEventMaskCmd` to enable event delivery for a resource.
 union Event {
-    // Events which are controlled by a mask.
+    /// Events which are controlled by a mask.
     MetricsEvent metrics;
 
     SizeChangeHintEvent size_change_hint;
 
-    // Events which are always delivered, regardless of mask.
+    /// Events which are always delivered, regardless of mask.
     ImportUnboundEvent import_unbound;
     ViewConnectedEvent view_connected;
     ViewDisconnectedEvent view_disconnected;
@@ -29,107 +29,107 @@ union Event {
     ViewHolderConnectedEvent view_holder_connected;
 };
 
-// Provides rendering target metrics information about the specified node.
-//
-// This event is delivered when the following conditions are true:
-// - The node is a descendant of a `Scene`.
-// - The node has `kMetricsEventMask` set to an enabled state.
-// - The node's metrics have changed since they were last delivered, or since
-//   `kMetricsEventMask` transitioned from a disabled state to an enabled state.
-//
-// Subscribe to this event to receive information about the scale factors you
-// should apply when generating textures for your nodes.
+/// Provides rendering target metrics information about the specified node.
+///
+/// This event is delivered when the following conditions are true:
+/// - The node is a descendant of a `Scene`.
+/// - The node has `kMetricsEventMask` set to an enabled state.
+/// - The node's metrics have changed since they were last delivered, or since
+///   `kMetricsEventMask` transitioned from a disabled state to an enabled state.
+///
+/// Subscribe to this event to receive information about the scale factors you
+/// should apply when generating textures for your nodes.
 struct MetricsEvent {
     uint32 node_id;
     Metrics metrics;
 };
 
-// Delivered in response to a size change hint from a parent node
-// (SendSizeChangeHintCmd).
-//
-// This event is delivered when the following conditions are true:
-// - The node has `kSizeChangeEventMask` set to an enabled state.
-// - A parent node has sent a SendSizeChangeHintCmd.
-//
-// Subscribe to this event to receive information about how large textures you
-// will need in the near future for your nodes. The canonical use case is to
-// pre-allocate memory to avoid repeated re-allocations.
+/// Delivered in response to a size change hint from a parent node
+/// (SendSizeChangeHintCmd).
+///
+/// This event is delivered when the following conditions are true:
+/// - The node has `kSizeChangeEventMask` set to an enabled state.
+/// - A parent node has sent a SendSizeChangeHintCmd.
+///
+/// Subscribe to this event to receive information about how large textures you
+/// will need in the near future for your nodes. The canonical use case is to
+/// pre-allocate memory to avoid repeated re-allocations.
 struct SizeChangeHintEvent {
     uint32 node_id;
     float32 width_change_factor;
     float32 height_change_factor;
 };
 
-// Delivered when the imported resource with the given ID is no longer bound to
-// its host resource, or if the imported resource can not be bound because
-// the host resource is not available.
+/// Delivered when the imported resource with the given ID is no longer bound to
+/// its host resource, or if the imported resource can not be bound because
+/// the host resource is not available.
 struct ImportUnboundEvent {
     uint32 resource_id;
 };
 
-// Delivered to a ViewHolder's Session when its peer View is connected.
+/// Delivered to a ViewHolder's Session when its peer View is connected.
 struct ViewConnectedEvent {
     uint32 view_holder_id;
 };
 
-// Delivered to a ViewHolder's Session when its peer View is disconnected or
-// destroyed.
-//
-// If the View is destroyed before the connection is established, then this
-// event will be delivered immediately when the ViewHolder attempts to connect.
+/// Delivered to a ViewHolder's Session when its peer View is disconnected or
+/// destroyed.
+///
+/// If the View is destroyed before the connection is established, then this
+/// event will be delivered immediately when the ViewHolder attempts to connect.
 struct ViewDisconnectedEvent {
     uint32 view_holder_id;
 };
 
-// Delivered to a View's Session when its peer ViewHolder is disconnected or
-// destroyed.
-//
-// If the ViewHolder is destroyed before the connection is established, then
-// this event will be delivered immediately when the View attempts to connect.
+/// Delivered to a View's Session when its peer ViewHolder is disconnected or
+/// destroyed.
+///
+/// If the ViewHolder is destroyed before the connection is established, then
+/// this event will be delivered immediately when the View attempts to connect.
 struct ViewHolderDisconnectedEvent {
     uint32 view_id;
 };
 
-// Delivered to a View's Session when its peer ViewHolder is connected.
-//
-// If the ViewHolder is destroyed before the connection is established, then
-// this event will not be delivered.
+/// Delivered to a View's Session when its peer ViewHolder is connected.
+///
+/// If the ViewHolder is destroyed before the connection is established, then
+/// this event will not be delivered.
 struct ViewHolderConnectedEvent {
     uint32 view_id;
 };
 
-// Delivered to a View's Session when the parent ViewHolder for the given View
-// becomes a part of a Scene.
-//
-// A ViewHolder is considered to be part of a Scene if there is an unbroken
-// chain of parent-child relationships between the Scene node and the
-// ViewHolder node.
+/// Delivered to a View's Session when the parent ViewHolder for the given View
+/// becomes a part of a Scene.
+///
+/// A ViewHolder is considered to be part of a Scene if there is an unbroken
+/// chain of parent-child relationships between the Scene node and the
+/// ViewHolder node.
 struct ViewAttachedToSceneEvent {
     uint32 view_id;
     ViewProperties properties;
 };
 
-// Delivered to a View's Session when the parent ViewHolder for the given View
-// is no longer part of a scene.
-//
-// This can happen if the ViewHolder is detached directly from the scene, or
-// if one of its parent nodes is.
-//
-// A ViewHolder is considered to be part of a Scene if there is an unbroken
-// chain of parent-child relationships between the Scene node and the
-// ViewHolder node.
+/// Delivered to a View's Session when the parent ViewHolder for the given View
+/// is no longer part of a scene.
+///
+/// This can happen if the ViewHolder is detached directly from the scene, or
+/// if one of its parent nodes is.
+///
+/// A ViewHolder is considered to be part of a Scene if there is an unbroken
+/// chain of parent-child relationships between the Scene node and the
+/// ViewHolder node.
 struct ViewDetachedFromSceneEvent {
     uint32 view_id;
 };
 
-// Delivered when the parent ViewHolder for the given View makes a change to
-// the View's properties.
+/// Delivered when the parent ViewHolder for the given View makes a change to
+/// the View's properties.
 struct ViewPropertiesChangedEvent {
     uint32 view_id;
     ViewProperties properties;
 };
 
-// Delivered to a ViewHolder's Session when its peer View's state has changed.
+/// Delivered to a ViewHolder's Session when its peer View's state has changed.
 struct ViewStateChangedEvent {
     uint32 view_holder_id;
     ViewState state;

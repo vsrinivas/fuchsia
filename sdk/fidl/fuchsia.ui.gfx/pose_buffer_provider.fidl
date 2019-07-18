@@ -4,11 +4,11 @@
 
 library fuchsia.ui.gfx;
 
+/// A minimal fidl interface to allow sourcing the contents of a PoseBuffer from another service.
 [Discoverable]
-// A minimal fidl interface to allow sourcing the contents of a PoseBuffer from another service.
 protocol PoseBufferProvider {
-    // Sets the PoseBuffer and the parameters PoseBufferProvider will use to fill that PoseBuffer.
-    // Setting this when it is already set will replace the previously set parameters with the new
-    // parameters, which will release the provider's reference to the buffer.
+    /// Sets the PoseBuffer and the parameters PoseBufferProvider will use to fill that PoseBuffer.
+    /// Setting this when it is already set will replace the previously set parameters with the new
+    /// parameters, which will release the provider's reference to the buffer.
     SetPoseBuffer(handle<vmo> buffer, uint32 num_entries, int64 base_time, uint64 time_interval);
 };
