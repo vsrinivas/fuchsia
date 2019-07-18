@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_AS370_INCLUDE_SOC_AS370_AS370_HW_H_
+#define ZIRCON_SYSTEM_DEV_LIB_AS370_INCLUDE_SOC_AS370_AS370_HW_H_
 
 #include <limits.h>
 
@@ -24,4 +25,8 @@ constexpr uint32_t kAudioGlobalSize = fbl::round_up<uint32_t, uint32_t>(0x2'0000
 constexpr uint32_t kAudioI2sBase = 0xf744'0000;
 constexpr uint32_t kAudioI2sSize = fbl::round_up<uint32_t, uint32_t>(0x2'0000, PAGE_SIZE);
 
-} // namespace as370
+constexpr uint32_t kDhubIrq = 32 + 11;
+
+}  // namespace as370
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_AS370_INCLUDE_SOC_AS370_AS370_HW_H_

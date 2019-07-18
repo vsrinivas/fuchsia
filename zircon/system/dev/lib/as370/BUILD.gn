@@ -3,5 +3,43 @@
 # found in the LICENSE file.
 
 library("as370") {
-  sources = []
+  sources = [
+    "syn-audio-out.cc",
+    "syn-dhub.cc",
+  ]
+  deps = [
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+test("syn-dhub-test") {
+  testonly = true
+  output_name = "syn-dhub-test"
+  sources = [
+    "syn-dhub-test.cc",
+    "syn-dhub.cc",
+  ]
+  deps = [
+    "$zx/system/dev/lib/as370",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mock-mmio-reg",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
 }
