@@ -13,11 +13,7 @@ using fuchsia.ui.views;
 // does not change.
 protocol StoryController {
     // Gets information associated with the story.
-    [Transitional = "Use GetInfo2 instead"]
     GetInfo() -> (StoryInfo info, StoryState state);
-    // For transition purposes only.
-    [Transitional = "Only use while GetInfo2 is transitional"]
-    GetInfo2() -> (StoryInfo2 info, StoryState state);
 
     // Requests to run the story controlled by this `StoryController` instance.
     // When the story starts, if not yet running, the view of the newly started
