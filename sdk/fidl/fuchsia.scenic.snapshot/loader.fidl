@@ -6,10 +6,10 @@ library fuchsia.scenic.snapshot;
 
 using fuchsia.mem;
 
+/// Snapshot loader exported by `ViewProvider` to load snapshots into views
+/// created from it.
 [Discoverable]
-// Snapshot loader exported by `ViewProvider` to load snapshots into views
-// created from it.
 protocol Loader {
-    // Load the snapshot from the Vmo buffer payload.
+    /// Load the snapshot from the Vmo buffer payload.
     Load(fuchsia.mem.Buffer payload);
 };
