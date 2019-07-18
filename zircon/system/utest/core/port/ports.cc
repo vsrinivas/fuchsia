@@ -712,9 +712,6 @@ TEST(PortStressTest, SignalCloseWait) {
 // A stress test designed to create a race where one thread is closing the port as another thread is
 // performing an object_wait_async using the same port handle.
 TEST(PortStressTest, CloseWaitRace) {
-    // TODO(FLK-418): fix the hang and reenable this test.
-    return;
-
     constexpr zx::duration kTestDuration = zx::msec(100);
     srand(4);
 
