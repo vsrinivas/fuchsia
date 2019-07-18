@@ -10,7 +10,7 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use super::{
     make_v3_possible_floating_point, parse_v3_possible_floating_point, peek_message_type,
-    IgmpMessage, IgmpResponseTimeV2, IgmpResponseTimeV3,
+    IgmpMessage, IgmpNonEmptyBody, IgmpResponseTimeV2, IgmpResponseTimeV3,
 };
 use crate::error::ParseError;
 use crate::wire::igmp::MessageType;
@@ -208,6 +208,8 @@ impl MembershipQueryData {
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct IgmpMembershipQueryV3;
 
+impl<B> IgmpNonEmptyBody for LayoutVerified<B, [Ipv4Addr]> {}
+
 impl<B> MessageType<B> for IgmpMembershipQueryV3 {
     type FixedHeader = MembershipQueryData;
     type VariableBody = LayoutVerified<B, [Ipv4Addr]>;
@@ -337,6 +339,8 @@ pub(crate) struct GroupRecord<B> {
 /// [RFC 3376 section 4.2]: https://tools.ietf.org/html/rfc3376#section-4.2
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct IgmpMembershipReportV3;
+
+impl<B> IgmpNonEmptyBody for LimitedRecords<B, IgmpMembershipReportV3> {}
 
 impl<B> MessageType<B> for IgmpMembershipReportV3 {
     type FixedHeader = MembershipReportV3Data;
@@ -526,7 +530,10 @@ mod tests {
 
     fn serialize_to_bytes<B: ByteSlice + Debug, M: MessageType<B> + Debug>(
         igmp: &IgmpMessage<B, M>,
-    ) -> Vec<u8> {
+    ) -> Vec<u8>
+    where
+        M::VariableBody: IgmpNonEmptyBody,
+    {
         M::body_bytes(&igmp.body)
             .into_serializer()
             .encapsulate(igmp.builder())
@@ -536,8 +543,37 @@ mod tests {
             .to_vec()
     }
 
+    fn serialize_to_bytes_inner<
+        B: ByteSlice + Debug,
+        M: MessageType<B, VariableBody = ()> + Debug,
+    >(
+        igmp: &IgmpMessage<B, M>,
+    ) -> Vec<u8> {
+        igmp.builder().into_serializer().serialize_vec_outer().unwrap().as_ref().to_vec()
+    }
+
     fn test_parse_and_serialize<
-        M: for<'a> MessageType<&'a [u8]> + Debug,
+        B: ByteSlice + Debug,
+        BV: BufferView<B>,
+        M: MessageType<B> + Debug,
+        F: FnOnce(&IgmpMessage<B, M>),
+    >(
+        mut req: BV,
+        check: F,
+    ) where
+        M::VariableBody: IgmpNonEmptyBody,
+    {
+        let orig_req = req.as_ref().to_owned();
+
+        let igmp = IgmpMessage::<_, M>::parse(req, ()).unwrap();
+        check(&igmp);
+
+        let data = serialize_to_bytes(&igmp);
+        assert_eq!(data, orig_req);
+    }
+
+    fn test_parse_and_serialize_inner<
+        M: for<'a> MessageType<&'a [u8], VariableBody = ()> + Debug,
         F: for<'a> FnOnce(&IgmpMessage<&'a [u8], M>),
     >(
         mut req: &[u8],
@@ -548,14 +584,14 @@ mod tests {
         let igmp = req.parse_with::<_, IgmpMessage<_, M>>(()).unwrap();
         check(&igmp);
 
-        let data = serialize_to_bytes(&igmp);
+        let data = serialize_to_bytes_inner(&igmp);
         assert_eq!(&data[..], orig_req);
     }
 
     #[test]
     fn membership_query_v2_parse_and_serialize() {
         set_logger_for_test();
-        test_parse_and_serialize::<IgmpMembershipQueryV2, _>(
+        test_parse_and_serialize_inner::<IgmpMembershipQueryV2, _>(
             igmp_router_queries::v2::QUERY,
             |igmp| {
                 assert_eq!(
@@ -570,31 +606,26 @@ mod tests {
     #[test]
     fn membership_query_v3_parse_and_serialize() {
         set_logger_for_test();
-        test_parse_and_serialize::<IgmpMembershipQueryV3, _>(
-            igmp_router_queries::v3::QUERY,
-            |igmp| {
-                assert_eq!(igmp.prefix.max_resp_code, igmp_router_queries::v3::MAX_RESP_CODE);
-                assert_eq!(
-                    igmp.header.group_address,
-                    Ipv4Addr::new(igmp_router_queries::v3::GROUP_ADDRESS)
-                );
-                assert_eq!(
-                    igmp.header.number_of_sources(),
-                    igmp_router_queries::v3::NUMBER_OF_SOURCES
-                );
-                assert_eq!(
-                    igmp.header.suppress_router_side_processing(),
-                    igmp_router_queries::v3::SUPPRESS_ROUTER_SIDE
-                );
-                assert_eq!(igmp.header.querier_robustness_variable(), igmp_router_queries::v3::QRV);
-                assert_eq!(
-                    igmp.header.querier_query_interval().as_secs() as u32,
-                    igmp_router_queries::v3::QQIC_SECS
-                );
-                assert_eq!(igmp.body.len(), igmp_router_queries::v3::NUMBER_OF_SOURCES as usize);
-                assert_eq!(igmp.body[0], Ipv4Addr::new(igmp_router_queries::v3::SOURCE));
-            },
-        );
+        let mut req = igmp_router_queries::v3::QUERY;
+        test_parse_and_serialize::<_, _, IgmpMembershipQueryV3, _>(&mut req, |igmp| {
+            assert_eq!(igmp.prefix.max_resp_code, igmp_router_queries::v3::MAX_RESP_CODE);
+            assert_eq!(
+                igmp.header.group_address,
+                Ipv4Addr::new(igmp_router_queries::v3::GROUP_ADDRESS)
+            );
+            assert_eq!(igmp.header.number_of_sources(), igmp_router_queries::v3::NUMBER_OF_SOURCES);
+            assert_eq!(
+                igmp.header.suppress_router_side_processing(),
+                igmp_router_queries::v3::SUPPRESS_ROUTER_SIDE
+            );
+            assert_eq!(igmp.header.querier_robustness_variable(), igmp_router_queries::v3::QRV);
+            assert_eq!(
+                igmp.header.querier_query_interval().as_secs() as u32,
+                igmp_router_queries::v3::QQIC_SECS
+            );
+            assert_eq!(igmp.body.len(), igmp_router_queries::v3::NUMBER_OF_SOURCES as usize);
+            assert_eq!(igmp.body[0], Ipv4Addr::new(igmp_router_queries::v3::SOURCE));
+        });
     }
 
     #[test]
@@ -602,8 +633,8 @@ mod tests {
         use igmp_reports::v3::*;
 
         set_logger_for_test();
-
-        test_parse_and_serialize::<IgmpMembershipReportV3, _>(MEMBER_REPORT, |igmp| {
+        let mut req = MEMBER_REPORT;
+        test_parse_and_serialize::<_, _, IgmpMembershipReportV3, _>(&mut req, |igmp| {
             assert_eq!(igmp.header.number_of_group_records(), NUMBER_OF_RECORDS);
             assert_eq!(igmp.prefix.max_resp_code, MAX_RESP_CODE);
             let mut iter = igmp.body.iter();
@@ -635,7 +666,7 @@ mod tests {
     fn membership_report_v1_parse_and_serialize() {
         use igmp_reports::v1;
         set_logger_for_test();
-        test_parse_and_serialize::<IgmpMembershipReportV1, _>(v1::MEMBER_REPORT, |igmp| {
+        test_parse_and_serialize_inner::<IgmpMembershipReportV1, _>(v1::MEMBER_REPORT, |igmp| {
             assert_eq!(*igmp.header, Ipv4Addr::new(v1::GROUP_ADDRESS));
         });
     }
@@ -644,7 +675,7 @@ mod tests {
     fn membership_report_v2_parse_and_serialize() {
         use igmp_reports::v2;
         set_logger_for_test();
-        test_parse_and_serialize::<IgmpMembershipReportV2, _>(v2::MEMBER_REPORT, |igmp| {
+        test_parse_and_serialize_inner::<IgmpMembershipReportV2, _>(v2::MEMBER_REPORT, |igmp| {
             assert_eq!(*igmp.header, Ipv4Addr::new(v2::GROUP_ADDRESS));
         });
     }
@@ -652,9 +683,12 @@ mod tests {
     #[test]
     fn leave_group_parse_and_serialize() {
         set_logger_for_test();
-        test_parse_and_serialize::<IgmpLeaveGroup, _>(igmp_leave_group::LEAVE_GROUP, |igmp| {
-            assert_eq!(*igmp.header, Ipv4Addr::new(igmp_leave_group::GROUP_ADDRESS));
-        });
+        test_parse_and_serialize_inner::<IgmpLeaveGroup, _>(
+            igmp_leave_group::LEAVE_GROUP,
+            |igmp| {
+                assert_eq!(*igmp.header, Ipv4Addr::new(igmp_leave_group::GROUP_ADDRESS));
+            },
+        );
     }
 
     #[test]

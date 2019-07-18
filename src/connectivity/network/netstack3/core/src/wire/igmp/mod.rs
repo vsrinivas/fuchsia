@@ -118,6 +118,11 @@ impl IgmpMaxRespCode for () {
     fn from_code(code: u8) {}
 }
 
+/// A marker trait for implementers of [`MessageType`]. Only [`MessageType`]s
+/// whose `VariableBody` implements `IgmpNonEmptyBody` (or is `()` for empty
+/// bodies) can be built using [`IgmpPacketBuilder`].
+pub(crate) trait IgmpNonEmptyBody {}
+
 /// A builder for IGMP packets.
 #[derive(Debug)]
 pub(crate) struct IgmpPacketBuilder<B, M: MessageType<B>> {
@@ -175,7 +180,10 @@ impl<B, M: MessageType<B, VariableBody = ()>> InnerPacketBuilder for IgmpPacketB
     }
 }
 
-impl<B, M: MessageType<B>> PacketBuilder for IgmpPacketBuilder<B, M> {
+impl<B, M: MessageType<B>> PacketBuilder for IgmpPacketBuilder<B, M>
+where
+    M::VariableBody: IgmpNonEmptyBody,
+{
     fn constraints(&self) -> PacketConstraints {
         PacketConstraints::new(
             mem::size_of::<M::FixedHeader>() + mem::size_of::<HeaderPrefix>(),
