@@ -4,6 +4,7 @@
 
 //! Common data structures.
 
+pub use id_map::Entry;
 pub(crate) use id_map::IdMap;
 pub use id_map_collection::{IdMapCollection, IdMapCollectionKey};
 
@@ -38,11 +39,7 @@ pub(crate) mod id_map {
 
         /// Returns `true` if there are no items in [`IdMap`].
         pub(crate) fn is_empty(&self) -> bool {
-            // invariant: the only way to remove items from IdMap is through
-            // the remove method, which compresses the underlying vec getting
-            // rid of unused items, so IdMap should only be empty if
-            // data is empty.
-            self.data.is_empty()
+            !self.data.iter().any(|f| f.is_some())
         }
 
         /// Returns a reference to the item indexed by `key`, or `None` if
@@ -155,6 +152,21 @@ pub(crate) mod id_map {
         pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = (Key, &mut T)> {
             self.data.iter_mut().enumerate().filter_map(|(k, v)| v.as_mut().map(|t| (k, t)))
         }
+
+        /// Gets the given key's corresponding entry in the map for in-place
+        /// manipulation.
+        pub(crate) fn entry(&mut self, key: usize) -> Entry<'_, usize, T> {
+            if key < self.data.len() {
+                let slot = &mut self.data[key];
+                if slot.is_some() {
+                    Entry::Occupied(OccupiedEntry { key, value: slot })
+                } else {
+                    Entry::Vacant(VacantEntry { key, slot: LazyEntry::Allocated(slot) })
+                }
+            } else {
+                Entry::Vacant(VacantEntry { key, slot: LazyEntry::Lazy(self) })
+            }
+        }
     }
 
     impl<T> Default for IdMap<T> {
@@ -163,9 +175,232 @@ pub(crate) mod id_map {
         }
     }
 
+    pub trait EntryKey {
+        fn get_key_index(&self) -> usize;
+    }
+
+    impl EntryKey for usize {
+        fn get_key_index(&self) -> usize {
+            *self
+        }
+    }
+
+    enum LazyEntry<'a, T> {
+        Allocated(&'a mut Option<T>),
+        Lazy(&'a mut IdMap<T>),
+    }
+
+    /// A view into a vacant entry in a map. It is part of the [`Entry`] enum.
+    pub struct VacantEntry<'a, K, T> {
+        key: K,
+        slot: LazyEntry<'a, T>,
+    }
+
+    impl<'a, K, T> VacantEntry<'a, K, T> {
+        /// Sets the value of the entry with the VacantEntry's key, and returns
+        /// a mutable reference to it.
+        pub fn insert(self, value: T) -> &'a mut T
+        where
+            K: EntryKey,
+        {
+            match self.slot {
+                LazyEntry::Allocated(slot) => {
+                    assert!(slot.replace(value).is_none());
+                    slot.as_mut().unwrap()
+                }
+                LazyEntry::Lazy(id_map) => {
+                    assert!(id_map.insert(self.key.get_key_index(), value).is_none());
+                    id_map.data[self.key.get_key_index()].as_mut().unwrap()
+                }
+            }
+        }
+
+        /// Gets a reference to the key that would be used when inserting a
+        /// value through the `VacantEntry`.
+        pub fn key(&self) -> &K {
+            &self.key
+        }
+
+        /// Take ownership of the key.
+        pub fn into_key(self) -> K {
+            self.key
+        }
+
+        /// Changes the key type of this `VacantEntry` to another key `X` that
+        /// still maps to the same index in an `IdMap`.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the resulting mapped key from `f` does not return the
+        /// same value for [`EntryKey::get_key_index`] as the old key did.
+        pub(crate) fn map_key<X, F>(self, f: F) -> VacantEntry<'a, X, T>
+        where
+            K: EntryKey,
+            X: EntryKey,
+            F: FnOnce(K) -> X,
+        {
+            let idx = self.key.get_key_index();
+            let key = f(self.key);
+            assert_eq!(idx, key.get_key_index());
+            VacantEntry { key, slot: self.slot }
+        }
+    }
+
+    /// A view into an occupied entry in a map. It is part of the
+    /// [`Entry`] enum.
+    pub struct OccupiedEntry<'a, K, T> {
+        key: K,
+        value: &'a mut Option<T>,
+    }
+
+    impl<'a, K, T> OccupiedEntry<'a, K, T> {
+        /// Gets a reference to the key in the entry.
+        pub fn key(&self) -> &K {
+            &self.key
+        }
+
+        /// Gets a reference to the value in the entry.
+        pub fn get(&self) -> &T {
+            // we can unwrap because value is always Some for OccupiedEntry
+            self.value.as_ref().unwrap()
+        }
+
+        /// Gets a mutable reference to the value in the entry.
+        ///
+        /// If you need a reference to the `OccupiedEntry` which may outlive the
+        /// destruction of the entry value, see [`OccupiedEntry::into_mut`].
+        pub fn get_mut(&mut self) -> &mut T {
+            // we can unwrap because value is always Some for OccupiedEntry
+            self.value.as_mut().unwrap()
+        }
+
+        /// Converts the `OccupiedEntry` into a mutable reference to the value
+        /// in the entry with a lifetime bound to the map itself.
+        ///
+        /// If you need multiple references to the `OccupiedEntry`, see
+        /// [`OccupiedEntry::get_mut`].
+        pub fn into_mut(self) -> &'a mut T {
+            // we can unwrap because value is always Some for OccupiedEntry
+            self.value.as_mut().unwrap()
+        }
+
+        /// Sets the value of the entry, and returns the entry's old value.
+        pub fn insert(&mut self, value: T) -> T {
+            // we can unwrap because value is always Some for OccupiedEntry
+            self.value.replace(value).unwrap()
+        }
+
+        /// Takes the value out of the entry, and returns it.
+        pub fn remove(self) -> T {
+            // we can unwrap because value is always Some for OccupiedEntry
+            self.value.take().unwrap()
+        }
+
+        /// Changes the key type of this `OccupiedEntry` to another key `X` that
+        /// still maps to the same index in an `IdMap`.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the resulting mapped key from `f` does not return the
+        /// same value for [`EntryKey::get_key_index`] as the old key did.
+        pub(crate) fn map_key<X, F>(self, f: F) -> OccupiedEntry<'a, X, T>
+        where
+            K: EntryKey,
+            X: EntryKey,
+            F: FnOnce(K) -> X,
+        {
+            let idx = self.key.get_key_index();
+            let key = f(self.key);
+            assert_eq!(idx, key.get_key_index());
+            OccupiedEntry { key, value: self.value }
+        }
+    }
+
+    /// A view into an in-place entry in a map that can be vacant or occupied.
+    pub enum Entry<'a, K, T> {
+        Vacant(VacantEntry<'a, K, T>),
+        Occupied(OccupiedEntry<'a, K, T>),
+    }
+
+    impl<'a, K, T> Entry<'a, K, T> {
+        /// Returns a reference to this entry's key.
+        pub fn key(&self) -> &K {
+            match self {
+                Entry::Vacant(e) => e.key(),
+                Entry::Occupied(e) => e.key(),
+            }
+        }
+
+        /// Ensures a value is in the entry by inserting `default` if empty,
+        /// and returns a mutable reference to the value in the entry.
+        pub fn or_insert(self, default: T) -> &'a mut T
+        where
+            K: EntryKey,
+        {
+            match self {
+                Entry::Vacant(e) => e.insert(default),
+                Entry::Occupied(e) => e.into_mut(),
+            }
+        }
+
+        /// Ensures a value is in the entry by inserting the result of the
+        /// function `f` if empty, and returns a mutable reference to the value
+        /// in the entry.
+        pub fn or_insert_with<F: FnOnce() -> T>(self, f: F) -> &'a mut T
+        where
+            K: EntryKey,
+        {
+            match self {
+                Entry::Vacant(e) => e.insert(f()),
+                Entry::Occupied(e) => e.into_mut(),
+            }
+        }
+
+        /// Ensures a value is in the entry by inserting the default value if
+        /// empty, and returns a mutable reference to the value in the entry.
+        pub fn or_default(self) -> &'a mut T
+        where
+            T: Default,
+            K: EntryKey,
+        {
+            self.or_insert_with(<T as Default>::default)
+        }
+
+        /// Provides in-place mutable access to an occupied entry before any
+        /// potential inserts into the map.
+        pub fn and_modify<F: FnOnce(&mut T)>(self, f: F) -> Self {
+            match self {
+                Entry::Vacant(e) => Entry::Vacant(e),
+                Entry::Occupied(mut e) => {
+                    f(e.get_mut());
+                    Entry::Occupied(e)
+                }
+            }
+        }
+
+        /// Changes the key type of this `Entry` to another key `X` that still
+        /// maps to the same index in an `IdMap`.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the resulting mapped key from `f` does not return the
+        /// same value for [`EntryKey::get_key_index`] as the old key did.
+        pub(crate) fn map_key<X, F>(self, f: F) -> Entry<'a, X, T>
+        where
+            K: EntryKey,
+            X: EntryKey,
+            F: FnOnce(K) -> X,
+        {
+            match self {
+                Entry::Vacant(e) => Entry::Vacant(e.map_key(f)),
+                Entry::Occupied(e) => Entry::Occupied(e.map_key(f)),
+            }
+        }
+    }
+
     #[cfg(test)]
     mod tests {
-        use super::IdMap;
+        use super::{Entry, IdMap};
 
         #[test]
         fn test_push() {
@@ -259,6 +494,58 @@ pub(crate) mod id_map {
             assert_eq!(map.data, vec![None, Some(1), None, Some(4), None, None, Some(8)]);
         }
 
+        #[test]
+        fn test_entry() {
+            let mut map = IdMap::new();
+            assert_eq!(*map.entry(1).or_insert(2), 2);
+            assert_eq!(map.data, vec![None, Some(2)]);
+            assert_eq!(
+                *map.entry(1)
+                    .and_modify(|v| {
+                        *v = 10;
+                    })
+                    .or_insert(5),
+                10
+            );
+            assert_eq!(map.data, vec![None, Some(10)]);
+            assert_eq!(
+                *map.entry(2)
+                    .and_modify(|v| {
+                        *v = 10;
+                    })
+                    .or_insert(5),
+                5
+            );
+            assert_eq!(map.data, vec![None, Some(10), Some(5)]);
+            assert_eq!(*map.entry(4).or_default(), 0);
+            assert_eq!(map.data, vec![None, Some(10), Some(5), None, Some(0)]);
+            assert_eq!(*map.entry(3).or_insert_with(|| 7), 7);
+            assert_eq!(map.data, vec![None, Some(10), Some(5), Some(7), Some(0)]);
+            assert_eq!(*map.entry(0).or_insert(1), 1);
+            assert_eq!(map.data, vec![Some(1), Some(10), Some(5), Some(7), Some(0)]);
+
+            match map.entry(0) {
+                Entry::Occupied(mut e) => {
+                    assert_eq!(*e.key(), 0);
+                    assert_eq!(*e.get(), 1);
+                    *e.get_mut() = 2;
+                    assert_eq!(*e.get(), 2);
+                    assert_eq!(e.remove(), 2);
+                }
+                _ => panic!("Wrong entry type, should be occupied"),
+            }
+            assert_eq!(map.data, vec![None, Some(10), Some(5), Some(7), Some(0)]);
+
+            match map.entry(0) {
+                Entry::Vacant(mut e) => {
+                    assert_eq!(*e.key(), 0);
+                    assert_eq!(*e.insert(4), 4);
+                }
+                _ => panic!("Wrong entry type, should be vacant"),
+            }
+            assert_eq!(map.data, vec![Some(4), Some(10), Some(5), Some(7), Some(0)]);
+        }
+
     }
 }
 
@@ -270,7 +557,8 @@ pub(crate) mod id_map {
 /// Used to provide collections keyed on [`crate::DeviceId`] that match hot path
 /// performance requirements.
 pub mod id_map_collection {
-    use super::id_map::IdMap;
+    use super::id_map::{Entry, EntryKey};
+    use super::IdMap;
 
     /// A key that can index items in [`IdMapCollection`].
     ///
@@ -291,6 +579,15 @@ pub mod id_map_collection {
 
         /// Get the id index for this key.
         fn get_id(&self) -> usize;
+    }
+
+    impl<O> EntryKey for O
+    where
+        O: IdMapCollectionKey,
+    {
+        fn get_key_index(&self) -> usize {
+            <O as IdMapCollectionKey>::get_id(self)
+        }
     }
 
     /// A generic collection indexed by an [`IdMapCollectionKey`].
@@ -365,6 +662,12 @@ pub mod id_map_collection {
         pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
             self.data.iter_mut().flat_map(|m| m.iter_mut()).map(|(_, v)| v)
         }
+
+        /// Gets the given key's corresponding entry in the map for in-place
+        /// manipulation.
+        pub fn entry(&mut self, key: K) -> Entry<'_, K, T> {
+            self.get_map_mut(&key).entry(key.get_id()).map_key(|_| key)
+        }
     }
 
     impl<K: IdMapCollectionKey, T> Default for IdMapCollection<K, T> {
@@ -377,12 +680,14 @@ pub mod id_map_collection {
     mod tests {
         use super::*;
 
+        #[derive(Copy, Clone, Eq, PartialEq, Debug)]
         enum MockVariants {
             A,
             B,
             C,
         }
 
+        #[derive(Copy, Clone, Eq, PartialEq, Debug)]
         struct MockKey {
             id: usize,
             var: MockVariants,
@@ -478,6 +783,34 @@ pub mod id_map_collection {
             assert_eq!(*t.get(&KEY_A).unwrap(), 30);
             assert_eq!(*t.get(&KEY_B).unwrap(), -10);
             assert_eq!(*t.get(&KEY_C).unwrap(), -20);
+        }
+
+        #[test]
+        fn test_entry() {
+            let mut t = TestCollection::new();
+            assert_eq!(*t.entry(KEY_A).or_insert(2), 2);
+            assert_eq!(
+                *t.entry(KEY_A)
+                    .and_modify(|v| {
+                        *v = 10;
+                    })
+                    .or_insert(5),
+                10
+            );
+            assert_eq!(
+                *t.entry(KEY_B)
+                    .and_modify(|v| {
+                        *v = 10;
+                    })
+                    .or_insert(5),
+                5
+            );
+            assert_eq!(*t.entry(KEY_C).or_insert_with(|| 7), 7);
+
+            assert_eq!(*t.entry(KEY_C).key(), KEY_C);
+            assert_eq!(*t.get(&KEY_A).unwrap(), 10);
+            assert_eq!(*t.get(&KEY_B).unwrap(), 5);
+            assert_eq!(*t.get(&KEY_C).unwrap(), 7);
         }
 
     }
