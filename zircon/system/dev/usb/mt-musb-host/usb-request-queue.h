@@ -34,7 +34,7 @@ public:
     virtual void Advance(bool interrupt) = 0;
 
     // Enqueue a new request for processing.
-    virtual zx_status_t QueueRequest(usb::UnownedRequest<> req) = 0;
+    virtual zx_status_t QueueRequest(usb::BorrowedRequest<> req) = 0;
 
     // Start the request processing thread.
     virtual zx_status_t StartQueueThread() = 0;
@@ -65,7 +65,7 @@ public:
     ~TransactionQueue() = default;
 
     void Advance(bool interrupt) override { transaction_->Advance(interrupt); }
-    zx_status_t QueueRequest(usb::UnownedRequest<> req) override;
+    zx_status_t QueueRequest(usb::BorrowedRequest<> req) override;
     zx_status_t StartQueueThread() override;
     zx_status_t CancelAll() override;
     size_t GetMaxTransferSize() override;
@@ -93,14 +93,14 @@ protected:
 private:
     // Dispatch and process a request transaction.  This method blocks until the transaction is
     // complete.
-    virtual zx_status_t DispatchRequest(usb::UnownedRequest<> req) = 0;
+    virtual zx_status_t DispatchRequest(usb::BorrowedRequest<> req) = 0;
 
     // Queue thread which services enqueued requests in serial FIFO order.
     int QueueThread();
 
-    // The queue of pending usb::UnownedRequests ready to be dispatched.  Requests are dispatched
+    // The queue of pending usb::BorrowedRequests ready to be dispatched.  Requests are dispatched
     // and processed in FIFO-order.
-    usb::UnownedRequestQueue<> pending_ TA_GUARDED(pending_lock_);
+    usb::BorrowedRequestQueue<> pending_ TA_GUARDED(pending_lock_);
 
     // Queue dispatch thread.
     thrd_t pending_thread_;
@@ -131,7 +131,7 @@ public:
     zx_status_t SetAddress(uint8_t addr);
 
 private:
-    zx_status_t DispatchRequest(usb::UnownedRequest<> req) override;
+    zx_status_t DispatchRequest(usb::BorrowedRequest<> req) override;
 
     // An endpoint descriptor containing sufficient data to bootstrap a Control transaction.
     static constexpr usb_endpoint_descriptor_t descriptor_ = {
@@ -152,7 +152,7 @@ public:
         : TransactionQueue(usb, faddr, descriptor) {}
 
 private:
-    zx_status_t DispatchRequest(usb::UnownedRequest<> req) override;
+    zx_status_t DispatchRequest(usb::BorrowedRequest<> req) override;
 };
 
 // An InterruptQueue is a TransactionQueue dispatching interrupt-type transactions.
@@ -163,7 +163,7 @@ public:
         : TransactionQueue(usb, faddr, descriptor) {}
 
 private:
-    zx_status_t DispatchRequest(usb::UnownedRequest<> req) override;
+    zx_status_t DispatchRequest(usb::BorrowedRequest<> req) override;
 };
 
 } // namespace mt_usb_hci

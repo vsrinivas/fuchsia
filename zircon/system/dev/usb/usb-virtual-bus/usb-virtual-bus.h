@@ -80,8 +80,8 @@ public:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(UsbVirtualBus);
 
-    using Request = usb::UnownedRequest<void>;
-    using RequestQueue = usb::UnownedRequestQueue<void>;
+    using Request = usb::BorrowedRequest<void>;
+    using RequestQueue = usb::BorrowedRequestQueue<void>;
 
     // This struct represents an endpoint on the virtual device.
     struct usb_virtual_ep_t {

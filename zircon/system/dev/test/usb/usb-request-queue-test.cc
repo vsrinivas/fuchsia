@@ -16,7 +16,7 @@ constexpr usb_request_complete_t kNoCallback = {};
 bool TrivialLifetimeTest() {
     BEGIN_TEST;
     usb::RequestQueue<void> queue;
-    usb::UnownedRequestQueue<void> unowned_queue;
+    usb::BorrowedRequestQueue<void> unowned_queue;
     END_TEST;
 }
 
@@ -93,7 +93,7 @@ bool ReleaseTest() {
 bool MultipleLayerTest() {
     BEGIN_TEST;
 
-    using FirstLayerReq = usb::UnownedRequest<void>;
+    using FirstLayerReq = usb::BorrowedRequest<void>;
     using SecondLayerReq = usb::Request<void>;
 
     constexpr size_t kBaseReqSize = sizeof(usb_request_t);
@@ -107,7 +107,7 @@ bool MultipleLayerTest() {
         queue.push(*std::move(request));
     }
 
-    usb::UnownedRequestQueue<void> queue2;
+    usb::BorrowedRequestQueue<void> queue2;
     size_t count = 0;
     for (auto request = queue.pop(); request; request = queue.pop()) {
         FirstLayerReq unowned(request->take(), kNoCallback, kBaseReqSize);
@@ -130,7 +130,7 @@ bool MultipleLayerTest() {
 bool MultipleLayerWithStorageTest() {
     BEGIN_TEST;
 
-    using FirstLayerReq = usb::UnownedRequest<char>;
+    using FirstLayerReq = usb::BorrowedRequest<char>;
     using SecondLayerReq = usb::Request<uint64_t>;
 
     constexpr size_t kBaseReqSize = sizeof(usb_request_t);
@@ -146,7 +146,7 @@ bool MultipleLayerWithStorageTest() {
         queue.push(*std::move(request));
     }
 
-    usb::UnownedRequestQueue<char> queue2;
+    usb::BorrowedRequestQueue<char> queue2;
     size_t count = 0;
     for (auto request = queue.pop(); request; request = queue.pop()) {
         FirstLayerReq unowned(request->take(), kNoCallback, kBaseReqSize);
@@ -172,7 +172,7 @@ bool MultipleLayerWithStorageTest() {
 bool MultipleLayerWithCallbackTest() {
     BEGIN_TEST;
 
-    using FirstLayerReq = usb::UnownedRequest<char>;
+    using FirstLayerReq = usb::BorrowedRequest<char>;
     using SecondLayerReq = usb::Request<uint64_t>;
 
     constexpr size_t kBaseReqSize = sizeof(usb_request_t);
@@ -198,7 +198,7 @@ bool MultipleLayerWithCallbackTest() {
     };
 
     {
-        usb::UnownedRequestQueue<char> queue2;
+        usb::BorrowedRequestQueue<char> queue2;
         for (auto request = queue.pop(); request; request = queue.pop()) {
             FirstLayerReq unowned(request->take(), complete_cb, kBaseReqSize);
             queue2.push(std::move(unowned));

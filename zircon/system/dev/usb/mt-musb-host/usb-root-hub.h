@@ -111,7 +111,7 @@ public:
     uint32_t hub_id() const override { return hub_id_; }
     const usb_speed_t& speed() const override { return speed_; }
 
-    zx_status_t HandleRequest(usb::UnownedRequest<> req) override;
+    zx_status_t HandleRequest(usb::BorrowedRequest<> req) override;
     zx_status_t EnableEndpoint(const usb_endpoint_descriptor_t&) override { return ZX_OK; }
     zx_status_t DisableEndpoint(const usb_endpoint_descriptor_t&) override { return ZX_OK; }
     size_t GetMaxTransferSize(uint8_t) override { return 0; }
@@ -127,32 +127,32 @@ public:
 
 private:
     // TODO(hansens) Implement the rest of the std. device requests should the stack ever use them.
-    zx_status_t ClearFeature(usb::UnownedRequest<> req);
-    zx_status_t ClearHubFeature(usb::UnownedRequest<> req);
-    zx_status_t ClearPortFeature(usb::UnownedRequest<> req);
-    //zx_status_t GetConfiguration(usb::UnownedRequest<> req);
-    zx_status_t GetDescriptor(usb::UnownedRequest<> req);
-    zx_status_t GetDeviceDescriptor(usb::UnownedRequest<> req);
-    zx_status_t GetConfigDescriptor(usb::UnownedRequest<> req);
-    zx_status_t GetStringDescriptor(usb::UnownedRequest<> req);
-    zx_status_t GetHubDescriptor(usb::UnownedRequest<> req);
-    //zx_status_t GetInterface(usb::UnownedRequest<> req);
-    zx_status_t GetStatus(usb::UnownedRequest<> req);
-    zx_status_t GetHubStatus(usb::UnownedRequest<> req);
-    zx_status_t GetPortStatus(usb::UnownedRequest<> req);
-    //zx_status_t SetAddress(usb::UnownedRequest<> req);
-    zx_status_t SetConfiguration(usb::UnownedRequest<> req);
-    //zx_status_t SetDescriptor(usb::UnownedRequest<> req);
-    zx_status_t SetFeature(usb::UnownedRequest<> req);
-    zx_status_t SetPortFeature(usb::UnownedRequest<> req);
-    zx_status_t SetHubFeature(usb::UnownedRequest<> req);
-    //zx_status_t SetInterface(usb::UnownedRequest<> req);
-    //zx_status_t SynchFrame(usb::UnownedRequest<> req);
+    zx_status_t ClearFeature(usb::BorrowedRequest<> req);
+    zx_status_t ClearHubFeature(usb::BorrowedRequest<> req);
+    zx_status_t ClearPortFeature(usb::BorrowedRequest<> req);
+    //zx_status_t GetConfiguration(usb::BorrowedRequest<> req);
+    zx_status_t GetDescriptor(usb::BorrowedRequest<> req);
+    zx_status_t GetDeviceDescriptor(usb::BorrowedRequest<> req);
+    zx_status_t GetConfigDescriptor(usb::BorrowedRequest<> req);
+    zx_status_t GetStringDescriptor(usb::BorrowedRequest<> req);
+    zx_status_t GetHubDescriptor(usb::BorrowedRequest<> req);
+    //zx_status_t GetInterface(usb::BorrowedRequest<> req);
+    zx_status_t GetStatus(usb::BorrowedRequest<> req);
+    zx_status_t GetHubStatus(usb::BorrowedRequest<> req);
+    zx_status_t GetPortStatus(usb::BorrowedRequest<> req);
+    //zx_status_t SetAddress(usb::BorrowedRequest<> req);
+    zx_status_t SetConfiguration(usb::BorrowedRequest<> req);
+    //zx_status_t SetDescriptor(usb::BorrowedRequest<> req);
+    zx_status_t SetFeature(usb::BorrowedRequest<> req);
+    zx_status_t SetPortFeature(usb::BorrowedRequest<> req);
+    zx_status_t SetHubFeature(usb::BorrowedRequest<> req);
+    //zx_status_t SetInterface(usb::BorrowedRequest<> req);
+    //zx_status_t SynchFrame(usb::BorrowedRequest<> req);
 
     // Endpoint-1 (aka get-port-status) handler, thread, and request queue.
     int EndpointHandlerThread();
     thrd_t endpoint_thread_ = {};
-    usb::UnownedRequestQueue<> endpoint_queue_;
+    usb::BorrowedRequestQueue<> endpoint_queue_;
 
     // The USB device id (address) for this root hub.
     uint32_t id_;

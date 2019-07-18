@@ -114,9 +114,9 @@ private:
     };
 
     using Request = usb::Request<void>;
-    using UnownedRequest = usb::UnownedRequest<RequestData>;
-    using UnownedRequestList = usb::UnownedRequestList<RequestData>;
-    using UnownedRequestQueue = usb::UnownedRequestQueue<RequestData>;
+    using UnownedRequest = usb::BorrowedRequest<RequestData>;
+    using UnownedRequestList = usb::BorrowedRequestList<RequestData>;
+    using UnownedRequestQueue = usb::BorrowedRequestQueue<RequestData>;
 
     struct Endpoint {
         // Requests that have not yet had an associated callback to the client.

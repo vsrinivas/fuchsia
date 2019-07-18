@@ -14,7 +14,7 @@
 
 namespace mt_usb_hci {
 
-zx_status_t TransactionQueue::QueueRequest(usb::UnownedRequest<> req) {
+zx_status_t TransactionQueue::QueueRequest(usb::BorrowedRequest<> req) {
     fbl::AutoLock _(&pending_lock_);
 
     // To prevent a race condition by which a request is enqueued after having stopped the
@@ -45,7 +45,7 @@ zx_status_t TransactionQueue::CancelAll() {
     }
 
     while (!pending_.is_empty()) {
-        std::optional<usb::UnownedRequest<>> req = pending_.pop();
+        std::optional<usb::BorrowedRequest<>> req = pending_.pop();
         req->Complete(ZX_ERR_CANCELED, 0);
     }
 
@@ -84,7 +84,7 @@ zx_status_t TransactionQueue::Halt() {
 
 int TransactionQueue::QueueThread() {
     zx_status_t status;
-    std::optional<usb::UnownedRequest<>> req;
+    std::optional<usb::BorrowedRequest<>> req;
 
     for (;;) {
         {
@@ -171,7 +171,7 @@ zx_status_t ControlQueue::SetAddress(uint8_t addr) {
     return ZX_OK;
 }
 
-zx_status_t ControlQueue::DispatchRequest(usb::UnownedRequest<> req) {
+zx_status_t ControlQueue::DispatchRequest(usb::BorrowedRequest<> req) {
     zx_status_t status;
     usb_setup_t setup = req.request()->setup;
 
@@ -212,7 +212,7 @@ zx_status_t ControlQueue::DispatchRequest(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t BulkQueue::DispatchRequest(usb::UnownedRequest<> req) {
+zx_status_t BulkQueue::DispatchRequest(usb::BorrowedRequest<> req) {
     void* vmo_addr;
     auto status = req.Mmap(&vmo_addr);
     if (status != ZX_OK) {
@@ -238,7 +238,7 @@ zx_status_t BulkQueue::DispatchRequest(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t InterruptQueue::DispatchRequest(usb::UnownedRequest<> req) {
+zx_status_t InterruptQueue::DispatchRequest(usb::BorrowedRequest<> req) {
     void* vmo_addr;
     auto status = req.Mmap(&vmo_addr);
     if (status != ZX_OK) {

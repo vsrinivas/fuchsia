@@ -111,7 +111,7 @@ void HubPort::Wait() {
     }
 }
 
-zx_status_t UsbRootHub::HandleRequest(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::HandleRequest(usb::BorrowedRequest<> req) {
     uint8_t ep_addr = static_cast<uint8_t>(req.request()->header.ep_address & 0xf);
 
     if (ep_addr > 1) { // A USB hub only suports two endpoints: control and interrupt.
@@ -168,7 +168,7 @@ zx_status_t UsbRootHub::PortReset() {
     return ZX_OK;
 }
 
-zx_status_t UsbRootHub::ClearFeature(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::ClearFeature(usb::BorrowedRequest<> req) {
     uint16_t index = le16toh(req.request()->setup.wIndex);
     if (index != 1) {
         zxlogf(ERROR, "unsupported ClearFeature() index: %d\n", index);
@@ -190,14 +190,14 @@ zx_status_t UsbRootHub::ClearFeature(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t UsbRootHub::ClearHubFeature(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::ClearHubFeature(usb::BorrowedRequest<> req) {
     // Currently hub-level features are not supported.
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     req.Complete(status, 0);
     return status;
 }
 
-zx_status_t UsbRootHub::ClearPortFeature(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::ClearPortFeature(usb::BorrowedRequest<> req) {
     uint16_t feature = static_cast<uint16_t>(letoh16(req.request()->setup.wValue));
 
     switch (feature) {
@@ -235,7 +235,7 @@ zx_status_t UsbRootHub::ClearPortFeature(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t UsbRootHub::GetDescriptor(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::GetDescriptor(usb::BorrowedRequest<> req) {
     uint8_t type = static_cast<uint8_t>(req.request()->setup.wValue >> 8);
 
     switch (type) {
@@ -255,7 +255,7 @@ zx_status_t UsbRootHub::GetDescriptor(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t UsbRootHub::GetDeviceDescriptor(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::GetDeviceDescriptor(usb::BorrowedRequest<> req) {
     uint16_t len = le16toh(req.request()->setup.wLength);
     ZX_ASSERT(len <= sizeof(usb_device_descriptor_t));
     ssize_t actual = req.CopyTo(&device_descriptor_, len, 0);
@@ -263,7 +263,7 @@ zx_status_t UsbRootHub::GetDeviceDescriptor(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t UsbRootHub::GetConfigDescriptor(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::GetConfigDescriptor(usb::BorrowedRequest<> req) {
     uint8_t index = static_cast<uint8_t>(req.request()->setup.wValue & 0xff);
     size_t len = static_cast<size_t>(le16toh(req.request()->setup.wLength));
 
@@ -280,7 +280,7 @@ zx_status_t UsbRootHub::GetConfigDescriptor(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t UsbRootHub::GetStringDescriptor(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::GetStringDescriptor(usb::BorrowedRequest<> req) {
     uint8_t index = static_cast<uint8_t>(req.request()->setup.wValue & 0xff);
     size_t len = static_cast<size_t>(le16toh(req.request()->setup.wLength));
 
@@ -297,7 +297,7 @@ zx_status_t UsbRootHub::GetStringDescriptor(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t UsbRootHub::GetHubDescriptor(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::GetHubDescriptor(usb::BorrowedRequest<> req) {
     uint16_t len = le16toh(req.request()->setup.wLength);
     ZX_ASSERT(len <= sizeof(usb_hub_descriptor_t));
     ssize_t actual = req.CopyTo(&hub_descriptor_, len, 0);
@@ -305,7 +305,7 @@ zx_status_t UsbRootHub::GetHubDescriptor(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t UsbRootHub::GetStatus(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::GetStatus(usb::BorrowedRequest<> req) {
     uint8_t bm_req_type = req.request()->setup.bmRequestType;
     switch (bm_req_type) {
     case 0xa0: // See: 11.24.2 (USB 2.0 spec)
@@ -322,20 +322,20 @@ zx_status_t UsbRootHub::GetStatus(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t UsbRootHub::GetPortStatus(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::GetPortStatus(usb::BorrowedRequest<> req) {
     ssize_t actual = req.CopyTo(&port_.status(), sizeof(usb_port_status_t), 0);
     req.Complete(ZX_OK, actual);
     return ZX_OK;
 }
 
-zx_status_t UsbRootHub::GetHubStatus(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::GetHubStatus(usb::BorrowedRequest<> req) {
     // Currently hub-level status is not supported.
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     req.Complete(status, 0);
     return status;
 }
 
-zx_status_t UsbRootHub::SetConfiguration(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::SetConfiguration(usb::BorrowedRequest<> req) {
     uint8_t index = static_cast<uint8_t>(req.request()->setup.wValue & 0xff);
     if (index != 1) {
         zxlogf(ERROR, "unsupported SetConfiguration() index: %d\n", index);
@@ -348,7 +348,7 @@ zx_status_t UsbRootHub::SetConfiguration(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t UsbRootHub::SetFeature(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::SetFeature(usb::BorrowedRequest<> req) {
 
     uint16_t index = le16toh(req.request()->setup.wIndex);
     if (index != 1) {
@@ -372,14 +372,14 @@ zx_status_t UsbRootHub::SetFeature(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t UsbRootHub::SetHubFeature(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::SetHubFeature(usb::BorrowedRequest<> req) {
     // Currently hub-level features are not supported.
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     req.Complete(status, 0);
     return status;
 }
 
-zx_status_t UsbRootHub::SetPortFeature(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::SetPortFeature(usb::BorrowedRequest<> req) {
     uint16_t feature = static_cast<uint16_t>(letoh16(req.request()->setup.wValue));
 
     switch (feature) {
@@ -404,7 +404,7 @@ zx_status_t UsbRootHub::SetPortFeature(usb::UnownedRequest<> req) {
 
 int UsbRootHub::EndpointHandlerThread() {
     port_.Wait();
-    std::optional<usb::UnownedRequest<>> req = endpoint_queue_.pop();
+    std::optional<usb::BorrowedRequest<>> req = endpoint_queue_.pop();
     uint8_t status = 1 << 1; // Signal change to port-1 status, see: 11.12.4 (USB 2.0 spec)
     ssize_t actual = req->CopyTo(&status, sizeof(uint8_t), 0);
     req->Complete(ZX_OK, actual);

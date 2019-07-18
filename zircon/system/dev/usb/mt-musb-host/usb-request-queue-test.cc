@@ -64,14 +64,14 @@ public:
     }
 
 private:
-    zx_status_t DispatchRequest(usb::UnownedRequest<> req) override {
+    zx_status_t DispatchRequest(usb::BorrowedRequest<> req) override {
         fbl::AutoLock _(&lock_);
         dispatch_ct_++;
         cond_.Signal();
         return m_dispatch_.Call();
     }
 
-    // The usb::UnownedRequest supplied to TransactionEndpoint::DispatchRequest is being ignored
+    // The usb::BorrowedRequest supplied to TransactionEndpoint::DispatchRequest is being ignored
     // here because MockFunction::Call doesn't implement perfect forwarding.
     mock_function::MockFunction<zx_status_t> m_dispatch_;
     int dispatch_ct_ TA_GUARDED(lock_);
@@ -105,9 +105,9 @@ TEST_F(TransactionQueueTest, QueueThread_StartAndHalt) {
 
 TEST_F(TransactionQueueTest, QueueThread_Enqueue) {
     std::optional<usb::Request<>> o_req;
-    size_t alloc_sz = usb::UnownedRequest<>::RequestSize(sizeof(usb_request_t));
+    size_t alloc_sz = usb::BorrowedRequest<>::RequestSize(sizeof(usb_request_t));
     ASSERT_OK(usb::Request<>::Alloc(&o_req, 4096, 0, alloc_sz));
-    usb::UnownedRequest<> req(o_req->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req(o_req->take(), cb_, sizeof(usb_request_t));
 
     TestingQueue q(mmio_->View(0));
     q.m_dispatch().ExpectCall(ZX_OK);
@@ -126,18 +126,18 @@ TEST_F(TransactionQueueTest, QueueThread_EnqueueMultiBeforeThreadStarts) {
     std::optional<usb::Request<>> o_req4;
     std::optional<usb::Request<>> o_req5;
 
-    size_t alloc_sz = usb::UnownedRequest<>::RequestSize(sizeof(usb_request_t));
+    size_t alloc_sz = usb::BorrowedRequest<>::RequestSize(sizeof(usb_request_t));
     ASSERT_OK(usb::Request<>::Alloc(&o_req1, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req2, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req3, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req4, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req5, 4096, 0, alloc_sz));
 
-    usb::UnownedRequest<> req1(o_req1->take(), cb_, sizeof(usb_request_t));
-    usb::UnownedRequest<> req2(o_req2->take(), cb_, sizeof(usb_request_t));
-    usb::UnownedRequest<> req3(o_req3->take(), cb_, sizeof(usb_request_t));
-    usb::UnownedRequest<> req4(o_req4->take(), cb_, sizeof(usb_request_t));
-    usb::UnownedRequest<> req5(o_req5->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req1(o_req1->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req2(o_req2->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req3(o_req3->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req4(o_req4->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req5(o_req5->take(), cb_, sizeof(usb_request_t));
 
     TestingQueue q(mmio_->View(0));
     q.m_dispatch().ExpectCall(ZX_OK);
@@ -165,18 +165,18 @@ TEST_F(TransactionQueueTest, QueueThread_EnqueueMultiAfterThreadStarts) {
     std::optional<usb::Request<>> o_req4;
     std::optional<usb::Request<>> o_req5;
 
-    size_t alloc_sz = usb::UnownedRequest<>::RequestSize(sizeof(usb_request_t));
+    size_t alloc_sz = usb::BorrowedRequest<>::RequestSize(sizeof(usb_request_t));
     ASSERT_OK(usb::Request<>::Alloc(&o_req1, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req2, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req3, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req4, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req5, 4096, 0, alloc_sz));
 
-    usb::UnownedRequest<> req1(o_req1->take(), cb_, sizeof(usb_request_t));
-    usb::UnownedRequest<> req2(o_req2->take(), cb_, sizeof(usb_request_t));
-    usb::UnownedRequest<> req3(o_req3->take(), cb_, sizeof(usb_request_t));
-    usb::UnownedRequest<> req4(o_req4->take(), cb_, sizeof(usb_request_t));
-    usb::UnownedRequest<> req5(o_req5->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req1(o_req1->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req2(o_req2->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req3(o_req3->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req4(o_req4->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req5(o_req5->take(), cb_, sizeof(usb_request_t));
 
     TestingQueue q(mmio_->View(0));
     q.m_dispatch().ExpectCall(ZX_OK);
@@ -204,18 +204,18 @@ TEST_F(TransactionQueueTest, QueueThread_EnqueueMultiDuringThreadStart) {
     std::optional<usb::Request<>> o_req4;
     std::optional<usb::Request<>> o_req5;
 
-    size_t alloc_sz = usb::UnownedRequest<>::RequestSize(sizeof(usb_request_t));
+    size_t alloc_sz = usb::BorrowedRequest<>::RequestSize(sizeof(usb_request_t));
     ASSERT_OK(usb::Request<>::Alloc(&o_req1, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req2, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req3, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req4, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req5, 4096, 0, alloc_sz));
 
-    usb::UnownedRequest<> req1(o_req1->take(), cb_, sizeof(usb_request_t));
-    usb::UnownedRequest<> req2(o_req2->take(), cb_, sizeof(usb_request_t));
-    usb::UnownedRequest<> req3(o_req3->take(), cb_, sizeof(usb_request_t));
-    usb::UnownedRequest<> req4(o_req4->take(), cb_, sizeof(usb_request_t));
-    usb::UnownedRequest<> req5(o_req5->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req1(o_req1->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req2(o_req2->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req3(o_req3->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req4(o_req4->take(), cb_, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req5(o_req5->take(), cb_, sizeof(usb_request_t));
 
     TestingQueue q(mmio_->View(0));
     q.m_dispatch().ExpectCall(ZX_OK);
@@ -260,18 +260,18 @@ TEST_F(TransactionQueueTest, QueueThread_CancelAll) {
     std::optional<usb::Request<>> o_req4;
     std::optional<usb::Request<>> o_req5;
 
-    size_t alloc_sz = usb::UnownedRequest<>::RequestSize(sizeof(usb_request_t));
+    size_t alloc_sz = usb::BorrowedRequest<>::RequestSize(sizeof(usb_request_t));
     ASSERT_OK(usb::Request<>::Alloc(&o_req1, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req2, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req3, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req4, 4096, 0, alloc_sz));
     ASSERT_OK(usb::Request<>::Alloc(&o_req5, 4096, 0, alloc_sz));
 
-    usb::UnownedRequest<> req1(o_req1->take(), cb, sizeof(usb_request_t));
-    usb::UnownedRequest<> req2(o_req2->take(), cb, sizeof(usb_request_t));
-    usb::UnownedRequest<> req3(o_req3->take(), cb, sizeof(usb_request_t));
-    usb::UnownedRequest<> req4(o_req4->take(), cb, sizeof(usb_request_t));
-    usb::UnownedRequest<> req5(o_req5->take(), cb, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req1(o_req1->take(), cb, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req2(o_req2->take(), cb, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req3(o_req3->take(), cb, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req4(o_req4->take(), cb, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req5(o_req5->take(), cb, sizeof(usb_request_t));
 
     // Note here we don't start the thread.
     TestingQueue q(mmio_->View(0));

@@ -275,13 +275,13 @@ bool MultipleSectionTest() {
     constexpr size_t kBaseReqSize = sizeof(usb_request_t);
     constexpr size_t kFirstLayerReqSize = Request::RequestSize(kBaseReqSize);
     constexpr size_t kSecondLayerReqSize =
-        usb::UnownedRequest<void>::RequestSize(kFirstLayerReqSize);
+        usb::BorrowedRequest<void>::RequestSize(kFirstLayerReqSize);
 
     std::optional<Request> request;
     ASSERT_EQ(Request::Alloc(&request, 0, 0, kSecondLayerReqSize), ZX_OK);
 
-    usb::UnownedRequest request2(request->take(), kNoCallback, kFirstLayerReqSize);
-    usb::UnownedRequest request3(request2.take(), kNoCallback, kBaseReqSize);
+    usb::BorrowedRequest request2(request->take(), kNoCallback, kFirstLayerReqSize);
+    usb::BorrowedRequest request3(request2.take(), kNoCallback, kBaseReqSize);
     request = usb::Request(request3.take(), kSecondLayerReqSize);
 
     END_TEST;
@@ -316,7 +316,7 @@ bool CallbackTest() {
     std::optional<Request> request;
     ASSERT_EQ(Request::Alloc(&request, 0, 0, kFirstLayerReqSize), ZX_OK);
 
-    usb::UnownedRequest<void> request2(request->take(), complete_cb, kBaseReqSize);
+    usb::BorrowedRequest<void> request2(request->take(), complete_cb, kBaseReqSize);
     request2.Complete(ZX_OK, 0);
     EXPECT_TRUE(called);
 
@@ -343,7 +343,7 @@ bool AutoCallbackTest() {
     ASSERT_EQ(Request::Alloc(&request, 0, 0, kFirstLayerReqSize), ZX_OK);
 
     {
-        usb::UnownedRequest<void> request2(request->take(), complete_cb, kBaseReqSize);
+        usb::BorrowedRequest<void> request2(request->take(), complete_cb, kBaseReqSize);
     }
     EXPECT_TRUE(called);
 

@@ -211,7 +211,7 @@ private:
     bool cache_report_enabled_ = true;
 
     fbl::Mutex pending_requests_lock_;
-    usb::UnownedRequestList<void> pending_requests_ __TA_GUARDED(pending_requests_lock_);
+    usb::BorrowedRequestList<void> pending_requests_ __TA_GUARDED(pending_requests_lock_);
 };
 
 } // namespace usb_peripheral

@@ -99,7 +99,7 @@ zx_status_t UsbVirtualBus::Init() {
 }
 
 int UsbVirtualBus::DeviceThread() {
-    usb::UnownedRequestQueue<void> complete_reqs_pending;
+    usb::BorrowedRequestQueue<void> complete_reqs_pending;
     while (1) {
         for (auto req = complete_reqs_pending.pop(); req; req = complete_reqs_pending.pop()) {
             req->Complete(req->request()->response.status, req->request()->response.actual);
@@ -119,7 +119,7 @@ int UsbVirtualBus::DeviceThread() {
                 }
                 return 0;
             }
-            usb::UnownedRequestQueue<void> aborted_requests;
+            usb::BorrowedRequestQueue<void> aborted_requests;
             // Data transfer between device/host (everything except ep 0)
             for (unsigned i = 1; i < USB_MAX_EPS; i++) {
                 usb_virtual_ep_t* ep = &eps_[i];

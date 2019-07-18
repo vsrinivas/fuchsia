@@ -53,7 +53,7 @@ zx_status_t UsbPeripheral::Create(void* ctx, zx_device_t* parent) {
 
 void UsbPeripheral::RequestComplete(usb_request_t* req) {
     fbl::AutoLock l(&pending_requests_lock_);
-    usb::UnownedRequest<void> request(req, dci_.GetRequestSize());
+    usb::BorrowedRequest<void> request(req, dci_.GetRequestSize());
 
     pending_requests_.erase(&request);
     l.release();
@@ -67,7 +67,7 @@ void UsbPeripheral::UsbPeripheralRequestQueue(usb_request_t* usb_request,
         return;
     }
     fbl::AutoLock l(&pending_requests_lock_);
-    usb::UnownedRequest<void> request(usb_request, *complete_cb, dci_.GetRequestSize());
+    usb::BorrowedRequest<void> request(usb_request, *complete_cb, dci_.GetRequestSize());
     __UNUSED usb_request_complete_t completion;
     completion.ctx = this;
     completion.callback = [](void* ctx, usb_request_t* req) {
@@ -101,7 +101,7 @@ zx_status_t UsbPeripheral::Init() {
     if (ums_.is_valid()) {
         ums_.SetMode(USB_MODE_NONE);
     }
-    parent_request_size_ = usb::UnownedRequest<void>::RequestSize(dci_.GetRequestSize());
+    parent_request_size_ = usb::BorrowedRequest<void>::RequestSize(dci_.GetRequestSize());
 
     status = DdkAdd("usb-peripheral", DEVICE_ADD_NON_BINDABLE);
     if (status != ZX_OK) {

@@ -62,8 +62,8 @@ private:
         EP_IN,
     };
 
-    using Request = usb::UnownedRequest<void>;
-    using RequestQueue = usb::UnownedRequestQueue<void>;
+    using Request = usb::BorrowedRequest<void>;
+    using RequestQueue = usb::BorrowedRequestQueue<void>;
 
     // This represents a non-control USB endpoint.
     // Endpoint zero is handled separately.

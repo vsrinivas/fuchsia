@@ -16,7 +16,7 @@ constexpr usb_request_complete_t kNoCallback = {};
 bool TrivialLifetimeTest() {
     BEGIN_TEST;
     usb::RequestList<void> list;
-    usb::UnownedRequestList<void> unowned_list;
+    usb::BorrowedRequestList<void> unowned_list;
     END_TEST;
 }
 
@@ -188,7 +188,7 @@ bool ReleaseTest() {
 bool MultipleLayerTest() {
     BEGIN_TEST;
 
-    using FirstLayerReq = usb::UnownedRequest<void>;
+    using FirstLayerReq = usb::BorrowedRequest<void>;
     using SecondLayerReq = usb::Request<void>;
 
     constexpr size_t kBaseReqSize = sizeof(usb_request_t);
@@ -208,7 +208,7 @@ bool MultipleLayerTest() {
     }
     EXPECT_EQ(second_layer_list.size(), 10u);
 
-    usb::UnownedRequestList<void> first_layer_list;
+    usb::BorrowedRequestList<void> first_layer_list;
     // Add the requests also into the first layer list.
     for (size_t i = 0; i < 10; i++) {
         FirstLayerReq unowned(raw_reqs[i], kNoCallback, kBaseReqSize, /* allow_destruct */ false);
@@ -239,7 +239,7 @@ bool MultipleLayerTest() {
 bool MultipleLayerWithStorageTest() {
     BEGIN_TEST;
 
-    using FirstLayerReq = usb::UnownedRequest<char>;
+    using FirstLayerReq = usb::BorrowedRequest<char>;
     using SecondLayerReq = usb::Request<uint64_t>;
 
     constexpr size_t kBaseReqSize = sizeof(usb_request_t);
@@ -261,7 +261,7 @@ bool MultipleLayerWithStorageTest() {
     }
     EXPECT_EQ(second_layer_list.size(), 10u);
 
-    usb::UnownedRequestList<char> first_layer_list;
+    usb::BorrowedRequestList<char> first_layer_list;
     size_t count = 0;
     // Add the requests also into the first layer list.
     for (size_t i = 0; i < 10; i++) {
@@ -314,7 +314,7 @@ bool MultipleLayerWithStorageTest() {
 bool MultipleLayerWithCallbackTest() {
     BEGIN_TEST;
 
-    using FirstLayerReq = usb::UnownedRequest<char>;
+    using FirstLayerReq = usb::BorrowedRequest<char>;
     using SecondLayerReq = usb::Request<uint64_t>;
 
     constexpr size_t kBaseReqSize = sizeof(usb_request_t);
@@ -350,7 +350,7 @@ bool MultipleLayerWithCallbackTest() {
     };
 
     {
-        usb::UnownedRequestList<char> first_layer_list;
+        usb::BorrowedRequestList<char> first_layer_list;
 
         // Store the requests into the first layer list.
         for (size_t i = 0; i < 10; i++) {

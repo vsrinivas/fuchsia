@@ -35,7 +35,7 @@ public:
     virtual const usb_speed_t& speed() const = 0;
 
     // Process a new usb request.
-    virtual zx_status_t HandleRequest(usb::UnownedRequest<> req) = 0;
+    virtual zx_status_t HandleRequest(usb::BorrowedRequest<> req) = 0;
 
     // Enable processing for the as-described endpoint on this device.
     virtual zx_status_t EnableEndpoint(const usb_endpoint_descriptor_t& desc) = 0;
@@ -71,7 +71,7 @@ public:
         return ep_q_[ep];
     }
 
-    zx_status_t HandleRequest(usb::UnownedRequest<> req) override;
+    zx_status_t HandleRequest(usb::BorrowedRequest<> req) override;
     // Endpoint processing for a HardwareDevice involves starting the requisite RequestQueue.
     zx_status_t EnableEndpoint(const usb_endpoint_descriptor_t& desc) override;
     zx_status_t DisableEndpoint(const usb_endpoint_descriptor_t& desc) override;

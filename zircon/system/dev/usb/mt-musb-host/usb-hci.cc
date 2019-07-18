@@ -36,7 +36,7 @@ constexpr uint32_t kDeviceId = 1;
 
 void UsbHci::UsbHciRequestQueue(usb_request_t* usb_request,
                                 const usb_request_complete_t* complete_cb) {
-    usb::UnownedRequest<> req(usb_request, *complete_cb, sizeof(usb_request_t));
+    usb::BorrowedRequest<> req(usb_request, *complete_cb, sizeof(usb_request_t));
     device_[usb_request->header.device_id]->HandleRequest(std::move(req));
 }
 
@@ -142,7 +142,7 @@ zx_status_t UsbHci::UsbHciCancelAll(uint32_t device_id, uint8_t ep_address) {
 }
 
 size_t UsbHci::UsbHciGetRequestSize() {
-    return usb::UnownedRequest<>::RequestSize(sizeof(usb_request_t));
+    return usb::BorrowedRequest<>::RequestSize(sizeof(usb_request_t));
 }
 
 zx_status_t UsbHci::Create(void* ctx, zx_device_t* parent) {

@@ -13,7 +13,7 @@ namespace mt_usb_hci {
 
 namespace regs = board_mt8167;
 
-zx_status_t HardwareDevice::HandleRequest(usb::UnownedRequest<> req) {
+zx_status_t HardwareDevice::HandleRequest(usb::BorrowedRequest<> req) {
     auto ep = static_cast<uint8_t>(usb_ep_num2(req.request()->header.ep_address));
     ZX_ASSERT_MSG(ep_q_.at(ep), "endpoint not configured");
     return ep_q_[ep]->QueueRequest(std::move(req));

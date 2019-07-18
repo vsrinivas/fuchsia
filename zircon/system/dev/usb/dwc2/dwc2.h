@@ -63,8 +63,8 @@ private:
         STALL,
     };
 
-    using Request = usb::UnownedRequest<void>;
-    using RequestQueue = usb::UnownedRequestQueue<void>;
+    using Request = usb::BorrowedRequest<void>;
+    using RequestQueue = usb::BorrowedRequestQueue<void>;
 
     struct Endpoint {
         // Requests waiting to be processed.
