@@ -88,6 +88,9 @@ greatly improves the chances that someone can find your documentation.
 
 Tips for leaving breadcrumbs:
 
+- Table of contents: Add links to documentation in the left sided navigation
+  on fuchsia.dev. See
+  [Change table of contents navigation](documentation_navigation_toc.md).
 - Top-down linkage: Add links from more general documents to more specific documents to help
   readers learn more about specific topics. The [Fuchsia book](../the-book/README.md) is a good
   starting point for top-down linkage.
@@ -97,3 +100,4 @@ Tips for leaving breadcrumbs:
   particularly effective.
 - Sideways linkage: Add links to documents on subjects that help readers better understand the
   content of your document.
+
