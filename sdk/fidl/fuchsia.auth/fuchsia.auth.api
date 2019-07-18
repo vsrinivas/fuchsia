@@ -1,7 +1,7 @@
 {
-  "fidl/fuchsia.auth/attestation_signer.fidl": "01bd29fe7a96c03a2345519e6b5d095d",
-  "fidl/fuchsia.auth/auth_provider.fidl": "6737edcf91d2e936c271bd4be9c3a600",
-  "fidl/fuchsia.auth/auth_provider_factory.fidl": "b53aee3832b658f97f7abe080285e04d",
-  "fidl/fuchsia.auth/common.fidl": "43f3194c0e2b916f11149eeb81aa773b",
-  "fidl/fuchsia.auth/token_manager.fidl": "cc8ca06f288d0ebf9ed31c462e48d3da"
+  "fidl/fuchsia.auth/attestation_signer.fidl": "2098608b8fb873f664cbd5f15b70c946",
+  "fidl/fuchsia.auth/auth_provider.fidl": "f75842eed520e0b34febbac1daf3233a",
+  "fidl/fuchsia.auth/auth_provider_factory.fidl": "865dfab8d113e9da4dfe3da89788f497",
+  "fidl/fuchsia.auth/common.fidl": "64f00b38646ee5e7bab48ef6091fef29",
+  "fidl/fuchsia.auth/token_manager.fidl": "0b01aa246663dd74954a3652605a3531"
 }

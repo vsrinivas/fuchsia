@@ -4,12 +4,12 @@
 
 library fuchsia.auth;
 
-// AuthProviderFactory creates an Auth Provider that talks to a particular
-// backend OAuth service such as Google, Facebook, or Twitter that can generate
-// tokens as defined by `auth_provider.fidl`.
+/// AuthProviderFactory creates an Auth Provider that talks to a particular
+/// backend OAuth service such as Google, Facebook, or Twitter that can generate
+/// tokens as defined by `auth_provider.fidl`.
 [Discoverable]
 protocol AuthProviderFactory {
-    // Creates an auth provider instance for the given OAuth provider.
+    /// Creates an auth provider instance for the given OAuth provider.
     GetAuthProvider(request<AuthProvider> auth_provider)
         -> (AuthProviderStatus status);
 };
