@@ -10,58 +10,58 @@ using fuchsia.ui.input;
 using fuchsia.virtualization;
 using zx;
 
-// The following EVENT_* constants indicate which user signal is associated with an event.
-// The value 0 is ZX_USER_SIGNAL_0, 1 is ZX_USER_SIGNAL_1 etc.
+/// The following EVENT_* constants indicate which user signal is associated with an event.
+/// The value 0 is ZX_USER_SIGNAL_0, 1 is ZX_USER_SIGNAL_1 etc.
 
-// Set a flag to inspect queues on the next interrupt.
+/// Set a flag to inspect queues on the next interrupt.
 const uint32 EVENT_SET_QUEUE = 0;
-// Set a flag to inspect configs on the next interrupt.
+/// Set a flag to inspect configs on the next interrupt.
 const uint32 EVENT_SET_CONFIG = 1;
-// If a flag is set, send an interrupt to the device.
+/// If a flag is set, send an interrupt to the device.
 const uint32 EVENT_SET_INTERRUPT = 2;
 
-// Contains the details of a device trap.
+/// Contains the details of a device trap.
 struct Trap {
-    // The address of the device trap. This must be page-aligned.
+    /// The address of the device trap. This must be page-aligned.
     zx.gpaddr addr;
 
-    // The size of the device trap. This must be a multiple of the page size.
+    /// The size of the device trap. This must be a multiple of the page size.
     uint64 size;
 };
 
-// Contains the basic information required to start execution of a device.
+/// Contains the basic information required to start execution of a device.
 struct StartInfo {
-    // The trap associated with a device. It is up to the device to set this
-    // trap during device setup.
+    /// The trap associated with a device. It is up to the device to set this
+    /// trap during device setup.
     Trap trap;
 
-    // The guest associated with a device. This handle should be used to setup
-    // device traps, and then be released before device operation begins.
+    /// The guest associated with a device. This handle should be used to setup
+    /// device traps, and then be released before device operation begins.
     handle<guest>? guest;
 
-    // The event associated with a device interrupt. This is how the device will
-    // notify the guest of events it should process.
-    //
-    // The meaning of the different signals that can be raised on the event are
-    // documented by the EVENT_* constants above.
+    /// The event associated with a device interrupt. This is how the device will
+    /// notify the guest of events it should process.
+    ///
+    /// The meaning of the different signals that can be raised on the event are
+    /// documented by the EVENT_* constants above.
     handle<event> event;
 
-    // The VMO used to represent guest physical memory.
+    /// The VMO used to represent guest physical memory.
     handle<vmo> vmo;
 };
 
 [FragileBase]
 protocol VirtioDevice {
-    // Configure a `queue` for the device. This specifies the `size` and the
-    // guest physical addresses of the queue: `desc`, `avail`, and `used`.
+    /// Configure a `queue` for the device. This specifies the `size` and the
+    /// guest physical addresses of the queue: `desc`, `avail`, and `used`.
     ConfigureQueue(uint16 queue, uint16 size, zx.gpaddr desc, zx.gpaddr avail,
                    zx.gpaddr used) -> ();
 
-    // Notify a `queue` for the device. Primarily used for black-box testing.
+    /// Notify a `queue` for the device. Primarily used for black-box testing.
     NotifyQueue(uint16 queue);
 
-    // Ready a device. This provides the set of `negotiated_features` that the
-    // driver and device have agreed upon.
+    /// Ready a device. This provides the set of `negotiated_features` that the
+    /// driver and device have agreed upon.
     Ready(uint32 negotiated_features) -> ();
 };
 
@@ -69,10 +69,10 @@ protocol VirtioDevice {
 protocol VirtioBalloon {
     compose VirtioDevice;
 
-    // Start the balloon device.
+    /// Start the balloon device.
     Start(StartInfo start_info) -> ();
 
-    // Get memory statistics from the balloon device.
+    /// Get memory statistics from the balloon device.
     GetMemStats() -> (zx.status status,
                       vector<fuchsia.virtualization.MemStat>? mem_stats);
 };
@@ -81,7 +81,7 @@ protocol VirtioBalloon {
 protocol VirtioBlock {
     compose VirtioDevice;
 
-    // Start the block device.
+    /// Start the block device.
     Start(StartInfo start_info,
           string:fuchsia.virtualization.MAX_BLOCK_DEVICE_ID_SIZE id,
           fuchsia.virtualization.BlockMode mode, fuchsia.virtualization.BlockFormat format,
@@ -92,17 +92,17 @@ protocol VirtioBlock {
 protocol VirtioConsole {
     compose VirtioDevice;
 
-    // Start the console device. This uses `socket` to handle input and output.
+    /// Start the console device. This uses `socket` to handle input and output.
     Start(StartInfo start_info, handle<socket> socket) -> ();
 };
 
-// Provides a way for VirtioInput to listen to view events.
+/// Provides a way for VirtioInput to listen to view events.
 [Discoverable]
 protocol ViewListener {
-    // Called when a View's size is changed.
+    /// Called when a View's size is changed.
     OnSizeChanged(fuchsia.ui.gfx.vec3 size);
 
-    // Called when a View receives input events.
+    /// Called when a View receives input events.
     OnInputEvent(fuchsia.ui.input.InputEvent event);
 };
 
@@ -110,10 +110,10 @@ protocol ViewListener {
 protocol VirtioGpu {
     compose VirtioDevice;
 
-    // Start the GPU device.
+    /// Start the GPU device.
     Start(StartInfo start_info, ViewListener? view_listener) -> ();
 
-    // Called when a device's configuration is changed.
+    /// Called when a device's configuration is changed.
     -> OnConfigChanged();
 };
 
@@ -121,7 +121,7 @@ protocol VirtioGpu {
 protocol VirtioInput {
     compose VirtioDevice;
 
-    // Start the input device.
+    /// Start the input device.
     Start(StartInfo start_info) -> ();
 };
 
@@ -129,7 +129,7 @@ protocol VirtioInput {
 protocol VirtioMagma {
     compose VirtioDevice;
 
-    // Start the magma device.
+    /// Start the magma device.
     Start(StartInfo start_info,
           handle<vmar> vmar,
           VirtioWaylandImporter? wayland_importer) -> (zx.status status);
@@ -139,7 +139,7 @@ protocol VirtioMagma {
 protocol VirtioNet {
     compose VirtioDevice;
 
-    // Start the net device.
+    /// Start the net device.
     Start(StartInfo start_info) -> ();
 };
 
@@ -147,7 +147,7 @@ protocol VirtioNet {
 protocol VirtioRng {
     compose VirtioDevice;
 
-    // Start the RNG device.
+    /// Start the RNG device.
     Start(StartInfo start_info) -> ();
 };
 
@@ -163,7 +163,7 @@ protocol VirtioWaylandImporter {
 protocol VirtioWayland {
     compose VirtioDevice;
 
-    // Start the wayland device.
+    /// Start the wayland device.
     Start(StartInfo start_info,
           handle<vmar> vmar,
           fuchsia.virtualization.WaylandDispatcher dispatcher) -> ();
