@@ -59,6 +59,11 @@ pub async fn wlan_method_to_fidl(
             await!(wlan_facade.disconnect())?;
             to_value(true).map_err(|e| format_err!("error handling disconnect: {}", e))
         }
+        "status" => {
+            fx_log_info!(tag: "WlanFacade", "fetching connection status");
+            let result = await!(wlan_facade.status())?;
+            to_value(result).map_err(|e| format_err!("error handling connection status: {}", e))
+        }
         _ => return Err(format_err!("unsupported command!")),
     }
 }

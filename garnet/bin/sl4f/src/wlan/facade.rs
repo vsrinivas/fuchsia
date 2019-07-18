@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::wlan::types::{
+    ClientStateSummary, ConnectionState, DisconnectStatus, NetworkIdentifier, NetworkState,
+    SecurityType, WlanClientState,
+};
 use connectivity_testing::wlan_service_util;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
@@ -108,5 +112,50 @@ impl WlanFacade {
             bail!("saw a failure with at least one disconnect call");
         }
         Ok(())
+    }
+
+    pub async fn status(&self) -> Result<ClientStateSummary, Error> {
+        // get iface info
+        let wlan_iface_ids = await!(wlan_service_util::get_iface_list(&self.wlan_svc))
+            .context("Status: failed to get wlan iface list")?;
+
+        if wlan_iface_ids.len() == 0 {
+            bail!("no wlan interfaces found");
+        }
+
+        // pick the first one
+        let sme_proxy =
+            await!(wlan_service_util::get_iface_sme_proxy(&self.wlan_svc, wlan_iface_ids[0]))
+                .context("Status: failed to get iface sme proxy")?;
+
+        let rsp = await!(sme_proxy.status()).context("failed to get status from sme_proxy")?;
+
+        // Create dummy ClientStateSummary
+        let mut connection_state = ConnectionState::Disconnected;
+        let mut network_id = NetworkIdentifier { ssid: vec![], type_: SecurityType::None };
+
+        match rsp.connected_to {
+            Some(ref bss) => {
+                network_id.ssid = bss.ssid.as_slice().to_vec();
+                connection_state = ConnectionState::Connected;
+            }
+            _ => {}
+        }
+
+        let network_state = NetworkState {
+            id: Some(network_id),
+            state: Some(connection_state),
+            status: Some(DisconnectStatus::ConnectionFailed),
+        };
+
+        let mut networks = Vec::new();
+        networks.push(network_state);
+
+        let client_state_summary = ClientStateSummary {
+            state: Some(WlanClientState::ConnectionsEnabled),
+            networks: Some(networks),
+        };
+
+        Ok(client_state_summary)
     }
 }
