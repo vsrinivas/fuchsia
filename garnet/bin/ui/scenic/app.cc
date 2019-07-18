@@ -14,9 +14,8 @@
 
 namespace {
 
-// Wait for /dev/class/display-controller on x86 as that's sufficient for
-// Intel GPU driver and supports AEMU and swiftshader, which don't depend
-// on devices in /dev/class/gpu.
+// Wait for /dev/class/display-controller on x86 as that's sufficient for Intel GPU driver and
+// supports AEMU and swiftshader, which don't depend on devices in /dev/class/gpu.
 //
 // TODO(SCN-568): Scenic should not be aware of these type of dependencies.
 #if defined(__x86_64__)
@@ -53,8 +52,7 @@ App::App(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_no
   scenic_->RegisterDependency(dependency.get());
 
   device_watcher_ = fsl::DeviceWatcher::Create(
-      kDependencyDir,
-      [this, dependency = std::move(dependency)](int dir_fd, std::string filename) {
+      kDependencyDir, [this, dependency = std::move(dependency)](int dir_fd, std::string filename) {
         escher_ = gfx::GfxSystem::CreateEscher(scenic_->app_context());
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
@@ -74,6 +72,8 @@ App::App(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_no
 #endif
 
         dependency->SetToInitialized();
+        // Reset the device watcher so we don't get a second callback.
+        device_watcher_.reset();
       });
 }
 
