@@ -4,9 +4,9 @@
 
 library fuchsia.ui.views;
 
-// DO NOT USE - Retained for ABI stability in fuchsia.ui.scenic.Command
+/// DO NOT USE - Retained for ABI stability in fuchsia.ui.scenic.Command
 
-// DO NOT USE
+/// DO NOT USE
 union Command {
     int32 empty;
 };

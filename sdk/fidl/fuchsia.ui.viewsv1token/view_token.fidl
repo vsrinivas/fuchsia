@@ -4,9 +4,9 @@
 
 library fuchsia.ui.viewsv1token;
 
-// A view owner allows linking its associated view into a view hierarchy.
-//
-// This interface is only intended to be used as a token, analogous to how
-// Scenic View/ViewHolder resources use eventpairs as tokens.
+/// A view owner allows linking its associated view into a view hierarchy.
+///
+/// This interface is only intended to be used as a token, analogous to how
+/// Scenic View/ViewHolder resources use eventpairs as tokens.
 protocol ViewOwner {
 };
