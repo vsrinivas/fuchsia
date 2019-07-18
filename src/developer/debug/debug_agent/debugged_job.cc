@@ -33,6 +33,15 @@ zx_status_t DebuggedJob::Init() {
   return loop->WatchJobExceptions(std::move(config), &job_watch_handle_);
 }
 
+bool DebuggedJob::FilterInfo::Matches(const std::string& proc_name) {
+  if (regex.valid()) {
+    return regex.Match(proc_name);
+  }
+
+  // TODO(DX-953): Job filters should always be valid.
+  return proc_name.find(filter) != std::string::npos;
+}
+
 void DebuggedJob::OnProcessStarting(zx::exception exception_token,
                                     zx_exception_info_t exception_info) {
   zx::process process = GetProcessFromException(exception_token.get());
@@ -50,17 +59,9 @@ void DebuggedJob::OnProcessStarting(zx::exception exception_token,
   // to checking if |proc_name| contains the filter.
   FilterInfo* matching_filter = nullptr;
   for (auto& filter : filters_) {
-    if (filter.regex.valid()) {
-      if (filter.regex.Match(proc_name)) {
-        matching_filter = &filter;
-        break;
-      }
-    } else {
-      // TODO(DX-953): Job filters should always be valid.
-      if (proc_name.find(filter.filter) != std::string::npos) {
-        matching_filter = &filter;
-        break;
-      }
+    if (filter.Matches(proc_name)) {
+      matching_filter = &filter;
+      break;
     }
   }
 
@@ -78,6 +79,21 @@ void DebuggedJob::OnProcessStarting(zx::exception exception_token,
   // Technically it's not necessary to reset the handle, but being explicit here
   // helps readability.
   exception_token.reset();
+}
+
+void DebuggedJob::ApplyToJob(FilterInfo& filter, zx::job& job) {
+  for (auto& child : GetChildProcesses(job.get())) {
+    auto proc_name = NameForObject(child);
+    if (filter.Matches(proc_name)) {
+      DEBUG_LOG(Job) << "New filter " << filter.filter << " matches process " << proc_name
+                     << ". Attaching.";
+      handler_->OnProcessStart(filter.filter, std::move(child));
+    }
+  }
+
+  for (auto& child : GetChildJobs(job.get())) {
+    ApplyToJob(filter, child);
+  }
 }
 
 void DebuggedJob::SetFilters(std::vector<std::string> filters) {
@@ -100,7 +116,7 @@ void DebuggedJob::SetFilters(std::vector<std::string> filters) {
     FilterInfo filter_info = {};
     filter_info.filter = std::move(filter);
     filter_info.regex = std::move(regex);
-    filters_.push_back(std::move(filter_info));
+    ApplyToJob(filters_.emplace_back(std::move(filter_info)), job_);
   }
 }
 

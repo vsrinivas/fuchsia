@@ -321,10 +321,11 @@ const char kAttachHelp[] =
   assume the KOID refers to a process. To be explicit, prefix with a "process"
   or "job" noun.
 
-  If the argument is not a number, it will be interpreted as a pattern.
-  Processes spawning in the given job (or anywhere if not given) whose name
-  matches the pattern will be attached to automatically. If given a filter as a
-  noun, that filter will be updated.
+  If the argument is not a number, it will be interpreted as a pattern. A
+  process in the given job (or anywhere if not given) whose name matches the
+  given pattern will be attached to if it exists, and going forward, new
+  processes in said job whose name matches the pattern will be attached to
+  automatically. If given a filter as a noun, that filter will be updated.
 
   When attaching to a job, two switches are accepted to refer to special jobs:
 
