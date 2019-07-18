@@ -9,12 +9,16 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/zx/vmo.h>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/io/fd.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace component {
+// LoadPackageResource loads the resource described by |path| into the |data|
+// slot in |package| using the |directory| in |package|.
+bool LoadPackageResource(const std::string& path, fuchsia::sys::Package& package);
 
 // PackageLoader is an abstract base class for subclasses that wish to
 // implement fuchsia::sys::Loader.
@@ -35,9 +39,6 @@ class PackageLoader : public fuchsia::sys::Loader {
   void AddBinding(fidl::InterfaceRequest<fuchsia::sys::Loader> request);
 
  private:
-  bool LoadResource(const fxl::UniqueFD& dir, const std::string path,
-                    fuchsia::sys::Package& package);
-
   fidl::BindingSet<fuchsia::sys::Loader> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PackageLoader);

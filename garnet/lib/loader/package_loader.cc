@@ -5,11 +5,13 @@
 #include "garnet/lib/loader/package_loader.h"
 
 #include <fcntl.h>
-#include <trace/event.h>
-#include <zircon/status.h>
 
 #include <utility>
 
+#include <trace/event.h>
+#include <zircon/status.h>
+
+#include "lib/fdio/fd.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fsl/vmo/file.h"
@@ -31,17 +33,9 @@ void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
   // First we are going to resolve the package directory, if it is present. We
   // can't handle resources yet, because we may not have enough URL to do so.
   FuchsiaPkgUrl fuchsia_url;
-  bool parsed = false;
-
-  if (FuchsiaPkgUrl::IsFuchsiaPkgScheme(url)) {
-    parsed = fuchsia_url.Parse(url);
-  } else {
-    parsed =
-        fuchsia_url.Parse("fuchsia-pkg://fuchsia.com/" + GetPathFromURL(url));
-  }
 
   // If the url isn't valid after our attempt at fix-up, bail.
-  if (!parsed) {
+  if (!fuchsia_url.Parse(url)) {
     FXL_LOG(ERROR) << "Cannot load " << url << " because the URL is not valid.";
     callback(nullptr);
     return;
@@ -49,30 +43,27 @@ void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
 
   package.resolved_url = fuchsia_url.ToString();
 
-  fxl::UniqueFD package_dir(
-      open(fuchsia_url.pkgfs_dir_path().c_str(), O_DIRECTORY | O_RDONLY));
+  fxl::UniqueFD package_dir(open(fuchsia_url.pkgfs_dir_path().c_str(), O_DIRECTORY | O_RDONLY));
   if (!package_dir.is_valid()) {
-    FXL_VLOG(1) << "Could not open directory " << fuchsia_url.pkgfs_dir_path()
-                << " " << strerror(errno);
+    FXL_VLOG(1) << "Could not open directory " << fuchsia_url.pkgfs_dir_path() << " "
+                << strerror(errno);
     callback(nullptr);
     return;
   }
 
-  // Why does this method have un-reportable error conditions?
-  zx::channel directory =
-      fsl::CloneChannelFromFileDescriptor(package_dir.get());
-  if (!directory) {
-    FXL_LOG(ERROR) << "Could not clone directory "
-                   << fuchsia_url.pkgfs_dir_path();
+  zx_status_t status;
+  if ((status = fdio_fd_transfer(package_dir.release(),
+                                 package.directory.reset_and_get_address())) != ZX_OK) {
+    FXL_LOG(ERROR) << "Could not release directory channel " << fuchsia_url.pkgfs_dir_path()
+                   << " status=" << zx_status_get_string(status);
     callback(nullptr);
     return;
   }
-  package.directory = std::move(directory);
 
   if (!fuchsia_url.resource_path().empty()) {
-    if (!LoadResource(package_dir, fuchsia_url.resource_path(), package)) {
-      FXL_LOG(ERROR) << "Could not load package resource "
-                     << fuchsia_url.resource_path() << " from " << url;
+    if (!LoadPackageResource(fuchsia_url.resource_path(), package)) {
+      FXL_LOG(ERROR) << "Could not load package resource " << fuchsia_url.resource_path()
+                     << " from " << url;
       callback(nullptr);
       return;
     }
@@ -81,16 +72,19 @@ void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
   callback(fidl::MakeOptional(std::move(package)));
 }
 
-void PackageLoader::AddBinding(
-    fidl::InterfaceRequest<fuchsia::sys::Loader> request) {
+void PackageLoader::AddBinding(fidl::InterfaceRequest<fuchsia::sys::Loader> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-bool PackageLoader::LoadResource(const fxl::UniqueFD& dir,
-                                 const std::string path,
-                                 fuchsia::sys::Package& package) {
+bool LoadPackageResource(const std::string& path, fuchsia::sys::Package& package) {
   fsl::SizedVmo resource;
-  if (!fsl::VmoFromFilenameAt(dir.get(), path, &resource)) {
+
+  auto dirfd = fsl::OpenChannelAsFileDescriptor(std::move(package.directory));
+  const bool got_resource = fsl::VmoFromFilenameAt(dirfd.get(), path, &resource);
+  if (fdio_fd_transfer(dirfd.release(), package.directory.reset_and_get_address()) != ZX_OK) {
+    return false;
+  }
+  if (!got_resource) {
     return false;
   }
 

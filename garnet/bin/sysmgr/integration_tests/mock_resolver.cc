@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+#include <vector>
+
 #include <fuchsia/pkg/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
 
-#include <memory>
-#include <vector>
+#include "lib/fdio/directory.h"
 
 namespace {
 
@@ -22,18 +24,16 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
     context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
   }
 
-  void Resolve(::std::string package_uri,
-               ::std::vector<::std::string> selectors,
+  void Resolve(::std::string package_uri, ::std::vector<::std::string> selectors,
                fuchsia::pkg::UpdatePolicy update_policy,
                ::fidl::InterfaceRequest<fuchsia::io::Directory> dir,
                ResolveCallback callback) override {
-    dir_channels_.push_back(dir.TakeChannel());
+    fdio_service_connect("/pkg", dir.TakeChannel().release());
     callback(ZX_OK);
   }
 
  private:
   std::unique_ptr<sys::ComponentContext> context_;
-  std::vector<zx::channel> dir_channels_;
   fidl::BindingSet<fuchsia::pkg::PackageResolver> bindings_;
 };
 
