@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fuzzing/cpp/traits.h>
-
-#include <lib/zx/handle.h>
-#include <zircon/types.h>
-
 #include <array>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
+
+#include <lib/fuzzing/cpp/traits.h>
+#include <lib/zx/handle.h>
+#include <zircon/types.h>
 
 #include "gtest/gtest.h"
 
@@ -24,8 +24,8 @@ constexpr size_t size8 = 8;
 
 template <typename T1>
 std::pair<T1, size_t> DoSizedAlloc(size_t size) {
-  std::unique_ptr<uint8_t> data(new uint8_t[size]);
-  ::fuzzing::FuzzInput src(data.get(), size);
+  std::vector<uint8_t> data(size, 0);
+  ::fuzzing::FuzzInput src(data.data(), size);
   T1 ret = Allocate<T1>{}(&src, &size);
   return std::pair<T1, size_t>(std::move(ret), size);
 }
