@@ -102,26 +102,21 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs, zx::
 
 // Launch the next process in the boot chain.
 // It will receive:
-// - stdout & stderr wired up to a debuglog handle
-// - A namespace containing:
-//   - A /boot directory, connected to the bootfs service hosted by bootsvc
-//   - A /svc directory, containing other services hosted by bootsvc, including:
-//     - fuchsia.boot.Arguments, which provides boot cmdline arguments
-//     - fuchsia.boot.Items, which allows querying for certain ZBI items
-//     - fuchsia.boot.Log, which provides debuglog handles
-//     - fuchsia.boot.RootJob, which provides root job handles
-//     - fuchsia.boot.RootResource, which provides root resource handles
-// - A loader that can load libraries from /boot, hosted by bootsvc
+// - stdout wired up via a debuglog handle
+// - The boot cmdline arguments, via envp
+// - A namespace containing a /boot, serviced by bootsvc
+// - A loader that can load libraries from /boot, serviced by bootsvc
+// - A handle to the root job
+// - A handle to each of the bootdata VMOs the kernel provided
+// - A handle to a channel containing the root resource, with type
+//   BOOTSVC_ROOT_RESOURCE_CHANNEL_HND
 void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
                        fbl::RefPtr<bootsvc::SvcfsService> svcfs,
                        fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc,
                        const zx::debuglog& log) {
   const char* bootsvc_next = getenv("bootsvc.next");
   if (bootsvc_next == nullptr) {
-    bootsvc_next =
-        "bin/component_manager,"
-        "fuchsia-boot:///#meta/root.cm,"
-        "--use-builtin-process-launcher";
+    bootsvc_next = "bin/devcoordinator";
   }
 
   // Split the bootsvc.next value into 1 or more arguments using ',' as a
@@ -167,7 +162,7 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   launchpad_add_handle(lp, bootfs_conn.release(), PA_HND(PA_NS_DIR, count));
   nametable[count++] = "/boot";
   launchpad_add_handle(lp, svcfs_conn.release(), PA_HND(PA_NS_DIR, count));
-  nametable[count++] = "/svc";
+  nametable[count++] = "/bootsvc";
 
   int argc = static_cast<int>(next_args.size());
   const char* argv[argc];
