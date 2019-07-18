@@ -121,11 +121,14 @@ bool rtc_is_invalid(const fuchsia_hardware_rtc_Time* rtc) {
 void sanitize_rtc(void* ctx, fuchsia_hardware_rtc_Time* rtc,
                   zx_status_t (*rtc_get)(void*, fuchsia_hardware_rtc_Time*),
                   zx_status_t (*rtc_set)(void*, const fuchsia_hardware_rtc_Time*)) {
-    // January 1, 2016 00:00:00
+    // January 1, 2019 00:00:00
     static const fuchsia_hardware_rtc_Time default_rtc = {
         .day = 1,
         .month = 1,
         .year = default_year,
+        .seconds = 0,
+        .minutes = 0,
+        .hours = 0,
     };
     rtc_get(ctx, rtc);
     if (rtc_is_invalid(rtc) || rtc->year < default_year) {
