@@ -4,7 +4,7 @@
 
 library fuchsia.data;
 
-// A value is a boolean, integer, float, string, vector, or dictionary.
+/// A value is a boolean, integer, float, string, vector, or dictionary.
 union Value {
     bool bit;
     int64 inum;
@@ -15,18 +15,18 @@ union Value {
     // TODO(CP-154): Consider adding blobs.
 };
 
-// A vector is a sequence of values.
+/// A vector is a sequence of values.
 struct Vector {
     vector<Value?> values;
 };
 
-// A dictionary is a sequence of key/value pairs.
-// Keys must be unique and sorted in lexicographically increasing order.
+/// A dictionary is a sequence of key/value pairs.
+/// Keys must be unique and sorted in lexicographically increasing order.
 struct Dictionary {
     vector<Entry> entries;
 };
 
-// A key/value pair in a `Dictionary`.
+/// A key/value pair in a `Dictionary`.
 struct Entry {
     string key;
     Value? value;
