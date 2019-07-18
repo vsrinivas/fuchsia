@@ -9,20 +9,20 @@ using fuchsia.ui.gfx;
 
 [Discoverable]
 protocol Controller {
-    // Instantiates a component by its URL and adds a tile backed by that component's ViewProvider.
-    // Returns a key for the tile that can be used for resizing or removing the tile, or 0 on failure.
+    /// Instantiates a component by its URL and adds a tile backed by that component's ViewProvider.
+    /// Returns a key for the tile that can be used for resizing or removing the tile, or 0 on failure.
     AddTileFromURL(string url, bool allow_focus, vector<string>? args) -> (uint32 key);
 
-    // Adds a tile backed by a view from the view provider.
-    // Returns a key for the tile that can be used for resizing or removing the tile, or 0 on failure.
+    /// Adds a tile backed by a view from the view provider.
+    /// Returns a key for the tile that can be used for resizing or removing the tile, or 0 on failure.
     AddTileFromViewProvider(string url, fuchsia.ui.app.ViewProvider provider) -> (uint32 key);
 
-    // Removes the tile with the given key.
+    /// Removes the tile with the given key.
     RemoveTile(uint32 key);
 
-    // Returns a list of tiles.
+    /// Returns a list of tiles.
     ListTiles() -> (vector<uint32> keys, vector<string> urls, vector<fuchsia.ui.gfx.vec3> sizes, vector<bool> focusabilities);
 
-    // Asks the tiles component to quit.
+    /// Asks the tiles component to quit.
     Quit();
 };
