@@ -5,10 +5,6 @@
 #ifndef TOOLS_FIDLCAT_LIB_SYSCALL_DECODER_DISPATCHER_H_
 #define TOOLS_FIDLCAT_LIB_SYSCALL_DECODER_DISPATCHER_H_
 
-#include <src/lib/fxl/logging.h>
-#include <zircon/system/public/zircon/errors.h>
-#include <zircon/system/public/zircon/types.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
@@ -20,6 +16,10 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+
+#include <src/lib/fxl/logging.h>
+#include <zircon/system/public/zircon/errors.h>
+#include <zircon/system/public/zircon/types.h>
 
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "tools/fidlcat/lib/message_decoder.h"
@@ -117,7 +117,9 @@ class SyscallArgument : public SyscallArgumentBaseTyped<Type> {
 
   bool ValueValid(SyscallDecoder* decoder) const override { return true; }
 
-  Type Value(SyscallDecoder* decoder) const override { return Type(decoder->Value(index())); }
+  Type Value(SyscallDecoder* decoder) const override {
+    return Type(decoder->ArgumentValue(index()));
+  }
 };
 
 // Defines a buffer argument for a system call.
@@ -137,15 +139,15 @@ class SyscallPointerArgument : public SyscallArgumentBaseTyped<Type> {
   }
 
   bool Loaded(SyscallDecoder* decoder) const override {
-    return decoder->Loaded(index(), sizeof(Type));
+    return decoder->ArgumentLoaded(index(), sizeof(Type));
   }
 
   bool ValueValid(SyscallDecoder* decoder) const override {
-    return decoder->Content(index()) != nullptr;
+    return decoder->ArgumentContent(index()) != nullptr;
   }
 
   Type Value(SyscallDecoder* decoder) const override {
-    uint8_t* content = decoder->Content(index());
+    uint8_t* content = decoder->ArgumentContent(index());
     if (content == nullptr) {
       return Type();
     }
@@ -157,11 +159,11 @@ class SyscallPointerArgument : public SyscallArgumentBaseTyped<Type> {
   }
 
   bool ArrayLoaded(SyscallDecoder* decoder, size_t size) const override {
-    return decoder->Loaded(index(), size);
+    return decoder->ArgumentLoaded(index(), size);
   }
 
   Type* Content(SyscallDecoder* decoder) const override {
-    return reinterpret_cast<Type*>(decoder->Content(index()));
+    return reinterpret_cast<Type*>(decoder->ArgumentContent(index()));
   }
 };
 
@@ -300,33 +302,29 @@ class PointerFieldAccess : public Access<Type> {
   Type Value(SyscallDecoder* decoder) const override { return {}; }
 
   void LoadArray(SyscallDecoder* decoder, size_t size) override {
-    if (loading_) {
-      return;
-    }
     argument_->LoadArray(decoder, sizeof(ClassType));
-    if (argument_->ArrayLoaded(decoder, sizeof(ClassType))) {
-      ClassType* object = argument_->Content(decoder);
-      if (object != nullptr) {
-        loading_ = true;
-        decoder->LoadMemory(reinterpret_cast<uint64_t>(get_(object)), size, &loaded_values_);
-      }
+    ClassType* object = argument_->Content(decoder);
+    if (object != nullptr) {
+      decoder->LoadBuffer(reinterpret_cast<uint64_t>(get_(object)), size);
     }
   }
 
   bool ArrayLoaded(SyscallDecoder* decoder, size_t size) const override {
-    return loaded_values_.size() == size;
+    ClassType* object = argument_->Content(decoder);
+    return (object == nullptr) ||
+           decoder->BufferLoaded(reinterpret_cast<uint64_t>(get_(object)), size);
   }
 
   const Type* Content(SyscallDecoder* decoder) const override {
-    return reinterpret_cast<const Type*>(loaded_values_.data());
+    ClassType* object = argument_->Content(decoder);
+    return reinterpret_cast<const Type*>(
+        decoder->BufferContent(reinterpret_cast<uint64_t>(get_(object))));
   }
 
  private:
   const SyscallPointerArgument<ClassType>* const argument_;
   const Type* (*get_)(const ClassType* from);
   const SyscallType syscall_type_;
-  std::vector<uint8_t> loaded_values_;
-  bool loading_ = false;
 };
 
 // Base class for the inputs/outputs we want to display for a system call.

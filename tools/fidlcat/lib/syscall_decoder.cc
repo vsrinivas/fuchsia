@@ -10,6 +10,8 @@
 #include <iostream>
 #include <vector>
 
+#include <zircon/system/public/zircon/types.h>
+
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
@@ -100,7 +102,20 @@ void SyscallDecoder::LoadArgument(int argument_index, size_t size) {
     return;
   }
   decoded_arguments_[argument_index].set_loading();
-  LoadMemory(Value(argument_index), size, &decoded_arguments_[argument_index].loaded_values());
+  LoadMemory(ArgumentValue(argument_index), size,
+             &decoded_arguments_[argument_index].loaded_values());
+}
+
+void SyscallDecoder::LoadBuffer(uint64_t address, size_t size) {
+  if (address == 0) {
+    return;
+  }
+  SyscallDecoderBuffer& buffer = buffers_[address];
+  if (buffer.loading()) {
+    return;
+  }
+  buffer.set_loading();
+  LoadMemory(address, size, &buffer.loaded_values());
 }
 
 void SyscallDecoder::Decode() {

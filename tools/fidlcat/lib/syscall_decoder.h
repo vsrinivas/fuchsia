@@ -5,8 +5,6 @@
 #ifndef TOOLS_FIDLCAT_LIB_SYSCALL_DECODER_H_
 #define TOOLS_FIDLCAT_LIB_SYSCALL_DECODER_H_
 
-#include <zircon/system/public/zircon/types.h>
-
 #include <cstdint>
 #include <memory>
 #include <ostream>
@@ -15,6 +13,8 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+
+#include <zircon/system/public/zircon/types.h>
 
 #include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -94,6 +94,21 @@ class SyscallDecoderArgument {
   bool loading_ = false;
 };
 
+class SyscallDecoderBuffer {
+ public:
+  SyscallDecoderBuffer() = default;
+
+  const std::vector<uint8_t>& loaded_values() const { return loaded_values_; }
+  std::vector<uint8_t>& loaded_values() { return loaded_values_; }
+  bool loading() const { return loading_; }
+  void set_loading() { loading_ = true; }
+  void clear_loading() { loading_ = false; }
+
+ private:
+  std::vector<uint8_t> loaded_values_;
+  bool loading_ = false;
+};
+
 // Handles the decoding of a syscall.
 // The decoding starts when SyscallDecoder::Decode is called. Then all the
 // decoding steps are executed one after the other (see the comments for Decode
@@ -127,21 +142,36 @@ class SyscallDecoder {
   void LoadArgument(int argument_index, size_t size);
 
   // True if the argument is loaded correctly.
-  bool Loaded(int argument_index, size_t size) const {
+  bool ArgumentLoaded(int argument_index, size_t size) const {
     return decoded_arguments_[argument_index].loaded_values().size() == size;
   }
 
   // Returns the value of an argument for basic types.
-  uint64_t Value(int argument_index) const { return decoded_arguments_[argument_index].value(); }
+  uint64_t ArgumentValue(int argument_index) const {
+    return decoded_arguments_[argument_index].value();
+  }
 
   // Returns a pointer on the argument content for buffers, structs or
   // output arguments.
-  uint8_t* Content(int argument_index) {
+  uint8_t* ArgumentContent(int argument_index) {
     SyscallDecoderArgument& argument = decoded_arguments_[argument_index];
     if (argument.value() == 0) {
       return nullptr;
     }
     return argument.loaded_values().data();
+  }
+
+  // Loads a buffer.
+  void LoadBuffer(uint64_t address, size_t size);
+
+  // True if the buffer is loaded correctly.
+  bool BufferLoaded(uint64_t address, size_t size) {
+    return (address == 0) ? true : buffers_[address].loaded_values().size() == size;
+  }
+
+  // Returns a pointer on the loaded buffer.
+  uint8_t* BufferContent(uint64_t address) {
+    return (address == 0) ? nullptr : buffers_[address].loaded_values().data();
   }
 
   // Display the argument.
@@ -200,6 +230,7 @@ class SyscallDecoder {
   uint64_t entry_sp_ = 0;
   uint64_t return_address_ = 0;
   std::vector<SyscallDecoderArgument> decoded_arguments_;
+  std::map<uint64_t, SyscallDecoderBuffer> buffers_;
   uint64_t syscall_return_value_ = 0;
   int pending_request_count_ = 0;
   bool input_arguments_loaded_ = false;
