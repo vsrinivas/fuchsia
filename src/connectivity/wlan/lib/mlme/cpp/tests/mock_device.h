@@ -5,6 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_MOCK_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_MOCK_DEVICE_H_
 
+#include <algorithm>
+#include <vector>
+
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
@@ -16,16 +19,12 @@
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 
-#include <algorithm>
-#include <vector>
-
 #include "test_timer.h"
 #include "test_utils.h"
 
 namespace wlan {
 
-static constexpr uint8_t kClientAddress[] = {0x94, 0x3C, 0x49,
-                                             0x49, 0x9F, 0x2D};
+static constexpr uint8_t kClientAddress[] = {0x94, 0x3C, 0x49, 0x49, 0x9F, 0x2D};
 
 namespace {
 
@@ -42,16 +41,14 @@ struct MockDevice : public DeviceInterface {
   using PacketList = std::vector<WlanPacket>;
   using KeyList = std::vector<wlan_key_config_t>;
 
-  MockDevice(common::MacAddr addr = common::MacAddr(kClientAddress))
-      : sta_assoc_ctx_{} {
+  MockDevice(common::MacAddr addr = common::MacAddr(kClientAddress)) : sta_assoc_ctx_{} {
     state = fbl::AdoptRef(new DeviceState);
     state->set_address(addr);
 
     auto info = &wlanmac_info.ifc_info;
     memcpy(info->mac_addr, addr.byte, 6);
     info->mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
-    info->supported_phys = WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT |
-                           WLAN_INFO_PHY_TYPE_VHT;
+    info->supported_phys = WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT | WLAN_INFO_PHY_TYPE_VHT;
     info->driver_features = 0;
     info->bands_count = 2;
     info->bands[0] = test_utils::FakeBandInfo(WLAN_INFO_BAND_2GHZ);
@@ -61,8 +58,7 @@ struct MockDevice : public DeviceInterface {
 
   // DeviceInterface implementation.
 
-  zx_status_t GetTimer(uint64_t id,
-                       fbl::unique_ptr<Timer>* timer) override final {
+  zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final {
     *timer = CreateTimer(id);
     return ZX_OK;
   }
@@ -71,14 +67,12 @@ struct MockDevice : public DeviceInterface {
     return std::make_unique<TestTimer>(id, &clock_);
   }
 
-  zx_status_t DeliverEthernet(
-      fbl::Span<const uint8_t> eth_frame) override final {
+  zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) override final {
     eth_queue.push_back({eth_frame.cbegin(), eth_frame.cend()});
     return ZX_OK;
   }
 
-  zx_status_t SendWlan(fbl::unique_ptr<Packet> packet,
-                       uint32_t flags) override final {
+  zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags) override final {
     WlanPacket wlan_packet;
     wlan_packet.pkt = std::move(packet);
     wlan_packet.flags = flags;
@@ -144,18 +138,14 @@ struct MockDevice : public DeviceInterface {
 
   fbl::RefPtr<DeviceState> GetState() override final { return state; }
 
-  const wlanmac_info_t& GetWlanInfo() const override final {
-    return wlanmac_info;
-  }
+  const wlanmac_info_t& GetWlanInfo() const override final { return wlanmac_info; }
 
-  zx_status_t GetMinstrelPeers(
-      ::fuchsia::wlan::minstrel::Peers* peers_fidl) override final {
+  zx_status_t GetMinstrelPeers(::fuchsia::wlan::minstrel::Peers* peers_fidl) override final {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t GetMinstrelStats(
-      const common::MacAddr& addr,
-      ::fuchsia::wlan::minstrel::Peer* resp) override final {
+  zx_status_t GetMinstrelStats(const common::MacAddr& addr,
+                               ::fuchsia::wlan::minstrel::Peer* resp) override final {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -174,8 +164,7 @@ struct MockDevice : public DeviceInterface {
   // kNoOrdinal means return the first message as <T> even though it might not
   // be of type T.
   template <typename T>
-  std::vector<MlmeMsg<T>> GetServiceMsgs(
-      uint64_t ordinal = MlmeMsg<T>::kNoOrdinal) {
+  std::vector<MlmeMsg<T>> GetServiceMsgs(uint64_t ordinal = MlmeMsg<T>::kNoOrdinal) {
     std::vector<MlmeMsg<T>> ret;
     for (auto iter = svc_queue.begin(); iter != svc_queue.end(); ++iter) {
       auto msg = MlmeMsg<T>::Decode(*iter, ordinal);
@@ -184,9 +173,9 @@ struct MockDevice : public DeviceInterface {
         iter->clear();
       }
     }
-    svc_queue.erase(std::remove_if(svc_queue.begin(), svc_queue.end(),
-                                   [](auto& i) { return i.empty(); }),
-                    svc_queue.end());
+    svc_queue.erase(
+        std::remove_if(svc_queue.begin(), svc_queue.end(), [](auto& i) { return i.empty(); }),
+        svc_queue.end());
     return ret;
   }
 
@@ -200,13 +189,9 @@ struct MockDevice : public DeviceInterface {
 
   KeyList GetKeys() { return keys; }
 
-  const wlan_assoc_ctx_t* GetStationAssocContext(void) {
-    return &sta_assoc_ctx_;
-  }
+  const wlan_assoc_ctx_t* GetStationAssocContext(void) { return &sta_assoc_ctx_; }
 
-  bool AreQueuesEmpty() {
-    return wlan_queue.empty() && svc_queue.empty() && eth_queue.empty();
-  }
+  bool AreQueuesEmpty() { return wlan_queue.empty() && svc_queue.empty() && eth_queue.empty(); }
 
   fbl::RefPtr<DeviceState> state;
   wlanmac_info_t wlanmac_info;

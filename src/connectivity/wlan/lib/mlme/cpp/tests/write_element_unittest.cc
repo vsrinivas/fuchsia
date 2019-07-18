@@ -29,8 +29,7 @@ TEST(WriteElement, Ssid) {
 }
 
 TEST(WriteElement, SupportedRates) {
-  SupportedRate rates[] = {SupportedRate(5, true), SupportedRate(20),
-                           SupportedRate(30)};
+  SupportedRate rates[] = {SupportedRate(5, true), SupportedRate(20), SupportedRate(30)};
   const uint8_t expected[] = {1, 3, 0x85u, 20, 30};
   Buf buf;
   WriteSupportedRates(&buf.w, rates);
@@ -81,8 +80,7 @@ TEST(WriteElement, CountryUnpadded) {
 }
 
 TEST(WriteElement, ExtendedSupportedRates) {
-  SupportedRate rates[] = {SupportedRate(10), SupportedRate(20),
-                           SupportedRate(30)};
+  SupportedRate rates[] = {SupportedRate(10), SupportedRate(20), SupportedRate(30)};
   const uint8_t expected[] = {50, 3, 10, 20, 30};
   Buf buf;
   WriteExtendedSupportedRates(&buf.w, rates);
@@ -92,14 +90,13 @@ TEST(WriteElement, ExtendedSupportedRates) {
 TEST(WriteElement, MeshConfiguration) {
   const uint8_t expected[] = {113, 7, 1, 1, 0, 1, 1, 0xCC, 0xF0};
   Buf buf;
-  const MeshConfiguration mesh_config = {
-      MeshConfiguration::kHwmp,
-      MeshConfiguration::kAirtime,
-      MeshConfiguration::kCongestCtrlInactive,
-      MeshConfiguration::kNeighborOffsetSync,
-      MeshConfiguration::kSae,
-      MeshConfiguration::MeshFormationInfo{0xCC},
-      MeshConfiguration::MeshCapability{0xF0}};
+  const MeshConfiguration mesh_config = {MeshConfiguration::kHwmp,
+                                         MeshConfiguration::kAirtime,
+                                         MeshConfiguration::kCongestCtrlInactive,
+                                         MeshConfiguration::kNeighborOffsetSync,
+                                         MeshConfiguration::kSae,
+                                         MeshConfiguration::MeshFormationInfo{0xCC},
+                                         MeshConfiguration::MeshCapability{0xF0}};
   WriteMeshConfiguration(&buf.w, mesh_config);
   EXPECT_TRUE(equal(expected, buf.w.WrittenData()));
 }
@@ -233,8 +230,7 @@ TEST(WriteElement, MpmOpenWithPmk) {
 
 TEST(WriteElement, MpmConfirmNoPmk) {
   Buf buf;
-  WriteMpmConfirm(&buf.w, MpmHeader{MpmHeader::AMPE, 0x4433u}, 0x6655u,
-                  nullptr);
+  WriteMpmConfirm(&buf.w, MpmHeader{MpmHeader::AMPE, 0x4433u}, 0x6655u, nullptr);
 
   const uint8_t expected[8] = {117, 6, 0x01, 0x00, 0x33, 0x44, 0x55, 0x66};
   EXPECT_RANGES_EQ(expected, buf.w.WrittenData());

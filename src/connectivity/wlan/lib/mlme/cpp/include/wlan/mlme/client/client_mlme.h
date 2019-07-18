@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CLIENT_MLME_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CLIENT_MLME_H_
 
+#include <optional>
+
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/client/client_interface.h>
@@ -13,8 +15,6 @@
 #include <wlan/mlme/service.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
-
-#include <optional>
 
 namespace wlan {
 
@@ -53,8 +53,7 @@ class ClientMlme : public Mlme {
     virtual void ReturnedOnChannel() override;
   };
 
-  zx_status_t HandleMlmeJoinReq(
-      const MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>& msg);
+  zx_status_t HandleMlmeJoinReq(const MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>& msg);
   zx_status_t SpawnStation();
 
   void Unjoin();

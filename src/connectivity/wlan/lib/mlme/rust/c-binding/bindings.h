@@ -73,45 +73,44 @@ typedef struct {
 } mlme_out_buf_t;
 
 extern "C" int32_t mlme_handle_data_frame(const mlme_device_ops_t *device,
-                                          const uint8_t *data_frame,
-                                          uintptr_t data_frame_len,
+                                          const uint8_t *data_frame, uintptr_t data_frame_len,
                                           bool has_padding);
 
-extern "C" int32_t mlme_is_valid_open_auth_resp(const uint8_t *data,
-                                                uintptr_t len);
+extern "C" int32_t mlme_is_valid_open_auth_resp(const uint8_t *data, uintptr_t len);
 
 extern "C" void mlme_sequence_manager_delete(mlme_sequence_manager_t *mgr);
 
 extern "C" mlme_sequence_manager_t *mlme_sequence_manager_new(void);
 
-extern "C" uint32_t mlme_sequence_manager_next_sns1(
-    mlme_sequence_manager_t *mgr, const uint8_t (*sta_addr)[6]);
+extern "C" uint32_t mlme_sequence_manager_next_sns1(mlme_sequence_manager_t *mgr,
+                                                    const uint8_t (*sta_addr)[6]);
 
-extern "C" uint32_t mlme_sequence_manager_next_sns2(
-    mlme_sequence_manager_t *mgr, const uint8_t (*sta_addr)[6], uint16_t tid);
+extern "C" uint32_t mlme_sequence_manager_next_sns2(mlme_sequence_manager_t *mgr,
+                                                    const uint8_t (*sta_addr)[6], uint16_t tid);
 
-extern "C" int32_t mlme_write_data_frame(
-    mlme_buffer_provider_ops_t provider, mlme_sequence_manager_t *seq_mgr,
-    const uint8_t (*bssid)[6], const uint8_t (*src)[6],
-    const uint8_t (*dest)[6], bool is_protected, bool is_qos,
-    uint16_t ether_type, const uint8_t *payload, uintptr_t payload_len,
-    mlme_out_buf_t *out_buf);
+extern "C" int32_t mlme_write_data_frame(mlme_buffer_provider_ops_t provider,
+                                         mlme_sequence_manager_t *seq_mgr,
+                                         const uint8_t (*bssid)[6], const uint8_t (*src)[6],
+                                         const uint8_t (*dest)[6], bool is_protected, bool is_qos,
+                                         uint16_t ether_type, const uint8_t *payload,
+                                         uintptr_t payload_len, mlme_out_buf_t *out_buf);
 
 extern "C" int32_t mlme_write_deauth_frame(mlme_buffer_provider_ops_t provider,
                                            mlme_sequence_manager_t *seq_mgr,
                                            const uint8_t (*bssid)[6],
-                                           const uint8_t (*client_addr)[6],
-                                           uint16_t reason_code,
+                                           const uint8_t (*client_addr)[6], uint16_t reason_code,
                                            mlme_out_buf_t *out_buf);
 
-extern "C" int32_t mlme_write_keep_alive_resp_frame(
-    mlme_buffer_provider_ops_t provider, mlme_sequence_manager_t *seq_mgr,
-    const uint8_t (*bssid)[6], const uint8_t (*client_addr)[6],
-    mlme_out_buf_t *out_buf);
+extern "C" int32_t mlme_write_keep_alive_resp_frame(mlme_buffer_provider_ops_t provider,
+                                                    mlme_sequence_manager_t *seq_mgr,
+                                                    const uint8_t (*bssid)[6],
+                                                    const uint8_t (*client_addr)[6],
+                                                    mlme_out_buf_t *out_buf);
 
-extern "C" int32_t mlme_write_open_auth_frame(
-    mlme_buffer_provider_ops_t provider, mlme_sequence_manager_t *seq_mgr,
-    const uint8_t (*bssid)[6], const uint8_t (*client_addr)[6],
-    mlme_out_buf_t *out_buf);
+extern "C" int32_t mlme_write_open_auth_frame(mlme_buffer_provider_ops_t provider,
+                                              mlme_sequence_manager_t *seq_mgr,
+                                              const uint8_t (*bssid)[6],
+                                              const uint8_t (*client_addr)[6],
+                                              mlme_out_buf_t *out_buf);
 
-#endif /* GARNET_LIB_RUST_WLAN_MLME_C_BINDINGS_H_ */
+#endif  // SRC_CONNECTIVITY_WLAN_LIB_MLME_RUST_C_BINDING_BINDINGS_H_

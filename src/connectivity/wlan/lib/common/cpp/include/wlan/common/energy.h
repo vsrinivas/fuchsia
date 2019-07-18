@@ -5,10 +5,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ENERGY_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ENERGY_H_
 
-#include <fbl/algorithm.h>
-
 #include <cstdint>
 #include <string>
+
+#include <fbl/algorithm.h>
 
 // Energy units defined here are to represent those defined in
 // IEEE standards and International System of Units.
@@ -82,8 +82,7 @@ struct mWatt : EnergyType<uint16_t, mWatt> {
 
 // 10^-15 Watt = 10^-12 milliWatt
 struct FemtoWatt : EnergyType<uint64_t, FemtoWatt> {
-  explicit constexpr FemtoWatt(uint64_t v = 0)
-      : EnergyType<uint64_t, FemtoWatt>(v) {}
+  explicit constexpr FemtoWatt(uint64_t v = 0) : EnergyType<uint64_t, FemtoWatt>(v) {}
 };
 
 constexpr FemtoWatt& operator+=(FemtoWatt& lhs, FemtoWatt rhs) {

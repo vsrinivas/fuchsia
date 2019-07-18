@@ -23,14 +23,12 @@ class MacHeaderWriter {
   void WriteMeshMgmtHeader(BufferWriter* writer, ManagementSubtype subtype,
                            const common::MacAddr& dst_addr) const;
 
-  void WriteMeshDataHeaderIndivAddressed(
-      BufferWriter* w, const common::MacAddr& next_hop_addr,
-      const common::MacAddr& mesh_dst_addr,
-      const common::MacAddr& mesh_src_addr) const;
+  void WriteMeshDataHeaderIndivAddressed(BufferWriter* w, const common::MacAddr& next_hop_addr,
+                                         const common::MacAddr& mesh_dst_addr,
+                                         const common::MacAddr& mesh_src_addr) const;
 
-  void WriteMeshDataHeaderGroupAddressed(
-      BufferWriter* w, const common::MacAddr& dst_addr,
-      const common::MacAddr& mesh_src_addr) const;
+  void WriteMeshDataHeaderGroupAddressed(BufferWriter* w, const common::MacAddr& dst_addr,
+                                         const common::MacAddr& mesh_src_addr) const;
 
  private:
   common::MacAddr transmitter_addr_;

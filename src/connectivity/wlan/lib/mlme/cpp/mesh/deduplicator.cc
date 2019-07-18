@@ -18,8 +18,7 @@ namespace wlan {
 
 bool DeDuplicator::DeDuplicate(const common::MacAddr& addr, uint32_t seq) {
   auto addr_seq_pair = MacAddrSeqPair(addr, seq);
-  if (cache_of_received_packets_.find(addr_seq_pair) !=
-      cache_of_received_packets_.end()) {
+  if (cache_of_received_packets_.find(addr_seq_pair) != cache_of_received_packets_.end()) {
     return true;
   }
 

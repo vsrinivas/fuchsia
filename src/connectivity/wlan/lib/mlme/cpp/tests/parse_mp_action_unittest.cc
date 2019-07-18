@@ -46,8 +46,7 @@ TEST(ParseMpOpen, Full) {
 
   {
     // Rates are expected to be a concatenation of Supp Rates and Ext Supp Rates
-    const uint8_t expected[9] = {0x81, 0x82, 0x83, 0x84, 0x05,
-                                 0x06, 0x07, 0x08, 0x09};
+    const uint8_t expected[9] = {0x81, 0x82, 0x83, 0x84, 0x05, 0x06, 0x07, 0x08, 0x09};
     EXPECT_RANGES_EQ(action.common.rates, expected);
   }
 
@@ -63,8 +62,7 @@ TEST(ParseMpOpen, Full) {
   EXPECT_EQ(action.common.ht_cap->mcs_set.rx_mcs_set, 0x0706050403020100ul);
 
   ASSERT_NE(action.common.ht_op, nullptr);
-  EXPECT_EQ(action.common.ht_op->basic_mcs_set.rx_mcs_set,
-            0xc7c6c5c4c3c2c1c0ul);
+  EXPECT_EQ(action.common.ht_op->basic_mcs_set.rx_mcs_set, 0xc7c6c5c4c3c2c1c0ul);
 
   ASSERT_NE(action.common.vht_cap, nullptr);
   EXPECT_EQ(action.common.vht_cap->vht_mcs_nss.rx_max_data_rate, 0x0433);
@@ -225,8 +223,7 @@ TEST(ParseMpConfirm, Full) {
 
   {
     // Rates are expected to be a concatenation of Supp Rates and Ext Supp Rates
-    const uint8_t expected[9] = {0x81, 0x82, 0x83, 0x84, 0x05,
-                                 0x06, 0x07, 0x08, 0x09};
+    const uint8_t expected[9] = {0x81, 0x82, 0x83, 0x84, 0x05, 0x06, 0x07, 0x08, 0x09};
     EXPECT_RANGES_EQ(action.common.rates, expected);
   }
 
@@ -246,8 +243,7 @@ TEST(ParseMpConfirm, Full) {
   EXPECT_EQ(action.common.ht_cap->mcs_set.rx_mcs_set, 0x0706050403020100ul);
 
   ASSERT_NE(action.common.ht_op, nullptr);
-  EXPECT_EQ(action.common.ht_op->basic_mcs_set.rx_mcs_set,
-            0xc7c6c5c4c3c2c1c0ul);
+  EXPECT_EQ(action.common.ht_op->basic_mcs_set.rx_mcs_set, 0xc7c6c5c4c3c2c1c0ul);
 
   ASSERT_NE(action.common.vht_cap, nullptr);
   EXPECT_EQ(action.common.vht_cap->vht_mcs_nss.rx_max_data_rate, 0x0433);
@@ -298,8 +294,7 @@ TEST(ParseMpConfirm, TooShortForCapabilityInfo) {
 }
 
 TEST(ParseMpConfirm, TooShortForAid) {
-  const uint8_t data[] = {0xaa, 0xbb,
-                          0xcc};  // too short to hold a CapabilityInfo + AID
+  const uint8_t data[] = {0xaa, 0xbb, 0xcc};  // too short to hold a CapabilityInfo + AID
   BufferReader reader{data};
   wlan_mlme::MeshPeeringConfirmAction action;
   ASSERT_FALSE(ParseMpConfirmAction(&reader, &action));

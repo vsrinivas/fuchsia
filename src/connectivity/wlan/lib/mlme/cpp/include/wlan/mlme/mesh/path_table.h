@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zx/time.h>
-#include <wlan/common/macaddr.h>
-
 #include <optional>
 #include <unordered_map>
+
+#include <lib/zx/time.h>
+#include <wlan/common/macaddr.h>
 
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MESH_PATH_TABLE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MESH_PATH_TABLE_H_
@@ -33,21 +33,16 @@ struct MeshProxyInfo {
 
 class PathTable {
  public:
-  typedef std::unordered_map<uint64_t, std::unique_ptr<MeshPath>>
-      PathTableByTarget;
-  typedef std::unordered_map<uint64_t, std::unique_ptr<MeshProxyInfo>>
-      ProxyInfoByDest;
+  typedef std::unordered_map<uint64_t, std::unique_ptr<MeshPath>> PathTableByTarget;
+  typedef std::unordered_map<uint64_t, std::unique_ptr<MeshProxyInfo>> ProxyInfoByDest;
 
   const MeshPath* GetPath(const common::MacAddr& mesh_target) const;
-  const MeshPath* AddOrUpdatePath(const common::MacAddr& mesh_target,
-                                  const MeshPath& path);
+  const MeshPath* AddOrUpdatePath(const common::MacAddr& mesh_target, const MeshPath& path);
   void RemovePath(const common::MacAddr& mesh_target);
 
   const MeshProxyInfo* GetProxyInfo(const common::MacAddr& target) const;
 
-  const PathTableByTarget& GetMeshPathTable() const {
-    return path_by_mesh_target_;
-  }
+  const PathTableByTarget& GetMeshPathTable() const { return path_by_mesh_target_; }
 
  private:
   PathTableByTarget path_by_mesh_target_;

@@ -19,8 +19,7 @@ const T* ParseFixedSized(fbl::Span<const uint8_t> raw_body) {
 }
 }  // namespace
 
-std::optional<fbl::Span<const uint8_t>> ParseSsid(
-    fbl::Span<const uint8_t> raw_body) {
+std::optional<fbl::Span<const uint8_t>> ParseSsid(fbl::Span<const uint8_t> raw_body) {
   if (raw_body.size() > kMaxSsidLen) {
     return {};
   }
@@ -64,9 +63,7 @@ std::optional<ParsedCountry> ParseCountry(fbl::Span<const uint8_t> raw_body) {
   }
   auto remaining = raw_body.subspan(sizeof(Country));
   size_t num_triplets = remaining.size() / sizeof(SubbandTriplet);
-  return {{*country,
-           {reinterpret_cast<const SubbandTriplet*>(remaining.data()),
-            num_triplets}}};
+  return {{*country, {reinterpret_cast<const SubbandTriplet*>(remaining.data()), num_triplets}}};
 }
 
 std::optional<fbl::Span<const SupportedRate>> ParseExtendedSupportedRates(
@@ -79,13 +76,11 @@ std::optional<fbl::Span<const SupportedRate>> ParseExtendedSupportedRates(
   return {{rates, raw_body.size()}};
 }
 
-const MeshConfiguration* ParseMeshConfiguration(
-    fbl::Span<const uint8_t> raw_body) {
+const MeshConfiguration* ParseMeshConfiguration(fbl::Span<const uint8_t> raw_body) {
   return ParseFixedSized<MeshConfiguration>(raw_body);
 }
 
-std::optional<fbl::Span<const uint8_t>> ParseMeshId(
-    fbl::Span<const uint8_t> raw_body) {
+std::optional<fbl::Span<const uint8_t>> ParseMeshId(fbl::Span<const uint8_t> raw_body) {
   if (raw_body.size() > kMaxMeshIdLen) {
     return {};
   }
@@ -131,8 +126,7 @@ std::optional<ParsedMpmOpen> ParseMpmOpen(fbl::Span<const uint8_t> raw_body) {
   return {{*header, pmk}};
 }
 
-std::optional<ParsedMpmConfirm> ParseMpmConfirm(
-    fbl::Span<const uint8_t> raw_body) {
+std::optional<ParsedMpmConfirm> ParseMpmConfirm(fbl::Span<const uint8_t> raw_body) {
   auto r = BufferReader{raw_body};
   auto header = r.ReadValue<MpmHeader>();
   if (!header) {

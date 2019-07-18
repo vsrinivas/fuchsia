@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <wlan/mlme/device_interface.h>
-
 #include <cstring>
+
+#include <wlan/mlme/device_interface.h>
 
 namespace wlan {}  // namespace wlan

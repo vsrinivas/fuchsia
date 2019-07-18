@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/span.h>
-#include <gtest/gtest.h>
-
 #include <array>
 #include <vector>
 
+#include <fbl/span.h>
+#include <gtest/gtest.h>
+
 namespace wlan {
 
-fbl::Span<const int> FuncThatTakesConstSpan(fbl::Span<const int> span) {
-  return span;
-}
+fbl::Span<const int> FuncThatTakesConstSpan(fbl::Span<const int> span) { return span; }
 
 fbl::Span<int> FuncThatTakesSpan(fbl::Span<int> span) { return span; }
 

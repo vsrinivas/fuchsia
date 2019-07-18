@@ -23,8 +23,7 @@ TEST(WriteSupportedRates, Zero) {
 TEST(WriteSupportedRates, Three) {
   Buf<32> buf;
 
-  SupportedRate rates[3] = {SupportedRate{10}, SupportedRate{20},
-                            SupportedRate{30}};
+  SupportedRate rates[3] = {SupportedRate{10}, SupportedRate{20}, SupportedRate{30}};
   RatesWriter(rates).WriteSupportedRates(&buf.w);
   EXPECT_EQ(5u, buf.w.WrittenBytes());  // element header + 3 rates
 
@@ -39,26 +38,23 @@ TEST(WriteSupportedRates, Three) {
 TEST(WriteSupportedRates, Nine) {
   Buf<10> buf;
 
-  SupportedRate rates[9] = {
-      SupportedRate{10}, SupportedRate{20}, SupportedRate{30},
-      SupportedRate{40}, SupportedRate{50}, SupportedRate{60},
-      SupportedRate{70}, SupportedRate{80}, SupportedRate{90}};
+  SupportedRate rates[9] = {SupportedRate{10}, SupportedRate{20}, SupportedRate{30},
+                            SupportedRate{40}, SupportedRate{50}, SupportedRate{60},
+                            SupportedRate{70}, SupportedRate{80}, SupportedRate{90}};
   RatesWriter(rates).WriteSupportedRates(&buf.w);
   EXPECT_EQ(10u, buf.w.WrittenBytes());  // element header + 8 rates
 
   EXPECT_EQ(element_id::kSuppRates, buf.data[0]);
 
-  uint8_t expected[10] = {
-      element_id::kSuppRates, 8, 10, 20, 30, 40, 50, 60, 70, 80};
+  uint8_t expected[10] = {element_id::kSuppRates, 8, 10, 20, 30, 40, 50, 60, 70, 80};
   EXPECT_EQ(0, memcmp(expected, buf.data, sizeof(expected)));
 }
 
 TEST(WriteExtendedSupportedRates, TooFew) {
   Buf<32> buf;
 
-  SupportedRate rates[8] = {SupportedRate{10}, SupportedRate{20},
-                            SupportedRate{30}, SupportedRate{40},
-                            SupportedRate{50}, SupportedRate{60},
+  SupportedRate rates[8] = {SupportedRate{10}, SupportedRate{20}, SupportedRate{30},
+                            SupportedRate{40}, SupportedRate{50}, SupportedRate{60},
                             SupportedRate{70}, SupportedRate{80}};
   RatesWriter(rates).WriteExtendedSupportedRates(&buf.w);
   EXPECT_EQ(0u, buf.w.WrittenBytes());
@@ -67,10 +63,9 @@ TEST(WriteExtendedSupportedRates, TooFew) {
 TEST(WriteExtendedSupportedRates, One) {
   Buf<3> buf;
 
-  SupportedRate rates[9] = {
-      SupportedRate{10}, SupportedRate{20}, SupportedRate{30},
-      SupportedRate{40}, SupportedRate{50}, SupportedRate{60},
-      SupportedRate{70}, SupportedRate{80}, SupportedRate{90}};
+  SupportedRate rates[9] = {SupportedRate{10}, SupportedRate{20}, SupportedRate{30},
+                            SupportedRate{40}, SupportedRate{50}, SupportedRate{60},
+                            SupportedRate{70}, SupportedRate{80}, SupportedRate{90}};
   RatesWriter(rates).WriteExtendedSupportedRates(&buf.w);
   EXPECT_EQ(3u, buf.w.WrittenBytes());
 

@@ -31,25 +31,17 @@ TEST(Hwmp, HwmpSeqnoLessThan) {
 }
 
 struct HwmpTest : public ::testing::Test {
-  HwmpTest() : state(std::make_unique<TestTimer>(123, &clock)) {
-    clock.Set(zx::time(1000));
-  }
+  HwmpTest() : state(std::make_unique<TestTimer>(123, &clock)) { clock.Set(zx::time(1000)); }
 
-  MacHeaderWriter CreateMacHeaderWriter() {
-    return MacHeaderWriter(self_addr(), seq_mgr.get());
-  }
+  MacHeaderWriter CreateMacHeaderWriter() { return MacHeaderWriter(self_addr(), seq_mgr.get()); }
 
-  static common::MacAddr self_addr() {
-    return common::MacAddr("aa:aa:aa:aa:aa:aa");
-  }
+  static common::MacAddr self_addr() { return common::MacAddr("aa:aa:aa:aa:aa:aa"); }
 
-  void AddPath(const char* dest, const char* next_hop,
-               std::optional<uint32_t> hwmp_seqno) {
-    table.AddOrUpdatePath(common::MacAddr(dest),
-                          {
-                              .next_hop = common::MacAddr(next_hop),
-                              .hwmp_seqno = hwmp_seqno,
-                          });
+  void AddPath(const char* dest, const char* next_hop, std::optional<uint32_t> hwmp_seqno) {
+    table.AddOrUpdatePath(common::MacAddr(dest), {
+                                                     .next_hop = common::MacAddr(next_hop),
+                                                     .hwmp_seqno = hwmp_seqno,
+                                                 });
   }
 
   timekeeper::TestClock clock;
@@ -78,9 +70,8 @@ TEST_F(HwmpTest, HandlePreqAddressedToUs) {
     };
   // clang-format on
 
-  auto outgoing_packets =
-      HandleHwmpAction(preq, common::MacAddr("10:10:10:10:10:10"), self_addr(),
-                       100, CreateMacHeaderWriter(), &state, &table);
+  auto outgoing_packets = HandleHwmpAction(preq, common::MacAddr("10:10:10:10:10:10"), self_addr(),
+                                           100, CreateMacHeaderWriter(), &state, &table);
 
   // 1. Expect an outgoing PREP frame
   {
@@ -130,8 +121,7 @@ TEST_F(HwmpTest, HandlePreqAddressedToUs) {
     ASSERT_NE(transmitter_path, nullptr);
     EXPECT_EQ(common::MacAddr("10:10:10:10:10:10"), transmitter_path->next_hop);
     EXPECT_EQ(std::optional<uint32_t>{}, transmitter_path->hwmp_seqno);
-    EXPECT_EQ(zx::time(1000 + 5 * 1024 * 1000),
-              transmitter_path->expiration_time);
+    EXPECT_EQ(zx::time(1000 + 5 * 1024 * 1000), transmitter_path->expiration_time);
     EXPECT_EQ(100u, transmitter_path->metric);
     EXPECT_EQ(1u, transmitter_path->hop_count);
   }
@@ -160,9 +150,8 @@ TEST_F(HwmpTest, ForwardPreq) {
     };
   // clang-format on
 
-  auto packets_to_tx =
-      HandleHwmpAction(preq, common::MacAddr("10:10:10:10:10:10"), self_addr(),
-                       100, CreateMacHeaderWriter(), &state, &table);
+  auto packets_to_tx = HandleHwmpAction(preq, common::MacAddr("10:10:10:10:10:10"), self_addr(),
+                                        100, CreateMacHeaderWriter(), &state, &table);
 
   ASSERT_EQ(1u, packets_to_tx.size());
   auto packet = packets_to_tx.Dequeue();
@@ -227,9 +216,8 @@ TEST_F(HwmpTest, ReplyToPreqOnBehalfOfAnotherNode) {
     };
   // clang-format on
 
-  auto packets_to_tx =
-      HandleHwmpAction(preq, common::MacAddr("10:10:10:10:10:10"), self_addr(),
-                       100, CreateMacHeaderWriter(), &state, &table);
+  auto packets_to_tx = HandleHwmpAction(preq, common::MacAddr("10:10:10:10:10:10"), self_addr(),
+                                        100, CreateMacHeaderWriter(), &state, &table);
   // Expect two frames: the PREP and the forwarded PREQ
   ASSERT_EQ(2u, packets_to_tx.size());
 
@@ -315,9 +303,8 @@ TEST_F(HwmpTest, DontReplyToPreqOnBehalfOfAnotherNode) {
     };
   // clang-format on
 
-  auto packets_to_tx =
-      HandleHwmpAction(preq, common::MacAddr("10:10:10:10:10:10"), self_addr(),
-                       100, CreateMacHeaderWriter(), &state, &table);
+  auto packets_to_tx = HandleHwmpAction(preq, common::MacAddr("10:10:10:10:10:10"), self_addr(),
+                                        100, CreateMacHeaderWriter(), &state, &table);
   // Expect one frame (the forwarded PREQ). PREP shouldn't be sent because
   // we don't have a path to target.
   ASSERT_EQ(1u, packets_to_tx.size());
@@ -377,9 +364,8 @@ TEST_F(HwmpTest, PreqTimeToDie) {
     };
   // clang-format on
 
-  auto packets_to_tx =
-      HandleHwmpAction(preq, common::MacAddr("10:10:10:10:10:10"), self_addr(),
-                       100, CreateMacHeaderWriter(), &state, &table);
+  auto packets_to_tx = HandleHwmpAction(preq, common::MacAddr("10:10:10:10:10:10"), self_addr(),
+                                        100, CreateMacHeaderWriter(), &state, &table);
 
   // PREQ should not be forwarded because TTL has dropped to zero
   ASSERT_EQ(0u, packets_to_tx.size());
@@ -420,9 +406,9 @@ TEST_F(HwmpTest, PathDiscoveryWithRetry) {
   // 1. Initiate path discovery and check that a PREQ is sent
   {
     PacketQueue packets_to_tx;
-    zx_status_t status = InitiatePathDiscovery(
-        common::MacAddr("10:10:10:10:10:10"), self_addr(),
-        CreateMacHeaderWriter(), &state, table, &packets_to_tx);
+    zx_status_t status =
+        InitiatePathDiscovery(common::MacAddr("10:10:10:10:10:10"), self_addr(),
+                              CreateMacHeaderWriter(), &state, table, &packets_to_tx);
     EXPECT_EQ(ZX_OK, status);
 
     ASSERT_EQ(1u, packets_to_tx.size());
@@ -434,8 +420,8 @@ TEST_F(HwmpTest, PathDiscoveryWithRetry) {
   {
     PacketQueue packets_to_tx;
     clock.Set(zx::time(ZX_SEC(1u)));
-    zx_status_t status = HandleHwmpTimeout(self_addr(), CreateMacHeaderWriter(),
-                                           &state, table, &packets_to_tx);
+    zx_status_t status =
+        HandleHwmpTimeout(self_addr(), CreateMacHeaderWriter(), &state, table, &packets_to_tx);
     EXPECT_EQ(ZX_OK, status);
 
     ASSERT_EQ(1u, packets_to_tx.size());
@@ -457,8 +443,8 @@ TEST_F(HwmpTest, PathDiscoveryWithRetry) {
             0x02, 0x00, 0x00, 0x00, // originator hwmp seqno
         };
     // clang-format on
-    HandleHwmpAction(prep, common::MacAddr("20:20:20:20:20:20"), self_addr(),
-                     100, CreateMacHeaderWriter(), &state, &table);
+    HandleHwmpAction(prep, common::MacAddr("20:20:20:20:20:20"), self_addr(), 100,
+                     CreateMacHeaderWriter(), &state, &table);
     auto path = table.GetPath(common::MacAddr("10:10:10:10:10:10"));
     ASSERT_NE(nullptr, path);
     EXPECT_EQ(common::MacAddr("20:20:20:20:20:20"), path->next_hop);
@@ -472,8 +458,8 @@ TEST_F(HwmpTest, PathDiscoveryWithRetry) {
   {
     PacketQueue packets_to_tx;
     clock.Set(zx::time(ZX_SEC(2u)));
-    zx_status_t status = HandleHwmpTimeout(self_addr(), CreateMacHeaderWriter(),
-                                           &state, table, &packets_to_tx);
+    zx_status_t status =
+        HandleHwmpTimeout(self_addr(), CreateMacHeaderWriter(), &state, table, &packets_to_tx);
     EXPECT_EQ(ZX_OK, status);
     EXPECT_EQ(0u, packets_to_tx.size());
   }
@@ -496,8 +482,8 @@ TEST_F(HwmpTest, ForwardPrep) {
     };
   // clang-format on
   PacketQueue packets_to_tx =
-      HandleHwmpAction(prep, common::MacAddr("40:40:40:40:40:40"), self_addr(),
-                       100, CreateMacHeaderWriter(), &state, &table);
+      HandleHwmpAction(prep, common::MacAddr("40:40:40:40:40:40"), self_addr(), 100,
+                       CreateMacHeaderWriter(), &state, &table);
 
   ASSERT_EQ(packets_to_tx.size(), 1u);
   auto packet = packets_to_tx.Dequeue();
@@ -545,8 +531,8 @@ TEST_F(HwmpTest, PrepTimeToDie) {
     };
   // clang-format on
   PacketQueue packets_to_tx =
-      HandleHwmpAction(prep, common::MacAddr("40:40:40:40:40:40"), self_addr(),
-                       100, CreateMacHeaderWriter(), &state, &table);
+      HandleHwmpAction(prep, common::MacAddr("40:40:40:40:40:40"), self_addr(), 100,
+                       CreateMacHeaderWriter(), &state, &table);
 
   // PREP should not be forwarded because TTL has dropped to zero
   ASSERT_EQ(packets_to_tx.size(), 0u);
@@ -599,8 +585,8 @@ TEST_F(HwmpTest, HandlePerrDestinationUnreachable) {
   // clang-format on
 
   PacketQueue packets_to_tx =
-      HandleHwmpAction(perr, common::MacAddr("f0:f0:f0:f0:f0:f0"), self_addr(),
-                       100, CreateMacHeaderWriter(), &state, &table);
+      HandleHwmpAction(perr, common::MacAddr("f0:f0:f0:f0:f0:f0"), self_addr(), 100,
+                       CreateMacHeaderWriter(), &state, &table);
 
   // Some paths should stay and some should be dropped
   EXPECT_NE(nullptr, table.GetPath(common::MacAddr("10:10:10:10:10:10")));
@@ -691,8 +677,8 @@ TEST_F(HwmpTest, HandlePerrNoForwardingInfo) {
   // clang-format on
 
   PacketQueue packets_to_tx =
-      HandleHwmpAction(perr, common::MacAddr("f0:f0:f0:f0:f0:f0"), self_addr(),
-                       100, CreateMacHeaderWriter(), &state, &table);
+      HandleHwmpAction(perr, common::MacAddr("f0:f0:f0:f0:f0:f0"), self_addr(), 100,
+                       CreateMacHeaderWriter(), &state, &table);
 
   // Some paths should stay and some should be dropped
   EXPECT_EQ(nullptr, table.GetPath(common::MacAddr("10:10:10:10:10:10")));
@@ -763,8 +749,8 @@ TEST_F(HwmpTest, PerrTimeToDie) {
   // clang-format on
 
   PacketQueue packets_to_tx =
-      HandleHwmpAction(perr, common::MacAddr("f0:f0:f0:f0:f0:f0"), self_addr(),
-                       100, CreateMacHeaderWriter(), &state, &table);
+      HandleHwmpAction(perr, common::MacAddr("f0:f0:f0:f0:f0:f0"), self_addr(), 100,
+                       CreateMacHeaderWriter(), &state, &table);
 
   // Expect the path to be deleted but the frame not forwarded since its TTL has
   // dropped to zero

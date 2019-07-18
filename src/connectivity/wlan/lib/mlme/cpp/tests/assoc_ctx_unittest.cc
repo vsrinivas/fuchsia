@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <optional>
+#include <vector>
+
 #include <fbl/span.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <gtest/gtest.h>
@@ -15,9 +18,6 @@
 #include <wlan/mlme/client/station.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/rates_elements.h>
-
-#include <optional>
-#include <vector>
 
 #include "test_utils.h"
 
@@ -141,8 +141,7 @@ TEST(ParseAssocRespIe, Parse) {
   size_t kBufLen = 512;
   std::vector<uint8_t> ie_chains(kBufLen);
 
-  SupportedRate rates[3] = {SupportedRate{10}, SupportedRate{20},
-                            SupportedRate{30}};
+  SupportedRate rates[3] = {SupportedRate{10}, SupportedRate{20}, SupportedRate{30}};
   HtCapabilities ht_cap{};
   HtOperation ht_op{};
   VhtCapabilities vht_cap{};
@@ -178,16 +177,14 @@ TEST(ParseAssocRespIe, Parse) {
 TEST(AssocContext, IntersectHtNoVht) {
   // Constructing client and BSS sample association context without VHT.
   auto bss_ctx = test_utils::FakeAssocCtx();
-  bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(
-      HtCapabilityInfo::TWENTY_FORTY);
+  bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
   bss_ctx.ht_cap->ht_cap_info.set_rx_stbc(1);
   bss_ctx.ht_cap->ht_cap_info.set_tx_stbc(0);
   bss_ctx.vht_cap = {};
   bss_ctx.vht_op = {};
 
   auto client_ctx = test_utils::FakeAssocCtx();
-  client_ctx.ht_cap->ht_cap_info.set_chan_width_set(
-      HtCapabilityInfo::TWENTY_FORTY);
+  client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
   client_ctx.ht_cap->ht_cap_info.set_rx_stbc(1);
   client_ctx.ht_cap->ht_cap_info.set_tx_stbc(0);
   client_ctx.vht_cap = {};
@@ -203,14 +200,12 @@ TEST(AssocContext, IntersectHtNoVht) {
   EXPECT_EQ(0, ctx.ht_cap->ht_cap_info.tx_stbc());
   EXPECT_EQ(0, ctx.ht_cap->ht_cap_info.rx_stbc());
   EXPECT_TRUE(ctx.is_cbw40_rx);
-  EXPECT_FALSE(
-      ctx.is_cbw40_tx);  // TODO(NET-1918): Revisit with rx/tx CBW40 capability
+  EXPECT_FALSE(ctx.is_cbw40_tx);  // TODO(NET-1918): Revisit with rx/tx CBW40 capability
 }
 
 TEST(AssocContext, IntersectClientNoHT) {
   auto bss_ctx = test_utils::FakeAssocCtx();
-  bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(
-      HtCapabilityInfo::TWENTY_FORTY);
+  bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
 
   auto client_ctx = test_utils::FakeAssocCtx();
   client_ctx.ht_cap = {};
@@ -225,12 +220,10 @@ TEST(AssocContext, IntersectClientNoHT) {
 
 TEST(AssocContext, IntersectHtVht) {
   auto bss_ctx = test_utils::FakeAssocCtx();
-  bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(
-      HtCapabilityInfo::TWENTY_FORTY);
+  bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
 
   auto client_ctx = test_utils::FakeAssocCtx();
-  client_ctx.ht_cap->ht_cap_info.set_chan_width_set(
-      HtCapabilityInfo::TWENTY_FORTY);
+  client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
 
   auto ctx = IntersectAssocCtx(bss_ctx, client_ctx);
   EXPECT_TRUE(ctx.vht_cap.has_value());
@@ -239,12 +232,10 @@ TEST(AssocContext, IntersectHtVht) {
 
 TEST(AssocContext, IntersectClientNoVht) {
   auto bss_ctx = test_utils::FakeAssocCtx();
-  bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(
-      HtCapabilityInfo::TWENTY_FORTY);
+  bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
 
   auto client_ctx = test_utils::FakeAssocCtx();
-  client_ctx.ht_cap->ht_cap_info.set_chan_width_set(
-      HtCapabilityInfo::TWENTY_FORTY);
+  client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
   client_ctx.vht_cap = {};
 
   auto ctx = IntersectAssocCtx(bss_ctx, client_ctx);
@@ -262,8 +253,7 @@ TEST(AssocContext, IntersectBssNoHT) {
   bss_ctx.vht_op = {};
 
   auto client_ctx = test_utils::FakeAssocCtx();
-  client_ctx.ht_cap->ht_cap_info.set_chan_width_set(
-      HtCapabilityInfo::TWENTY_FORTY);
+  client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
 
   auto ctx = IntersectAssocCtx(bss_ctx, client_ctx);
   EXPECT_FALSE(ctx.ht_cap.has_value());
@@ -274,14 +264,12 @@ TEST(AssocContext, IntersectBssNoHT) {
 
 TEST(AssocContext, IntersectBssNoVht) {
   auto bss_ctx = test_utils::FakeAssocCtx();
-  bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(
-      HtCapabilityInfo::TWENTY_FORTY);
+  bss_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
   bss_ctx.vht_cap = {};
   bss_ctx.vht_op = {};
 
   auto client_ctx = test_utils::FakeAssocCtx();
-  client_ctx.ht_cap->ht_cap_info.set_chan_width_set(
-      HtCapabilityInfo::TWENTY_FORTY);
+  client_ctx.ht_cap->ht_cap_info.set_chan_width_set(HtCapabilityInfo::TWENTY_FORTY);
 
   auto ctx = IntersectAssocCtx(bss_ctx, client_ctx);
   EXPECT_TRUE(ctx.ht_cap.has_value());

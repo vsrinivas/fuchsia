@@ -5,14 +5,14 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_RUST_UTILS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_RUST_UTILS_H_
 
-#include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
-
 #include <memory>
+
+#include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
 
 namespace wlan {
 
-using SequenceManager = std::unique_ptr<mlme_sequence_manager_t,
-                                        void (*)(mlme_sequence_manager_t*)>;
+using SequenceManager =
+    std::unique_ptr<mlme_sequence_manager_t, void (*)(mlme_sequence_manager_t*)>;
 
 SequenceManager NewSequenceManager();
 

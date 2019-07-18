@@ -12,13 +12,11 @@
 
 namespace wlan {
 
-void WriteMpOpenActionFrame(
-    BufferWriter* w, const MacHeaderWriter& mac_header_writer,
-    const ::fuchsia::wlan::mlme::MeshPeeringOpenAction& action);
+void WriteMpOpenActionFrame(BufferWriter* w, const MacHeaderWriter& mac_header_writer,
+                            const ::fuchsia::wlan::mlme::MeshPeeringOpenAction& action);
 
-void WriteMpConfirmActionFrame(
-    BufferWriter* w, const MacHeaderWriter& mac_header_writer,
-    const ::fuchsia::wlan::mlme::MeshPeeringConfirmAction& action);
+void WriteMpConfirmActionFrame(BufferWriter* w, const MacHeaderWriter& mac_header_writer,
+                               const ::fuchsia::wlan::mlme::MeshPeeringConfirmAction& action);
 
 }  // namespace wlan
 

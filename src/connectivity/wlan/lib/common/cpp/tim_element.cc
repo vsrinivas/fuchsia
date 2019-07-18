@@ -9,8 +9,7 @@ namespace wlan {
 namespace common {
 
 // TODO(hahnr): Support dot11MultiBSSIDActivated is true.
-bool IsTrafficBuffered(uint16_t aid, const TimHeader& tim_hdr,
-                       fbl::Span<const uint8_t> bitmap) {
+bool IsTrafficBuffered(uint16_t aid, const TimHeader& tim_hdr, fbl::Span<const uint8_t> bitmap) {
   size_t n1 = tim_hdr.bmp_ctrl.offset() * 2;
 
   size_t octet = aid / 8;

@@ -31,8 +31,7 @@ T align(T t) {
   return (t + (N - 1)) & ~(N - 1);
 }
 
-static bool IsAmsduSubframeHeader(const DataFrameHeader* hdr,
-                                  size_t available_buf_len) {
+static bool IsAmsduSubframeHeader(const DataFrameHeader* hdr, size_t available_buf_len) {
   // Before accessing dynamic fields, verify full header length.
   if (available_buf_len < hdr->len()) {
     return false;
@@ -66,8 +65,7 @@ template <>
 struct MacSubtypeValidator<DataFrameHeader, NullDataHdr> {
   static bool is_valid(const uint8_t* buf, size_t len) {
     auto fc = reinterpret_cast<const FrameControl*>(buf);
-    return fc->subtype() == DataSubtype::kNull ||
-           fc->subtype() == DataSubtype::kQosnull;
+    return fc->subtype() == DataSubtype::kNull || fc->subtype() == DataSubtype::kQosnull;
   }
 };
 
@@ -105,8 +103,7 @@ bool IsValidMacFrameType(const uint8_t* buf, size_t len) {
   }
 
   auto fc = reinterpret_cast<const FrameControl*>(buf);
-  return fc->type() == H::Type() &&
-         MacSubtypeValidator<H, B>::is_valid(buf, len);
+  return fc->type() == H::Type() && MacSubtypeValidator<H, B>::is_valid(buf, len);
 }
 
 template <typename B>
@@ -216,8 +213,7 @@ bool is_valid_hdr_length(const uint8_t* buf, size_t len) {
 }
 
 template <typename H, typename B>
-bool is_valid_frame_length(const uint8_t* buf, size_t len,
-                           add_padding_func padding) {
+bool is_valid_frame_length(const uint8_t* buf, size_t len, add_padding_func padding) {
   if (buf == nullptr || !is_valid_hdr_length<H>(buf, len)) {
     return false;
   }

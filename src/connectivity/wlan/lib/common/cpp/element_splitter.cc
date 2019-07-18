@@ -18,13 +18,11 @@ static void SkipIfTooShort(fbl::Span<const uint8_t>* span) {
   }
 }
 
-ElementIterator::ElementIterator(fbl::Span<const uint8_t> buffer)
-    : remaining_(buffer) {
+ElementIterator::ElementIterator(fbl::Span<const uint8_t> buffer) : remaining_(buffer) {
   SkipIfTooShort(&remaining_);
 }
 
-std::tuple<element_id::ElementId, fbl::Span<const uint8_t>>
-    ElementIterator::operator*() const {
+std::tuple<element_id::ElementId, fbl::Span<const uint8_t>> ElementIterator::operator*() const {
   const ElementHeader* header = FromBytes<ElementHeader>(remaining_);
   ZX_ASSERT(header != nullptr);
   return {
@@ -41,8 +39,7 @@ ElementIterator& ElementIterator::operator++() {
   return *this;
 }
 
-static bool SpansHaveSameEnd(fbl::Span<const uint8_t> a,
-                             fbl::Span<const uint8_t> b) {
+static bool SpansHaveSameEnd(fbl::Span<const uint8_t> a, fbl::Span<const uint8_t> b) {
   return a.data() + a.size() == b.data() + b.size();
 }
 
@@ -52,9 +49,7 @@ bool operator==(const ElementIterator& a, const ElementIterator& b) {
   return a.remaining_.data() == b.remaining_.data();
 }
 
-bool operator!=(const ElementIterator& a, const ElementIterator& b) {
-  return !(a == b);
-}
+bool operator!=(const ElementIterator& a, const ElementIterator& b) { return !(a == b); }
 
 }  // namespace common
 }  // namespace wlan

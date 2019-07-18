@@ -10,10 +10,8 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 namespace wlan {
 
-static void WriteFixed(BufferWriter* w,
-                       const MacHeaderWriter& mac_header_writer,
-                       const common::MacAddr& dst_addr,
-                       action::SelfProtectedAction action) {
+static void WriteFixed(BufferWriter* w, const MacHeaderWriter& mac_header_writer,
+                       const common::MacAddr& dst_addr, action::SelfProtectedAction action) {
   // Mac header
   mac_header_writer.WriteMeshMgmtHeader(w, kAction, dst_addr);
 
@@ -27,8 +25,7 @@ static void WriteFixed(BufferWriter* w,
   cap_info->set_short_preamble(1);
 }
 
-static void WriteCommonElementsHead(BufferWriter* w,
-                                    const wlan_mlme::MeshPeeringCommon& c) {
+static void WriteCommonElementsHead(BufferWriter* w, const wlan_mlme::MeshPeeringCommon& c) {
   RatesWriter rates_writer({
       reinterpret_cast<const SupportedRate*>(c.rates.data()),
       c.rates.size(),
@@ -40,8 +37,7 @@ static void WriteCommonElementsHead(BufferWriter* w,
   common::WriteMeshConfiguration(w, MeshConfiguration::FromFidl(c.mesh_config));
 }
 
-static void WriteCommonElementsTail(BufferWriter* w,
-                                    const wlan_mlme::MeshPeeringCommon& c) {
+static void WriteCommonElementsTail(BufferWriter* w, const wlan_mlme::MeshPeeringCommon& c) {
   if (c.ht_cap != nullptr) {
     common::WriteHtCapabilities(w, HtCapabilities::FromFidl(*c.ht_cap));
   }
@@ -56,8 +52,7 @@ static void WriteCommonElementsTail(BufferWriter* w,
   }
 }
 
-void WriteMpOpenActionFrame(BufferWriter* w,
-                            const MacHeaderWriter& mac_header_writer,
+void WriteMpOpenActionFrame(BufferWriter* w, const MacHeaderWriter& mac_header_writer,
                             const wlan_mlme::MeshPeeringOpenAction& action) {
   common::MacAddr dst_addr{action.common.peer_sta_address};
   WriteFixed(w, mac_header_writer, dst_addr, action::kMeshPeeringOpen);
@@ -72,9 +67,8 @@ void WriteMpOpenActionFrame(BufferWriter* w,
   WriteCommonElementsTail(w, action.common);
 }
 
-void WriteMpConfirmActionFrame(
-    BufferWriter* w, const MacHeaderWriter& mac_header_writer,
-    const wlan_mlme::MeshPeeringConfirmAction& action) {
+void WriteMpConfirmActionFrame(BufferWriter* w, const MacHeaderWriter& mac_header_writer,
+                               const wlan_mlme::MeshPeeringConfirmAction& action) {
   common::MacAddr dst_addr{action.common.peer_sta_address};
   WriteFixed(w, mac_header_writer, dst_addr, action::kMeshPeeringConfirm);
   w->WriteValue<uint16_t>(action.aid);

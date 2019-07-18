@@ -5,6 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MESH_DEDUPLICATOR_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MESH_DEDUPLICATOR_H_
 
+#include <queue>
+#include <unordered_set>
+
 #include <wlan/common/buffer_reader.h>
 #include <wlan/common/parse_mac_header.h>
 #include <wlan/mlme/device_interface.h>
@@ -12,9 +15,6 @@
 #include <wlan/mlme/mesh/hwmp.h>
 #include <wlan/mlme/mesh/path_table.h>
 #include <wlan/mlme/mlme.h>
-
-#include <queue>
-#include <unordered_set>
 
 namespace wlan {
 

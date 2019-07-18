@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_SCANNER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_SCANNER_H_
 
+#include <unordered_map>
+
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/zx/time.h>
@@ -13,8 +15,6 @@
 #include <wlan/mlme/rust_utils.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
-
-#include <unordered_map>
 
 namespace wlan {
 
@@ -27,8 +27,7 @@ class MlmeMsg;
 
 class Scanner {
  public:
-  Scanner(DeviceInterface* device, ChannelScheduler* chan_sched,
-          fbl::unique_ptr<Timer> timer);
+  Scanner(DeviceInterface* device, ChannelScheduler* chan_sched, fbl::unique_ptr<Timer> timer);
   virtual ~Scanner() {}
 
   zx_status_t Start(const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req);
@@ -39,8 +38,7 @@ class Scanner {
 
   void HandleTimeout();
 
-  zx_status_t HandleMlmeScanReq(
-      const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req);
+  zx_status_t HandleMlmeScanReq(const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req);
   void HandleBeacon(const MgmtFrameView<Beacon>& frame);
   void HandleProbeResponse(const MgmtFrameView<ProbeResponse>& frame);
   void HandleHwScanAborted();
@@ -54,15 +52,13 @@ class Scanner {
 
     virtual void BeginOffChannelTime() override;
     virtual void HandleOffChannelFrame(fbl::unique_ptr<Packet>) override;
-    virtual bool EndOffChannelTime(bool interrupted,
-                                   OffChannelRequest* next_req) override;
+    virtual bool EndOffChannelTime(bool interrupted, OffChannelRequest* next_req) override;
   };
 
   zx_status_t StartHwScan();
 
   bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr);
-  void ProcessBeaconOrProbeResponse(const common::MacAddr bssid,
-                                    const Beacon& beacon,
+  void ProcessBeaconOrProbeResponse(const common::MacAddr bssid, const Beacon& beacon,
                                     fbl::Span<const uint8_t> ie_chain,
                                     const wlan_rx_info_t* rx_info);
   void SendProbeRequest(wlan_channel_t channel);

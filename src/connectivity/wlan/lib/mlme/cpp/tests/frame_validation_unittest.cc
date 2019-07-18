@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+#include <utility>
+
 #include <gtest/gtest.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/wlan.h>
-
-#include <memory>
-#include <utility>
 
 #include "test_data.h"
 
@@ -42,9 +42,7 @@ struct DynamicTestHdr {
   uint8_t b;
   uint8_t c;
 
-  constexpr size_t len() const {
-    return is_large ? kLargeLength : sizeof(*this);
-  }
+  constexpr size_t len() const { return is_large ? kLargeLength : sizeof(*this); }
 } __PACKED;
 
 static fbl::unique_ptr<Packet> GetPacket(size_t len) {
@@ -59,88 +57,70 @@ size_t no_padding(size_t v) { return v; }
 size_t add4BytesPadding(size_t v) { return v + 4; }
 
 void AssertCorrectMacFrameType(FrameType type, const Packet* pkt) {
-  bool frame_valid = is_valid_frame_type<MgmtFrameHeader, UnknownBody>(
-      pkt->data(), pkt->len());
+  bool frame_valid = is_valid_frame_type<MgmtFrameHeader, UnknownBody>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid, type == FrameType::kManagement);
 
-  frame_valid = is_valid_frame_type<DataFrameHeader, UnknownBody>(pkt->data(),
-                                                                  pkt->len());
+  frame_valid = is_valid_frame_type<DataFrameHeader, UnknownBody>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid, type == FrameType::kData);
 
-  frame_valid =
-      is_valid_frame_type<CtrlFrameHdr, UnknownBody>(pkt->data(), pkt->len());
+  frame_valid = is_valid_frame_type<CtrlFrameHdr, UnknownBody>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid, type == FrameType::kControl);
 }
 
 void AssertCorrectMgmtFrameType(ManagementSubtype type, const Packet* pkt) {
   AssertCorrectMacFrameType(FrameType::kManagement, pkt);
 
-  bool frame_valid = is_valid_frame_type<MgmtFrameHeader, AssociationRequest>(
-      pkt->data(), pkt->len());
+  bool frame_valid =
+      is_valid_frame_type<MgmtFrameHeader, AssociationRequest>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid, type == ManagementSubtype::kAssociationRequest);
 
-  frame_valid = is_valid_frame_type<MgmtFrameHeader, AssociationResponse>(
-      pkt->data(), pkt->len());
+  frame_valid = is_valid_frame_type<MgmtFrameHeader, AssociationResponse>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid, type == ManagementSubtype::kAssociationResponse);
 
-  frame_valid = is_valid_frame_type<MgmtFrameHeader, ProbeRequest>(pkt->data(),
-                                                                   pkt->len());
+  frame_valid = is_valid_frame_type<MgmtFrameHeader, ProbeRequest>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid, type == ManagementSubtype::kProbeRequest);
 
-  frame_valid = is_valid_frame_type<MgmtFrameHeader, ProbeResponse>(pkt->data(),
-                                                                    pkt->len());
+  frame_valid = is_valid_frame_type<MgmtFrameHeader, ProbeResponse>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid, type == ManagementSubtype::kProbeResponse);
 
-  frame_valid =
-      is_valid_frame_type<MgmtFrameHeader, Beacon>(pkt->data(), pkt->len());
+  frame_valid = is_valid_frame_type<MgmtFrameHeader, Beacon>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid, type == ManagementSubtype::kBeacon);
 
-  frame_valid = is_valid_frame_type<MgmtFrameHeader, Disassociation>(
-      pkt->data(), pkt->len());
+  frame_valid = is_valid_frame_type<MgmtFrameHeader, Disassociation>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid, type == ManagementSubtype::kDisassociation);
 
-  frame_valid = is_valid_frame_type<MgmtFrameHeader, Authentication>(
-      pkt->data(), pkt->len());
+  frame_valid = is_valid_frame_type<MgmtFrameHeader, Authentication>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid, type == ManagementSubtype::kAuthentication);
 
-  frame_valid = is_valid_frame_type<MgmtFrameHeader, Deauthentication>(
-      pkt->data(), pkt->len());
+  frame_valid = is_valid_frame_type<MgmtFrameHeader, Deauthentication>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid, type == ManagementSubtype::kDeauthentication);
 
-  frame_valid = is_valid_frame_type<MgmtFrameHeader, ActionFrame>(pkt->data(),
-                                                                  pkt->len());
+  frame_valid = is_valid_frame_type<MgmtFrameHeader, ActionFrame>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid, type == ManagementSubtype::kAction);
 }
 
 void AssertCorrectCtrlFrameType(ControlSubtype type, const Packet* pkt) {
   AssertCorrectMacFrameType(FrameType::kControl, pkt);
 
-  bool frame_valid =
-      is_valid_frame_type<CtrlFrameHdr, PsPollFrame>(pkt->data(), pkt->len());
+  bool frame_valid = is_valid_frame_type<CtrlFrameHdr, PsPollFrame>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid, type == ControlSubtype::kPsPoll);
 }
 
-void AssertCorrectDataFrameType(DataSubtype type, const Packet* pkt,
-                                bool is_amsdu = false) {
+void AssertCorrectDataFrameType(DataSubtype type, const Packet* pkt, bool is_amsdu = false) {
   AssertCorrectMacFrameType(FrameType::kData, pkt);
 
-  bool frame_valid = is_valid_frame_type<DataFrameHeader, NullDataHdr>(
-      pkt->data(), pkt->len());
+  bool frame_valid = is_valid_frame_type<DataFrameHeader, NullDataHdr>(pkt->data(), pkt->len());
+  ASSERT_EQ(frame_valid, type == DataSubtype::kNull || type == DataSubtype::kQosnull);
+
+  frame_valid = is_valid_frame_type<DataFrameHeader, LlcHeader>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid,
-            type == DataSubtype::kNull || type == DataSubtype::kQosnull);
+            !is_amsdu && (type == DataSubtype::kDataSubtype || type == DataSubtype::kQosdata));
 
-  frame_valid =
-      is_valid_frame_type<DataFrameHeader, LlcHeader>(pkt->data(), pkt->len());
-  ASSERT_EQ(frame_valid, !is_amsdu && (type == DataSubtype::kDataSubtype ||
-                                       type == DataSubtype::kQosdata));
-
-  frame_valid = is_valid_frame_type<DataFrameHeader, AmsduSubframeHeader>(
-      pkt->data(), pkt->len());
+  frame_valid = is_valid_frame_type<DataFrameHeader, AmsduSubframeHeader>(pkt->data(), pkt->len());
   ASSERT_EQ(frame_valid, is_amsdu);
 }
 
-Packet WrapInPacket(std::vector<uint8_t> data,
-                    Packet::Peer peer = Packet::Peer::kWlan) {
+Packet WrapInPacket(std::vector<uint8_t> data, Packet::Peer peer = Packet::Peer::kWlan) {
   auto buf = GetBuffer(data.size());
   Packet pkt(std::move(buf), data.size());
   pkt.CopyFrom(data.data(), data.size(), 0);
@@ -190,8 +170,7 @@ TEST(FrameValidation, TestDynamicHdrLength) {
   // into the large buffer.
   hdr->is_large = true;
   ASSERT_FALSE(is_valid_hdr_length<DynamicTestHdr>(pkt->data(), len));
-  ASSERT_TRUE(is_valid_hdr_length<DynamicTestHdr>(
-      pkt->data(), DynamicTestHdr::kLargeLength));
+  ASSERT_TRUE(is_valid_hdr_length<DynamicTestHdr>(pkt->data(), DynamicTestHdr::kLargeLength));
 }
 
 TEST(FrameValidation, TestFrameLength_NoPadding) {
@@ -199,14 +178,11 @@ TEST(FrameValidation, TestFrameLength_NoPadding) {
   auto pkt = GetPacket(len);
 
   // Verifies correct behavior for frames which use no padding.
-  bool valid_len =
-      is_valid_frame_length<TestHdrA, TestHdrB>(pkt->data(), len, no_padding);
+  bool valid_len = is_valid_frame_length<TestHdrA, TestHdrB>(pkt->data(), len, no_padding);
   ASSERT_TRUE(valid_len);
-  valid_len = is_valid_frame_length<TestHdrA, TestHdrB>(pkt->data(), len + 1,
-                                                        no_padding);
+  valid_len = is_valid_frame_length<TestHdrA, TestHdrB>(pkt->data(), len + 1, no_padding);
   ASSERT_TRUE(valid_len);
-  valid_len = is_valid_frame_length<TestHdrA, TestHdrB>(pkt->data(), len - 1,
-                                                        no_padding);
+  valid_len = is_valid_frame_length<TestHdrA, TestHdrB>(pkt->data(), len - 1, no_padding);
   ASSERT_FALSE(valid_len);
 
   // Test convenience method.
@@ -221,14 +197,11 @@ TEST(FrameValidation, TestFrameLength_EmptyBody_NoPadding) {
   auto pkt = GetPacket(len);
 
   // Verifies correct behavior for frames which carry an empty body.
-  bool valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(
-      pkt->data(), len, no_padding);
+  bool valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len, no_padding);
   ASSERT_TRUE(valid_len);
-  valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len + 1,
-                                                           no_padding);
+  valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len + 1, no_padding);
   ASSERT_TRUE(valid_len);
-  valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len - 1,
-                                                           no_padding);
+  valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len - 1, no_padding);
   ASSERT_FALSE(valid_len);
 
   // Test convenience method.
@@ -243,14 +216,11 @@ TEST(FrameValidation, TestFrameLength_Padding) {
   auto pkt = GetPacket(len);
 
   // Verifies correct behavior for frames which use padding.
-  bool valid_len = is_valid_frame_length<TestHdrA, TestHdrB>(pkt->data(), len,
-                                                             add4BytesPadding);
+  bool valid_len = is_valid_frame_length<TestHdrA, TestHdrB>(pkt->data(), len, add4BytesPadding);
   ASSERT_TRUE(valid_len);
-  valid_len = is_valid_frame_length<TestHdrA, TestHdrB>(pkt->data(), len + 1,
-                                                        add4BytesPadding);
+  valid_len = is_valid_frame_length<TestHdrA, TestHdrB>(pkt->data(), len + 1, add4BytesPadding);
   ASSERT_TRUE(valid_len);
-  valid_len = is_valid_frame_length<TestHdrA, TestHdrB>(pkt->data(), len - 1,
-                                                        add4BytesPadding);
+  valid_len = is_valid_frame_length<TestHdrA, TestHdrB>(pkt->data(), len - 1, add4BytesPadding);
   ASSERT_FALSE(valid_len);
 }
 
@@ -260,14 +230,11 @@ TEST(FrameValidation, TestFrameLength_EmptyBody_Padding) {
 
   // Verifies correct behavior for frames which carry an empty body and use
   // padding.
-  bool valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(
-      pkt->data(), len, add4BytesPadding);
+  bool valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len, add4BytesPadding);
   ASSERT_FALSE(valid_len);
-  valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len + 3,
-                                                           add4BytesPadding);
+  valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len + 3, add4BytesPadding);
   ASSERT_FALSE(valid_len);
-  valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len + 4,
-                                                           add4BytesPadding);
+  valid_len = is_valid_frame_length<TestHdrA, UnknownBody>(pkt->data(), len + 4, add4BytesPadding);
   ASSERT_TRUE(valid_len);
 }
 

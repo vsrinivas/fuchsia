@@ -24,8 +24,7 @@ TEST(ParseElement, SsidTooLong) {
 
 TEST(ParseElement, SupportedRates) {
   const uint8_t raw_body[] = {10, 20, 30, 40, 50, 60, 70, 80};
-  std::optional<fbl::Span<const SupportedRate>> rates =
-      ParseSupportedRates(raw_body);
+  std::optional<fbl::Span<const SupportedRate>> rates = ParseSupportedRates(raw_body);
   ASSERT_TRUE(rates);
   EXPECT_EQ(raw_body, reinterpret_cast<const uint8_t*>(rates->data()));
   EXPECT_EQ(8u, rates->size());
@@ -38,8 +37,7 @@ TEST(ParseElement, SupportedRatesEmpty) {
 
 TEST(ParseElement, SupportedRatesTooLong) {
   const uint8_t raw_body[] = {10, 20, 30, 40, 50, 60, 70, 80, 90};
-  std::optional<fbl::Span<const SupportedRate>> rates =
-      ParseSupportedRates(raw_body);
+  std::optional<fbl::Span<const SupportedRate>> rates = ParseSupportedRates(raw_body);
   ASSERT_FALSE(rates);
 }
 
@@ -150,16 +148,14 @@ TEST(ParseElement, CountryTooShort) {
 
 TEST(ParseElement, ExtendedSupportedRates) {
   const uint8_t raw_body[] = {10, 20, 30, 40, 50, 60, 70, 80, 90};
-  std::optional<fbl::Span<const SupportedRate>> rates =
-      ParseExtendedSupportedRates(raw_body);
+  std::optional<fbl::Span<const SupportedRate>> rates = ParseExtendedSupportedRates(raw_body);
   ASSERT_TRUE(rates);
   EXPECT_EQ(raw_body, reinterpret_cast<const uint8_t*>(rates->data()));
   EXPECT_EQ(9u, rates->size());
 }
 
 TEST(ParseElement, ExtendedSupportedRatesEmpty) {
-  std::optional<fbl::Span<const SupportedRate>> rates =
-      ParseExtendedSupportedRates({});
+  std::optional<fbl::Span<const SupportedRate>> rates = ParseExtendedSupportedRates({});
   ASSERT_FALSE(rates);
 }
 
@@ -248,11 +244,10 @@ TEST(ParseElement, HtCapabilities) {
   const uint8_t raw_body[26] = {
       0xaa, 0xbb,  // ht cap info
       0x55,        // ampdu params
-      0x0,  0x1,  0x2,  0x3,  0x4, 0x5, 0x6, 0x7,
-      0x8,  0x9,  0xa,  0xb,  0xc, 0xd, 0xe, 0xf,  // mcs
-      0xdd, 0xee,                                  // ext caps
-      0x11, 0x22, 0x33, 0x44,                      // beamforming
-      0x77                                         // asel
+      0x0,  0x1,  0x2,  0x3,  0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf,  // mcs
+      0xdd, 0xee,              // ext caps
+      0x11, 0x22, 0x33, 0x44,  // beamforming
+      0x77                     // asel
   };
   const HtCapabilities* h = ParseHtCapabilities(raw_body);
   ASSERT_NE(nullptr, h);
@@ -279,9 +274,8 @@ TEST(ParseElement, HtCapabilitiesTooLong) {
 }
 
 TEST(ParseElement, HtOperation) {
-  const uint8_t raw_body[22] = {36,  0x11, 0x22, 0x33, 0x44, 0x55, 0x0, 0x1,
-                                0x2, 0x3,  0x4,  0x5,  0x6,  0x7,  0x8, 0x9,
-                                0xa, 0xb,  0xc,  0xd,  0xe,  0xf};
+  const uint8_t raw_body[22] = {36,  0x11, 0x22, 0x33, 0x44, 0x55, 0x0, 0x1, 0x2, 0x3, 0x4,
+                                0x5, 0x6,  0x7,  0x8,  0x9,  0xa,  0xb, 0xc, 0xd, 0xe, 0xf};
   const HtOperation* h = ParseHtOperation(raw_body);
   ASSERT_NE(nullptr, h);
   EXPECT_EQ(36, h->primary_chan);
@@ -407,9 +401,8 @@ TEST(ParseElement, MpmConfirmGoodNoPmk) {
 }
 
 TEST(ParseElement, MpmConfirmGoodWithPmk) {
-  const uint8_t data[22] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 1, 2,
-                            3,    4,    5,    6,    7,    8,    9, 10,
-                            11,   12,   13,   14,   15,   16};
+  const uint8_t data[22] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 1,  2,  3,  4,  5,
+                            6,    7,    8,    9,    10,   11,   12, 13, 14, 15, 16};
   auto mpm = ParseMpmConfirm(data);
   ASSERT_TRUE(mpm);
   EXPECT_EQ(static_cast<uint16_t>(mpm->header.protocol), 0x2211u);
@@ -428,8 +421,7 @@ TEST(ParseElement, MpmCloseBad) {
     EXPECT_FALSE(ParseMpmClose(weird_length));
   }
   {
-    const uint8_t weird_length[9] = {0x11, 0x22, 0x33, 0x44, 0x55,
-                                     0x66, 0x77, 0x88, 0x99};
+    const uint8_t weird_length[9] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99};
     EXPECT_FALSE(ParseMpmClose(weird_length));
   }
   {
@@ -461,9 +453,8 @@ TEST(ParseElement, MpmCloseGoodWithLinkIdNoPmk) {
 }
 
 TEST(ParseElement, MpmCloseGoodNoLinkIdWithPmk) {
-  const uint8_t data[22] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 1, 2,
-                            3,    4,    5,    6,    7,    8,    9, 10,
-                            11,   12,   13,   14,   15,   16};
+  const uint8_t data[22] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 1,  2,  3,  4,  5,
+                            6,    7,    8,    9,    10,   11,   12, 13, 14, 15, 16};
   auto mpm = ParseMpmClose(data);
   ASSERT_TRUE(mpm);
   EXPECT_EQ(static_cast<uint16_t>(mpm->header.protocol), 0x2211u);
@@ -474,9 +465,8 @@ TEST(ParseElement, MpmCloseGoodNoLinkIdWithPmk) {
 }
 
 TEST(ParseElement, MpmCloseGoodWithLinkIdWithPmk) {
-  const uint8_t data[24] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
-                            1,    2,    3,    4,    5,    6,    7,    8,
-                            9,    10,   11,   12,   13,   14,   15,   16};
+  const uint8_t data[24] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 1,  2,  3,  4,
+                            5,    6,    7,    8,    9,    10,   11,   12,   13, 14, 15, 16};
   auto mpm = ParseMpmClose(data);
   ASSERT_TRUE(mpm);
   EXPECT_EQ(static_cast<uint16_t>(mpm->header.protocol), 0x2211u);

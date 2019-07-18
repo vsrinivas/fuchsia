@@ -7,8 +7,7 @@
 namespace wlan {
 namespace common {
 
-PerrDestinationParser::PerrDestinationParser(fbl::Span<const uint8_t> bytes)
-    : reader_(bytes) {}
+PerrDestinationParser::PerrDestinationParser(fbl::Span<const uint8_t> bytes) : reader_(bytes) {}
 
 std::optional<ParsedPerrDestination> PerrDestinationParser::Next() {
   ParsedPerrDestination ret = {};

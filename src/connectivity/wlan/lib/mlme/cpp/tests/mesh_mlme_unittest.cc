@@ -22,8 +22,7 @@ struct MeshMlmeTest : public ::testing::Test {
 
   wlan_mlme::StartResultCodes JoinMesh() {
     wlan_mlme::StartRequest join;
-    zx_status_t status = mlme.HandleMlmeMsg(
-        MlmeMsg<wlan_mlme::StartRequest>(std::move(join), 123));
+    zx_status_t status = mlme.HandleMlmeMsg(MlmeMsg<wlan_mlme::StartRequest>(std::move(join), 123));
     EXPECT_EQ(ZX_OK, status);
 
     auto msgs = device.GetServiceMsgs<wlan_mlme::StartConfirm>();
@@ -33,8 +32,7 @@ struct MeshMlmeTest : public ::testing::Test {
 
   wlan_mlme::StopResultCodes LeaveMesh() {
     wlan_mlme::StopRequest leave;
-    zx_status_t status = mlme.HandleMlmeMsg(
-        MlmeMsg<wlan_mlme::StopRequest>(std::move(leave), 123));
+    zx_status_t status = mlme.HandleMlmeMsg(MlmeMsg<wlan_mlme::StopRequest>(std::move(leave), 123));
     EXPECT_EQ(ZX_OK, status);
 
     auto msgs = device.GetServiceMsgs<wlan_mlme::StopConfirm>();
@@ -44,15 +42,15 @@ struct MeshMlmeTest : public ::testing::Test {
 
   auto GetPathTable() {
     wlan_mlme::GetMeshPathTableRequest params;
-    zx_status_t status = mlme.HandleMlmeMsg(
-        MlmeMsg<wlan_mlme::GetMeshPathTableRequest>(std::move(params), 123));
+    zx_status_t status =
+        mlme.HandleMlmeMsg(MlmeMsg<wlan_mlme::GetMeshPathTableRequest>(std::move(params), 123));
     EXPECT_EQ(ZX_OK, status);
 
     return device.GetServiceMsgs<wlan_mesh::MeshPathTable>();
   }
 
-  void EstablishPath(const common::MacAddr& target_addr,
-                     const common::MacAddr& next_hop, uint32_t lifetime) {
+  void EstablishPath(const common::MacAddr& target_addr, const common::MacAddr& next_hop,
+                     uint32_t lifetime) {
     // Receive a PREP to establish a path
     zx_status_t status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
         // clang-format off
@@ -92,8 +90,7 @@ TEST_F(MeshMlmeTest, JoinLeave) {
   EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCodes::BSS_ALREADY_STOPPED);
   EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
   EXPECT_TRUE(device.beaconing_enabled);
-  EXPECT_EQ(JoinMesh(),
-            wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED);
+  EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED);
   EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCodes::SUCCESS);
   EXPECT_FALSE(device.beaconing_enabled);
   EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCodes::BSS_ALREADY_STOPPED);
@@ -383,8 +380,8 @@ TEST_F(MeshMlmeTest, DeliverDuplicateData) {
   // send some non-duplicate packets
   for (uint8_t addr = 1; addr < 5; addr++) {
     for (uint8_t seq = 1; seq < 5; seq++) {
-      zx_status_t status = mlme.HandleFramePacket(
-          test_utils::MakeWlanPacket(mesh_packet(addr, seq, 0xef)));
+      zx_status_t status =
+          mlme.HandleFramePacket(test_utils::MakeWlanPacket(mesh_packet(addr, seq, 0xef)));
       EXPECT_EQ(ZX_OK, status);
 
       auto eth_frames = device.GetEthPackets();
@@ -397,8 +394,8 @@ TEST_F(MeshMlmeTest, DeliverDuplicateData) {
   // send some duplicate packets
   for (uint8_t addr = 1; addr < 5; addr++) {
     for (uint8_t seq = 1; seq < 5; seq++) {
-      zx_status_t status = mlme.HandleFramePacket(
-          test_utils::MakeWlanPacket(mesh_packet(addr, seq, 0xef)));
+      zx_status_t status =
+          mlme.HandleFramePacket(test_utils::MakeWlanPacket(mesh_packet(addr, seq, 0xef)));
       EXPECT_EQ(ZX_OK, status);
 
       auto eth_frames = device.GetEthPackets();
@@ -409,8 +406,8 @@ TEST_F(MeshMlmeTest, DeliverDuplicateData) {
   // send some more non-duplicate packets with a different payload
   for (uint8_t addr = 5; addr < 10; addr++) {
     for (uint8_t seq = 0; seq < 5; seq++) {
-      zx_status_t status = mlme.HandleFramePacket(
-          test_utils::MakeWlanPacket(mesh_packet(addr, seq, 0xff)));
+      zx_status_t status =
+          mlme.HandleFramePacket(test_utils::MakeWlanPacket(mesh_packet(addr, seq, 0xff)));
       EXPECT_EQ(ZX_OK, status);
 
       auto eth_frames = device.GetEthPackets();
@@ -522,26 +519,21 @@ TEST_F(MeshMlmeTest, OutgoingData) {
   EstablishPath(dest, next_hop, 100);
 
   // Transmit a data frame
-  ASSERT_EQ(ZX_OK, mlme.HandleFramePacket(
-                       test_utils::MakeEthPacket(dest, src, {'a'})));
+  ASSERT_EQ(ZX_OK, mlme.HandleFramePacket(test_utils::MakeEthPacket(dest, src, {'a'})));
   auto packets = device.GetWlanPackets();
   ASSERT_EQ(1u, packets.size());
-  EXPECT_RANGES_EQ(expected_data_frame(0, 'a'),
-                   fbl::Span<const uint8_t>(*packets[0].pkt));
+  EXPECT_RANGES_EQ(expected_data_frame(0, 'a'), fbl::Span<const uint8_t>(*packets[0].pkt));
 
   // Transmit another data frame
-  ASSERT_EQ(ZX_OK, mlme.HandleFramePacket(
-                       test_utils::MakeEthPacket(dest, src, {'b'})));
+  ASSERT_EQ(ZX_OK, mlme.HandleFramePacket(test_utils::MakeEthPacket(dest, src, {'b'})));
   packets = device.GetWlanPackets();
   ASSERT_EQ(1u, packets.size());
-  EXPECT_RANGES_EQ(expected_data_frame(1, 'b'),
-                   fbl::Span<const uint8_t>(*packets[0].pkt));
+  EXPECT_RANGES_EQ(expected_data_frame(1, 'b'), fbl::Span<const uint8_t>(*packets[0].pkt));
 
   // Fast forward well into the future and attempt to transmit yet another data
   // frame
   device.SetTime(zx::time(ZX_SEC(12345)));
-  ASSERT_EQ(ZX_OK, mlme.HandleFramePacket(
-                       test_utils::MakeEthPacket(dest, src, {'c'})));
+  ASSERT_EQ(ZX_OK, mlme.HandleFramePacket(test_utils::MakeEthPacket(dest, src, {'c'})));
 
   packets = device.GetWlanPackets();
   ASSERT_EQ(2u, packets.size());
@@ -575,14 +567,12 @@ TEST_F(MeshMlmeTest, OutgoingData) {
         0x00, 0x00, 0x00, 0x00, // target hwmp seqno
       // clang-format on
   };
-  EXPECT_RANGES_EQ(expected_preq_frame,
-                   fbl::Span<const uint8_t>(*packets[0].pkt));
+  EXPECT_RANGES_EQ(expected_preq_frame, fbl::Span<const uint8_t>(*packets[0].pkt));
 
   // The current implementation is expected to send out the data frame even if
   // the path has expired. This might change in the future if we implement
   // packet buffering.
-  EXPECT_RANGES_EQ(expected_data_frame(2, 'c'),
-                   fbl::Span<const uint8_t>(*packets[1].pkt));
+  EXPECT_RANGES_EQ(expected_data_frame(2, 'c'), fbl::Span<const uint8_t>(*packets[1].pkt));
 }
 
 TEST_F(MeshMlmeTest, GeneratePerrIfMissingForwardingPath) {
@@ -645,8 +635,7 @@ TEST_F(MeshMlmeTest, GeneratePerrIfMissingForwardingPath) {
         62, 0, // reason code = MESH-PATH-ERROR-NO-FORWARDING-INFORMATION
       // clang-format on
   };
-  EXPECT_RANGES_EQ(expected_perr_frame,
-                   fbl::Span<const uint8_t>(*packets[0].pkt));
+  EXPECT_RANGES_EQ(expected_perr_frame, fbl::Span<const uint8_t>(*packets[0].pkt));
 }
 
 }  // namespace wlan

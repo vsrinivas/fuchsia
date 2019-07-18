@@ -163,21 +163,18 @@ MlmeMsg<wlan_mlme::AuthenticateRequest> CreateAuthRequest() {
   return {std::move(*req), fuchsia_wlan_mlme_MLMEAuthenticateReqOrdinal};
 }
 
-MlmeMsg<wlan_mlme::DeauthenticateRequest> CreateDeauthRequest(
-    common::MacAddr peer_addr, wlan_mlme::ReasonCode reason_code) {
+MlmeMsg<wlan_mlme::DeauthenticateRequest> CreateDeauthRequest(common::MacAddr peer_addr,
+                                                              wlan_mlme::ReasonCode reason_code) {
   auto req = wlan_mlme::DeauthenticateRequest::New();
-  std::memcpy(req->peer_sta_address.data(), peer_addr.byte,
-              common::kMacAddrLen);
+  std::memcpy(req->peer_sta_address.data(), peer_addr.byte, common::kMacAddrLen);
   req->reason_code = reason_code;
   return {std::move(*req), fuchsia_wlan_mlme_MLMEDeauthenticateReqOrdinal};
 }
 
 MlmeMsg<wlan_mlme::AuthenticateResponse> CreateAuthResponse(
-    common::MacAddr client_addr,
-    wlan_mlme::AuthenticateResultCodes result_code) {
+    common::MacAddr client_addr, wlan_mlme::AuthenticateResultCodes result_code) {
   auto resp = wlan_mlme::AuthenticateResponse::New();
-  std::memcpy(resp->peer_sta_address.data(), client_addr.byte,
-              common::kMacAddrLen);
+  std::memcpy(resp->peer_sta_address.data(), client_addr.byte, common::kMacAddrLen);
   resp->result_code = result_code;
 
   return {std::move(*resp), fuchsia_wlan_mlme_MLMEAuthenticateRespOrdinal};
@@ -198,11 +195,9 @@ MlmeMsg<wlan_mlme::AssociateRequest> CreateAssocRequest(bool rsn) {
 }
 
 MlmeMsg<wlan_mlme::AssociateResponse> CreateAssocResponse(
-    common::MacAddr client_addr, wlan_mlme::AssociateResultCodes result_code,
-    uint16_t aid) {
+    common::MacAddr client_addr, wlan_mlme::AssociateResultCodes result_code, uint16_t aid) {
   auto resp = wlan_mlme::AssociateResponse::New();
-  std::memcpy(resp->peer_sta_address.data(), client_addr.byte,
-              common::kMacAddrLen);
+  std::memcpy(resp->peer_sta_address.data(), client_addr.byte, common::kMacAddrLen);
   resp->result_code = result_code;
   resp->association_id = aid;
 
@@ -220,9 +215,9 @@ MlmeMsg<wlan_mlme::EapolRequest> CreateEapolRequest(common::MacAddr src_addr,
   return {std::move(*req), fuchsia_wlan_mlme_MLMEEapolReqOrdinal};
 }
 
-MlmeMsg<wlan_mlme::SetKeysRequest> CreateSetKeysRequest(
-    common::MacAddr addr, std::vector<uint8_t> key_data,
-    wlan_mlme::KeyType key_type) {
+MlmeMsg<wlan_mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr addr,
+                                                        std::vector<uint8_t> key_data,
+                                                        wlan_mlme::KeyType key_type) {
   wlan_mlme::SetKeyDescriptor key;
   key.key = key_data;
   key.key_id = 1;
@@ -250,8 +245,7 @@ MlmeMsg<wlan_mlme::SetControlledPortRequest> CreateSetCtrlPortRequest(
 
 fbl::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid) {
   constexpr size_t ie_len = 256;
-  constexpr size_t max_frame_len =
-      MgmtFrameHeader::max_len() + Beacon::max_len() + ie_len;
+  constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Beacon::max_len() + ie_len;
   auto packet = GetWlanPacket(max_frame_len);
   ZX_DEBUG_ASSERT(packet != nullptr);
 
@@ -290,8 +284,7 @@ fbl::unique_ptr<Packet> CreateProbeRequest() {
   common::MacAddr client(kClientAddress);
 
   constexpr size_t ie_len = 256;
-  constexpr size_t max_frame_len =
-      MgmtFrameHeader::max_len() + ProbeRequest::max_len() + ie_len;
+  constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + ProbeRequest::max_len() + ie_len;
   auto packet = GetWlanPacket(max_frame_len);
   ZX_DEBUG_ASSERT(packet != nullptr);
 
@@ -322,8 +315,7 @@ fbl::unique_ptr<Packet> CreateProbeRequest() {
 
 fbl::unique_ptr<Packet> CreateAuthReqFrame(common::MacAddr client_addr) {
   common::MacAddr bssid(kBssid1);
-  constexpr size_t max_frame_len =
-      MgmtFrameHeader::max_len() + Authentication::max_len();
+  constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Authentication::max_len();
   auto packet = GetWlanPacket(max_frame_len);
   ZX_DEBUG_ASSERT(packet != nullptr);
 
@@ -352,8 +344,7 @@ fbl::unique_ptr<Packet> CreateAuthRespFrame(AuthAlgorithm auth_algo) {
   common::MacAddr bssid(kBssid1);
   common::MacAddr client(kClientAddress);
 
-  constexpr size_t max_frame_len =
-      MgmtFrameHeader::max_len() + Authentication::max_len();
+  constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Authentication::max_len();
   auto packet = GetWlanPacket(max_frame_len);
   ZX_DEBUG_ASSERT(packet != nullptr);
 
@@ -381,8 +372,7 @@ fbl::unique_ptr<Packet> CreateAuthRespFrame(AuthAlgorithm auth_algo) {
 fbl::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr) {
   common::MacAddr bssid(kBssid1);
 
-  constexpr size_t max_frame_len =
-      MgmtFrameHeader::max_len() + Deauthentication::max_len();
+  constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Deauthentication::max_len();
   auto packet = GetWlanPacket(max_frame_len);
   ZX_DEBUG_ASSERT(packet != nullptr);
 
@@ -394,8 +384,7 @@ fbl::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr) {
   mgmt_hdr->addr2 = client_addr;
   mgmt_hdr->addr3 = bssid;
 
-  w.Write<Deauthentication>()->reason_code =
-      WLAN_REASON_CODE_LEAVING_NETWORK_DEAUTH;
+  w.Write<Deauthentication>()->reason_code = WLAN_REASON_CODE_LEAVING_NETWORK_DEAUTH;
 
   packet->set_len(w.WrittenBytes());
 
@@ -406,8 +395,7 @@ fbl::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr) {
 }
 
 fbl::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr,
-                                            fbl::Span<const uint8_t> ssid,
-                                            bool rsn) {
+                                            fbl::Span<const uint8_t> ssid, bool rsn) {
   common::MacAddr bssid(kBssid1);
 
   // arbitrarily large reserved len; will shrink down later
@@ -453,9 +441,8 @@ fbl::unique_ptr<Packet> CreateAssocRespFrame(const AssocContext& ap_assoc_ctx) {
   common::MacAddr client(kClientAddress);
 
   constexpr size_t reserved_ie_len = 256;
-  constexpr size_t max_frame_len = MgmtFrameHeader::max_len() +
-                                   AssociationResponse::max_len() +
-                                   reserved_ie_len;
+  constexpr size_t max_frame_len =
+      MgmtFrameHeader::max_len() + AssociationResponse::max_len() + reserved_ie_len;
   auto packet = GetWlanPacket(max_frame_len);
   ZX_DEBUG_ASSERT(packet != nullptr);
 
@@ -501,8 +488,7 @@ fbl::unique_ptr<Packet> CreateAssocRespFrame(const AssocContext& ap_assoc_ctx) {
 fbl::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr) {
   common::MacAddr bssid(kBssid1);
 
-  constexpr size_t max_frame_len =
-      MgmtFrameHeader::max_len() + Disassociation::max_len();
+  constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Disassociation::max_len();
   auto packet = GetWlanPacket(max_frame_len);
   ZX_DEBUG_ASSERT(packet != nullptr);
 
@@ -514,8 +500,7 @@ fbl::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr) {
   mgmt_hdr->addr2 = client_addr;
   mgmt_hdr->addr3 = bssid;
 
-  w.Write<Disassociation>()->reason_code =
-      WLAN_REASON_CODE_LEAVING_NETWORK_DISASSOC;
+  w.Write<Disassociation>()->reason_code = WLAN_REASON_CODE_LEAVING_NETWORK_DISASSOC;
 
   packet->set_len(w.WrittenBytes());
 
@@ -529,8 +514,7 @@ fbl::unique_ptr<Packet> CreateDataFrame(fbl::Span<const uint8_t> payload) {
   common::MacAddr bssid(kBssid1);
   common::MacAddr client(kClientAddress);
 
-  const size_t buf_len =
-      DataFrameHeader::max_len() + LlcHeader::max_len() + payload.size_bytes();
+  const size_t buf_len = DataFrameHeader::max_len() + LlcHeader::max_len() + payload.size_bytes();
   auto packet = GetWlanPacket(buf_len);
   ZX_DEBUG_ASSERT(packet != nullptr);
 
@@ -569,8 +553,7 @@ fbl::unique_ptr<Packet> CreateAmsduDataFramePacket(
 
   size_t buf_len = DataFrameHeader::max_len();
   for (auto span : payloads) {
-    buf_len += AmsduSubframeHeader::max_len() + LlcHeader::max_len() +
-               span.size_bytes() + 3;
+    buf_len += AmsduSubframeHeader::max_len() + LlcHeader::max_len() + span.size_bytes() + 3;
   };
   auto packet = GetWlanPacket(buf_len);
   ZX_DEBUG_ASSERT(packet != nullptr);
@@ -591,8 +574,7 @@ fbl::unique_ptr<Packet> CreateAmsduDataFramePacket(
     auto msdu_hdr = w.Write<AmsduSubframeHeader>();
     msdu_hdr->da = client;
     msdu_hdr->sa = bssid;
-    msdu_hdr->msdu_len_be =
-        htobe16(LlcHeader::max_len() + payloads[i].size_bytes());
+    msdu_hdr->msdu_len_be = htobe16(LlcHeader::max_len() + payloads[i].size_bytes());
 
     auto llc_hdr = w.Write<LlcHeader>();
     llc_hdr->dsap = kLlcSnapExtension;

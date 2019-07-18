@@ -10,11 +10,9 @@
 
 namespace wlan {
 
-bool ParseMpOpenAction(BufferReader* r,
-                       ::fuchsia::wlan::mlme::MeshPeeringOpenAction* out);
+bool ParseMpOpenAction(BufferReader* r, ::fuchsia::wlan::mlme::MeshPeeringOpenAction* out);
 
-bool ParseMpConfirmAction(BufferReader* r,
-                          ::fuchsia::wlan::mlme::MeshPeeringConfirmAction* out);
+bool ParseMpConfirmAction(BufferReader* r, ::fuchsia::wlan::mlme::MeshPeeringConfirmAction* out);
 
 }  // namespace wlan
 

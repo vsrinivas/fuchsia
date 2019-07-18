@@ -43,8 +43,7 @@ wlan_status_code ToStatusCode(const wlan_mlme::AssociateResultCodes code) {
       return WLAN_STATUS_CODE_REFUSED_AP_OUT_OF_MEMORY;
     case wlan_mlme::AssociateResultCodes::REFUSED_BASIC_RATES_MISMATCH:
       return WLAN_STATUS_CODE_REFUSED_BASIC_RATES_MISMATCH;
-    case wlan_mlme::AssociateResultCodes::
-        REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED:
+    case wlan_mlme::AssociateResultCodes::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED:
       return WLAN_STATUS_CODE_REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED;
     case wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY:
       return WLAN_STATUS_CODE_REFUSED_TEMPORARILY;

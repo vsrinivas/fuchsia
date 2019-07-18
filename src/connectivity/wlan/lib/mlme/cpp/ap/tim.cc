@@ -6,9 +6,7 @@
 
 namespace wlan {
 
-TrafficIndicationMap::TrafficIndicationMap() {
-  aid_bitmap_.Reset(kMaxBssClients);
-}
+TrafficIndicationMap::TrafficIndicationMap() { aid_bitmap_.Reset(kMaxBssClients); }
 
 void TrafficIndicationMap::SetTrafficIndication(aid_t aid, bool has_bu) {
   ZX_DEBUG_ASSERT(aid < kMaxBssClients);
@@ -24,9 +22,9 @@ void TrafficIndicationMap::SetTrafficIndication(aid_t aid, bool has_bu) {
   }
 }
 
-zx_status_t TrafficIndicationMap::WritePartialVirtualBitmap(
-    uint8_t* buf, size_t buf_len, size_t* bitmap_len,
-    uint8_t* bitmap_offset) const {
+zx_status_t TrafficIndicationMap::WritePartialVirtualBitmap(uint8_t* buf, size_t buf_len,
+                                                            size_t* bitmap_len,
+                                                            uint8_t* bitmap_offset) const {
   size_t n1 = N1();
   size_t n2 = N2();
 
@@ -35,8 +33,7 @@ zx_status_t TrafficIndicationMap::WritePartialVirtualBitmap(
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  auto data =
-      static_cast<const uint8_t*>(aid_bitmap_.StorageUnsafe()->GetData());
+  auto data = static_cast<const uint8_t*>(aid_bitmap_.StorageUnsafe()->GetData());
   memcpy(buf, data + n1, *bitmap_len);
   *bitmap_offset = n1 / 2;
 
@@ -45,9 +42,7 @@ zx_status_t TrafficIndicationMap::WritePartialVirtualBitmap(
 
 size_t TrafficIndicationMap::BitmapLen() const { return 1 + (N2() - N1()); }
 
-uint8_t TrafficIndicationMap::BitmapOffset() const {
-  return static_cast<uint8_t>(N1() / 2);
-}
+uint8_t TrafficIndicationMap::BitmapOffset() const { return static_cast<uint8_t>(N1() / 2); }
 
 const uint8_t* TrafficIndicationMap::BitmapData() const {
   return static_cast<const uint8_t*>(aid_bitmap_.StorageUnsafe()->GetData());
@@ -58,16 +53,13 @@ bool TrafficIndicationMap::HasDozingClients() const {
   return !empty;
 }
 
-bool TrafficIndicationMap::HasGroupTraffic() const {
-  return aid_bitmap_.GetOne(kGroupAdressedAid);
-}
+bool TrafficIndicationMap::HasGroupTraffic() const { return aid_bitmap_.GetOne(kGroupAdressedAid); }
 
 void TrafficIndicationMap::Clear() { aid_bitmap_.Reset(kMaxBssClients); }
 
 size_t TrafficIndicationMap::N1() const {
   size_t first_set_bit;
-  bool none_set =
-      aid_bitmap_.Scan(1, aid_bitmap_.size(), false, &first_set_bit);
+  bool none_set = aid_bitmap_.Scan(1, aid_bitmap_.size(), false, &first_set_bit);
   if (none_set) {
     return 0;
   }
@@ -77,8 +69,7 @@ size_t TrafficIndicationMap::N1() const {
 
 size_t TrafficIndicationMap::N2() const {
   size_t last_set_bit;
-  bool none_set =
-      aid_bitmap_.ReverseScan(1, aid_bitmap_.size(), false, &last_set_bit);
+  bool none_set = aid_bitmap_.ReverseScan(1, aid_bitmap_.size(), false, &last_set_bit);
   if (none_set) {
     return 0;
   }

@@ -31,19 +31,14 @@ class MeshMlme : public Mlme {
   zx_status_t HandleTimeout(const ObjectId id) override;
 
  private:
-  const common::MacAddr& self_addr() const {
-    return device_->GetState()->address();
-  }
+  const common::MacAddr& self_addr() const { return device_->GetState()->address(); }
 
   ::fuchsia::wlan::mlme::StartResultCodes Start(
       const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
   ::fuchsia::wlan::mlme::StopResultCodes Stop();
-  void SendPeeringOpen(
-      const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringOpenAction>& req);
-  void SendPeeringConfirm(
-      const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringConfirmAction>& req);
-  void ConfigurePeering(
-      const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringParams>& params);
+  void SendPeeringOpen(const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringOpenAction>& req);
+  void SendPeeringConfirm(const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringConfirmAction>& req);
+  void ConfigurePeering(const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringParams>& params);
 
   void SendDataFrame(fbl::unique_ptr<Packet> packet);
   void SendMgmtFrame(fbl::unique_ptr<Packet> packet);
@@ -54,12 +49,9 @@ class MeshMlme : public Mlme {
   zx_status_t HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt);
   zx_status_t HandleAnyMgmtFrame(MgmtFrame<>&& frame);
   zx_status_t HandleActionFrame(const MgmtFrameHeader& mgmt, BufferReader* r);
-  zx_status_t HandleSelfProtectedAction(const common::MacAddr& src_addr,
-                                        BufferReader* r);
-  zx_status_t HandleMpmOpenAction(const common::MacAddr& src_addr,
-                                  BufferReader* r);
-  zx_status_t HandleMpmConfirmAction(const common::MacAddr& src_addr,
-                                     BufferReader* r);
+  zx_status_t HandleSelfProtectedAction(const common::MacAddr& src_addr, BufferReader* r);
+  zx_status_t HandleMpmOpenAction(const common::MacAddr& src_addr, BufferReader* r);
+  zx_status_t HandleMpmConfirmAction(const common::MacAddr& src_addr, BufferReader* r);
   void HandleMeshAction(const MgmtFrameHeader& mgmt, BufferReader* r);
 
   const MeshPath* QueryPathTable(const common::MacAddr& mesh_dest);
@@ -67,12 +59,11 @@ class MeshMlme : public Mlme {
 
   void HandleDataFrame(fbl::unique_ptr<Packet> packet);
   bool ShouldDeliverData(const common::ParsedDataFrameHeader& header);
-  void DeliverData(const common::ParsedMeshDataHeader& header,
-                   fbl::Span<uint8_t> wlan_frame, size_t payload_offset);
+  void DeliverData(const common::ParsedMeshDataHeader& header, fbl::Span<uint8_t> wlan_frame,
+                   size_t payload_offset);
   std::optional<common::MacAddr> GetNextHopForForwarding(
       const common::ParsedMeshDataHeader& header);
-  void ForwardData(const common::ParsedMeshDataHeader& header,
-                   fbl::unique_ptr<Packet> packet,
+  void ForwardData(const common::ParsedMeshDataHeader& header, fbl::unique_ptr<Packet> packet,
                    const common::MacAddr& next_hop);
 
   MacHeaderWriter CreateMacHeaderWriter();

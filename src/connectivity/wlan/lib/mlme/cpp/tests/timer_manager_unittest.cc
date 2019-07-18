@@ -45,8 +45,7 @@ struct TimerManagerTest : public ::testing::Test {
   TimerManagerTest() {
     auto timer_box = std::make_unique<MockedTimer>();
     timer = timer_box.get();
-    timer_manager =
-        std::make_unique<TimerManager<std::string>>(std::move(timer_box));
+    timer_manager = std::make_unique<TimerManager<std::string>>(std::move(timer_box));
   }
 
   timekeeper::TestClock* clock() { return &timer->clock; }
@@ -104,8 +103,7 @@ TEST_F(TimerManagerTest, CancelNearestEvent) {
 
   clock()->Set(zx::time(150));
   size_t num_handled = 0;
-  timer_manager->HandleTimeout(
-      [&](auto now, auto event, auto id) { num_handled++; });
+  timer_manager->HandleTimeout([&](auto now, auto event, auto id) { num_handled++; });
 
   EXPECT_EQ(0u, num_handled);
   EXPECT_EQ(zx::time(200), timer->deadline());
@@ -120,8 +118,7 @@ TEST_F(TimerManagerTest, HandleLastTimeout) {
   timer->Reset();
   clock()->Set(zx::time(100));
   std::vector<std::string> events;
-  timer_manager->HandleTimeout(
-      [&](auto now, auto event, auto id) { events.push_back(event); });
+  timer_manager->HandleTimeout([&](auto now, auto event, auto id) { events.push_back(event); });
   EXPECT_EQ(events, std::vector<std::string>({"foo"}));
 
   // Make sure the timer has not been reset
@@ -178,8 +175,7 @@ TEST_F(TimerManagerTest, EventsWithSameDeadlineReportedInSchedulingOrder) {
   clock()->Set(zx::time(100));
 
   std::vector<TimeoutId> reported_ids;
-  timer_manager->HandleTimeout(
-      [&](auto now, auto event, auto id) { reported_ids.push_back(id); });
+  timer_manager->HandleTimeout([&](auto now, auto event, auto id) { reported_ids.push_back(id); });
 
   EXPECT_RANGES_EQ(ids, reported_ids);
   EXPECT_EQ(0u, timer_manager->NumScheduled());

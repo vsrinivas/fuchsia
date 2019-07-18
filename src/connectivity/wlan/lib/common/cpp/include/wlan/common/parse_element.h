@@ -54,12 +54,10 @@ struct ParsedPrep {
 
 struct ParsedPerr {
   const PerrHeader* header;
-  fbl::Span<const uint8_t>
-      destinations;  // can be parsed with PerrDestinationParser
+  fbl::Span<const uint8_t> destinations;  // can be parsed with PerrDestinationParser
 };
 
-std::optional<fbl::Span<const uint8_t>> ParseSsid(
-    fbl::Span<const uint8_t> raw_body);
+std::optional<fbl::Span<const uint8_t>> ParseSsid(fbl::Span<const uint8_t> raw_body);
 std::optional<fbl::Span<const SupportedRate>> ParseSupportedRates(
     fbl::Span<const uint8_t> raw_body);
 const DsssParamSet* ParseDsssParamSet(fbl::Span<const uint8_t> raw_body);
@@ -68,10 +66,8 @@ std::optional<ParsedTim> ParseTim(fbl::Span<const uint8_t> raw_body);
 std::optional<ParsedCountry> ParseCountry(fbl::Span<const uint8_t> raw_body);
 std::optional<fbl::Span<const SupportedRate>> ParseExtendedSupportedRates(
     fbl::Span<const uint8_t> raw_body);
-const MeshConfiguration* ParseMeshConfiguration(
-    fbl::Span<const uint8_t> raw_body);
-std::optional<fbl::Span<const uint8_t>> ParseMeshId(
-    fbl::Span<const uint8_t> raw_body);
+const MeshConfiguration* ParseMeshConfiguration(fbl::Span<const uint8_t> raw_body);
+std::optional<fbl::Span<const uint8_t>> ParseMeshId(fbl::Span<const uint8_t> raw_body);
 const QosInfo* ParseQosCapability(fbl::Span<const uint8_t> raw_body);
 const common::MacAddr* ParseGcrGroupAddress(fbl::Span<const uint8_t> raw_body);
 const HtCapabilities* ParseHtCapabilities(fbl::Span<const uint8_t> raw_body);
@@ -84,8 +80,7 @@ const VhtOperation* ParseVhtOperation(fbl::Span<const uint8_t> raw_body);
 // following three functions parse it for each of the three contexts,
 // respectively.
 std::optional<ParsedMpmOpen> ParseMpmOpen(fbl::Span<const uint8_t> raw_body);
-std::optional<ParsedMpmConfirm> ParseMpmConfirm(
-    fbl::Span<const uint8_t> raw_body);
+std::optional<ParsedMpmConfirm> ParseMpmConfirm(fbl::Span<const uint8_t> raw_body);
 std::optional<ParsedMpmClose> ParseMpmClose(fbl::Span<const uint8_t> raw_body);
 
 std::optional<ParsedPreq> ParsePreq(fbl::Span<const uint8_t> raw_body);

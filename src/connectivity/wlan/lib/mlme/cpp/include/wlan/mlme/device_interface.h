@@ -5,6 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEVICE_INTERFACE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEVICE_INTERFACE_H_
 
+#include <cstdint>
+#include <cstring>
+
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
@@ -13,9 +16,6 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
-
-#include <cstdint>
-#include <cstring>
 
 namespace wlan {
 
@@ -50,8 +50,7 @@ class DeviceInterface {
   virtual zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) = 0;
 
   virtual zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) = 0;
-  virtual zx_status_t SendWlan(fbl::unique_ptr<Packet> packet,
-                               uint32_t flags = 0) = 0;
+  virtual zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags = 0) = 0;
   virtual zx_status_t SendService(fbl::Span<const uint8_t> span) = 0;
 
   virtual zx_status_t SetChannel(wlan_channel_t chan) = 0;
@@ -63,11 +62,9 @@ class DeviceInterface {
   virtual zx_status_t StartHwScan(const wlan_hw_scan_config_t* scan_config) = 0;
   virtual zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) = 0;
   virtual zx_status_t ClearAssoc(const common::MacAddr& peer_addr) = 0;
-  virtual zx_status_t GetMinstrelPeers(
-      ::fuchsia::wlan::minstrel::Peers* peers_fidl) = 0;
-  virtual zx_status_t GetMinstrelStats(
-      const common::MacAddr& addr,
-      ::fuchsia::wlan::minstrel::Peer* peer_fidl) = 0;
+  virtual zx_status_t GetMinstrelPeers(::fuchsia::wlan::minstrel::Peers* peers_fidl) = 0;
+  virtual zx_status_t GetMinstrelStats(const common::MacAddr& addr,
+                                       ::fuchsia::wlan::minstrel::Peer* peer_fidl) = 0;
 
   virtual fbl::RefPtr<DeviceState> GetState() = 0;
   virtual const wlanmac_info_t& GetWlanInfo() const = 0;

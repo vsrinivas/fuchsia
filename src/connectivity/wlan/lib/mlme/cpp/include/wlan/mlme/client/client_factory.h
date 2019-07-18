@@ -13,9 +13,8 @@
 
 namespace wlan {
 
-fbl::unique_ptr<ClientInterface> CreateDefaultClient(
-    DeviceInterface* device, JoinContext* join_ctx,
-    ChannelScheduler* chan_scheduler);
+fbl::unique_ptr<ClientInterface> CreateDefaultClient(DeviceInterface* device, JoinContext* join_ctx,
+                                                     ChannelScheduler* chan_scheduler);
 
 }  // namespace wlan
 

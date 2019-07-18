@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cinttypes>
+#include <utility>
+
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
@@ -23,9 +26,6 @@
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
-#include <cinttypes>
-#include <utility>
-
 #include "lib/fidl/cpp/vector.h"
 
 namespace wlan {
@@ -34,29 +34,25 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 static constexpr size_t kMaxBss = 1000;
 
-static void SendScanEnd(DeviceInterface* device, uint64_t txn_id,
-                        wlan_mlme::ScanResultCodes code) {
+static void SendScanEnd(DeviceInterface* device, uint64_t txn_id, wlan_mlme::ScanResultCodes code) {
   wlan_mlme::ScanEnd msg;
   msg.txn_id = txn_id;
   msg.code = code;
-  zx_status_t s =
-      SendServiceMsg(device, &msg, fuchsia_wlan_mlme_MLMEOnScanEndOrdinal);
+  zx_status_t s = SendServiceMsg(device, &msg, fuchsia_wlan_mlme_MLMEOnScanEndOrdinal);
   if (s != ZX_OK) {
     errorf("failed to send OnScanEnd event: %d\n", s);
   }
 }
 
-static zx_status_t SendResults(
-    DeviceInterface* device, uint64_t txn_id,
-    const std::unordered_map<uint64_t, Bss>& bss_map) {
+static zx_status_t SendResults(DeviceInterface* device, uint64_t txn_id,
+                               const std::unordered_map<uint64_t, Bss>& bss_map) {
   for (auto& p : bss_map) {
     wlan_mlme::ScanResult r;
     r.txn_id = txn_id;
     if (p.second.bss_desc().Clone(&r.bss) != ZX_OK) {
       continue;
     }
-    zx_status_t status =
-        SendServiceMsg(device, &r, fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
+    zx_status_t status = SendServiceMsg(device, &r, fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
     if (status != ZX_OK) {
       return status;
     }
@@ -75,8 +71,7 @@ Scanner::Scanner(DeviceInterface* device, ChannelScheduler* chan_sched,
       timer_(std::move(timer)),
       seq_mgr_(NewSequenceManager()) {}
 
-zx_status_t Scanner::HandleMlmeScanReq(
-    const MlmeMsg<wlan_mlme::ScanRequest>& req) {
+zx_status_t Scanner::HandleMlmeScanReq(const MlmeMsg<wlan_mlme::ScanRequest>& req) {
   return Start(req);
 }
 
@@ -84,15 +79,13 @@ zx_status_t Scanner::Start(const MlmeMsg<wlan_mlme::ScanRequest>& req) {
   debugfn();
 
   if (IsRunning()) {
-    SendScanEnd(device_, req.body()->txn_id,
-                wlan_mlme::ScanResultCodes::NOT_SUPPORTED);
+    SendScanEnd(device_, req.body()->txn_id, wlan_mlme::ScanResultCodes::NOT_SUPPORTED);
     return ZX_ERR_UNAVAILABLE;
   }
 
   if (req.body()->channel_list->size() == 0 ||
       req.body()->max_channel_time < req.body()->min_channel_time) {
-    SendScanEnd(device_, req.body()->txn_id,
-                wlan_mlme::ScanResultCodes::INVALID_ARGS);
+    SendScanEnd(device_, req.body()->txn_id, wlan_mlme::ScanResultCodes::INVALID_ARGS);
     return ZX_ERR_INVALID_ARGS;
   }
   // TODO(NET-629): re-enable checking the enum value after fidl2 lands
@@ -105,14 +98,12 @@ zx_status_t Scanner::Start(const MlmeMsg<wlan_mlme::ScanRequest>& req) {
   zx_status_t status = req.body()->Clone(req_.get());
   if (status != ZX_OK) {
     errorf("could not clone Scanrequest: %d\n", status);
-    SendScanEnd(device_, req.body()->txn_id,
-                wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
+    SendScanEnd(device_, req.body()->txn_id, wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
     Reset();
     return status;
   }
 
-  if (device_->GetWlanInfo().ifc_info.driver_features &
-      WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD) {
+  if (device_->GetWlanInfo().ifc_info.driver_features & WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD) {
     debugscan("starting a hardware scan\n");
     return StartHwScan();
   } else {
@@ -134,8 +125,7 @@ zx_status_t Scanner::StartHwScan() {
   const auto& chans = req_->channel_list;
   if (chans->size() > arraysize(config.channels)) {
     errorf("too many channels to scan: %zu\n", chans->size());
-    SendScanEnd(device_, req_->txn_id,
-                wlan_mlme::ScanResultCodes::INVALID_ARGS);
+    SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INVALID_ARGS);
     Reset();
     return ZX_ERR_INVALID_ARGS;
   }
@@ -144,8 +134,7 @@ zx_status_t Scanner::StartHwScan() {
 
   if (req_->ssid.size() > arraysize(config.ssid.ssid)) {
     errorf("SSID too large: %zu\n", req_->ssid.size());
-    SendScanEnd(device_, req_->txn_id,
-                wlan_mlme::ScanResultCodes::INVALID_ARGS);
+    SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INVALID_ARGS);
     Reset();
     return ZX_ERR_INVALID_ARGS;
   }
@@ -155,8 +144,7 @@ zx_status_t Scanner::StartHwScan() {
   zx_status_t status = device_->StartHwScan(&config);
   if (status != ZX_OK) {
     errorf("StartHwScan returned an error: %s\n", zx_status_get_string(status));
-    SendScanEnd(device_, req_->txn_id,
-                wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
+    SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
     Reset();
     return status;
   }
@@ -169,27 +157,24 @@ void Scanner::OffChannelHandlerImpl::BeginOffChannelTime() {
       scanner_->SendProbeRequest(scanner_->ScanChannel());
     } else {
       scanner_->timer_->CancelTimer();
-      auto deadline =
-          scanner_->timer_->Now() + WLAN_TU(scanner_->req_->probe_delay);
+      auto deadline = scanner_->timer_->Now() + WLAN_TU(scanner_->req_->probe_delay);
       scanner_->timer_->SetTimer(deadline);
     }
   }
 }
 
-void Scanner::OffChannelHandlerImpl::HandleOffChannelFrame(
-    fbl::unique_ptr<Packet> pkt) {
+void Scanner::OffChannelHandlerImpl::HandleOffChannelFrame(fbl::unique_ptr<Packet> pkt) {
   if (auto mgmt_frame = MgmtFrameView<>::CheckType(pkt.get()).CheckLength()) {
     if (auto bcn_frame = mgmt_frame.CheckBodyType<Beacon>().CheckLength()) {
       scanner_->HandleBeacon(bcn_frame);
-    } else if (auto probe_frame =
-                   mgmt_frame.CheckBodyType<ProbeResponse>().CheckLength()) {
+    } else if (auto probe_frame = mgmt_frame.CheckBodyType<ProbeResponse>().CheckLength()) {
       scanner_->HandleProbeResponse(probe_frame);
     }
   }
 }
 
-bool Scanner::OffChannelHandlerImpl::EndOffChannelTime(
-    bool interrupted, OffChannelRequest* next_req) {
+bool Scanner::OffChannelHandlerImpl::EndOffChannelTime(bool interrupted,
+                                                       OffChannelRequest* next_req) {
   scanner_->timer_->CancelTimer();
 
   // If we were interrupted before the timeout ended, scan the channel again
@@ -278,8 +263,7 @@ void Scanner::HandleProbeResponse(const MgmtFrameView<ProbeResponse>& frame) {
   }
 }
 
-void Scanner::ProcessBeaconOrProbeResponse(const common::MacAddr bssid,
-                                           const Beacon& beacon,
+void Scanner::ProcessBeaconOrProbeResponse(const common::MacAddr bssid, const Beacon& beacon,
                                            fbl::Span<const uint8_t> ie_chain,
                                            const wlan_rx_info_t* rx_info) {
   debugfn();
@@ -291,17 +275,15 @@ void Scanner::ProcessBeaconOrProbeResponse(const common::MacAddr bssid,
       return;
     }
     it = current_bss_
-             .emplace(std::piecewise_construct,
-                      std::forward_as_tuple(bssid.ToU64()),
+             .emplace(std::piecewise_construct, std::forward_as_tuple(bssid.ToU64()),
                       std::forward_as_tuple(bssid))
              .first;
   }
 
   zx_status_t status = it->second.ProcessBeacon(beacon, ie_chain, rx_info);
   if (status != ZX_OK) {
-    debugbcn("Failed to handle beacon (err %3d): BSSID %s timestamp: %15" PRIu64
-             "\n",
-             status, MACSTR(bssid), beacon.timestamp);
+    debugbcn("Failed to handle beacon (err %3d): BSSID %s timestamp: %15" PRIu64 "\n", status,
+             MACSTR(bssid), beacon.timestamp);
   }
 }
 
@@ -321,8 +303,7 @@ void Scanner::SendProbeRequest(wlan_channel_t channel) {
   auto mgmt_hdr = w.Write<MgmtFrameHeader>();
   mgmt_hdr->fc.set_type(FrameType::kManagement);
   mgmt_hdr->fc.set_subtype(ManagementSubtype::kProbeRequest);
-  uint32_t seq =
-      mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
+  uint32_t seq = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
   mgmt_hdr->sc.set_seq(seq);
 
   const common::MacAddr& mymac = device_->GetState()->address();
@@ -334,8 +315,7 @@ void Scanner::SendProbeRequest(wlan_channel_t channel) {
   BufferWriter elem_w(w.RemainingBuffer());
   common::WriteSsid(&elem_w, {req_->ssid.data(), req_->ssid.size()});
 
-  auto band_info =
-      FindBand(device_->GetWlanInfo().ifc_info, common::Is5Ghz(channel));
+  auto band_info = FindBand(device_->GetWlanInfo().ifc_info, common::Is5Ghz(channel));
   ZX_DEBUG_ASSERT(band_info != nullptr);
   if (band_info) {
     SupportedRate rates[WLAN_INFO_BAND_INFO_MAX_BASIC_RATES];
@@ -352,8 +332,7 @@ void Scanner::SendProbeRequest(wlan_channel_t channel) {
     rates_writer.WriteSupportedRates(&elem_w);
     rates_writer.WriteExtendedSupportedRates(&elem_w);
   } else {
-    warnf("scanner: no rates found for chan %u; skip sending ProbeRequest\n",
-          channel.primary);
+    warnf("scanner: no rates found for chan %u; skip sending ProbeRequest\n", channel.primary);
     return;
   }
 
@@ -372,11 +351,9 @@ void Scanner::HandleHwScanAborted() {
     errorf("got a HwScanAborted event while the scanner is not running\n");
     return;
   }
-  errorf(
-      "scanner: hardware scan was aborted. Throwing out %zu BSS descriptions\n",
-      current_bss_.size());
-  SendScanEnd(device_, req_->txn_id,
-              wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
+  errorf("scanner: hardware scan was aborted. Throwing out %zu BSS descriptions\n",
+         current_bss_.size());
+  SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
   Reset();
 }
 
@@ -393,10 +370,8 @@ void Scanner::SendResultsAndReset() {
   if (status == ZX_OK) {
     SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::SUCCESS);
   } else {
-    errorf("scanner: failed to send results: %s\n",
-           zx_status_get_string(status));
-    SendScanEnd(device_, req_->txn_id,
-                wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
+    errorf("scanner: failed to send results: %s\n", zx_status_get_string(status));
+    SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INTERNAL_ERROR);
   }
   Reset();
 }

@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
+#include <cinttypes>
+#include <cstring>
+#include <sstream>
+
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
@@ -23,11 +28,6 @@
 #include <zircon/fidl.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-
-#include <atomic>
-#include <cinttypes>
-#include <cstring>
-#include <sstream>
 
 namespace wlan {
 
@@ -207,8 +207,7 @@ zx_status_t Dispatcher::HandleAnyMlmeMessage(fbl::Span<uint8_t> span) {
 }
 
 template <typename Message>
-zx_status_t Dispatcher::HandleMlmeMessage(fbl::Span<uint8_t> span,
-                                          uint64_t ordinal) {
+zx_status_t Dispatcher::HandleMlmeMessage(fbl::Span<uint8_t> span, uint64_t ordinal) {
   auto msg = MlmeMsg<Message>::Decode(span, ordinal);
   if (!msg.has_value()) {
     errorf("could not deserialize MLME primitive %lu: \n", ordinal);
@@ -250,8 +249,7 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
     wlan_mlme::BandCapabilities band;
     band.band_id = wlan::common::BandToFidl(band_info.band);
     band.basic_rates.resize(0);
-    for (size_t rate_idx = 0; rate_idx < sizeof(band_info.basic_rates);
-         rate_idx++) {
+    for (size_t rate_idx = 0; rate_idx < sizeof(band_info.basic_rates); rate_idx++) {
       if (band_info.basic_rates[rate_idx] != 0) {
         band.basic_rates.push_back(band_info.basic_rates[rate_idx]);
       }
@@ -259,8 +257,7 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
     const wlan_info_channel_list_t& chan_list = band_info.supported_channels;
     band.base_frequency = chan_list.base_freq;
     band.channels.resize(0);
-    for (size_t chan_idx = 0; chan_idx < sizeof(chan_list.channels);
-         chan_idx++) {
+    for (size_t chan_idx = 0; chan_idx < sizeof(chan_list.channels); chan_idx++) {
       if (chan_list.channels[chan_idx] != 0) {
         band.channels.push_back(chan_list.channels[chan_idx]);
       }
@@ -270,13 +267,11 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
 
     if (band_info.ht_supported) {
       auto ht_cap = HtCapabilities::FromDdk(band_info.ht_caps);
-      band.ht_cap =
-          std::make_unique<wlan_mlme::HtCapabilities>(ht_cap.ToFidl());
+      band.ht_cap = std::make_unique<wlan_mlme::HtCapabilities>(ht_cap.ToFidl());
     }
     if (band_info.vht_supported) {
       auto vht_cap = VhtCapabilities::FromDdk(band_info.vht_caps);
-      band.vht_cap =
-          std::make_unique<wlan_mlme::VhtCapabilities>(vht_cap.ToFidl());
+      band.vht_cap = std::make_unique<wlan_mlme::VhtCapabilities>(vht_cap.ToFidl());
     }
 
     resp.bands.push_back(std::move(band));
@@ -293,26 +288,22 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
     resp.driver_features.push_back(wlan_common::DriverFeature::SYNTH);
   }
   if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT) {
-    resp.driver_features.push_back(
-        wlan_common::DriverFeature::TX_STATUS_REPORT);
+    resp.driver_features.push_back(wlan_common::DriverFeature::TX_STATUS_REPORT);
   }
   if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_DFS) {
     resp.driver_features.push_back(wlan_common::DriverFeature::DFS);
   }
 
-  return SendServiceMsg(device_, &resp,
-                        fuchsia_wlan_mlme_MLMEQueryDeviceInfoOrdinal, txid);
+  return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEQueryDeviceInfoOrdinal, txid);
 }
 
 zx_status_t Dispatcher::HandleMlmeStats(uint64_t ordinal) const {
   debugfn();
   wlan_mlme::StatsQueryResponse resp = GetStatsToFidl();
-  return SendServiceMsg(device_, &resp,
-                        fuchsia_wlan_mlme_MLMEStatsQueryRespOrdinal);
+  return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEStatsQueryRespOrdinal);
 }
 
-zx_status_t Dispatcher::HandleMinstrelPeerList(uint64_t ordinal,
-                                               zx_txid_t txid) const {
+zx_status_t Dispatcher::HandleMinstrelPeerList(uint64_t ordinal, zx_txid_t txid) const {
   debugfn();
   wlan_mlme::MinstrelListResponse resp{};
   zx_status_t status = device_->GetMinstrelPeers(&resp.peers);
@@ -320,12 +311,10 @@ zx_status_t Dispatcher::HandleMinstrelPeerList(uint64_t ordinal,
     errorf("cannot get minstrel peer list: %s\n", zx_status_get_string(status));
     resp.peers.peers.resize(0);
   }
-  return SendServiceMsg(device_, &resp,
-                        fuchsia_wlan_mlme_MLMEListMinstrelPeersOrdinal, txid);
+  return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEListMinstrelPeersOrdinal, txid);
 }
 
-zx_status_t Dispatcher::HandleMinstrelTxStats(fbl::Span<uint8_t> span,
-                                              uint64_t ordinal,
+zx_status_t Dispatcher::HandleMinstrelTxStats(fbl::Span<uint8_t> span, uint64_t ordinal,
                                               zx_txid_t txid) const {
   debugfn();
   wlan_mlme::MinstrelStatsResponse resp{};
@@ -344,8 +333,7 @@ zx_status_t Dispatcher::HandleMinstrelTxStats(fbl::Span<uint8_t> span,
   } else {
     errorf("could not get peer stats: %s\n", zx_status_get_string(status));
   }
-  return SendServiceMsg(device_, &resp,
-                        fuchsia_wlan_mlme_MLMEGetMinstrelStatsOrdinal, txid);
+  return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEGetMinstrelStatsOrdinal, txid);
 }
 
 void Dispatcher::HwIndication(uint32_t ind) {

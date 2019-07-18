@@ -5,13 +5,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_ASSOC_CONTEXT_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_ASSOC_CONTEXT_H_
 
+#include <optional>
+#include <vector>
+
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <fbl/span.h>
 #include <wlan/common/element.h>
 #include <wlan/mlme/mac_frame.h>
-
-#include <optional>
-#include <vector>
 
 namespace wlan {
 // Information defined only within a context of association
@@ -57,26 +57,21 @@ struct AssocContext {
   wlan_assoc_ctx_t ToDdk() const;
 };
 
-const wlan_info_band_info_t* FindBand(const wlan_info_t& ifc_info,
-                                      bool is_5ghz);
+const wlan_info_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz);
 
 std::optional<std::vector<SupportedRate>> BuildAssocReqSuppRates(
-    const std::vector<uint8_t>& ap_basic_rate_set,
-    const std::vector<uint8_t>& ap_op_rate_set,
+    const std::vector<uint8_t>& ap_basic_rate_set, const std::vector<uint8_t>& ap_op_rate_set,
     const std::vector<SupportedRate>& client_rates);
 
 // Visable only for unit testing.
-std::optional<AssocContext> ParseAssocRespIe(
-    fbl::Span<const uint8_t> ie_chains);
+std::optional<AssocContext> ParseAssocRespIe(fbl::Span<const uint8_t> ie_chains);
 
-AssocContext MakeClientAssocCtx(const wlan_info_t& ifc_info,
-                                const wlan_channel_t join_chan);
-std::optional<AssocContext> MakeBssAssocCtx(
-    const AssociationResponse& assoc_resp, fbl::Span<const uint8_t> ie_chains,
-    const common::MacAddr& peer);
+AssocContext MakeClientAssocCtx(const wlan_info_t& ifc_info, const wlan_channel_t join_chan);
+std::optional<AssocContext> MakeBssAssocCtx(const AssociationResponse& assoc_resp,
+                                            fbl::Span<const uint8_t> ie_chains,
+                                            const common::MacAddr& peer);
 
-AssocContext IntersectAssocCtx(const AssocContext& bss,
-                               const AssocContext& client);
+AssocContext IntersectAssocCtx(const AssocContext& bss, const AssocContext& client);
 
 }  // namespace wlan
 #endif  // SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_ASSOC_CONTEXT_H_

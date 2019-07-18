@@ -6,8 +6,7 @@
 
 namespace wlan {
 
-ChannelScheduler::ChannelScheduler(OnChannelHandler* handler,
-                                   DeviceInterface* device,
+ChannelScheduler::ChannelScheduler(OnChannelHandler* handler, DeviceInterface* device,
                                    fbl::unique_ptr<Timer> timer)
     : on_channel_handler_(handler), device_(device), timer_(std::move(timer)) {}
 
@@ -30,8 +29,7 @@ zx_status_t ChannelScheduler::SetChannel(const wlan_channel_t& chan) {
 void ChannelScheduler::EnsureOnChannel(zx::time end) {
   if (!on_channel_) {
     pending_off_channel_request_ =
-        off_channel_request_.handler->EndOffChannelTime(true,
-                                                        &off_channel_request_);
+        off_channel_request_.handler->EndOffChannelTime(true, &off_channel_request_);
     device_->SetChannel(channel_);
     on_channel_ = true;
     on_channel_handler_->ReturnedOnChannel();
@@ -56,8 +54,7 @@ void ChannelScheduler::HandleTimeout() {
       GoOffChannel();
     }
   } else {
-    if (off_channel_request_.handler->EndOffChannelTime(
-            false, &off_channel_request_)) {
+    if (off_channel_request_.handler->EndOffChannelTime(false, &off_channel_request_)) {
       GoOffChannel();
     } else {
       timer_->CancelTimer();

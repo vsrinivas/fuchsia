@@ -26,12 +26,10 @@ class BeaconSender {
              const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
   void Stop();
   zx_status_t UpdateBeacon(const PsCfg& ps_cfg);
-  void SendProbeResponse(const common::MacAddr& recv_addr,
-                         fbl::Span<const uint8_t> ie_chain);
+  void SendProbeResponse(const common::MacAddr& recv_addr, fbl::Span<const uint8_t> ie_chain);
 
  private:
-  zx_status_t BuildBeacon(const PsCfg& ps_cfg, MgmtFrame<Beacon>* frame,
-                          size_t* tim_ele_offset);
+  zx_status_t BuildBeacon(const PsCfg& ps_cfg, MgmtFrame<Beacon>* frame, size_t* tim_ele_offset);
 
   bool IsStarted();
 
@@ -41,8 +39,7 @@ class BeaconSender {
 };
 
 // Visible for testing
-bool ShouldSendProbeResponse(fbl::Span<const uint8_t> ie_chain,
-                             fbl::Span<const uint8_t> our_ssid);
+bool ShouldSendProbeResponse(fbl::Span<const uint8_t> ie_chain, fbl::Span<const uint8_t> our_ssid);
 
 }  // namespace wlan
 

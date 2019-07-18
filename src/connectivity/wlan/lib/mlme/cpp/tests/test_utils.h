@@ -5,15 +5,15 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_UTILS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_UTILS_H_
 
+#include <algorithm>
+#include <array>
+#include <vector>
+
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <gtest/gtest.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/mlme/assoc_context.h>
 #include <wlan/mlme/packet.h>
-
-#include <algorithm>
-#include <array>
-#include <vector>
 
 namespace wlan {
 namespace test_utils {
@@ -55,8 +55,7 @@ struct RangeWrapper {
   }
 };
 
-static inline fbl::unique_ptr<Packet> MakeWlanPacket(
-    std::initializer_list<uint8_t> bytes) {
+static inline fbl::unique_ptr<Packet> MakeWlanPacket(std::initializer_list<uint8_t> bytes) {
   auto packet = GetWlanPacket(bytes.size());
   ZX_ASSERT(packet != nullptr);
 
@@ -65,8 +64,7 @@ static inline fbl::unique_ptr<Packet> MakeWlanPacket(
   return packet;
 }
 
-static inline fbl::unique_ptr<Packet> MakeWlanPacket(
-    std::vector<uint8_t> bytes) {
+static inline fbl::unique_ptr<Packet> MakeWlanPacket(std::vector<uint8_t> bytes) {
   auto packet = GetWlanPacket(bytes.size());
   ZX_ASSERT(packet != nullptr);
 
@@ -75,9 +73,9 @@ static inline fbl::unique_ptr<Packet> MakeWlanPacket(
   return packet;
 }
 
-static inline fbl::unique_ptr<Packet> MakeEthPacket(
-    const common::MacAddr& dest_addr, const common::MacAddr& src_addr,
-    std::initializer_list<uint8_t> payload) {
+static inline fbl::unique_ptr<Packet> MakeEthPacket(const common::MacAddr& dest_addr,
+                                                    const common::MacAddr& src_addr,
+                                                    std::initializer_list<uint8_t> payload) {
   auto packet = GetEthPacket(sizeof(EthernetII) + payload.size());
   ZX_ASSERT(packet != nullptr);
 

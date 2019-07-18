@@ -15,8 +15,7 @@ namespace common {
 template <typename ValueType>
 class BitField {
  public:
-  static_assert(std::is_unsigned<ValueType>::value,
-                "BitField only supports unsigned value types.");
+  static_assert(std::is_unsigned<ValueType>::value, "BitField only supports unsigned value types.");
 
   constexpr explicit BitField(ValueType val) : val_(val) {}
   constexpr BitField() = default;
@@ -45,9 +44,8 @@ class BitField {
     static_assert(len > 0, "BitField member length must be positive");
     static_assert(offset < (sizeof(ValueType) * 8),
                   "offset must be less than size of the BitField");
-    static_assert(
-        offset + len <= (sizeof(ValueType) * 8),
-        "offset + len must be less than or equal to size of the BitField");
+    static_assert(offset + len <= (sizeof(ValueType) * 8),
+                  "offset + len must be less than or equal to size of the BitField");
     return ((1ull << len) - 1) << offset;
   }
 
@@ -67,8 +65,7 @@ class AddressableBitField : public BitField<ValueType> {
  public:
   static constexpr AddrType addr() { return A; }
 
-  constexpr explicit AddressableBitField(ValueType val)
-      : BitField<ValueType>(val) {}
+  constexpr explicit AddressableBitField(ValueType val) : BitField<ValueType>(val) {}
   constexpr AddressableBitField() = default;
 };
 

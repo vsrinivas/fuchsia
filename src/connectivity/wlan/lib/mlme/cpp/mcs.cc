@@ -3,23 +3,21 @@
 // found in the LICENSE file.
 
 #include <math.h>
+
 #include <wlan/mlme/mcs.h>
 
 namespace wlan {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs,
-                             const wlan_mlme::SupportedMcsSet& fidl) {
+SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs, const wlan_mlme::SupportedMcsSet& fidl) {
   return IntersectMcs(lhs, SupportedMcsSetFromFidl(fidl));
 }
 
-SupportedMcsSet IntersectMcs(const wlan_mlme::SupportedMcsSet& fidl,
-                             const SupportedMcsSet& lhs) {
+SupportedMcsSet IntersectMcs(const wlan_mlme::SupportedMcsSet& fidl, const SupportedMcsSet& lhs) {
   return IntersectMcs(lhs, SupportedMcsSetFromFidl(fidl));
 }
 
-SupportedMcsSet SupportedMcsSetFromFidl(
-    const wlan_mlme::SupportedMcsSet& fidl) {
+SupportedMcsSet SupportedMcsSetFromFidl(const wlan_mlme::SupportedMcsSet& fidl) {
   SupportedMcsSet mcs_set;
 
   mcs_set.rx_mcs_head.set_bitmask(fidl.rx_mcs_set);

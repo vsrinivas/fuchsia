@@ -5,10 +5,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_SPLITTER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_SPLITTER_H_
 
+#include <tuple>
+
 #include <fbl/span.h>
 #include <wlan/common/element_id.h>
-
-#include <tuple>
 
 namespace wlan {
 namespace common {
@@ -20,10 +20,8 @@ bool operator!=(const ElementIterator& a, const ElementIterator& b);
 
 class ElementIterator {
  public:
-  friend bool wlan::common::operator==(const ElementIterator& a,
-                                       const ElementIterator& b);
-  friend bool wlan::common::operator!=(const ElementIterator& a,
-                                       const ElementIterator& b);
+  friend bool wlan::common::operator==(const ElementIterator& a, const ElementIterator& b);
+  friend bool wlan::common::operator!=(const ElementIterator& a, const ElementIterator& b);
 
   explicit ElementIterator(fbl::Span<const uint8_t> buffer);
 
@@ -41,9 +39,7 @@ class ElementSplitter {
 
   ElementIterator begin() const { return ElementIterator(buffer_); }
 
-  ElementIterator end() const {
-    return ElementIterator(buffer_.subspan(buffer_.size()));
-  }
+  ElementIterator end() const { return ElementIterator(buffer_.subspan(buffer_.size())); }
 
  private:
   fbl::Span<const uint8_t> buffer_;

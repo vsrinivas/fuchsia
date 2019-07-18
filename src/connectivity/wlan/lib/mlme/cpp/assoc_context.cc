@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <set>
+
 #include <wlan/common/channel.h>
 #include <wlan/common/element_splitter.h>
 #include <wlan/common/parse_element.h>
 #include <wlan/mlme/assoc_context.h>
 #include <zircon/status.h>
-
-#include <set>
 
 namespace wlan {
 
@@ -23,8 +23,7 @@ wlan_info_phy_type_t AssocContext::DerivePhy() const {
   return WLAN_INFO_PHY_TYPE_ERP;
 }
 
-const wlan_info_band_info_t* FindBand(const wlan_info_t& ifc_info,
-                                      bool is_5ghz) {
+const wlan_info_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz) {
   ZX_DEBUG_ASSERT(ifc_info.bands_count <= WLAN_INFO_MAX_BANDS);
 
   for (uint8_t idx = 0; idx < ifc_info.bands_count; idx++) {
@@ -42,8 +41,7 @@ const wlan_info_band_info_t* FindBand(const wlan_info_t& ifc_info,
 }
 
 std::optional<std::vector<SupportedRate>> BuildAssocReqSuppRates(
-    const std::vector<uint8_t>& ap_basic_rate_set,
-    const std::vector<uint8_t>& ap_op_rate_set,
+    const std::vector<uint8_t>& ap_basic_rate_set, const std::vector<uint8_t>& ap_op_rate_set,
     const std::vector<SupportedRate>& client_rates) {
   std::set<uint8_t> basic(ap_basic_rate_set.cbegin(), ap_basic_rate_set.cend());
   std::set<uint8_t> op(ap_op_rate_set.cbegin(), ap_op_rate_set.cend());
@@ -56,12 +54,11 @@ std::optional<std::vector<SupportedRate>> BuildAssocReqSuppRates(
 
   auto rates = IntersectRatesAp(ap_rates, client_rates);
 
-  size_t num_basic_rates = std::count_if(rates.cbegin(), rates.cend(),
-                                         [](auto& r) { return r.is_basic(); });
+  size_t num_basic_rates =
+      std::count_if(rates.cbegin(), rates.cend(), [](auto& r) { return r.is_basic(); });
 
   if (num_basic_rates != basic.size()) {
-    errorf("Ap demands %zu basic rates. Client supports %zu.\n", basic.size(),
-           num_basic_rates);
+    errorf("Ap demands %zu basic rates. Client supports %zu.\n", basic.size(), num_basic_rates);
     return {};
   }
 
@@ -69,8 +66,7 @@ std::optional<std::vector<SupportedRate>> BuildAssocReqSuppRates(
 }
 
 // TODO(NET-1287): Refactor together with Bss::ParseIE()
-std::optional<AssocContext> ParseAssocRespIe(
-    fbl::Span<const uint8_t> ie_chains) {
+std::optional<AssocContext> ParseAssocRespIe(fbl::Span<const uint8_t> ie_chains) {
   AssocContext ctx{};
   for (auto [id, raw_body] : common::ElementSplitter(ie_chains)) {
     switch (id) {
@@ -129,8 +125,7 @@ std::optional<AssocContext> ParseAssocRespIe(
   return ctx;
 }
 
-AssocContext MakeClientAssocCtx(const wlan_info_t& ifc_info,
-                                const wlan_channel_t join_chan) {
+AssocContext MakeClientAssocCtx(const wlan_info_t& ifc_info, const wlan_channel_t join_chan) {
   AssocContext assoc_ctx{};
   assoc_ctx.cap = CapabilityInfo::FromDdk(ifc_info.caps);
 
@@ -155,9 +150,9 @@ AssocContext MakeClientAssocCtx(const wlan_info_t& ifc_info,
   return assoc_ctx;
 }
 
-std::optional<AssocContext> MakeBssAssocCtx(
-    const AssociationResponse& assoc_resp, fbl::Span<const uint8_t> ie_chains,
-    const common::MacAddr& peer) {
+std::optional<AssocContext> MakeBssAssocCtx(const AssociationResponse& assoc_resp,
+                                            fbl::Span<const uint8_t> ie_chains,
+                                            const common::MacAddr& peer) {
   auto ctx = ParseAssocRespIe(ie_chains);
   if (!ctx.has_value()) {
     return {};
@@ -169,8 +164,7 @@ std::optional<AssocContext> MakeBssAssocCtx(
   return ctx;
 }
 
-AssocContext IntersectAssocCtx(const AssocContext& bss,
-                               const AssocContext& client) {
+AssocContext IntersectAssocCtx(const AssocContext& bss, const AssocContext& client) {
   auto result = AssocContext{};
 
   result.cap = IntersectCapInfo(bss.cap, client.cap);
@@ -193,8 +187,7 @@ AssocContext IntersectAssocCtx(const AssocContext& bss,
     if (bss.ht_cap->ht_cap_info.rx_stbc() == 0) {
       result.ht_cap->ht_cap_info.set_tx_stbc(0);
     } else {
-      result.ht_cap->ht_cap_info.set_tx_stbc(
-          client.ht_cap->ht_cap_info.tx_stbc());
+      result.ht_cap->ht_cap_info.set_tx_stbc(client.ht_cap->ht_cap_info.tx_stbc());
     }
 
     // If AP can't tx STBC, then the client shall not expect to rx STBC.
@@ -202,24 +195,20 @@ AssocContext IntersectAssocCtx(const AssocContext& bss,
     if (bss.ht_cap->ht_cap_info.tx_stbc() == 0) {
       result.ht_cap->ht_cap_info.set_rx_stbc(0);
     } else {
-      result.ht_cap->ht_cap_info.set_rx_stbc(
-          client.ht_cap->ht_cap_info.rx_stbc());
+      result.ht_cap->ht_cap_info.set_rx_stbc(client.ht_cap->ht_cap_info.rx_stbc());
     }
 
     result.ht_op = bss.ht_op;
   }
 
   if (bss.vht_cap.has_value() && client.vht_cap.has_value()) {
-    result.vht_cap =
-        IntersectVhtCap(bss.vht_cap.value(), client.vht_cap.value());
+    result.vht_cap = IntersectVhtCap(bss.vht_cap.value(), client.vht_cap.value());
     result.vht_op = bss.vht_op;
   }
 
-  result.is_cbw40_rx = result.ht_cap &&
-                       bss.ht_cap->ht_cap_info.chan_width_set() ==
-                           HtCapabilityInfo::TWENTY_FORTY &&
-                       client.ht_cap->ht_cap_info.chan_width_set() ==
-                           HtCapabilityInfo::TWENTY_FORTY;
+  result.is_cbw40_rx =
+      result.ht_cap && bss.ht_cap->ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_FORTY &&
+      client.ht_cap->ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_FORTY;
 
   // TODO(porce): Test capabilities and configurations of the client and its
   // BSS.

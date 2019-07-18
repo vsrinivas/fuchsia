@@ -110,12 +110,10 @@ HtOperation BuildHtOperation(const wlan_channel_t& chan) {
   }
 
   head.set_rifs_mode(0);
-  head.set_reserved1(
-      0);  // TODO(porce): Tweak this for 802.11n D1.10 compatibility
+  head.set_reserved1(0);  // TODO(porce): Tweak this for 802.11n D1.10 compatibility
   head.set_ht_protect(HtOpInfoHead::NONE);
   head.set_nongreenfield_present(1);
-  head.set_reserved2(
-      0);  // TODO(porce): Tweak this for 802.11n D1.10 compatibility
+  head.set_reserved2(0);  // TODO(porce): Tweak this for 802.11n D1.10 compatibility
   head.set_obss_non_ht(0);
   head.set_center_freq_seg2(0);
   head.set_dual_beacon(0);

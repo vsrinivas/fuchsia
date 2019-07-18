@@ -4,12 +4,13 @@
 
 #include "device.h"
 
+#include <net/ethernet.h>
+
 #include <ddk/device.h>
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <fuchsia/wlan/device/c/fidl.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <net/ethernet.h>
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element.h>

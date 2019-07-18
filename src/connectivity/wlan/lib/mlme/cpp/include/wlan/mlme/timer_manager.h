@@ -5,12 +5,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_TIMER_MANAGER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_TIMER_MANAGER_H_
 
-#include <fbl/unique_ptr.h>
-#include <wlan/mlme/timer.h>
-
 #include <memory>
 #include <queue>
 #include <unordered_map>
+
+#include <fbl/unique_ptr.h>
+#include <wlan/mlme/timer.h>
 
 namespace wlan {
 
@@ -33,13 +33,11 @@ class TimeoutId {
 template <typename Event = std::tuple<>>
 class TimerManager {
  public:
-  explicit TimerManager(fbl::unique_ptr<Timer> timer)
-      : timer_(std::move(timer)) {}
+  explicit TimerManager(fbl::unique_ptr<Timer> timer) : timer_(std::move(timer)) {}
 
   // If the call succeeds, the returned TimeoutId is guaranteed to not be equal
   // to 'TimeoutId{}'
-  zx_status_t Schedule(zx::time deadline, const Event& event,
-                       TimeoutId* out_id) {
+  zx_status_t Schedule(zx::time deadline, const Event& event, TimeoutId* out_id) {
     if (heap_.empty() || deadline < heap_.top().deadline) {
       zx_status_t status = timer_->SetTimer(deadline);
       if (status != ZX_OK) {

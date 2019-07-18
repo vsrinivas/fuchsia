@@ -430,7 +430,10 @@ pub type UpdateSink = Vec<SecAssocUpdate>;
 mod tests {
     use super::*;
     use crate::rsna::{test_util, NegotiatedProtection, Role};
-    use wlan_common::{assert_variant, ie::rsn::{akm, cipher, rsne::Rsne, suite_selector::OUI}};
+    use wlan_common::{
+        assert_variant,
+        ie::rsn::{akm, cipher, rsne::Rsne, suite_selector::OUI},
+    };
 
     #[test]
     fn test_negotiated_protection_from_rsne() {

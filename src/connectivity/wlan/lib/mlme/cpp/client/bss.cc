@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+#include <string>
+
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/zx/clock.h>
 #include <wlan/common/channel.h>
@@ -11,17 +14,13 @@
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/parse_beacon.h>
 
-#include <memory>
-#include <string>
-
 namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 // TODO(NET-500): This file needs some clean-up.
 
-zx_status_t Bss::ProcessBeacon(const Beacon& beacon,
-                               fbl::Span<const uint8_t> ie_chain,
+zx_status_t Bss::ProcessBeacon(const Beacon& beacon, fbl::Span<const uint8_t> ie_chain,
                                const wlan_rx_info_t* rx_info) {
   if (!IsBeaconValid(beacon)) {
     return ZX_ERR_INTERNAL;
@@ -38,14 +37,13 @@ zx_status_t Bss::ProcessBeacon(const Beacon& beacon,
     // TODO(porce): Identify varying IE, and do IE-by-IE comparison.
     // BSS had been discovered, but the beacon changed.
     // Suspicious situation. Consider Deauth if in assoc.
-    debugbcn("BSSID %s beacon change detected. (len %zu -> %zu)\n",
-             bssid_.ToString().c_str(), last_ie_chain_len_, ie_chain.size());
+    debugbcn("BSSID %s beacon change detected. (len %zu -> %zu)\n", bssid_.ToString().c_str(),
+             last_ie_chain_len_, ie_chain.size());
   }
 
   auto status = Update(beacon, ie_chain);
   if (status != ZX_OK) {
-    debugbcn("BSSID %s failed to update its BSS object: (%d)\n",
-             bssid_.ToString().c_str(), status);
+    debugbcn("BSSID %s failed to update its BSS object: (%d)\n", bssid_.ToString().c_str(), status);
 
     return status;
   }
@@ -56,17 +54,13 @@ zx_status_t Bss::ProcessBeacon(const Beacon& beacon,
 std::string Bss::ToString() const {
   // TODO(porce): Convert to finspect Describe()
   char buf[1024];
-  snprintf(
-      buf, sizeof(buf),
-      "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s SSID [%s]",
-      bssid_.ToString().c_str(),
-      bss_desc_.bss_type == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N",
-      bss_desc_.rssi_dbm,
-      bss_desc_.country.is_null()
-          ? "---"
-          : reinterpret_cast<const char*>(bss_desc_.country->data()),
-      common::ChanStr(bcn_rx_chan_).c_str(),
-      debug::ToAsciiOrHexStr(bss_desc_.ssid).c_str());
+  snprintf(buf, sizeof(buf), "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s SSID [%s]",
+           bssid_.ToString().c_str(),
+           bss_desc_.bss_type == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N",
+           bss_desc_.rssi_dbm,
+           bss_desc_.country.is_null() ? "---"
+                                       : reinterpret_cast<const char*>(bss_desc_.country->data()),
+           common::ChanStr(bcn_rx_chan_).c_str(), debug::ToAsciiOrHexStr(bss_desc_.ssid).c_str());
   return std::string(buf);
 }
 
@@ -102,19 +96,15 @@ void Bss::Renew(const Beacon& beacon, const wlan_rx_info_t* rx_info) {
   // TODO(NET-856): Change DDK wlan_rx_info_t and do translation in the vendor
   // device driver.
   // TODO(porce): Don't trust instantaneous values. Keep history.
-  bss_desc_.rssi_dbm = (rx_info->valid_fields & WLAN_RX_INFO_VALID_RSSI)
-                           ? rx_info->rssi_dbm
-                           : WLAN_RSSI_DBM_INVALID;
-  bss_desc_.rcpi_dbmh = (rx_info->valid_fields & WLAN_RX_INFO_VALID_RCPI)
-                            ? rx_info->rcpi_dbmh
-                            : WLAN_RCPI_DBMH_INVALID;
-  bss_desc_.rsni_dbh = (rx_info->valid_fields & WLAN_RX_INFO_VALID_SNR)
-                           ? rx_info->snr_dbh
-                           : WLAN_RSNI_DBH_INVALID;
+  bss_desc_.rssi_dbm =
+      (rx_info->valid_fields & WLAN_RX_INFO_VALID_RSSI) ? rx_info->rssi_dbm : WLAN_RSSI_DBM_INVALID;
+  bss_desc_.rcpi_dbmh = (rx_info->valid_fields & WLAN_RX_INFO_VALID_RCPI) ? rx_info->rcpi_dbmh
+                                                                          : WLAN_RCPI_DBMH_INVALID;
+  bss_desc_.rsni_dbh =
+      (rx_info->valid_fields & WLAN_RX_INFO_VALID_SNR) ? rx_info->snr_dbh : WLAN_RSNI_DBH_INVALID;
 }
 
-bool Bss::HasBeaconChanged(const Beacon& beacon,
-                           fbl::Span<const uint8_t> ie_chain) const {
+bool Bss::HasBeaconChanged(const Beacon& beacon, fbl::Span<const uint8_t> ie_chain) const {
   // Test changes in beacon, except for the timestamp field.
   if (last_ie_chain_len_ != ie_chain.size()) {
     return true;
@@ -123,30 +113,26 @@ bool Bss::HasBeaconChanged(const Beacon& beacon,
   return sig != last_bcn_signature_;
 }
 
-zx_status_t Bss::Update(const Beacon& beacon,
-                        fbl::Span<const uint8_t> ie_chain) {
+zx_status_t Bss::Update(const Beacon& beacon, fbl::Span<const uint8_t> ie_chain) {
   last_ie_chain_len_ = ie_chain.size();
   last_bcn_signature_ = GetBeaconSignature(beacon, ie_chain);
 
   // Fields that are always present.
   bssid_.CopyTo(bss_desc_.bssid.data());
 
-  bss_desc_.beacon_period =
-      beacon.beacon_interval;  // name mismatch is spec-compliant.
+  bss_desc_.beacon_period = beacon.beacon_interval;  // name mismatch is spec-compliant.
   bss_desc_.cap = beacon.cap.ToFidl();
   bss_desc_.bss_type = GetBssType(beacon.cap);
 
   ParseBeaconElements(ie_chain, bcn_rx_chan_.primary, &bss_desc_);
   debugbcn("beacon BSSID %s Chan %u CBW %u Sec80 %u\n",
-           common::MacAddr(bss_desc_.bssid).ToString().c_str(),
-           bss_desc_.chan.primary, bss_desc_.chan.cbw,
-           bss_desc_.chan.secondary80);
+           common::MacAddr(bss_desc_.bssid).ToString().c_str(), bss_desc_.chan.primary,
+           bss_desc_.chan.cbw, bss_desc_.chan.secondary80);
 
   return ZX_OK;
 }
 
-BeaconHash Bss::GetBeaconSignature(const Beacon& beacon,
-                                   fbl::Span<const uint8_t> ie_chain) const {
+BeaconHash Bss::GetBeaconSignature(const Beacon& beacon, fbl::Span<const uint8_t> ie_chain) const {
   // Get a hash of the beacon except for its first field: timestamp.
   // TODO(porce): Change to a less humble version.
   BeaconHash hash = beacon.beacon_interval + beacon.cap.val();

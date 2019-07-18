@@ -28,15 +28,13 @@ struct BeaconConfig {
   MeshConfiguration* mesh_config;
   const uint8_t* mesh_id;
   size_t mesh_id_len;
-  fbl::Span<const SupportedRate>
-      rates;  // covers both Supported Rates and Ext Sup Rates elements
+  fbl::Span<const SupportedRate> rates;  // covers both Supported Rates and Ext Sup Rates elements
 };
 
 zx_status_t BuildBeacon(const BeaconConfig& config, MgmtFrame<Beacon>* buffer,
                         size_t* tim_ele_offset);
 
-zx_status_t BuildProbeResponse(const BeaconConfig& config,
-                               const common::MacAddr& recv_addr,
+zx_status_t BuildProbeResponse(const BeaconConfig& config, const common::MacAddr& recv_addr,
                                MgmtFrame<ProbeResponse>* buffer);
 
 }  // namespace wlan

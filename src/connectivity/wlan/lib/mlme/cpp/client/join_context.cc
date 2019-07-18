@@ -7,8 +7,7 @@
 
 namespace wlan {
 JoinContext::JoinContext(::fuchsia::wlan::mlme::BSSDescription bss,
-                         ::fuchsia::wlan::common::PHY phy,
-                         ::fuchsia::wlan::common::CBW cbw)
+                         ::fuchsia::wlan::common::PHY phy, ::fuchsia::wlan::common::CBW cbw)
     : bss_(std::move(bss)) {
   bssid_ = common::MacAddr(bss_.bssid);
   bss_channel_ = wlan_channel_t{
@@ -31,8 +30,7 @@ wlan_channel_t JoinContext::SanitizeChannel(const wlan_channel_t& chan) {
 
   wlan_channel_t chan_fallback = chan;
   chan_fallback.cbw = CBW20;
-  errorf("Sanitize the invalid channel: %s to %s\n",
-         common::ChanStrLong(chan).c_str(),
+  errorf("Sanitize the invalid channel: %s to %s\n", common::ChanStrLong(chan).c_str(),
          common::ChanStrLong(chan_fallback).c_str());
   return chan_fallback;
 }

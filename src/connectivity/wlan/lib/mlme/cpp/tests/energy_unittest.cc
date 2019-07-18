@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cmath>
+
 #include <gtest/gtest.h>
 #include <wlan/common/energy.h>
-
-#include <cmath>
 
 namespace wlan {
 namespace common {

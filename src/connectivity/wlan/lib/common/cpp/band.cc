@@ -31,9 +31,7 @@ std::string BandStr(uint8_t band) {
 
 std::string BandStr(wlan_info_band_t band) { return BandStr(static_cast<uint8_t>(band)); }
 
-std::string BandStr(const wlan_channel_t& chan) {
-  return BandStr(GetBand(chan));
-}
+std::string BandStr(const wlan_channel_t& chan) { return BandStr(GetBand(chan)); }
 
 wlan_common::Band BandToFidl(uint8_t band) {
   return BandToFidl(static_cast<wlan_info_band_t>(band));

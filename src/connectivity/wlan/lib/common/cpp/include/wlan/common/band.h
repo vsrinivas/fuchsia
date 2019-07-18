@@ -5,12 +5,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_BAND_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_BAND_H_
 
+#include <cstdint>
+#include <string>
+
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/protocol/info.h>
-
-#include <cstdint>
-#include <string>
 
 namespace wlan {
 namespace common {

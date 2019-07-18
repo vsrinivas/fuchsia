@@ -7,9 +7,8 @@
 
 namespace wlan {
 
-void MacHeaderWriter::WriteMeshMgmtHeader(
-    BufferWriter* w, ManagementSubtype subtype,
-    const common::MacAddr& dst_addr) const {
+void MacHeaderWriter::WriteMeshMgmtHeader(BufferWriter* w, ManagementSubtype subtype,
+                                          const common::MacAddr& dst_addr) const {
   auto mgmt_hdr = w->Write<MgmtFrameHeader>();
   mgmt_hdr->fc.set_type(FrameType::kManagement);
   mgmt_hdr->fc.set_subtype(subtype);
@@ -20,15 +19,13 @@ void MacHeaderWriter::WriteMeshMgmtHeader(
   // See IEEE Std 802.11-2016, 9.3.3.2, item "c) 4) iv)": addr3 is set to SA for
   // mesh stations
   mgmt_hdr->addr3 = transmitter_addr_;
-  uint32_t seq =
-      mlme_sequence_manager_next_sns1(seq_mgr_, &mgmt_hdr->addr1.byte);
+  uint32_t seq = mlme_sequence_manager_next_sns1(seq_mgr_, &mgmt_hdr->addr1.byte);
   mgmt_hdr->sc.set_seq(seq);
 }
 
 // See IEEE Std 802.11-2016, 9.3.5 (Table 9-42). See also 10.35.3.
 void MacHeaderWriter::WriteMeshDataHeaderIndivAddressed(
-    BufferWriter* w, const common::MacAddr& next_hop_addr,
-    const common::MacAddr& mesh_dst_addr,
+    BufferWriter* w, const common::MacAddr& next_hop_addr, const common::MacAddr& mesh_dst_addr,
     const common::MacAddr& mesh_src_addr) const {
   auto data_hdr = w->Write<DataFrameHeader>();
   data_hdr->fc.set_type(FrameType::kData);
@@ -46,15 +43,13 @@ void MacHeaderWriter::WriteMeshDataHeaderIndivAddressed(
   auto qos_ctrl = w->Write<QosControl>();
   qos_ctrl->set_byte(QosControl::kMeshControlPresentBit);
 
-  uint32_t seq = mlme_sequence_manager_next_sns2(
-      seq_mgr_, &data_hdr->addr1.byte, qos_ctrl->tid());
+  uint32_t seq = mlme_sequence_manager_next_sns2(seq_mgr_, &data_hdr->addr1.byte, qos_ctrl->tid());
   data_hdr->sc.set_seq(seq);
 }
 
 // See IEEE Std 802.11-2016, 9.3.5 (Table 9-42). See also 10.35.4.
 void MacHeaderWriter::WriteMeshDataHeaderGroupAddressed(
-    BufferWriter* w, const common::MacAddr& dst_addr,
-    const common::MacAddr& mesh_src_addr) const {
+    BufferWriter* w, const common::MacAddr& dst_addr, const common::MacAddr& mesh_src_addr) const {
   auto data_hdr = w->Write<DataFrameHeader>();
   data_hdr->fc.set_type(FrameType::kData);
   data_hdr->fc.set_subtype(DataSubtype::kQosdata);
@@ -69,8 +64,7 @@ void MacHeaderWriter::WriteMeshDataHeaderGroupAddressed(
   auto qos_ctrl = w->Write<QosControl>();
   qos_ctrl->set_byte(QosControl::kMeshControlPresentBit);
 
-  uint32_t seq = mlme_sequence_manager_next_sns2(
-      seq_mgr_, &data_hdr->addr1.byte, qos_ctrl->tid());
+  uint32_t seq = mlme_sequence_manager_next_sns2(seq_mgr_, &data_hdr->addr1.byte, qos_ctrl->tid());
   data_hdr->sc.set_seq(seq);
 }
 

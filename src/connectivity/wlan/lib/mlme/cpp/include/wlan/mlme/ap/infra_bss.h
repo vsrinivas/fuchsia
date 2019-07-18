@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_AP_INFRA_BSS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_AP_INFRA_BSS_H_
 
+#include <queue>
+
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/ap/beacon_sender.h>
@@ -16,8 +18,6 @@
 #include <wlan/mlme/rust_utils.h>
 #include <wlan/mlme/service.h>
 #include <zircon/types.h>
-
-#include <queue>
 
 namespace wlan {
 
@@ -56,14 +56,13 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
   uint64_t timestamp() override;
 
   zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) override;
-  zx_status_t SendDataFrame(DataFrame<>&& data_frame,
-                            uint32_t flags = 0) override;
+  zx_status_t SendDataFrame(DataFrame<>&& data_frame, uint32_t flags = 0) override;
   zx_status_t DeliverEthernet(fbl::Span<const uint8_t> frame) override;
 
   uint32_t NextSns1(const common::MacAddr& addr) override;
 
-  std::optional<DataFrame<LlcHeader>> EthToDataFrame(
-      const EthFrame& eth_frame, bool needs_protection) override;
+  std::optional<DataFrame<LlcHeader>> EthToDataFrame(const EthFrame& eth_frame,
+                                                     bool needs_protection) override;
   void OnPreTbtt() override;
   void OnBcnTxComplete() override;
 
@@ -74,8 +73,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
   wlan_channel_t Chan() const override { return chan_; }
 
  private:
-  using ClientMap = std::unordered_map<common::MacAddr,
-                                       fbl::unique_ptr<RemoteClientInterface>,
+  using ClientMap = std::unordered_map<common::MacAddr, fbl::unique_ptr<RemoteClientInterface>,
                                        common::MacAddrHasher>;
 
   void HandleEthFrame(EthFrame&&);
@@ -84,8 +82,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
   void HandleAnyDataFrame(DataFrame<>&&);
   void HandleAnyCtrlFrame(CtrlFrame<>&&);
   void HandleNewClientAuthAttempt(const MgmtFrameView<Authentication>&);
-  zx_status_t HandleMlmeSetKeysReq(
-      const MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>&);
+  zx_status_t HandleMlmeSetKeysReq(const MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest>&);
 
   bool HasClient(const common::MacAddr& client);
   RemoteClientInterface* GetClient(const common::MacAddr& addr);

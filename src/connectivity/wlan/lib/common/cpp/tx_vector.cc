@@ -24,8 +24,7 @@ namespace wlan {
 //
 // TODO(NET-1451) VHT will be inserted between HT and ERP.
 
-zx_status_t TxVector::FromSupportedRate(const SupportedRate& erp_rate,
-                                        TxVector* tx_vec) {
+zx_status_t TxVector::FromSupportedRate(const SupportedRate& erp_rate, TxVector* tx_vec) {
   if (tx_vec == nullptr) {
     errorf("nullptr passed to TxVector::FromSupportedRate()\n");
     ZX_DEBUG_ASSERT(false);
@@ -109,9 +108,7 @@ std::optional<SupportedRate> TxVectorIdxToErpRate(tx_vec_idx_t idx) {
   return SupportedRate(erp_rate_list[idx - kErpStartIdx]);
 }
 
-bool IsTxVecIdxValid(tx_vec_idx_t idx) {
-  return kInvalidTxVectorIdx < idx && idx <= kMaxValidIdx;
-}
+bool IsTxVecIdxValid(tx_vec_idx_t idx) { return kInvalidTxVectorIdx < idx && idx <= kMaxValidIdx; }
 
 wlan_info_phy_type_t TxVecIdxToPhy(tx_vec_idx_t idx) {
   if (idx < kHtStartIdx + kHtNumTxVector) {
@@ -141,8 +138,7 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
   switch (phy) {
     case WLAN_INFO_PHY_TYPE_HT: {
       uint8_t group_idx = (idx - kHtStartIdx) / kHtNumMcs;
-      GI gi = ((group_idx / kHtNumCbw) % kHtNumGi == 1 ? WLAN_GI_400NS
-                                                       : WLAN_GI_800NS);
+      GI gi = ((group_idx / kHtNumCbw) % kHtNumGi == 1 ? WLAN_GI_400NS : WLAN_GI_800NS);
       CBW cbw = (group_idx % kHtNumCbw == 0 ? CBW20 : CBW40);
       uint8_t mcs_idx = (idx - kHtStartIdx) % kHtNumMcs;
 
@@ -196,8 +192,7 @@ bool TxVector::IsValid() const {
       if (!(gi == WLAN_GI_800NS || gi == WLAN_GI_400NS)) {
         return false;
       }
-      if (!(cbw == CBW20 || cbw == CBW40 || cbw == CBW40ABOVE ||
-            cbw == CBW40BELOW)) {
+      if (!(cbw == CBW20 || cbw == CBW40 || cbw == CBW40ABOVE || cbw == CBW40BELOW)) {
         return false;
       }
       return 0 <= mcs_idx && mcs_idx < kHtNumMcs;
@@ -260,15 +255,11 @@ bool operator==(const TxVector& lhs, const TxVector& rhs) {
   }
 }
 
-bool operator!=(const TxVector& lhs, const TxVector& rhs) {
-  return !(lhs == rhs);
-}
+bool operator!=(const TxVector& lhs, const TxVector& rhs) { return !(lhs == rhs); }
 
-bool IsEqualExceptMcs(const ::wlan::TxVector& lhs,
-                      const ::wlan::TxVector& rhs) {
+bool IsEqualExceptMcs(const ::wlan::TxVector& lhs, const ::wlan::TxVector& rhs) {
   ::wlan::TxVector temp = lhs;
-  temp.mcs_idx =
-      rhs.mcs_idx;  // Make mcs_idx equal so that we only compare other fields.
+  temp.mcs_idx = rhs.mcs_idx;  // Make mcs_idx equal so that we only compare other fields.
   return rhs == temp;
 }
 }  // namespace wlan

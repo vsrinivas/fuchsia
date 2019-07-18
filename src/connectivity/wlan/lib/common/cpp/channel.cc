@@ -11,9 +11,7 @@ bool operator==(const wlan_channel_t& lhs, const wlan_channel_t& rhs) {
   return (lhs.primary == rhs.primary && lhs.cbw == rhs.cbw);
 }
 
-bool operator!=(const wlan_channel_t& lhs, const wlan_channel_t& rhs) {
-  return !(lhs == rhs);
-}
+bool operator!=(const wlan_channel_t& lhs, const wlan_channel_t& rhs) { return !(lhs == rhs); }
 
 // TODO(porce): Look up constants from the operating class table.
 // No need to use constexpr in this prototype.
@@ -102,8 +100,7 @@ bool IsValidChan5Ghz(const wlan_channel_t& chan) {
       }
       break;
     case CBW80P80: {
-      if (!(s == 42 || s == 58 || s == 106 || s == 122 || s == 138 ||
-            s == 155)) {
+      if (!(s == 42 || s == 58 || s == 106 || s == 122 || s == 138 || s == 155)) {
         return false;
       }
 
@@ -245,8 +242,7 @@ std::string ChanStr(const wlan_channel_t& chan) {
   if (chan.cbw != CBW80P80) {
     std::snprintf(buf, sizeof(buf), "%u%s", chan.primary, CbwSuffix(chan.cbw));
   } else {
-    std::snprintf(buf, sizeof(buf), "%u+%u%s", chan.primary, chan.secondary80,
-                  CbwSuffix(chan.cbw));
+    std::snprintf(buf, sizeof(buf), "%u+%u%s", chan.primary, chan.secondary80, CbwSuffix(chan.cbw));
   }
   return std::string(buf);
 }
@@ -256,8 +252,7 @@ std::string ChanStrLong(const wlan_channel_t& chan) {
   if (chan.cbw != CBW80P80) {
     std::snprintf(buf, sizeof(buf), "%u %s", chan.primary, CbwStr(chan.cbw));
   } else {
-    std::snprintf(buf, sizeof(buf), "%u+%u %s", chan.primary, chan.secondary80,
-                  CbwStr(chan.cbw));
+    std::snprintf(buf, sizeof(buf), "%u+%u %s", chan.primary, chan.secondary80, CbwStr(chan.cbw));
   }
   return std::string(buf);
 }

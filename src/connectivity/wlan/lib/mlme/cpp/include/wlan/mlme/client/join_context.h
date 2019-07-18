@@ -16,17 +16,14 @@ namespace wlan {
 
 class JoinContext {
  public:
-  JoinContext(::fuchsia::wlan::mlme::BSSDescription bss,
-              ::fuchsia::wlan::common::PHY phy,
+  JoinContext(::fuchsia::wlan::mlme::BSSDescription bss, ::fuchsia::wlan::common::PHY phy,
               ::fuchsia::wlan::common::CBW cbw);
 
   const common::MacAddr& bssid() const { return bssid_; }
   const wlan_channel_t& channel() const { return channel_; }
   const wlan_channel_t& bss_channel() const { return bss_channel_; }
   uint16_t listen_interval() const { return listen_interval_; }
-  void set_listen_interval(uint16_t listen_interval) {
-    listen_interval_ = listen_interval;
-  }
+  void set_listen_interval(uint16_t listen_interval) { listen_interval_ = listen_interval; }
 
   wlan_info_phy_type_t phy() const { return phy_; }
   const ::fuchsia::wlan::mlme::BSSDescription* bss() const { return &bss_; }

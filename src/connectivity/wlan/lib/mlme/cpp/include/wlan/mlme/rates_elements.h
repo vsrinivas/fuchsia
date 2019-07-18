@@ -15,8 +15,7 @@ namespace wlan {
 
 class RatesWriter {
  public:
-  explicit RatesWriter(fbl::Span<const SupportedRate> all_rates)
-      : all_rates_(all_rates) {}
+  explicit RatesWriter(fbl::Span<const SupportedRate> all_rates) : all_rates_(all_rates) {}
 
   void WriteSupportedRates(BufferWriter* w) const;
 

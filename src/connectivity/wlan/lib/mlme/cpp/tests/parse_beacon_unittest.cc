@@ -11,8 +11,7 @@ namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-wlan_mlme::VhtOperation make_vht_op(wlan_mlme::VhtCbw cbw, uint8_t seg0,
-                                    uint8_t seg1) {
+wlan_mlme::VhtOperation make_vht_op(wlan_mlme::VhtCbw cbw, uint8_t seg0, uint8_t seg1) {
   wlan_mlme::VhtOperation vht_op;
   vht_op.vht_cbw = to_enum_type(cbw);
   vht_op.center_freq_seg0 = seg0;
@@ -31,8 +30,7 @@ TEST(ParseBeaconTest, GetVhtCbw) {
             std::optional{CBW160});
   EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_80_160_80P80, 0, 20)),
             std::optional{CBW80P80});
-  EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_20_40, 0, 8)),
-            std::optional<CBW>{});
+  EXPECT_EQ(GetVhtCbw(make_vht_op(wlan_mlme::VhtCbw::CBW_20_40, 0, 8)), std::optional<CBW>{});
 }
 
 TEST(ParseBeaconTest, DeriveChannel) {
@@ -50,10 +48,8 @@ TEST(ParseBeaconTest, DeriveChannel) {
     ht_op.primary_chan = 36;
     ht_op.ht_op_info.secondary_chan_offset =
         to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_BELOW);
-    ht_op.ht_op_info.sta_chan_width =
-        to_enum_type(wlan_mlme::StaChanWidth::ANY);
-    EXPECT_EQ(DeriveChannel(3, 4, &ht_op, {}),
-              (wlan_channel_t{36, CBW40BELOW, 0}));
+    ht_op.ht_op_info.sta_chan_width = to_enum_type(wlan_mlme::StaChanWidth::ANY);
+    EXPECT_EQ(DeriveChannel(3, 4, &ht_op, {}), (wlan_channel_t{36, CBW40BELOW, 0}));
   }
 
   // sta_chan_width set to TWENTY overrides bandwidth
@@ -62,8 +58,7 @@ TEST(ParseBeaconTest, DeriveChannel) {
     ht_op.primary_chan = 36;
     ht_op.ht_op_info.secondary_chan_offset =
         to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_BELOW);
-    ht_op.ht_op_info.sta_chan_width =
-        to_enum_type(wlan_mlme::StaChanWidth::TWENTY);
+    ht_op.ht_op_info.sta_chan_width = to_enum_type(wlan_mlme::StaChanWidth::TWENTY);
     EXPECT_EQ(DeriveChannel(3, 4, &ht_op, {}), (wlan_channel_t{36, CBW20, 0}));
   }
 
@@ -73,10 +68,8 @@ TEST(ParseBeaconTest, DeriveChannel) {
     ht_op.primary_chan = 36;
     ht_op.ht_op_info.secondary_chan_offset =
         to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_BELOW);
-    ht_op.ht_op_info.sta_chan_width =
-        to_enum_type(wlan_mlme::StaChanWidth::ANY);
-    EXPECT_EQ(DeriveChannel(3, 4, &ht_op, {CBW160}),
-              (wlan_channel_t{36, CBW160, 0}));
+    ht_op.ht_op_info.sta_chan_width = to_enum_type(wlan_mlme::StaChanWidth::ANY);
+    EXPECT_EQ(DeriveChannel(3, 4, &ht_op, {CBW160}), (wlan_channel_t{36, CBW160, 0}));
   }
 }
 
@@ -141,11 +134,9 @@ TEST(ParseBeaconTest, ParseBeaconElements) {
   ParseBeaconElements(ies, 40, &bss_desc);
 
   EXPECT_EQ(bss_desc.ssid, std::vector<uint8_t>({'f', 'o', 'o'}));
-  EXPECT_EQ(bss_desc.basic_rate_set,
-            std::vector<uint8_t>({0x01, 0x02, 0x03, 0x04}));
-  EXPECT_EQ(bss_desc.op_rate_set,
-            std::vector<uint8_t>({0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                                  0x08, 0x09, 0x0a, 0x0b}));
+  EXPECT_EQ(bss_desc.basic_rate_set, std::vector<uint8_t>({0x01, 0x02, 0x03, 0x04}));
+  EXPECT_EQ(bss_desc.op_rate_set, std::vector<uint8_t>({0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                                                        0x08, 0x09, 0x0a, 0x0b}));
   EXPECT_EQ(bss_desc.chan.primary, 36);
   EXPECT_EQ(*bss_desc.country, std::vector<uint8_t>({'A', 'B', 'C'}));
   EXPECT_EQ(*bss_desc.rsn, std::vector<uint8_t>({48, 2, 0xaa, 0xbb}));

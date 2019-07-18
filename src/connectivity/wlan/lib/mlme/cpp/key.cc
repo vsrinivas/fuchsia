@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <optional>
+
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/mlme/key.h>
 #include <wlan/protocol/mac.h>
-
-#include <optional>
 
 namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-std::optional<wlan_key_config_t> ToKeyConfig(
-    const wlan_mlme::SetKeyDescriptor& key_descriptor) {
+std::optional<wlan_key_config_t> ToKeyConfig(const wlan_mlme::SetKeyDescriptor& key_descriptor) {
   uint8_t key_type;
   switch (key_descriptor.key_type) {
     case wlan_mlme::KeyType::PAIRWISE:
@@ -40,8 +39,7 @@ std::optional<wlan_key_config_t> ToKeyConfig(
   key_config.rsc = key_descriptor.rsc;
   memcpy(key_config.cipher_oui, key_descriptor.cipher_suite_oui.data(),
          sizeof(key_config.cipher_oui));
-  memcpy(key_config.peer_addr, key_descriptor.address.data(),
-         sizeof(key_config.peer_addr));
+  memcpy(key_config.peer_addr, key_descriptor.address.data(), sizeof(key_config.peer_addr));
   return key_config;
 }
 

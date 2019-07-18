@@ -5,6 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_H_
 
+#include <cstdint>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include <ddk/hw/wlan/ieee80211.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/common/bitfield.h>
@@ -15,11 +20,6 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-
-#include <cstdint>
-#include <unordered_map>
-#include <utility>
-#include <vector>
 
 namespace wlan {
 
@@ -36,10 +36,8 @@ constexpr size_t kMaxSsidLen = 32;
 // Rates are in 0.5Mbps increment: 12 -> 6 Mbps, 11 -> 5.5 Mbps, etc.
 struct SupportedRate : public common::BitField<uint8_t> {
   constexpr SupportedRate() = default;
-  constexpr explicit SupportedRate(uint8_t val)
-      : common::BitField<uint8_t>(val) {}
-  constexpr explicit SupportedRate(uint8_t val, bool is_basic)
-      : common::BitField<uint8_t>(val) {
+  constexpr explicit SupportedRate(uint8_t val) : common::BitField<uint8_t>(val) {}
+  constexpr explicit SupportedRate(uint8_t val, bool is_basic) : common::BitField<uint8_t>(val) {
     set_is_basic(static_cast<uint8_t>(is_basic));
   }
 
@@ -50,18 +48,10 @@ struct SupportedRate : public common::BitField<uint8_t> {
   WLAN_BIT_FIELD(is_basic, 7, 1)
 
   operator uint8_t() const { return val(); }
-  bool operator==(const SupportedRate& other) const {
-    return rate() == other.rate();
-  }
-  bool operator!=(const SupportedRate& other) const {
-    return !this->operator==(other);
-  }
-  bool operator<(const SupportedRate& other) const {
-    return rate() < other.rate();
-  }
-  bool operator>(const SupportedRate& other) const {
-    return rate() > other.rate();
-  }
+  bool operator==(const SupportedRate& other) const { return rate() == other.rate(); }
+  bool operator!=(const SupportedRate& other) const { return !this->operator==(other); }
+  bool operator<(const SupportedRate& other) const { return rate() < other.rate(); }
+  bool operator>(const SupportedRate& other) const { return rate() > other.rate(); }
 } __PACKED;
 
 static constexpr size_t kMaxSupportedRatesLen = 8;
@@ -149,10 +139,8 @@ struct MeshConfiguration {
 
   ::fuchsia::wlan::mlme::MeshConfiguration ToFidl() const {
     ::fuchsia::wlan::mlme::MeshConfiguration ret;
-    ret.active_path_sel_proto_id =
-        static_cast<uint8_t>(active_path_sel_proto_id);
-    ret.active_path_sel_metric_id =
-        static_cast<uint8_t>(active_path_sel_metric_id);
+    ret.active_path_sel_proto_id = static_cast<uint8_t>(active_path_sel_proto_id);
+    ret.active_path_sel_metric_id = static_cast<uint8_t>(active_path_sel_metric_id);
     ret.congest_ctrl_method_id = static_cast<uint8_t>(congest_ctrl_method_id);
     ret.sync_method_id = static_cast<uint8_t>(sync_method_id);
     ret.auth_proto_id = static_cast<uint8_t>(auth_proto_id);
@@ -161,15 +149,11 @@ struct MeshConfiguration {
     return ret;
   }
 
-  static MeshConfiguration FromFidl(
-      const ::fuchsia::wlan::mlme::MeshConfiguration& f) {
+  static MeshConfiguration FromFidl(const ::fuchsia::wlan::mlme::MeshConfiguration& f) {
     return MeshConfiguration{
-        .active_path_sel_proto_id =
-            static_cast<PathSelProtoId>(f.active_path_sel_proto_id),
-        .active_path_sel_metric_id =
-            static_cast<PathSelMetricId>(f.active_path_sel_metric_id),
-        .congest_ctrl_method_id =
-            static_cast<CongestCtrlModeId>(f.congest_ctrl_method_id),
+        .active_path_sel_proto_id = static_cast<PathSelProtoId>(f.active_path_sel_proto_id),
+        .active_path_sel_metric_id = static_cast<PathSelMetricId>(f.active_path_sel_metric_id),
+        .congest_ctrl_method_id = static_cast<CongestCtrlModeId>(f.congest_ctrl_method_id),
         .sync_method_id = static_cast<SyncMethodId>(f.sync_method_id),
         .auth_proto_id = static_cast<AuthProtoId>(f.auth_proto_id),
         .mesh_formation_info = MeshFormationInfo(f.mesh_formation_info),
@@ -261,8 +245,7 @@ static_assert(sizeof(PreqPerTarget) == 11);
 // IEEE Std 802.11-2016, 9.4.2.114, Figure 9-481
 struct PrepFlags : public common::BitField<uint8_t> {
   PrepFlags() = default;
-  explicit PrepFlags(uint8_t raw_value)
-      : common::BitField<uint8_t>(raw_value) {}
+  explicit PrepFlags(uint8_t raw_value) : common::BitField<uint8_t>(raw_value) {}
 
   // bits 0-5 reserved
   WLAN_BIT_FIELD(addr_ext, 6, 1)
@@ -328,15 +311,13 @@ struct PerrPerDestinationTail {
 // IEEE Std 802.11-2016, 9.4.2.115
 constexpr size_t kPerrMaxDestinations = 19;
 
-constexpr size_t kPerrMaxDestinationSize = sizeof(PerrPerDestinationHeader) +
-                                           sizeof(common::MacAddr) +
-                                           sizeof(PerrPerDestinationTail);
+constexpr size_t kPerrMaxDestinationSize =
+    sizeof(PerrPerDestinationHeader) + sizeof(common::MacAddr) + sizeof(PerrPerDestinationTail);
 
 // IEEE Std 802.11-2016, 9.4.1.17
 class QosInfo : public common::BitField<uint8_t> {
  public:
-  constexpr explicit QosInfo(uint8_t value)
-      : common::BitField<uint8_t>(value) {}
+  constexpr explicit QosInfo(uint8_t value) : common::BitField<uint8_t>(value) {}
   constexpr QosInfo() = default;
 
   // AP specific QoS Info structure: IEEE Std 802.11-2016, 9.4.1.17, Figure 9-82
@@ -397,8 +378,7 @@ enum TsScheduleSetting : uint8_t {
 // IEEE Std 802.11-2016, 9.4.2.30, Figure 9-266
 class TsInfoPart1 : public common::BitField<uint16_t> {
  public:
-  constexpr explicit TsInfoPart1(uint16_t params)
-      : common::BitField<uint16_t>(params) {}
+  constexpr explicit TsInfoPart1(uint16_t params) : common::BitField<uint16_t>(params) {}
   constexpr TsInfoPart1() = default;
 
   WLAN_BIT_FIELD(traffic_type, 0, 1)
@@ -414,8 +394,7 @@ class TsInfoPart1 : public common::BitField<uint16_t> {
 // IEEE Std 802.11-2016, 9.4.2.30, Figure 9-266
 class TsInfoPart2 : public common::BitField<uint8_t> {
  public:
-  constexpr explicit TsInfoPart2(uint8_t params)
-      : common::BitField<uint8_t>(params) {}
+  constexpr explicit TsInfoPart2(uint8_t params) : common::BitField<uint8_t>(params) {}
   constexpr TsInfoPart2() = default;
 
   WLAN_BIT_FIELD(schedule, 0, 1)
@@ -436,9 +415,7 @@ struct TsInfo {
     return p1.access_policy() == TsAccessPolicy::kEdca && p2.schedule();
   }
 
-  bool IsScheduleReserved() const {
-    return p1.access_policy() != TsAccessPolicy::kEdca;
-  }
+  bool IsScheduleReserved() const { return p1.access_policy() != TsAccessPolicy::kEdca; }
 
   TsScheduleSetting GetScheduleSetting() const {
     return static_cast<TsScheduleSetting>(p1.apsd() | (p2.schedule() << 1));
@@ -447,8 +424,7 @@ struct TsInfo {
 
 // IEEE Std 802.11-2016, 9.4.2.30, Figure 9-267
 struct NominalMsduSize : public common::BitField<uint16_t> {
-  constexpr explicit NominalMsduSize(uint16_t params)
-      : common::BitField<uint16_t>(params) {}
+  constexpr explicit NominalMsduSize(uint16_t params) : common::BitField<uint16_t>(params) {}
   constexpr NominalMsduSize() = default;
 
   WLAN_BIT_FIELD(size, 0, 15) WLAN_BIT_FIELD(fixed, 15, 1)
@@ -499,7 +475,7 @@ class HtCapabilityInfo : public common::BitField<uint16_t> {
   WLAN_BIT_FIELD(short_gi_40, 6, 1)     // Short Guard Interval for 40 MHz
   WLAN_BIT_FIELD(tx_stbc, 7, 1)
 
-  WLAN_BIT_FIELD(rx_stbc, 8, 2)  // maximum number of spatial streams. Up to 3.
+  WLAN_BIT_FIELD(rx_stbc, 8, 2)             // maximum number of spatial streams. Up to 3.
   WLAN_BIT_FIELD(delayed_block_ack, 10, 1)  // HT-delayed Block Ack
   WLAN_BIT_FIELD(max_amsdu_len, 11, 1)
   WLAN_BIT_FIELD(dsss_in_40, 12, 1)  // DSSS/CCK Mode in 40 MHz
@@ -524,8 +500,7 @@ class HtCapabilityInfo : public common::BitField<uint16_t> {
     OCTETS_7935 = 1,
   };
 
-  static HtCapabilityInfo FromFidl(
-      const ::fuchsia::wlan::mlme::HtCapabilityInfo& fidl) {
+  static HtCapabilityInfo FromFidl(const ::fuchsia::wlan::mlme::HtCapabilityInfo& fidl) {
     HtCapabilityInfo dst;
 
     dst.set_ldpc_coding_cap(fidl.ldpc_coding_cap ? 1 : 0);
@@ -569,8 +544,7 @@ class HtCapabilityInfo : public common::BitField<uint16_t> {
 // IEEE Std 802.11-2016, 9.4.2.56.3
 class AmpduParams : public common::BitField<uint8_t> {
  public:
-  constexpr explicit AmpduParams(uint8_t params)
-      : common::BitField<uint8_t>(params) {}
+  constexpr explicit AmpduParams(uint8_t params) : common::BitField<uint8_t>(params) {}
   constexpr AmpduParams() = default;
 
   WLAN_BIT_FIELD(exponent, 0, 2)           // Maximum A-MPDU Length Exponent.
@@ -594,8 +568,7 @@ class AmpduParams : public common::BitField<uint8_t> {
     AmpduParams dst;
 
     dst.set_exponent(fidl.exponent);
-    dst.set_min_start_spacing(
-        static_cast<MinMPDUStartSpacing>(fidl.min_start_spacing));
+    dst.set_min_start_spacing(static_cast<MinMPDUStartSpacing>(fidl.min_start_spacing));
 
     return dst;
   }
@@ -613,13 +586,10 @@ class AmpduParams : public common::BitField<uint8_t> {
 // IEEE Std 802.11-2016, 9.4.2.56.4
 class SupportedMcsRxMcsHead : public common::BitField<uint64_t> {
  public:
-  constexpr explicit SupportedMcsRxMcsHead(uint64_t val)
-      : common::BitField<uint64_t>(val) {}
+  constexpr explicit SupportedMcsRxMcsHead(uint64_t val) : common::BitField<uint64_t>(val) {}
   constexpr SupportedMcsRxMcsHead() = default;
 
-  bool Support(uint8_t mcs_index) const {
-    return 1 == (1 & (bitmask() >> mcs_index));
-  }
+  bool Support(uint8_t mcs_index) const { return 1 == (1 & (bitmask() >> mcs_index)); }
 
   // HT-MCS table in IEEE Std 802.11-2016, Annex B.4.17.2
   // VHT-MCS tables in IEEE Std 802.11-2016, 21.5
@@ -629,8 +599,7 @@ class SupportedMcsRxMcsHead : public common::BitField<uint64_t> {
 // IEEE Std 802.11-2016, 9.4.2.56.4
 class SupportedMcsRxMcsTail : public common::BitField<uint32_t> {
  public:
-  constexpr explicit SupportedMcsRxMcsTail(uint32_t val)
-      : common::BitField<uint32_t>(val) {}
+  constexpr explicit SupportedMcsRxMcsTail(uint32_t val) : common::BitField<uint32_t>(val) {}
   constexpr SupportedMcsRxMcsTail() = default;
 
   WLAN_BIT_FIELD(bitmask, 0, 13)
@@ -642,8 +611,7 @@ class SupportedMcsRxMcsTail : public common::BitField<uint32_t> {
 // IEEE Std 802.11-2016, 9.4.2.56.4
 class SupportedMcsTxMcs : public common::BitField<uint32_t> {
  public:
-  constexpr explicit SupportedMcsTxMcs(uint32_t chunk)
-      : common::BitField<uint32_t>(chunk) {}
+  constexpr explicit SupportedMcsTxMcs(uint32_t chunk) : common::BitField<uint32_t>(chunk) {}
   constexpr SupportedMcsTxMcs() = default;
 
   WLAN_BIT_FIELD(set_defined, 0, 1)  // Add 96 for the original bit location
@@ -670,8 +638,7 @@ struct SupportedMcsSet {
   SupportedMcsRxMcsTail rx_mcs_tail;
   SupportedMcsTxMcs tx_mcs;
 
-  static SupportedMcsSet FromFidl(
-      const ::fuchsia::wlan::mlme::SupportedMcsSet& fidl) {
+  static SupportedMcsSet FromFidl(const ::fuchsia::wlan::mlme::SupportedMcsSet& fidl) {
     SupportedMcsSet dst;
 
     dst.rx_mcs_head.set_bitmask(fidl.rx_mcs_set);
@@ -729,8 +696,7 @@ class HtExtCapabilities : public common::BitField<uint16_t> {
     MCS_BOTH = 3,
   };
 
-  static HtExtCapabilities FromFidl(
-      const ::fuchsia::wlan::mlme::HtExtCapabilities& fidl) {
+  static HtExtCapabilities FromFidl(const ::fuchsia::wlan::mlme::HtExtCapabilities& fidl) {
     HtExtCapabilities dst;
 
     dst.set_pco(fidl.pco);
@@ -758,8 +724,7 @@ class HtExtCapabilities : public common::BitField<uint16_t> {
 // IEEE Std 802.11-2016, 9.4.2.56.6
 class TxBfCapability : public common::BitField<uint32_t> {
  public:
-  constexpr explicit TxBfCapability(uint32_t txbf_cap)
-      : common::BitField<uint32_t>(txbf_cap) {}
+  constexpr explicit TxBfCapability(uint32_t txbf_cap) : common::BitField<uint32_t>(txbf_cap) {}
   constexpr TxBfCapability() = default;
 
   WLAN_BIT_FIELD(implicit_rx, 0, 1)
@@ -818,9 +783,7 @@ class TxBfCapability : public common::BitField<uint32_t> {
     set_csi_antennas(num - 1);
   }
 
-  uint8_t noncomp_steering_ants_human() const {
-    return noncomp_steering_ants() + 1;
-  }
+  uint8_t noncomp_steering_ants_human() const { return noncomp_steering_ants() + 1; }
   void set_noncomp_steering_ants_human(uint8_t num) {
     constexpr uint8_t kLowerbound = 1;
     constexpr uint8_t kUpperbound = 4;
@@ -864,8 +827,7 @@ class TxBfCapability : public common::BitField<uint32_t> {
     set_chan_estimation(num - 1);
   }
 
-  static TxBfCapability FromFidl(
-      const ::fuchsia::wlan::mlme::TxBfCapability& fidl) {
+  static TxBfCapability FromFidl(const ::fuchsia::wlan::mlme::TxBfCapability& fidl) {
     TxBfCapability dst;
 
     dst.set_implicit_rx(fidl.implicit_rx ? 1 : 0);
@@ -908,14 +870,11 @@ class TxBfCapability : public common::BitField<uint32_t> {
     fidl.noncomp_feedback = noncomp_feedback();
     fidl.comp_feedback = comp_feedback();
     fidl.min_grouping = min_grouping();
-    fidl.csi_antennas = csi_antennas_human();  // Converting to human readable
-    fidl.noncomp_steering_ants =
-        noncomp_steering_ants_human();  // Converting to human readable
-    fidl.comp_steering_ants =
-        comp_steering_ants_human();    // Converting to human readable
-    fidl.csi_rows = csi_rows_human();  // Converting to human readable
-    fidl.chan_estimation =
-        chan_estimation_human();  // Converting to human readable
+    fidl.csi_antennas = csi_antennas_human();                    // Converting to human readable
+    fidl.noncomp_steering_ants = noncomp_steering_ants_human();  // Converting to human readable
+    fidl.comp_steering_ants = comp_steering_ants_human();        // Converting to human readable
+    fidl.csi_rows = csi_rows_human();                            // Converting to human readable
+    fidl.chan_estimation = chan_estimation_human();              // Converting to human readable
 
     return fidl;
   }
@@ -923,8 +882,7 @@ class TxBfCapability : public common::BitField<uint32_t> {
 
 class AselCapability : public common::BitField<uint8_t> {
  public:
-  constexpr explicit AselCapability(uint8_t asel_cap)
-      : common::BitField<uint8_t>(asel_cap) {}
+  constexpr explicit AselCapability(uint8_t asel_cap) : common::BitField<uint8_t>(asel_cap) {}
   constexpr AselCapability() = default;
 
   WLAN_BIT_FIELD(asel, 0, 1)
@@ -937,8 +895,7 @@ class AselCapability : public common::BitField<uint8_t> {
   WLAN_BIT_FIELD(tx_sounding_ppdu, 6, 1)
   WLAN_BIT_FIELD(reserved, 7, 1)
 
-  static AselCapability FromFidl(
-      const ::fuchsia::wlan::mlme::AselCapability& fidl) {
+  static AselCapability FromFidl(const ::fuchsia::wlan::mlme::AselCapability& fidl) {
     AselCapability dst;
 
     dst.set_asel(fidl.asel ? 1 : 0);
@@ -1002,8 +959,7 @@ struct HtCapabilities {
     return ddk;
   }
 
-  static HtCapabilities FromFidl(
-      const ::fuchsia::wlan::mlme::HtCapabilities& fidl) {
+  static HtCapabilities FromFidl(const ::fuchsia::wlan::mlme::HtCapabilities& fidl) {
     HtCapabilities dst;
     dst.ht_cap_info = HtCapabilityInfo::FromFidl(fidl.ht_cap_info);
     dst.ampdu_params = AmpduParams::FromFidl(fidl.ampdu_params);
@@ -1030,8 +986,7 @@ struct HtCapabilities {
 // Note this is a field within HtOperation element.
 class HtOpInfoHead : public common::BitField<uint32_t> {
  public:
-  constexpr explicit HtOpInfoHead(uint32_t op_info)
-      : common::BitField<uint32_t>(op_info) {}
+  constexpr explicit HtOpInfoHead(uint32_t op_info) : common::BitField<uint32_t>(op_info) {}
   constexpr HtOpInfoHead() = default;
 
   WLAN_BIT_FIELD(secondary_chan_offset, 0, 2)
@@ -1045,7 +1000,7 @@ class HtOpInfoHead : public common::BitField<uint32_t> {
                  1)  // Nongreenfield HT STAs present.
 
   WLAN_BIT_FIELD(reserved2, 11,
-                 1)  // Note 802.11n D1.10 implementations use these.
+                 1)                   // Note 802.11n D1.10 implementations use these.
   WLAN_BIT_FIELD(obss_non_ht, 12, 1)  // OBSS Non-HT STAs present.
   // IEEE 802.11-2016 Figure 9-339 has an incosistency so this is Fuchsia
   // interpretation: The channel number for the second segment in a 80+80 Mhz
@@ -1079,8 +1034,7 @@ class HtOpInfoHead : public common::BitField<uint32_t> {
 
 class HtOpInfoTail : public common::BitField<uint8_t> {
  public:
-  constexpr explicit HtOpInfoTail(uint8_t val)
-      : common::BitField<uint8_t>(val) {}
+  constexpr explicit HtOpInfoTail(uint8_t val) : common::BitField<uint8_t>(val) {}
   constexpr HtOpInfoTail() = default;
 
   WLAN_BIT_FIELD(stbc_beacon, 0, 1)  // Add 32 for the original bit location.
@@ -1131,11 +1085,9 @@ struct HtOperation {
 
     dst.head.set_secondary_chan_offset(
         static_cast<HtOpInfoHead::SecChanOffset>(hoi.secondary_chan_offset));
-    dst.head.set_sta_chan_width(
-        static_cast<HtOpInfoHead::StaChanWidth>(hoi.sta_chan_width));
+    dst.head.set_sta_chan_width(static_cast<HtOpInfoHead::StaChanWidth>(hoi.sta_chan_width));
     dst.head.set_rifs_mode(hoi.rifs_mode ? 1 : 0);
-    dst.head.set_ht_protect(
-        static_cast<HtOpInfoHead::HtProtect>(hoi.ht_protect));
+    dst.head.set_ht_protect(static_cast<HtOpInfoHead::HtProtect>(hoi.ht_protect));
     dst.head.set_nongreenfield_present(hoi.nongreenfield_present ? 1 : 0);
     dst.head.set_obss_non_ht(hoi.obss_non_ht ? 1 : 0);
     dst.head.set_center_freq_seg2(hoi.center_freq_seg2);
@@ -1225,8 +1177,7 @@ struct VhtCapabilitiesInfo : public common::BitField<uint32_t> {
     LINK_ADAPT_BOTH = 3,
   };
 
-  static VhtCapabilitiesInfo FromFidl(
-      const ::fuchsia::wlan::mlme::VhtCapabilitiesInfo& fidl) {
+  static VhtCapabilitiesInfo FromFidl(const ::fuchsia::wlan::mlme::VhtCapabilitiesInfo& fidl) {
     VhtCapabilitiesInfo dst;
 
     dst.set_max_mpdu_len(static_cast<MaxMpduLen>(fidl.max_mpdu_len));
@@ -1284,8 +1235,7 @@ struct VhtCapabilitiesInfo : public common::BitField<uint32_t> {
 // IEEE Std 802.11-2016, 9.4.2.158.3
 struct VhtMcsNss : public common::BitField<uint64_t> {
  public:
-  constexpr explicit VhtMcsNss(uint64_t vht_mcs_nss)
-      : common::BitField<uint64_t>(vht_mcs_nss) {}
+  constexpr explicit VhtMcsNss(uint64_t vht_mcs_nss) : common::BitField<uint64_t>(vht_mcs_nss) {}
   constexpr VhtMcsNss() = default;
 
   // Rx VHT-MCS Map
@@ -1414,8 +1364,7 @@ struct VhtCapabilities {
     return ddk;
   }
 
-  static VhtCapabilities FromFidl(
-      const ::fuchsia::wlan::mlme::VhtCapabilities& fidl) {
+  static VhtCapabilities FromFidl(const ::fuchsia::wlan::mlme::VhtCapabilities& fidl) {
     VhtCapabilities dst;
     dst.vht_cap_info = VhtCapabilitiesInfo::FromFidl(fidl.vht_cap_info);
     dst.vht_mcs_nss = VhtMcsNss::FromFidl(fidl.vht_mcs_nss);
@@ -1433,8 +1382,7 @@ struct VhtCapabilities {
 // IEEE Std 802.11-2016, Figure 9-562
 struct BasicVhtMcsNss : public common::BitField<uint16_t> {
  public:
-  constexpr explicit BasicVhtMcsNss(uint16_t basic_mcs)
-      : common::BitField<uint16_t>(basic_mcs) {}
+  constexpr explicit BasicVhtMcsNss(uint16_t basic_mcs) : common::BitField<uint16_t>(basic_mcs) {}
   constexpr BasicVhtMcsNss() = default;
 
   WLAN_BIT_FIELD(ss1, 0, 2)
@@ -1471,8 +1419,7 @@ struct BasicVhtMcsNss : public common::BitField<uint16_t> {
     set_val(val() | mcs_val);
   }
 
-  static BasicVhtMcsNss FromFidl(
-      const ::fuchsia::wlan::mlme::BasicVhtMcsNss& fidl) {
+  static BasicVhtMcsNss FromFidl(const ::fuchsia::wlan::mlme::BasicVhtMcsNss& fidl) {
     BasicVhtMcsNss dst;
 
     for (uint8_t ss_num = 1; ss_num <= 8; ++ss_num) {
@@ -1527,8 +1474,7 @@ struct VhtOperation {
     return dst;
   }
 
-  static VhtOperation FromFidl(
-      const ::fuchsia::wlan::mlme::VhtOperation& fidl) {
+  static VhtOperation FromFidl(const ::fuchsia::wlan::mlme::VhtOperation& fidl) {
     VhtOperation dst;
 
     dst.vht_cbw = static_cast<VhtChannelBandwidth>(fidl.vht_cbw);
@@ -1570,18 +1516,14 @@ struct MpmPmk {
   uint8_t data[16];
 } __PACKED;
 
-SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs,
-                             const SupportedMcsSet& rhs);
-HtCapabilities IntersectHtCap(const HtCapabilities& lhs,
-                              const HtCapabilities& rhs);
-VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs,
-                                const VhtCapabilities& rhs);
+SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs, const SupportedMcsSet& rhs);
+HtCapabilities IntersectHtCap(const HtCapabilities& lhs, const HtCapabilities& rhs);
+VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs, const VhtCapabilities& rhs);
 
 // Find common legacy rates between AP and client.
 // The outcoming "Basic rates" follows those specified in AP
-std::vector<SupportedRate> IntersectRatesAp(
-    const std::vector<SupportedRate>& ap_rates,
-    const std::vector<SupportedRate>& client_rates);
+std::vector<SupportedRate> IntersectRatesAp(const std::vector<SupportedRate>& ap_rates,
+                                            const std::vector<SupportedRate>& client_rates);
 }  // namespace wlan
 
 #endif  // SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_H_

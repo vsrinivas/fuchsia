@@ -17,15 +17,11 @@ struct RequiredIes {
   bool have_mesh_config = false;
   bool have_mpm = false;
 
-  bool have_all() const {
-    return have_supp_rates && have_mesh_id && have_mesh_config && have_mpm;
-  }
+  bool have_all() const { return have_supp_rates && have_mesh_id && have_mesh_config && have_mpm; }
 };
 
-static void HandleCommonMpElement(element_id::ElementId id,
-                                  fbl::Span<const uint8_t> raw_body,
-                                  wlan_mlme::MeshPeeringCommon* out,
-                                  RequiredIes* required_ies) {
+static void HandleCommonMpElement(element_id::ElementId id, fbl::Span<const uint8_t> raw_body,
+                                  wlan_mlme::MeshPeeringCommon* out, RequiredIes* required_ies) {
   switch (id) {
     case element_id::kSuppRates:
       if (auto rates = common::ParseSupportedRates(raw_body)) {
@@ -53,8 +49,7 @@ static void HandleCommonMpElement(element_id::ElementId id,
       break;
     case element_id::kHtCapabilities:
       if (auto ht_cap = common::ParseHtCapabilities(raw_body)) {
-        out->ht_cap =
-            std::make_unique<wlan_mlme::HtCapabilities>(ht_cap->ToFidl());
+        out->ht_cap = std::make_unique<wlan_mlme::HtCapabilities>(ht_cap->ToFidl());
       }
       break;
     case element_id::kHtOperation:
@@ -64,14 +59,12 @@ static void HandleCommonMpElement(element_id::ElementId id,
       break;
     case element_id::kVhtCapabilities:
       if (auto vht_cap = common::ParseVhtCapabilities(raw_body)) {
-        out->vht_cap =
-            std::make_unique<wlan_mlme::VhtCapabilities>(vht_cap->ToFidl());
+        out->vht_cap = std::make_unique<wlan_mlme::VhtCapabilities>(vht_cap->ToFidl());
       }
       break;
     case element_id::kVhtOperation:
       if (auto vht_op = common::ParseVhtOperation(raw_body)) {
-        out->vht_op =
-            std::make_unique<wlan_mlme::VhtOperation>(vht_op->ToFidl());
+        out->vht_op = std::make_unique<wlan_mlme::VhtOperation>(vht_op->ToFidl());
       }
       break;
     default:
@@ -79,8 +72,7 @@ static void HandleCommonMpElement(element_id::ElementId id,
   }
 }
 
-static void ConvertMpmHeader(const MpmHeader& header,
-                             wlan_mlme::MeshPeeringCommon* out) {
+static void ConvertMpmHeader(const MpmHeader& header, wlan_mlme::MeshPeeringCommon* out) {
   out->protocol_id = header.protocol;
   out->local_link_id = header.local_link_id;
 }
@@ -109,8 +101,7 @@ bool ParseMpOpenAction(BufferReader* r, wlan_mlme::MeshPeeringOpenAction* out) {
 }
 
 // IEEE Std 802.11-2016, 9.6.16.3.2
-bool ParseMpConfirmAction(BufferReader* r,
-                          wlan_mlme::MeshPeeringConfirmAction* out) {
+bool ParseMpConfirmAction(BufferReader* r, wlan_mlme::MeshPeeringConfirmAction* out) {
   auto cap_info = r->Read<CapabilityInfo>();
   if (cap_info == nullptr) {
     return false;

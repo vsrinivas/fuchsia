@@ -5,12 +5,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MACADDR_MAP_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MACADDR_MAP_H_
 
+#include <unordered_map>
+
 #include <fbl/macros.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/macaddr.h>
 #include <zircon/types.h>
-
-#include <unordered_map>
 
 namespace wlan {
 
@@ -81,8 +81,7 @@ class MacAddrMap {
     }
 
     if (Lookup(addr)) {
-      debugf("[MacAddrMap-%u] Duplicate insert declined for Address: %s\n",
-             Type, MACSTR(addr));
+      debugf("[MacAddrMap-%u] Duplicate insert declined for Address: %s\n", Type, MACSTR(addr));
       return ZX_ERR_ALREADY_EXISTS;
     }
 

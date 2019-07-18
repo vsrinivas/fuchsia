@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cinttypes>
+#include <cstring>
+#include <sstream>
+
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/zx/time.h>
 #include <wlan/common/bitfield.h>
@@ -21,17 +25,12 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
-#include <cinttypes>
-#include <cstring>
-#include <sstream>
-
 namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
-ClientMlme::ClientMlme(DeviceInterface* device)
-    : device_(device), on_channel_handler_(this) {
+ClientMlme::ClientMlme(DeviceInterface* device) : device_(device), on_channel_handler_(this) {
   debugfn();
 }
 
@@ -44,28 +43,24 @@ zx_status_t ClientMlme::Init() {
   ObjectId timer_id;
   timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
   timer_id.set_target(to_enum_type(ObjectTarget::kChannelScheduler));
-  zx_status_t status =
-      device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
+  zx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
   if (status != ZX_OK) {
     errorf("could not create channel scheduler timer: %d\n", status);
     return status;
   }
-  chan_sched_.reset(
-      new ChannelScheduler(&on_channel_handler_, device_, std::move(timer)));
+  chan_sched_.reset(new ChannelScheduler(&on_channel_handler_, device_, std::move(timer)));
 
   fbl::unique_ptr<Timer> scanner_timer;
   ObjectId scanner_timer_id;
   scanner_timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
   scanner_timer_id.set_target(to_enum_type(ObjectTarget::kScanner));
-  status = device_->GetTimer(
-      ToPortKey(PortKeyType::kMlme, scanner_timer_id.val()), &scanner_timer);
+  status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, scanner_timer_id.val()), &scanner_timer);
   if (status != ZX_OK) {
     errorf("could not create scanner timer: %d\n", status);
     return status;
   }
 
-  scanner_.reset(
-      new Scanner(device_, chan_sched_.get(), std::move(scanner_timer)));
+  scanner_.reset(new Scanner(device_, chan_sched_.get(), std::move(scanner_timer)));
   return status;
 }
 
@@ -111,8 +106,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     Unjoin();
     return HandleMlmeJoinReq(*join_req);
   } else if (!join_ctx_.has_value()) {
-    warnf("rx'ed MLME message (ordinal: %lu) before synchronizing with a BSS\n",
-          msg.ordinal());
+    warnf("rx'ed MLME message (ordinal: %lu) before synchronizing with a BSS\n", msg.ordinal());
     return ZX_ERR_BAD_STATE;
   }
 
@@ -122,9 +116,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     if (sta_ != nullptr) {
       return sta_->SetKeys(setkeys_req->body()->keylist);
     } else {
-      warnf(
-          "rx'ed MLME message (ordinal: %lu) before authenticating with a BSS\n",
-          msg.ordinal());
+      warnf("rx'ed MLME message (ordinal: %lu) before authenticating with a BSS\n", msg.ordinal());
       return ZX_ERR_BAD_STATE;
     }
   }
@@ -139,8 +131,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     warnf(
         "rx'ed MLME msg (ordinal: %lu) with unexpected peer addr; expected: %s "
         "; actual: %s\n",
-        msg.ordinal(), join_ctx_->bssid().ToString().c_str(),
-        peer_addr->ToString().c_str());
+        msg.ordinal(), join_ctx_->bssid().ToString().c_str(), peer_addr->ToString().c_str());
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -149,20 +140,17 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     auto status = SpawnStation();
     if (status != ZX_OK) {
       errorf("error spawning STA: %d\n", status);
-      return service::SendAuthConfirm(
-          device_, join_ctx_->bssid(),
-          wlan_mlme::AuthenticateResultCodes::REFUSED);
+      return service::SendAuthConfirm(device_, join_ctx_->bssid(),
+                                      wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
 
     // Let station handle the request itself.
-    return sta_->Authenticate(auth_req->body()->auth_type,
-                              auth_req->body()->auth_failure_timeout);
+    return sta_->Authenticate(auth_req->body()->auth_type, auth_req->body()->auth_failure_timeout);
   }
 
   // If the STA exists, forward all incoming MLME messages.
   if (sta_ == nullptr) {
-    warnf("rx'ed MLME message (ordinal: %lu) before authenticating with a BSS\n",
-          msg.ordinal());
+    warnf("rx'ed MLME message (ordinal: %lu) before authenticating with a BSS\n", msg.ordinal());
     return ZX_ERR_BAD_STATE;
   }
 
@@ -174,13 +162,11 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     auto body = eapol_req->body();
     return sta_->SendEapolFrame(body->data, common::MacAddr(body->src_addr),
                                 common::MacAddr(body->dst_addr));
-  } else if (auto setctrlport_req =
-                 msg.As<wlan_mlme::SetControlledPortRequest>()) {
+  } else if (auto setctrlport_req = msg.As<wlan_mlme::SetControlledPortRequest>()) {
     sta_->UpdateControlledPort(setctrlport_req->body()->state);
     return ZX_OK;
   } else {
-    warnf("rx'ed unsupported MLME message for client; ordinal: %lu\n",
-          msg.ordinal());
+    warnf("rx'ed unsupported MLME message for client; ordinal: %lu\n", msg.ordinal());
     return ZX_ERR_BAD_STATE;
   }
 }
@@ -208,8 +194,7 @@ zx_status_t ClientMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
   }
 }
 
-zx_status_t ClientMlme::HandleMlmeJoinReq(
-    const MlmeMsg<wlan_mlme::JoinRequest>& req) {
+zx_status_t ClientMlme::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req) {
   debugfn();
 
   wlan_mlme::BSSDescription bss;
@@ -224,10 +209,9 @@ zx_status_t ClientMlme::HandleMlmeJoinReq(
   debugjoin("setting channel to %s\n", common::ChanStrLong(join_chan).c_str());
   status = chan_sched_->SetChannel(join_chan);
   if (status != ZX_OK) {
-    errorf("could not set WLAN channel to %s: %d\n",
-           common::ChanStrLong(join_chan).c_str(), status);
-    service::SendJoinConfirm(device_,
-                             wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
+    errorf("could not set WLAN channel to %s: %d\n", common::ChanStrLong(join_chan).c_str(),
+           status);
+    service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
     return status;
   }
 
@@ -241,8 +225,7 @@ zx_status_t ClientMlme::HandleMlmeJoinReq(
   if (status != ZX_OK) {
     errorf("error configuring BSS in driver; aborting: %d\n", status);
     // TODO(hahnr): JoinResultCodes needs to define better result codes.
-    return service::SendJoinConfirm(
-        device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
+    return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
   }
 
   join_ctx_ = std::move(join_ctx);
@@ -256,8 +239,7 @@ zx_status_t ClientMlme::SpawnStation() {
     return ZX_ERR_BAD_STATE;
   }
 
-  auto client =
-      CreateDefaultClient(device_, &join_ctx_.value(), chan_sched_.get());
+  auto client = CreateDefaultClient(device_, &join_ctx_.value(), chan_sched_.get());
   if (!client) {
     return ZX_ERR_INTERNAL;
   }
@@ -279,17 +261,14 @@ void ValidateOnChannelFrame(const Packet& pkt) {
   ZX_DEBUG_ASSERT(pkt.peer() == Packet::Peer::kWlan);
 }
 
-void ClientMlme::OnChannelHandlerImpl::HandleOnChannelFrame(
-    fbl::unique_ptr<Packet> packet) {
+void ClientMlme::OnChannelHandlerImpl::HandleOnChannelFrame(fbl::unique_ptr<Packet> packet) {
   debugfn();
   ValidateOnChannelFrame(*packet);
 
-  if (auto mgmt_frame =
-          MgmtFrameView<>::CheckType(packet.get()).CheckLength()) {
+  if (auto mgmt_frame = MgmtFrameView<>::CheckType(packet.get()).CheckLength()) {
     if (auto bcn_frame = mgmt_frame.CheckBodyType<Beacon>().CheckLength()) {
       mlme_->scanner_->HandleBeacon(bcn_frame);
-    } else if (auto probe_frame =
-                   mgmt_frame.CheckBodyType<ProbeResponse>().CheckLength()) {
+    } else if (auto probe_frame = mgmt_frame.CheckBodyType<ProbeResponse>().CheckLength()) {
       mlme_->scanner_->HandleProbeResponse(probe_frame);
     }
   }

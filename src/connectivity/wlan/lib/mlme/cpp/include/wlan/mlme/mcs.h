@@ -10,13 +10,11 @@
 
 namespace wlan {
 
-SupportedMcsSet IntersectMcs(
-    const SupportedMcsSet& lhs,
-    const ::fuchsia::wlan::mlme::SupportedMcsSet& fidl);
+SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs,
+                             const ::fuchsia::wlan::mlme::SupportedMcsSet& fidl);
 SupportedMcsSet IntersectMcs(const ::fuchsia::wlan::mlme::SupportedMcsSet& fidl,
                              const SupportedMcsSet& lhs);
-SupportedMcsSet SupportedMcsSetFromFidl(
-    const ::fuchsia::wlan::mlme::SupportedMcsSet& fidl);
+SupportedMcsSet SupportedMcsSetFromFidl(const ::fuchsia::wlan::mlme::SupportedMcsSet& fidl);
 
 }  // namespace wlan
 

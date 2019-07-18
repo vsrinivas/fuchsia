@@ -5,13 +5,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_MACADDR_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_MACADDR_H_
 
-#include <zircon/compiler.h>
-#include <zircon/types.h>
-
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <string>
+
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 namespace wlan {
 namespace common {
@@ -42,16 +42,14 @@ struct MacAddr {
 
   std::string ToString() const {
     char buf[17 + 1];
-    std::snprintf(buf, 17 + 1, "%02x:%02x:%02x:%02x:%02x:%02x", byte[0],
-                  byte[1], byte[2], byte[3], byte[4], byte[5]);
+    std::snprintf(buf, 17 + 1, "%02x:%02x:%02x:%02x:%02x:%02x", byte[0], byte[1], byte[2], byte[3],
+                  byte[4], byte[5]);
     return std::string(buf);
   }
 
   void Reset() { std::memset(byte, 0x00, kMacAddrLen); }
 
-  int Cmp(const MacAddr& addr) const {
-    return memcmp(byte, addr.byte, kMacAddrLen);
-  }
+  int Cmp(const MacAddr& addr) const { return memcmp(byte, addr.byte, kMacAddrLen); }
 
   // TODO(porce): inline
   bool operator==(const MacAddr& addr) const { return Cmp(addr) == 0; }
@@ -91,9 +89,8 @@ struct MacAddr {
     }
 
     // ISO 9542 MAC Group Addresses
-    if (byte[0] == 0x09 && byte[1] == 0x00 && byte[2] == 0x2b &&
-        byte[3] == 0x00 && byte[4] == 0x00 &&
-        (byte[5] == 0x04 || byte[5] == 0x05)) {
+    if (byte[0] == 0x09 && byte[1] == 0x00 && byte[2] == 0x2b && byte[3] == 0x00 &&
+        byte[4] == 0x00 && (byte[5] == 0x04 || byte[5] == 0x05)) {
       return true;
     }
 
@@ -108,9 +105,7 @@ struct MacAddr {
   // Overloaded initializers.
   void Set(const MacAddr& addr) { std::memcpy(byte, addr.byte, kMacAddrLen); }
   void Set(const std::string& addr) { FromStr(addr); }
-  void Set(const uint8_t addr[kMacAddrLen]) {
-    std::memcpy(byte, addr, kMacAddrLen);
-  }
+  void Set(const uint8_t addr[kMacAddrLen]) { std::memcpy(byte, addr, kMacAddrLen); }
   void Set(std::initializer_list<uint8_t> addr) {
     if (addr.size() == kMacAddrLen)
       std::copy(addr.begin(), addr.end(), byte);
@@ -124,9 +119,8 @@ struct MacAddr {
     }
 
     unsigned int tmp[kMacAddrLen];
-    int result =
-        std::sscanf(str.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x", &tmp[0],
-                    &tmp[1], &tmp[2], &tmp[3], &tmp[4], &tmp[5]);
+    int result = std::sscanf(str.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x", &tmp[0], &tmp[1],
+                             &tmp[2], &tmp[3], &tmp[4], &tmp[5]);
     if (kMacAddrLen != static_cast<size_t>(result)) {
       return false;
     }
@@ -145,15 +139,11 @@ struct MacAddr {
     return m;
   }
 
-  inline void* CopyTo(void* dst) const {
-    return memcpy(dst, byte, kMacAddrLen);
-  }
+  inline void* CopyTo(void* dst) const { return memcpy(dst, byte, kMacAddrLen); }
 } __PACKED;
 
 struct MacAddrHasher {
-  std::size_t operator()(const MacAddr& addr) const {
-    return std::hash<uint64_t>()(addr.ToU64());
-  }
+  std::size_t operator()(const MacAddr& addr) const { return std::hash<uint64_t>()(addr.ToU64()); }
 };
 
 // Defined in macaddr.cpp

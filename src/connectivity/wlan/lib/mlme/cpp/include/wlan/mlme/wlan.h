@@ -5,11 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_WLAN_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_WLAN_H_
 
-#include <wlan/common/from_bytes.h>
-
 #include <cstdint>
 #include <cstring>
 #include <type_traits>
+
+#include <wlan/common/from_bytes.h>
 
 namespace wlan {
 
@@ -37,8 +37,7 @@ static inline uint64_t ToPortKeyId(uint64_t key) { return key >> 8; }
 
 // enum class cast helper
 template <typename T>
-static constexpr inline typename std::underlying_type<T>::type to_enum_type(
-    T t) {
+static constexpr inline typename std::underlying_type<T>::type to_enum_type(T t) {
   return static_cast<typename std::underlying_type<T>::type>(t);
 }
 

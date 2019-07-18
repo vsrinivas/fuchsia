@@ -5,10 +5,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_PARSE_MAC_HEADER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_PARSE_MAC_HEADER_H_
 
+#include <optional>
+
 #include <wlan/common/buffer_reader.h>
 #include <wlan/common/mac_frame.h>
-
-#include <optional>
 
 namespace wlan {
 namespace common {

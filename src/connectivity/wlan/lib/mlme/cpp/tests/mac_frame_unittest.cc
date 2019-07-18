@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+#include <utility>
+
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <gtest/gtest.h>
 #include <wlan/common/buffer_writer.h>
@@ -10,9 +13,6 @@
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/wlan.h>
-
-#include <memory>
-#include <utility>
 
 #include "test_data.h"
 #include "test_utils.h"
@@ -37,9 +37,7 @@ struct TestHdr2 {
   uint8_t b;
   uint8_t c;
 
-  size_t len() const {
-    return sizeof(*this) + (has_padding ? k4BytePaddingLen : 0);
-  }
+  size_t len() const { return sizeof(*this) + (has_padding ? k4BytePaddingLen : 0); }
 } __PACKED;
 
 struct TestHdr3 {
@@ -68,9 +66,7 @@ struct TripleHdrFrame {
     return sizeof(TestHdr2) + padding_len + third_frame_len();
   }
   static constexpr size_t second_frame_body_len() { return third_frame_len(); }
-  static constexpr size_t third_frame_len() {
-    return sizeof(TestHdr3) + payload_len;
-  }
+  static constexpr size_t third_frame_len() { return sizeof(TestHdr3) + payload_len; }
   static constexpr size_t third_frame_body_len() { return payload_len; }
   static constexpr size_t len() { return sizeof(TripleHdrFrame); }
   static constexpr size_t body_len() { return second_frame_len(); }
@@ -177,18 +173,15 @@ TEST(Frame, RxInfo_MacFrame) {
   // Only MAC frames can hold rx_info;
   MgmtFrame<> mgmt_frame(std::move(pkt));
   ASSERT_TRUE(mgmt_frame.View().has_rx_info());
-  ASSERT_EQ(
-      memcmp(mgmt_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
+  ASSERT_EQ(memcmp(mgmt_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
 
   CtrlFrame<PsPollFrame> ctrl_frame(mgmt_frame.Take());
   ASSERT_TRUE(ctrl_frame.View().has_rx_info());
-  ASSERT_EQ(
-      memcmp(ctrl_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
+  ASSERT_EQ(memcmp(ctrl_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
 
   MgmtFrame<> data_frame(ctrl_frame.Take());
   ASSERT_TRUE(data_frame.View().has_rx_info());
-  ASSERT_EQ(
-      memcmp(data_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
+  ASSERT_EQ(memcmp(data_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
 }
 
 TEST(Frame, RxInfo_OtherFrame) {
@@ -228,8 +221,7 @@ TEST(Frame, RxInfo_PaddingAlignedBody) {
 
   DataFrame<> data_frame(std::move(pkt));
   ASSERT_TRUE(data_frame.View().has_rx_info());
-  ASSERT_EQ(
-      memcmp(data_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
+  ASSERT_EQ(memcmp(data_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
   ASSERT_EQ(data_frame.body_data()[0], 42);
 }
 
@@ -251,8 +243,7 @@ TEST(Frame, RxInfo_NoPaddingAlignedBody) {
 
   DataFrame<> data_frame(std::move(pkt));
   ASSERT_TRUE(data_frame.View().has_rx_info());
-  ASSERT_EQ(
-      memcmp(data_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
+  ASSERT_EQ(memcmp(data_frame.View().rx_info(), &rx_info, sizeof(wlan_rx_info_t)), 0);
   ASSERT_EQ(data_frame.body_data()[0], 42);
 }
 
@@ -290,8 +281,7 @@ TEST(Frame, AdvanceThroughAmsduFrame) {
   auto llc_frame = amsdu_llc_subframe1.SkipHeader();
   ASSERT_TRUE(llc_frame);
 
-  auto opt_amsdu_llc_subframe2 =
-      llc_frame.AdvanceBy(msdu_len + kPadding).As<AmsduSubframeHeader>();
+  auto opt_amsdu_llc_subframe2 = llc_frame.AdvanceBy(msdu_len + kPadding).As<AmsduSubframeHeader>();
   ASSERT_TRUE(opt_amsdu_llc_subframe2);
   auto amsdu_llc_subframe2 = opt_amsdu_llc_subframe2.CheckLength();
   ASSERT_TRUE(amsdu_llc_subframe2);
@@ -379,8 +369,8 @@ TEST(Frame, DdkConversion) {
   EXPECT_EQ(0, ieee_caps.radio_msmt());
   EXPECT_EQ(0x0020, ieee_caps.val());
 
-  ddk_caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
-             WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
+  ddk_caps =
+      WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE | WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
   ieee_caps = CapabilityInfo::FromDdk(ddk_caps);
   EXPECT_EQ(1, ieee_caps.short_preamble());
   EXPECT_EQ(0, ieee_caps.spectrum_mgmt());
@@ -396,13 +386,12 @@ TEST(Frame, ParseProbeRequests) {
 
   MgmtFrame<ProbeRequest> probe_req(std::move(pkt));
   uint8_t expected_ie_chain[] = {
-      0x00, 0x00, 0x01, 0x08, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c,
-      0x2d, 0x1a, 0xef, 0x01, 0x13, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x7f, 0x09, 0x04, 0x00, 0x0a, 0x02, 0x01, 0x00,
-      0x00, 0x40, 0x80, 0xbf, 0x0c, 0xb2, 0x79, 0x91, 0x33, 0xfa, 0xff, 0x0c,
-      0x03, 0xfa, 0xff, 0x0c, 0x03, 0xdd, 0x07, 0x00, 0x50, 0xf2, 0x08, 0x00,
-      0x23, 0x00, 0xff, 0x03, 0x02, 0x00, 0x1c};
+      0x00, 0x00, 0x01, 0x08, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c, 0x2d, 0x1a,
+      0xef, 0x01, 0x13, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7f, 0x09,
+      0x04, 0x00, 0x0a, 0x02, 0x01, 0x00, 0x00, 0x40, 0x80, 0xbf, 0x0c, 0xb2, 0x79, 0x91,
+      0x33, 0xfa, 0xff, 0x0c, 0x03, 0xfa, 0xff, 0x0c, 0x03, 0xdd, 0x07, 0x00, 0x50, 0xf2,
+      0x08, 0x00, 0x23, 0x00, 0xff, 0x03, 0x02, 0x00, 0x1c};
   EXPECT_RANGES_EQ(probe_req.body_data(), expected_ie_chain);
 }
 

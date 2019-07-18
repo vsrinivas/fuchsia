@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MAC_FRAME_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MAC_FRAME_H_
 
+#include <cstdint>
+
 #include <fbl/unique_ptr.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
@@ -15,8 +17,6 @@
 #include <wlan/mlme/packet.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-
-#include <cstdint>
 
 namespace wlan {
 
@@ -33,9 +33,7 @@ class VerifiedFrameType {
     return VerifiedFrameType<H, B>(frame);
   }
 
-  static VerifiedFrameType<H, B> Invalid() {
-    return VerifiedFrameType<H, B>(FrameView<H, B>());
-  }
+  static VerifiedFrameType<H, B> Invalid() { return VerifiedFrameType<H, B>(FrameView<H, B>()); }
 
   FrameView<H, B> CheckLength() const {
     if (!IsValid()) {
@@ -61,22 +59,19 @@ class VerifiedFrameType {
 template <typename Header, typename Body = UnknownBody>
 class FrameView {
  public:
-  explicit FrameView(const Packet* pkt, size_t offset = 0)
-      : data_offset_(offset), pkt_(pkt) {
+  explicit FrameView(const Packet* pkt, size_t offset = 0) : data_offset_(offset), pkt_(pkt) {
     ZX_DEBUG_ASSERT(pkt_ != nullptr);
     ZX_DEBUG_ASSERT(pkt->len() >= offset);
   }
 
   FrameView() : data_offset_(0), pkt_(nullptr) {}
 
-  static VerifiedFrameType<Header, Body> CheckType(const Packet* pkt,
-                                                   size_t offset = 0) {
+  static VerifiedFrameType<Header, Body> CheckType(const Packet* pkt, size_t offset = 0) {
     if (!is_valid_frame_type<Header, Body>(pkt, offset)) {
       return VerifiedFrameType<Header, Body>::Invalid();
     }
 
-    return VerifiedFrameType<Header, Body>::Valid(
-        FrameView<Header, Body>(pkt, offset));
+    return VerifiedFrameType<Header, Body>::Valid(FrameView<Header, Body>(pkt, offset));
   }
 
   template <typename NewBody>
@@ -176,8 +171,7 @@ class FrameView {
   const wlan_rx_info_t* rx_info() const {
     ZX_DEBUG_ASSERT(pkt_ != nullptr);
     ZX_DEBUG_ASSERT(has_rx_info());
-    static_assert(is_mac_hdr<Header>::value,
-                  "only MAC frame can carry rx_info");
+    static_assert(is_mac_hdr<Header>::value, "only MAC frame can carry rx_info");
 
     return pkt_->ctrl_data<wlan_rx_info_t>();
   }
@@ -219,13 +213,11 @@ class FrameView {
 template <typename Header, typename Body = UnknownBody>
 class Frame {
  public:
-  explicit Frame(fbl::unique_ptr<Packet> pkt)
-      : data_offset_(0), pkt_(std::move(pkt)) {
+  explicit Frame(fbl::unique_ptr<Packet> pkt) : data_offset_(0), pkt_(std::move(pkt)) {
     ZX_DEBUG_ASSERT(pkt_ != nullptr);
   }
 
-  Frame(size_t offset, fbl::unique_ptr<Packet> pkt)
-      : data_offset_(offset), pkt_(std::move(pkt)) {
+  Frame(size_t offset, fbl::unique_ptr<Packet> pkt) : data_offset_(offset), pkt_(std::move(pkt)) {
     ZX_DEBUG_ASSERT(pkt_ != nullptr);
   }
 

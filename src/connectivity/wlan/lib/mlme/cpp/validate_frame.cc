@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <array>
+
 #include <fbl/span.h>
 #include <wlan/common/buffer_reader.h>
 #include <wlan/common/mac_frame.h>
 #include <wlan/mlme/debug.h>
-
-#include <array>
 
 namespace wlan {
 
@@ -15,8 +15,7 @@ using namespace element_id;
 
 class ErrorAccumulator {
  public:
-  __attribute__((__format__(__printf__, 3, 4))) void Add(size_t offset,
-                                                         const char* fmt, ...) {
+  __attribute__((__format__(__printf__, 3, 4))) void Add(size_t offset, const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
 
@@ -41,13 +40,10 @@ struct AllowedElement {
   ElementId id;
   bool required;
 
-  constexpr AllowedElement(ElementId id, bool required = false)
-      : id(id), required(required) {}
+  constexpr AllowedElement(ElementId id, bool required = false) : id(id), required(required) {}
 };
 
-constexpr AllowedElement Required(ElementId id) {
-  return AllowedElement(id, true);
-}
+constexpr AllowedElement Required(ElementId id) { return AllowedElement(id, true); }
 
 // IEEE Std 802.11-2016, 9.3.3.3
 static constexpr AllowedElement kBeaconElements[] = {
@@ -368,33 +364,26 @@ static constexpr AllowedElement kTimingAdElements[] = {
     // clang-format on
 };
 
-static void ValidateFixedSizeElement(size_t offset,
-                                     fbl::Span<const uint8_t> body,
-                                     size_t expected_size,
-                                     const char* element_name,
+static void ValidateFixedSizeElement(size_t offset, fbl::Span<const uint8_t> body,
+                                     size_t expected_size, const char* element_name,
                                      ErrorAccumulator* errors) {
   if (body.size() != expected_size) {
-    errors->Add(offset,
-                "%s element has invalid length (%zu bytes vs %zu expected)",
-                element_name, body.size(), expected_size);
+    errors->Add(offset, "%s element has invalid length (%zu bytes vs %zu expected)", element_name,
+                body.size(), expected_size);
   }
 }
 
-static void ValidateElement(size_t offset, ElementId id,
-                            fbl::Span<const uint8_t> body,
+static void ValidateElement(size_t offset, ElementId id, fbl::Span<const uint8_t> body,
                             ErrorAccumulator* errors) {
   switch (id) {
     case kSsid:
       if (body.size() > 32) {
-        errors->Add(offset, "SSID element is too long (%zu bytes)",
-                    body.size());
+        errors->Add(offset, "SSID element is too long (%zu bytes)", body.size());
       }
       break;
     case kSuppRates:
       if (body.empty() || body.size() > 8) {
-        errors->Add(offset,
-                    "Supported Rates element has invalid length (%zu bytes)",
-                    body.size());
+        errors->Add(offset, "Supported Rates element has invalid length (%zu bytes)", body.size());
       }
       break;
     case kDsssParamSet:
@@ -405,14 +394,12 @@ static void ValidateElement(size_t offset, ElementId id,
       break;
     case kTim:
       if (body.size() < 4) {
-        errors->Add(offset, "TIM element is too short (%zu bytes)",
-                    body.size());
+        errors->Add(offset, "TIM element is too short (%zu bytes)", body.size());
       }
       break;
     case kCountry:
       if (body.size() < 3) {
-        errors->Add(offset, "Country element is too short (%zu bytes)",
-                    body.size());
+        errors->Add(offset, "Country element is too short (%zu bytes)", body.size());
       } else if (body.size() % 2 != 0) {
         errors->Add(offset, "Country element is not padded to even length");
       } else if (body.size() % 3 == 2) {
@@ -426,8 +413,7 @@ static void ValidateElement(size_t offset, ElementId id,
       break;
     case kMeshId:
       if (body.size() > 32) {
-        errors->Add(offset, "Mesh ID element is too long (%zu bytes)",
-                    body.size());
+        errors->Add(offset, "Mesh ID element is too long (%zu bytes)", body.size());
       }
       break;
     case kMeshConfiguration:
@@ -435,20 +421,15 @@ static void ValidateElement(size_t offset, ElementId id,
       break;
     case kMeshPeeringManagement:
       if (body.size() < 4) {
-        errors->Add(offset,
-                    "Mesh Peering Management element is too short (%zu bytes)",
+        errors->Add(offset, "Mesh Peering Management element is too short (%zu bytes)",
                     body.size());
       } else if (body.size() > 24) {
-        errors->Add(offset,
-                    "Mesh Peering Management element is too long (%zu bytes)",
-                    body.size());
+        errors->Add(offset, "Mesh Peering Management element is too long (%zu bytes)", body.size());
       } else {
         size_t opt = (body.size() - 4) % 16;
         if (opt != 0 && opt != 2 && opt != 4) {
-          errors->Add(
-              offset,
-              "Mesh Peering Management element has invalid length (%zu bytes)",
-              body.size());
+          errors->Add(offset, "Mesh Peering Management element has invalid length (%zu bytes)",
+                      body.size());
         }
       }
       break;
@@ -475,8 +456,7 @@ static void ValidateElement(size_t offset, ElementId id,
   }
 }
 
-static void ValidateElements(BufferReader* r,
-                             fbl::Span<const AllowedElement> allowed,
+static void ValidateElements(BufferReader* r, fbl::Span<const AllowedElement> allowed,
                              ErrorAccumulator* errors) {
   bool seen[allowed.size()];
   std::fill_n(seen, allowed.size(), false);
@@ -495,17 +475,15 @@ static void ValidateElements(BufferReader* r,
     auto id = static_cast<element_id::ElementId>(hdr->id);
     auto len = hdr->len;
 
-    auto it =
-        std::find_if(allowed.begin(), allowed.end(),
-                     [id](const AllowedElement& ae) { return ae.id == id; });
+    auto it = std::find_if(allowed.begin(), allowed.end(),
+                           [id](const AllowedElement& ae) { return ae.id == id; });
     if (it == allowed.end()) {
       errors->Add(hdr_offset, "Unexpected element ID %u", id);
     } else {
       size_t order = it - allowed.begin();
       if (order < prev_order) {
-        errors->Add(hdr_offset,
-                    "Wrong element order: %u is expected to appear before %u",
-                    id, prev_id);
+        errors->Add(hdr_offset, "Wrong element order: %u is expected to appear before %u", id,
+                    prev_id);
       }
       prev_order = order;
       prev_id = id;
@@ -518,8 +496,7 @@ static void ValidateElements(BufferReader* r,
 
     auto ie_body = r->Read(len);
     if (len > 0 && ie_body.empty()) {
-      errors->Add(hdr_offset + 1,
-                  "Element length %u exceeds the number of remaining bytes %zu",
+      errors->Add(hdr_offset + 1, "Element length %u exceeds the number of remaining bytes %zu",
                   len, r->RemainingBytes());
       break;
     }
@@ -529,19 +506,18 @@ static void ValidateElements(BufferReader* r,
 
   for (size_t i = 0; i < allowed.size(); ++i) {
     if (allowed[i].required && !seen[i]) {
-      errors->Add(r->ReadBytes() + r->RemainingBytes(),
-                  "Required element %u is not present", allowed[i].id);
+      errors->Add(r->ReadBytes() + r->RemainingBytes(), "Required element %u is not present",
+                  allowed[i].id);
     }
   }
 }
 
-static void ValidateFrameWithElements(
-    BufferReader* r, size_t fixed_header_len, const char* frame_name,
-    fbl::Span<const AllowedElement> allowed_elements,
-    ErrorAccumulator* errors) {
+static void ValidateFrameWithElements(BufferReader* r, size_t fixed_header_len,
+                                      const char* frame_name,
+                                      fbl::Span<const AllowedElement> allowed_elements,
+                                      ErrorAccumulator* errors) {
   if (fixed_header_len != 0 && r->Read(fixed_header_len).empty()) {
-    errors->Add(r->ReadBytes(),
-                "Expected a %s header but the frame is too short", frame_name);
+    errors->Add(r->ReadBytes(), "Expected a %s header but the frame is too short", frame_name);
     return;
   }
 
@@ -551,58 +527,49 @@ static void ValidateFrameWithElements(
 static void ValidateMgmtFrame(BufferReader* r, ErrorAccumulator* errors) {
   auto mgmt_header = r->Read<MgmtFrameHeader>();
   if (mgmt_header == nullptr) {
-    errors->Add(r->ReadBytes(),
-                "Frame is shorter than minimum mgmt header length");
+    errors->Add(r->ReadBytes(), "Frame is shorter than minimum mgmt header length");
     return;
   }
 
   if (mgmt_header->fc.HasHtCtrl()) {
     auto ht_ctrl = r->Read<HtControl>();
     if (ht_ctrl == nullptr) {
-      errors->Add(
-          r->ReadBytes(),
-          "FC indicates that HTC is present but the frame is too short");
+      errors->Add(r->ReadBytes(), "FC indicates that HTC is present but the frame is too short");
       return;
     }
   }
 
   switch (mgmt_header->fc.subtype()) {
     case kAssociationRequest:
-      ValidateFrameWithElements(r, sizeof(AssociationRequest),
-                                "Association Request", kAssocReqElements,
-                                errors);
+      ValidateFrameWithElements(r, sizeof(AssociationRequest), "Association Request",
+                                kAssocReqElements, errors);
       break;
     case kAssociationResponse:
-      ValidateFrameWithElements(r, sizeof(AssociationResponse),
-                                "Association Response", kAssocRespElements,
-                                errors);
+      ValidateFrameWithElements(r, sizeof(AssociationResponse), "Association Response",
+                                kAssocRespElements, errors);
       break;
     case kReassociationRequest:
-      ValidateFrameWithElements(r, sizeof(ReassociationRequest),
-                                "Reassociation Request", kReassocReqElements,
-                                errors);
+      ValidateFrameWithElements(r, sizeof(ReassociationRequest), "Reassociation Request",
+                                kReassocReqElements, errors);
       break;
     case kReassociationResponse:
-      ValidateFrameWithElements(r, sizeof(ReassociationResponse),
-                                "Reassociation Response", kReassocRespElements,
-                                errors);
+      ValidateFrameWithElements(r, sizeof(ReassociationResponse), "Reassociation Response",
+                                kReassocRespElements, errors);
       break;
     case kProbeRequest:
-      ValidateFrameWithElements(r, ProbeRequest::max_len(), "Probe Request",
-                                kProbeReqElements, errors);
+      ValidateFrameWithElements(r, ProbeRequest::max_len(), "Probe Request", kProbeReqElements,
+                                errors);
       break;
     case kProbeResponse:
-      ValidateFrameWithElements(r, sizeof(ProbeResponse), "Probe Response",
-                                kProbeRespElements, errors);
+      ValidateFrameWithElements(r, sizeof(ProbeResponse), "Probe Response", kProbeRespElements,
+                                errors);
       break;
     case kTimingAdvertisement:
-      ValidateFrameWithElements(r, sizeof(TimingAdvertisement),
-                                "Timing Advertisement", kTimingAdElements,
-                                errors);
+      ValidateFrameWithElements(r, sizeof(TimingAdvertisement), "Timing Advertisement",
+                                kTimingAdElements, errors);
       break;
     case kBeacon:
-      ValidateFrameWithElements(r, sizeof(Beacon), "Beacon", kBeaconElements,
-                                errors);
+      ValidateFrameWithElements(r, sizeof(Beacon), "Beacon", kBeaconElements, errors);
       break;
     case kAtim:
       if (r->RemainingBytes() > 0) {
@@ -610,8 +577,8 @@ static void ValidateMgmtFrame(BufferReader* r, ErrorAccumulator* errors) {
       }
       break;
     case kDisassociation:
-      ValidateFrameWithElements(r, sizeof(Disassociation), "Disassociation",
-                                kDisassocElements, errors);
+      ValidateFrameWithElements(r, sizeof(Disassociation), "Disassociation", kDisassocElements,
+                                errors);
       break;
     case kAuthentication:
       // This will report a false positive if we attempt to write an auth frame
@@ -619,12 +586,11 @@ static void ValidateMgmtFrame(BufferReader* r, ErrorAccumulator* errors) {
       // If we get there one day, we can delete this check (or write a proper
       // validator, which is probably not worth the effort, given how
       // complicated the encoding is).
-      ValidateFrameWithElements(r, sizeof(Authentication), "Authentication",
-                                kAuthElements, errors);
+      ValidateFrameWithElements(r, sizeof(Authentication), "Authentication", kAuthElements, errors);
       break;
     case kDeauthentication:
-      ValidateFrameWithElements(r, sizeof(Deauthentication), "Deauthentication",
-                                kDeauthElements, errors);
+      ValidateFrameWithElements(r, sizeof(Deauthentication), "Deauthentication", kDeauthElements,
+                                errors);
       break;
     case kAction:
     case kActionNoAck:
@@ -632,8 +598,7 @@ static void ValidateMgmtFrame(BufferReader* r, ErrorAccumulator* errors) {
   }
 }
 
-static void DoValidateFrame(fbl::Span<const uint8_t> data,
-                            ErrorAccumulator* errors) {
+static void DoValidateFrame(fbl::Span<const uint8_t> data, ErrorAccumulator* errors) {
   BufferReader r{data};
   auto fc = r.Peek<FrameControl>();
 

@@ -10,8 +10,7 @@
 namespace wlan {
 namespace common {
 
-bool IsTrafficBuffered(uint16_t aid, const TimHeader& tim_hdr,
-                       fbl::Span<const uint8_t> bitmap);
+bool IsTrafficBuffered(uint16_t aid, const TimHeader& tim_hdr, fbl::Span<const uint8_t> bitmap);
 
 std::optional<ParsedTim> FindAndParseTim(fbl::Span<const uint8_t> ies);
 

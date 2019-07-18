@@ -13,25 +13,18 @@ template <typename T>
 struct PartTraits {
   static constexpr size_t size_bytes(const T& t) { return sizeof(T); }
 
-  static void write(BufferWriter* w, const T& t) {
-    w->Write(as_bytes(fbl::Span<const T>{&t, 1u}));
-  }
+  static void write(BufferWriter* w, const T& t) { w->Write(as_bytes(fbl::Span<const T>{&t, 1u})); }
 };
 
 template <typename T>
 struct PartTraits<fbl::Span<T>> {
-  static constexpr size_t size_bytes(const fbl::Span<T>& t) {
-    return t.size_bytes();
-  }
+  static constexpr size_t size_bytes(const fbl::Span<T>& t) { return t.size_bytes(); }
 
-  static void write(BufferWriter* w, const fbl::Span<T>& t) {
-    w->Write(as_bytes(t));
-  }
+  static void write(BufferWriter* w, const fbl::Span<T>& t) { w->Write(as_bytes(t)); }
 };
 
 template <size_t PadTo, typename... T>
-void WriteWithPadding(BufferWriter* w, element_id::ElementId elem_id,
-                      const T&... parts) {
+void WriteWithPadding(BufferWriter* w, element_id::ElementId elem_id, const T&... parts) {
   w->WriteByte(elem_id);
 
   size_t total_size = (PartTraits<T>::size_bytes(parts) + ...);
@@ -60,8 +53,7 @@ void WriteSsid(BufferWriter* w, fbl::Span<const uint8_t> ssid) {
   Write(w, element_id::kSsid, ssid);
 }
 
-void WriteSupportedRates(BufferWriter* w,
-                         fbl::Span<const SupportedRate> supported_rates) {
+void WriteSupportedRates(BufferWriter* w, fbl::Span<const SupportedRate> supported_rates) {
   Write(w, element_id::kSuppRates, supported_rates);
 }
 
@@ -73,18 +65,16 @@ void WriteCfParamSet(BufferWriter* w, CfParamSet param_set) {
   Write(w, element_id::kCfParamSet, param_set);
 }
 
-void WriteTim(BufferWriter* w, TimHeader header,
-              fbl::Span<const uint8_t> bitmap) {
+void WriteTim(BufferWriter* w, TimHeader header, fbl::Span<const uint8_t> bitmap) {
   Write(w, element_id::kTim, header, bitmap);
 }
 
-void WriteCountry(BufferWriter* w, Country country,
-                  fbl::Span<SubbandTriplet> triplets) {
+void WriteCountry(BufferWriter* w, Country country, fbl::Span<SubbandTriplet> triplets) {
   WriteWithPadding<2>(w, element_id::kCountry, country, triplets);
 }
 
-void WriteExtendedSupportedRates(
-    BufferWriter* w, fbl::Span<const SupportedRate> ext_supported_rates) {
+void WriteExtendedSupportedRates(BufferWriter* w,
+                                 fbl::Span<const SupportedRate> ext_supported_rates) {
   Write(w, element_id::kExtSuppRates, ext_supported_rates);
 }
 
@@ -121,41 +111,36 @@ void WriteVhtOperation(BufferWriter* w, const VhtOperation& vht_op) {
 }
 
 void WriteMpmOpen(BufferWriter* w, MpmHeader mpm_header, const MpmPmk* pmk) {
-  auto pmk_bytes = pmk == nullptr ? fbl::Span<const uint8_t>{}
-                                  : fbl::Span<const uint8_t>{pmk->data};
+  auto pmk_bytes =
+      pmk == nullptr ? fbl::Span<const uint8_t>{} : fbl::Span<const uint8_t>{pmk->data};
   Write(w, element_id::kMeshPeeringManagement, mpm_header, pmk_bytes);
 }
 
-void WriteMpmConfirm(BufferWriter* w, MpmHeader mpm_header,
-                     uint16_t peer_link_id, const MpmPmk* pmk) {
-  auto pmk_bytes = pmk == nullptr ? fbl::Span<const uint8_t>{}
-                                  : fbl::Span<const uint8_t>{pmk->data};
-  Write(w, element_id::kMeshPeeringManagement, mpm_header, peer_link_id,
-        pmk_bytes);
+void WriteMpmConfirm(BufferWriter* w, MpmHeader mpm_header, uint16_t peer_link_id,
+                     const MpmPmk* pmk) {
+  auto pmk_bytes =
+      pmk == nullptr ? fbl::Span<const uint8_t>{} : fbl::Span<const uint8_t>{pmk->data};
+  Write(w, element_id::kMeshPeeringManagement, mpm_header, peer_link_id, pmk_bytes);
 }
 
 void WritePreq(BufferWriter* w, const PreqHeader& header,
-               const common::MacAddr* originator_external_addr,
-               const PreqMiddle& middle,
+               const common::MacAddr* originator_external_addr, const PreqMiddle& middle,
                fbl::Span<const PreqPerTarget> per_target) {
-  auto ext_bytes =
-      originator_external_addr == nullptr
-          ? fbl::Span<const uint8_t>{}
-          : fbl::Span<const uint8_t>{originator_external_addr->byte};
+  auto ext_bytes = originator_external_addr == nullptr
+                       ? fbl::Span<const uint8_t>{}
+                       : fbl::Span<const uint8_t>{originator_external_addr->byte};
   Write(w, element_id::kPreq, header, ext_bytes, middle, per_target);
 }
 
 void WritePrep(BufferWriter* w, const PrepHeader& header,
-               const common::MacAddr* target_external_addr,
-               const PrepTail& tail) {
+               const common::MacAddr* target_external_addr, const PrepTail& tail) {
   auto ext_bytes = target_external_addr == nullptr
                        ? fbl::Span<const uint8_t>{}
                        : fbl::Span<const uint8_t>{target_external_addr->byte};
   Write(w, element_id::kPrep, header, ext_bytes, tail);
 }
 
-void WritePerr(BufferWriter* w, const PerrHeader& header,
-               fbl::Span<const uint8_t> destinations) {
+void WritePerr(BufferWriter* w, const PerrHeader& header, fbl::Span<const uint8_t> destinations) {
   Write(w, element_id::kPerr, header, destinations);
 }
 

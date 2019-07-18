@@ -30,8 +30,7 @@ const MeshPath* PathTable::AddOrUpdatePath(const common::MacAddr& mesh_target,
   return p.first->second.get();
 }
 
-const MeshProxyInfo* PathTable::GetProxyInfo(
-    const common::MacAddr& target) const {
+const MeshProxyInfo* PathTable::GetProxyInfo(const common::MacAddr& target) const {
   auto it = proxy_info_by_dest_.find(target.ToU64());
   if (it == proxy_info_by_dest_.end()) {
     return nullptr;

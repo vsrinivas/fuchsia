@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <gtest/gtest.h>
 #include <wlan/common/element.h>
 #include <wlan/mlme/client/bss.h>
-
-#include <memory>
 
 namespace wlan {
 namespace {
@@ -204,8 +204,7 @@ TEST(FidlToElement, HtOperationFidlToBitField) {
   fidl.primary_chan = 169;
 
   auto* ht_op_info = &fidl.ht_op_info;
-  ht_op_info->secondary_chan_offset =
-      to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_ABOVE);
+  ht_op_info->secondary_chan_offset = to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_ABOVE);
   ht_op_info->sta_chan_width = to_enum_type(wlan_mlme::StaChanWidth::ANY);
   ht_op_info->rifs_mode = true;
   ht_op_info->ht_protect = to_enum_type(wlan_mlme::HtProtect::TWENTY_MHZ);
@@ -270,8 +269,7 @@ TEST(ElementToFidl, HtOperationToFidl) {
   EXPECT_EQ(fidl.primary_chan, 169);
 
   const auto& htoi = fidl.ht_op_info;
-  EXPECT_EQ(htoi.secondary_chan_offset,
-            to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_ABOVE));
+  EXPECT_EQ(htoi.secondary_chan_offset, to_enum_type(wlan_mlme::SecChanOffset::SECONDARY_ABOVE));
   EXPECT_EQ(htoi.sta_chan_width, to_enum_type(wlan_mlme::StaChanWidth::ANY));
   EXPECT_TRUE(htoi.rifs_mode);
   EXPECT_EQ(htoi.ht_protect, to_enum_type(wlan_mlme::HtProtect::TWENTY_MHZ));
@@ -286,8 +284,7 @@ TEST(ElementToFidl, HtOperationToFidl) {
   EXPECT_TRUE(htoi.pco_active);
   EXPECT_TRUE(htoi.pco_phase);
 
-  EXPECT_EQ(fidl.basic_mcs_set.rx_mcs_set,
-            static_cast<uint64_t>(0x89abcdef01234567));
+  EXPECT_EQ(fidl.basic_mcs_set.rx_mcs_set, static_cast<uint64_t>(0x89abcdef01234567));
 }
 
 TEST(FidlToElement, VhtOperationFidlToBitField) {
@@ -344,22 +341,14 @@ TEST(ElementToFidl, VhtOperationBitFieldToField) {
   EXPECT_EQ(fidl.center_freq_seg0, 155);
   EXPECT_EQ(fidl.center_freq_seg1, 169);
 
-  EXPECT_EQ(fidl.basic_mcs.max_mcs[0],
-            to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_8));
-  EXPECT_EQ(fidl.basic_mcs.max_mcs[1],
-            to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_9));
-  EXPECT_EQ(fidl.basic_mcs.max_mcs[2],
-            to_enum_type(wlan_mlme::VhtMcs::SET_NONE));
-  EXPECT_EQ(fidl.basic_mcs.max_mcs[3],
-            to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_9));
-  EXPECT_EQ(fidl.basic_mcs.max_mcs[4],
-            to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_8));
-  EXPECT_EQ(fidl.basic_mcs.max_mcs[5],
-            to_enum_type(wlan_mlme::VhtMcs::SET_NONE));
-  EXPECT_EQ(fidl.basic_mcs.max_mcs[6],
-            to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_8));
-  EXPECT_EQ(fidl.basic_mcs.max_mcs[7],
-            to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_9));
+  EXPECT_EQ(fidl.basic_mcs.max_mcs[0], to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_8));
+  EXPECT_EQ(fidl.basic_mcs.max_mcs[1], to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_9));
+  EXPECT_EQ(fidl.basic_mcs.max_mcs[2], to_enum_type(wlan_mlme::VhtMcs::SET_NONE));
+  EXPECT_EQ(fidl.basic_mcs.max_mcs[3], to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_9));
+  EXPECT_EQ(fidl.basic_mcs.max_mcs[4], to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_8));
+  EXPECT_EQ(fidl.basic_mcs.max_mcs[5], to_enum_type(wlan_mlme::VhtMcs::SET_NONE));
+  EXPECT_EQ(fidl.basic_mcs.max_mcs[6], to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_8));
+  EXPECT_EQ(fidl.basic_mcs.max_mcs[7], to_enum_type(wlan_mlme::VhtMcs::SET_0_TO_9));
 }
 
 }  // namespace

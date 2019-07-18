@@ -18,8 +18,7 @@ void RatesWriter::WriteExtendedSupportedRates(BufferWriter* w) const {
   // Don't write the Extended Supported Rates element if everything fits in
   // Supported rates
   if (all_rates_.size() > kMaxSupportedRatesLen) {
-    common::WriteExtendedSupportedRates(
-        w, all_rates_.subspan(kMaxSupportedRatesLen));
+    common::WriteExtendedSupportedRates(w, all_rates_.subspan(kMaxSupportedRatesLen));
   }
 }
 

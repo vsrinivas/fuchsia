@@ -47,8 +47,7 @@ std::optional<ParsedMeshDataHeader> ParseMeshDataHeader(BufferReader* r) {
   if (mac_header->qos_ctrl == nullptr) {
     return {};
   }
-  if ((mac_header->qos_ctrl->byte() & QosControl::kMeshControlPresentBit) ==
-      0) {
+  if ((mac_header->qos_ctrl->byte() & QosControl::kMeshControlPresentBit) == 0) {
     return {};
   }
 

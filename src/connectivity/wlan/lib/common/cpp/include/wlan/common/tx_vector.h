@@ -5,6 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_TX_VECTOR_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_TX_VECTOR_H_
 
+#include <cstdio>
+#include <optional>
+
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <lib/zx/time.h>
 #include <wlan/common/element.h>
@@ -12,9 +15,6 @@
 #include <wlan/protocol/mac.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
-
-#include <cstdio>
-#include <optional>
 
 namespace wlan {
 
@@ -34,8 +34,7 @@ static constexpr tx_vec_idx_t kStartIdx = 1 + kInvalidTxVectorIdx;
 static constexpr tx_vec_idx_t kHtStartIdx = kStartIdx;
 static constexpr tx_vec_idx_t kErpStartIdx = kHtStartIdx + kHtNumTxVector;
 static constexpr tx_vec_idx_t kDsssCckStartIdx = kErpStartIdx + kErpNumTxVector;
-static constexpr tx_vec_idx_t kMaxValidIdx =
-    kDsssCckStartIdx + kDsssCckNumTxVector - 1;
+static constexpr tx_vec_idx_t kMaxValidIdx = kDsssCckStartIdx + kDsssCckNumTxVector - 1;
 
 // Extend the definition of MCS index for ERP
 // OFDM/ERP-OFDM, represented by WLAN_INFO_PHY_TYPE_ERP:
@@ -64,8 +63,7 @@ struct TxVector {
   // For ERP, see FromSupportedRate() below (Fuchsia extension)
   uint8_t mcs_idx;
 
-  static zx_status_t FromSupportedRate(const SupportedRate& rate,
-                                       TxVector* tx_vec);
+  static zx_status_t FromSupportedRate(const SupportedRate& rate, TxVector* tx_vec);
   static zx_status_t FromIdx(tx_vec_idx_t idx, TxVector* tx_vec);
 
   bool IsValid() const;

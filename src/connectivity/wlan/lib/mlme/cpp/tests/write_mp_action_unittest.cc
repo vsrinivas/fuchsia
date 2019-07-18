@@ -42,9 +42,8 @@ TEST(WriteMpAction, Open) {
   wlan_mlme::MeshPeeringOpenAction a;
   a.common = FakeCommonFields();
 
-  WriteMpOpenActionFrame(
-      &buf.w,
-      MacHeaderWriter(common::MacAddr("a0:a1:a2:a3:a4:a5"), seq_mgr.get()), a);
+  WriteMpOpenActionFrame(&buf.w,
+                         MacHeaderWriter(common::MacAddr("a0:a1:a2:a3:a4:a5"), seq_mgr.get()), a);
 
   const uint8_t expected[] = {
       // Mgmt header
@@ -59,10 +58,10 @@ TEST(WriteMpAction, Open) {
       // Body
       0x20, 0x00,  // capability info. This is currently hard-coded to 0x0020
       1, 8, 0x81, 0x82, 0x83, 0x84, 0x05, 0x06, 0x07, 0x08,  // supported rates
-      50, 1, 0x09,                     // ext supported rates
-      114, 3, 'f', 'o', 'o',           // mesh id
-      113, 7, 1, 2, 3, 4, 5, 6, 7,     // mesh config
-      117, 4, 0x11, 0x22, 0x33, 0x44,  // MPM
+      50, 1, 0x09,                                           // ext supported rates
+      114, 3, 'f', 'o', 'o',                                 // mesh id
+      113, 7, 1, 2, 3, 4, 5, 6, 7,                           // mesh config
+      117, 4, 0x11, 0x22, 0x33, 0x44,                        // MPM
   };
   EXPECT_RANGES_EQ(expected, buf.w.WrittenData());
 }
@@ -77,8 +76,7 @@ TEST(WriteMpAction, Confirm) {
   a.aid = 0x8877;
 
   WriteMpConfirmActionFrame(
-      &buf.w,
-      MacHeaderWriter(common::MacAddr("a0:a1:a2:a3:a4:a5"), seq_mgr.get()), a);
+      &buf.w, MacHeaderWriter(common::MacAddr("a0:a1:a2:a3:a4:a5"), seq_mgr.get()), a);
 
   const uint8_t expected[] = {
       // Mgmt header
@@ -94,10 +92,10 @@ TEST(WriteMpAction, Confirm) {
       0x20, 0x00,  // capability info. This is currently hard-coded to 0x0020
       0x77, 0x88,  // aid
       1, 8, 0x81, 0x82, 0x83, 0x84, 0x05, 0x06, 0x07, 0x08,  // supported rates
-      50, 1, 0x09,                                // ext supported rates
-      114, 3, 'f', 'o', 'o',                      // mesh id
-      113, 7, 1, 2, 3, 4, 5, 6, 7,                // mesh config
-      117, 6, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66  // MPM
+      50, 1, 0x09,                                           // ext supported rates
+      114, 3, 'f', 'o', 'o',                                 // mesh id
+      113, 7, 1, 2, 3, 4, 5, 6, 7,                           // mesh config
+      117, 6, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66             // MPM
   };
   EXPECT_RANGES_EQ(expected, buf.w.WrittenData());
 }

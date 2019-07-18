@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
+#include <numeric>
+
 #include <gtest/gtest.h>
 #include <wlan/common/buffer_reader.h>
 #include <wlan/common/buffer_writer.h>
-
-#include <algorithm>
-#include <numeric>
 
 #include "test_utils.h"
 

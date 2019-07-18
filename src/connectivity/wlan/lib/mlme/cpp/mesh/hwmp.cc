@@ -44,13 +44,10 @@ bool HwmpSeqnoLessThan(uint32_t a, uint32_t b) {
   return static_cast<int32_t>(d) > 0;
 }
 
-static uint32_t MaxHwmpSeqno(uint32_t a, uint32_t b) {
-  return HwmpSeqnoLessThan(a, b) ? b : a;
-}
+static uint32_t MaxHwmpSeqno(uint32_t a, uint32_t b) { return HwmpSeqnoLessThan(a, b) ? b : a; }
 
 // See IEEE Std 802.11-2016, 14.10.8.4
-static bool ShouldUpdatePathToRemoteNode(const MeshPath* path,
-                                         uint32_t remote_hwmp_seqno,
+static bool ShouldUpdatePathToRemoteNode(const MeshPath* path, uint32_t remote_hwmp_seqno,
                                          uint32_t total_metric) {
   // No known path: definitely create one
   if (!path) {
@@ -58,8 +55,7 @@ static bool ShouldUpdatePathToRemoteNode(const MeshPath* path,
   }
 
   // Update if we got a more recent HWMP sequence number
-  if (path->hwmp_seqno &&
-      HwmpSeqnoLessThan(*path->hwmp_seqno, remote_hwmp_seqno)) {
+  if (path->hwmp_seqno && HwmpSeqnoLessThan(*path->hwmp_seqno, remote_hwmp_seqno)) {
     return true;
   }
 
@@ -79,31 +75,30 @@ static bool ShouldUpdatePathToRemoteNode(const MeshPath* path,
 //
 // Returns the mesh path to the remote node if it was updated and nullptr
 // otherwise.
-static const MeshPath* UpdateForwardingInfo(
-    PathTable* path_table, HwmpState* state,
-    const common::MacAddr& transmitter_addr, const common::MacAddr& remote_addr,
-    uint32_t remote_hwmp_seqno, uint32_t metric, uint32_t last_hop_metric,
-    unsigned hop_count, uint32_t lifetime_tu) {
+static const MeshPath* UpdateForwardingInfo(PathTable* path_table, HwmpState* state,
+                                            const common::MacAddr& transmitter_addr,
+                                            const common::MacAddr& remote_addr,
+                                            uint32_t remote_hwmp_seqno, uint32_t metric,
+                                            uint32_t last_hop_metric, unsigned hop_count,
+                                            uint32_t lifetime_tu) {
   zx::time expiration = state->timer_mgr.Now() + WLAN_TU(lifetime_tu);
   const MeshPath* ret = nullptr;
 
   // First, update the path information for the originator/destination node
   // (see the last two bullet points in 14.10.8.4)
   auto path = path_table->GetPath(remote_addr);
-  if (ShouldUpdatePathToRemoteNode(path, remote_hwmp_seqno,
-                                   metric + last_hop_metric)) {
+  if (ShouldUpdatePathToRemoteNode(path, remote_hwmp_seqno, metric + last_hop_metric)) {
     zx::time old_expiration = path ? path->expiration_time : zx::time{};
     // See Table 14-9, columns titled 'Forwarding information for originator
     // mesh STA' and 'Forwarding information for target mesh STA'.
-    ret = path_table->AddOrUpdatePath(
-        remote_addr,
-        MeshPath{
-            .next_hop = transmitter_addr,
-            .hwmp_seqno = {remote_hwmp_seqno},
-            .expiration_time = std::max(old_expiration, expiration),
-            .metric = metric + last_hop_metric,
-            .hop_count = hop_count + 1,
-        });
+    ret = path_table->AddOrUpdatePath(remote_addr,
+                                      MeshPath{
+                                          .next_hop = transmitter_addr,
+                                          .hwmp_seqno = {remote_hwmp_seqno},
+                                          .expiration_time = std::max(old_expiration, expiration),
+                                          .metric = metric + last_hop_metric,
+                                          .hop_count = hop_count + 1,
+                                      });
   }
 
   // Update the path information for the transmitter if it is different from the
@@ -114,15 +109,14 @@ static const MeshPath* UpdateForwardingInfo(
       zx::time old_expiration = path ? path->expiration_time : zx::time{};
       auto path_seqno = path ? path->hwmp_seqno : std::optional<uint32_t>{};
 
-      path_table->AddOrUpdatePath(
-          transmitter_addr,
-          MeshPath{
-              .next_hop = transmitter_addr,
-              .hwmp_seqno = path_seqno,
-              .expiration_time = std::max(old_expiration, expiration),
-              .metric = last_hop_metric,
-              .hop_count = 1,
-          });
+      path_table->AddOrUpdatePath(transmitter_addr,
+                                  MeshPath{
+                                      .next_hop = transmitter_addr,
+                                      .hwmp_seqno = path_seqno,
+                                      .expiration_time = std::max(old_expiration, expiration),
+                                      .metric = last_hop_metric,
+                                      .hop_count = 1,
+                                  });
     }
   }
 
@@ -144,11 +138,12 @@ struct SeqnoAndMetric {
 };
 
 // See IEEE Std 802.11-2016, 14.10.10.3, Cases A and C
-static fbl::unique_ptr<Packet> MakeOriginalPrep(
-    const MacHeaderWriter& header_writer,
-    const common::MacAddr& preq_transmitter_addr,
-    const PreqPerTarget& per_target, const common::ParsedPreq& preq,
-    const MeshPath& path_to_originator, SeqnoAndMetric target_info) {
+static fbl::unique_ptr<Packet> MakeOriginalPrep(const MacHeaderWriter& header_writer,
+                                                const common::MacAddr& preq_transmitter_addr,
+                                                const PreqPerTarget& per_target,
+                                                const common::ParsedPreq& preq,
+                                                const MeshPath& path_to_originator,
+                                                SeqnoAndMetric target_info) {
   auto packet = GetWlanPacket(kMaxHwmpFrameSize);
   if (!packet) {
     return {};
@@ -180,10 +175,10 @@ static fbl::unique_ptr<Packet> MakeOriginalPrep(
 }
 
 // See IEEE Std 802.11-2016, 14.10.9.3, Case E
-static fbl::unique_ptr<Packet> MakeForwardedPreq(
-    const MacHeaderWriter& mac_header_writer,
-    const common::ParsedPreq& incoming_preq, uint32_t last_hop_metric,
-    fbl::Span<const PreqPerTarget> to_forward) {
+static fbl::unique_ptr<Packet> MakeForwardedPreq(const MacHeaderWriter& mac_header_writer,
+                                                 const common::ParsedPreq& incoming_preq,
+                                                 uint32_t last_hop_metric,
+                                                 fbl::Span<const PreqPerTarget> to_forward) {
   auto packet = GetWlanPacket(kMaxHwmpFrameSize);
   if (!packet) {
     return {};
@@ -192,36 +187,31 @@ static fbl::unique_ptr<Packet> MakeForwardedPreq(
   mac_header_writer.WriteMeshMgmtHeader(&w, kAction, common::kBcastMac);
   w.Write<ActionFrame>()->category = action::kMesh;
   w.Write<MeshActionHeader>()->mesh_action = action::kHwmpMeshPathSelection;
-  common::WritePreq(
-      &w,
-      {
-          .flags = incoming_preq.header->flags,
-          .hop_count =
-              static_cast<uint8_t>(incoming_preq.header->hop_count + 1),
-          .element_ttl =
-              static_cast<uint8_t>(incoming_preq.header->element_ttl - 1),
-          .path_discovery_id = incoming_preq.header->path_discovery_id,
-          .originator_addr = incoming_preq.header->originator_addr,
-          .originator_hwmp_seqno = incoming_preq.header->originator_hwmp_seqno,
-      },
-      incoming_preq.originator_external_addr,
-      {
-          .lifetime = incoming_preq.middle->lifetime,
-          .metric = incoming_preq.middle->metric + last_hop_metric,
-          .target_count = static_cast<uint8_t>(to_forward.size()),
-      },
-      to_forward);
+  common::WritePreq(&w,
+                    {
+                        .flags = incoming_preq.header->flags,
+                        .hop_count = static_cast<uint8_t>(incoming_preq.header->hop_count + 1),
+                        .element_ttl = static_cast<uint8_t>(incoming_preq.header->element_ttl - 1),
+                        .path_discovery_id = incoming_preq.header->path_discovery_id,
+                        .originator_addr = incoming_preq.header->originator_addr,
+                        .originator_hwmp_seqno = incoming_preq.header->originator_hwmp_seqno,
+                    },
+                    incoming_preq.originator_external_addr,
+                    {
+                        .lifetime = incoming_preq.middle->lifetime,
+                        .metric = incoming_preq.middle->metric + last_hop_metric,
+                        .target_count = static_cast<uint8_t>(to_forward.size()),
+                    },
+                    to_forward);
   packet->set_len(w.WrittenBytes());
   return packet;
 }
 
 // See IEEE Std 802.11-2016, 14.10.9.4.3
 static void HandlePreq(const common::MacAddr& preq_transmitter_addr,
-                       const common::MacAddr& self_addr,
-                       const common::ParsedPreq& preq, uint32_t last_hop_metric,
-                       const MacHeaderWriter& mac_header_writer,
-                       HwmpState* state, PathTable* path_table,
-                       PacketQueue* packets_to_tx) {
+                       const common::MacAddr& self_addr, const common::ParsedPreq& preq,
+                       uint32_t last_hop_metric, const MacHeaderWriter& mac_header_writer,
+                       HwmpState* state, PathTable* path_table, PacketQueue* packets_to_tx) {
   // The spec (IEEE Std 802.11-2016, 14.10.9.4.2) suggests that we entirely
   // throw out the PREQ if it doesn't meet the "acceptance criteria",
   // e.g. if there is no known path to the target. This seems wrong: we could
@@ -229,10 +219,10 @@ static void HandlePreq(const common::MacAddr& preq_transmitter_addr,
   // transmitter and the originator. Also, the sentence refers to "THE" target
   // address of the PREQ element, whereas in fact a single PREQ element may
   // contain several target addresses.
-  auto path_to_originator = UpdateForwardingInfo(
-      path_table, state, preq_transmitter_addr, preq.header->originator_addr,
-      preq.header->originator_hwmp_seqno, preq.middle->metric, last_hop_metric,
-      preq.header->hop_count, preq.middle->lifetime);
+  auto path_to_originator =
+      UpdateForwardingInfo(path_table, state, preq_transmitter_addr, preq.header->originator_addr,
+                           preq.header->originator_hwmp_seqno, preq.middle->metric, last_hop_metric,
+                           preq.header->hop_count, preq.middle->lifetime);
   // The spec also suggests another case when we need to handle the PREQ:
   // the sequence number in the PREQ matches what we have cached for the target,
   // but we haven't seen the (originator_addr, path_discovery_id) pair yet.
@@ -251,23 +241,20 @@ static void HandlePreq(const common::MacAddr& preq_transmitter_addr,
       // TODO(gbonik): Also check if we are a proxy of target_addr
 
       // See IEEE Std 802.11-2016, 14.10.8.3, second bullet point
-      state->our_hwmp_seqno =
-          MaxHwmpSeqno(state->our_hwmp_seqno, t.target_hwmp_seqno) + 1;
-      if (auto packet = MakeOriginalPrep(
-              mac_header_writer, preq_transmitter_addr, t, preq,
-              *path_to_originator, SeqnoAndMetric::FromState(state))) {
+      state->our_hwmp_seqno = MaxHwmpSeqno(state->our_hwmp_seqno, t.target_hwmp_seqno) + 1;
+      if (auto packet = MakeOriginalPrep(mac_header_writer, preq_transmitter_addr, t, preq,
+                                         *path_to_originator, SeqnoAndMetric::FromState(state))) {
         packets_to_tx->Enqueue(std::move(packet));
       }
     } else {
       bool replied = false;
       if (!t.flags.target_only()) {
         auto path_to_target = path_table->GetPath(t.target_addr);
-        if (path_to_target != nullptr &&
-            path_to_target->hwmp_seqno.has_value() &&
+        if (path_to_target != nullptr && path_to_target->hwmp_seqno.has_value() &&
             path_to_target->expiration_time >= state->timer_mgr.Now()) {
-          auto packet = MakeOriginalPrep(
-              mac_header_writer, preq_transmitter_addr, t, preq,
-              *path_to_originator, SeqnoAndMetric::FromPath(path_to_target));
+          auto packet =
+              MakeOriginalPrep(mac_header_writer, preq_transmitter_addr, t, preq,
+                               *path_to_originator, SeqnoAndMetric::FromPath(path_to_target));
           if (packet) {
             packets_to_tx->Enqueue(std::move(packet));
           }
@@ -275,8 +262,7 @@ static void HandlePreq(const common::MacAddr& preq_transmitter_addr,
         }
       }
 
-      if (preq.header->element_ttl > 1 &&
-          num_to_forward < countof(to_forward)) {
+      if (preq.header->element_ttl > 1 && num_to_forward < countof(to_forward)) {
         to_forward[num_to_forward] = t;
         if (replied) {
           // See IEEE Std 802.11-2016, 14.10.9.3, case E2: since we already
@@ -295,61 +281,54 @@ static void HandlePreq(const common::MacAddr& preq_transmitter_addr,
   }
 
   if (num_to_forward > 0) {
-    if (auto packet =
-            MakeForwardedPreq(mac_header_writer, preq, last_hop_metric,
-                              {to_forward, num_to_forward})) {
+    if (auto packet = MakeForwardedPreq(mac_header_writer, preq, last_hop_metric,
+                                        {to_forward, num_to_forward})) {
       packets_to_tx->Enqueue(std::move(packet));
     }
   }
 }
 
 // See IEEE Std 802.11-2016, 14.10.10.3, Case B
-static fbl::unique_ptr<Packet> MakeForwardedPrep(
-    const MacHeaderWriter& mac_header_writer,
-    const common::ParsedPrep& incoming_prep, uint32_t last_hop_metric,
-    const MeshPath& path_to_originator) {
+static fbl::unique_ptr<Packet> MakeForwardedPrep(const MacHeaderWriter& mac_header_writer,
+                                                 const common::ParsedPrep& incoming_prep,
+                                                 uint32_t last_hop_metric,
+                                                 const MeshPath& path_to_originator) {
   auto packet = GetWlanPacket(kMaxHwmpFrameSize);
   if (!packet) {
     return {};
   }
   BufferWriter w(*packet);
-  mac_header_writer.WriteMeshMgmtHeader(&w, kAction,
-                                        path_to_originator.next_hop);
+  mac_header_writer.WriteMeshMgmtHeader(&w, kAction, path_to_originator.next_hop);
   w.Write<ActionFrame>()->category = action::kMesh;
   w.Write<MeshActionHeader>()->mesh_action = action::kHwmpMeshPathSelection;
-  common::WritePrep(
-      &w,
-      {
-          .flags = incoming_prep.header->flags,
-          .hop_count =
-              static_cast<uint8_t>(incoming_prep.header->hop_count + 1),
-          .element_ttl =
-              static_cast<uint8_t>(incoming_prep.header->element_ttl - 1),
-          .target_addr = incoming_prep.header->target_addr,
-          .target_hwmp_seqno = incoming_prep.header->target_hwmp_seqno,
-      },
-      incoming_prep.target_external_addr,
-      {
-          .lifetime = incoming_prep.tail->lifetime,
-          .metric = incoming_prep.tail->metric + last_hop_metric,
-          .originator_addr = incoming_prep.tail->originator_addr,
-          .originator_hwmp_seqno = incoming_prep.tail->originator_hwmp_seqno,
-      });
+  common::WritePrep(&w,
+                    {
+                        .flags = incoming_prep.header->flags,
+                        .hop_count = static_cast<uint8_t>(incoming_prep.header->hop_count + 1),
+                        .element_ttl = static_cast<uint8_t>(incoming_prep.header->element_ttl - 1),
+                        .target_addr = incoming_prep.header->target_addr,
+                        .target_hwmp_seqno = incoming_prep.header->target_hwmp_seqno,
+                    },
+                    incoming_prep.target_external_addr,
+                    {
+                        .lifetime = incoming_prep.tail->lifetime,
+                        .metric = incoming_prep.tail->metric + last_hop_metric,
+                        .originator_addr = incoming_prep.tail->originator_addr,
+                        .originator_hwmp_seqno = incoming_prep.tail->originator_hwmp_seqno,
+                    });
   packet->set_len(w.WrittenBytes());
   return packet;
 }
 
 // See IEEE Std 802.11-2016, 14.10.10.4.3
 static void HandlePrep(const common::MacAddr& prep_transmitter_addr,
-                       const common::MacAddr& self_addr,
-                       const common::ParsedPrep& prep, uint32_t last_hop_metric,
-                       const MacHeaderWriter& mac_header_writer,
-                       HwmpState* state, PathTable* path_table,
-                       PacketQueue* packets_to_tx) {
-  auto path_to_target = UpdateForwardingInfo(
-      path_table, state, prep_transmitter_addr, prep.header->target_addr,
-      prep.header->target_hwmp_seqno, prep.tail->metric, last_hop_metric,
-      prep.header->hop_count, prep.tail->lifetime);
+                       const common::MacAddr& self_addr, const common::ParsedPrep& prep,
+                       uint32_t last_hop_metric, const MacHeaderWriter& mac_header_writer,
+                       HwmpState* state, PathTable* path_table, PacketQueue* packets_to_tx) {
+  auto path_to_target =
+      UpdateForwardingInfo(path_table, state, prep_transmitter_addr, prep.header->target_addr,
+                           prep.header->target_hwmp_seqno, prep.tail->metric, last_hop_metric,
+                           prep.header->hop_count, prep.tail->lifetime);
   if (path_to_target == nullptr) {
     return;
   }
@@ -362,10 +341,9 @@ static void HandlePrep(const common::MacAddr& prep_transmitter_addr,
   }
 
   if (prep.tail->originator_addr != self_addr && prep.header->element_ttl > 1) {
-    if (auto path_to_originator =
-            path_table->GetPath(prep.tail->originator_addr)) {
-      if (auto packet = MakeForwardedPrep(
-              mac_header_writer, prep, last_hop_metric, *path_to_originator)) {
+    if (auto path_to_originator = path_table->GetPath(prep.tail->originator_addr)) {
+      if (auto packet =
+              MakeForwardedPrep(mac_header_writer, prep, last_hop_metric, *path_to_originator)) {
         packets_to_tx->Enqueue(std::move(packet));
       }
     }
@@ -376,10 +354,9 @@ static void HandlePrep(const common::MacAddr& prep_transmitter_addr,
 }
 
 // See IEEE Std 802.11-2016, 14.10.11.4.3
-static bool ShouldInvalidatePathByPerr(
-    const common::MacAddr& perr_transmitter_addr,
-    const common::ParsedPerrDestination& perr_dest, const PathTable* path_table,
-    uint32_t* out_hwmp_seqno) {
+static bool ShouldInvalidatePathByPerr(const common::MacAddr& perr_transmitter_addr,
+                                       const common::ParsedPerrDestination& perr_dest,
+                                       const PathTable* path_table, uint32_t* out_hwmp_seqno) {
   using Rc = ::fuchsia::wlan::mlme::ReasonCode;
 
   // PERR elements with an external address can only invalidate proxy
@@ -404,8 +381,7 @@ static bool ShouldInvalidatePathByPerr(
   // HWMP sequence value, instead of the "USN" flag like in PREQ. Zero is
   // otherwise a perfectly normal value of the HWMP sequence number which could
   // occur with the 32-bit counter rollover.
-  if (perr_dest.tail->reason_code ==
-          to_enum_type(Rc::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION) &&
+  if (perr_dest.tail->reason_code == to_enum_type(Rc::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION) &&
       perr_dest.header->hwmp_seqno == 0) {
     if (path->hwmp_seqno.has_value()) {
       *out_hwmp_seqno = *path->hwmp_seqno + 1;
@@ -416,10 +392,8 @@ static bool ShouldInvalidatePathByPerr(
   }
 
   // Case (c)
-  if (perr_dest.tail->reason_code ==
-          to_enum_type(Rc::MESH_PATH_ERROR_DESTINATION_UNREACHABLE) ||
-      perr_dest.tail->reason_code ==
-          to_enum_type(Rc::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION)) {
+  if (perr_dest.tail->reason_code == to_enum_type(Rc::MESH_PATH_ERROR_DESTINATION_UNREACHABLE) ||
+      perr_dest.tail->reason_code == to_enum_type(Rc::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION)) {
     if (!path->hwmp_seqno.has_value() ||
         HwmpSeqnoLessThan(*path->hwmp_seqno, perr_dest.header->hwmp_seqno)) {
       *out_hwmp_seqno = perr_dest.header->hwmp_seqno;
@@ -430,9 +404,8 @@ static bool ShouldInvalidatePathByPerr(
   return false;
 }
 
-static void WriteForwardedPerrDestination(
-    const common::ParsedPerrDestination& incoming, uint32_t new_hwmp_seqno,
-    BufferWriter* writer) {
+static void WriteForwardedPerrDestination(const common::ParsedPerrDestination& incoming,
+                                          uint32_t new_hwmp_seqno, BufferWriter* writer) {
   writer->WriteValue<PerrPerDestinationHeader>({
       .flags = incoming.header->flags,
       .dest_addr = incoming.header->dest_addr,
@@ -445,10 +418,10 @@ static void WriteForwardedPerrDestination(
 }
 
 // See IEEE Std 802.11-2016, 14.10.11.3, Case D
-static fbl::unique_ptr<Packet> MakeForwardedPerr(
-    const MacHeaderWriter& mac_header_writer,
-    const common::ParsedPerr& incoming_perr, uint8_t num_destinations,
-    fbl::Span<const uint8_t> destinations) {
+static fbl::unique_ptr<Packet> MakeForwardedPerr(const MacHeaderWriter& mac_header_writer,
+                                                 const common::ParsedPerr& incoming_perr,
+                                                 uint8_t num_destinations,
+                                                 fbl::Span<const uint8_t> destinations) {
   auto packet = GetWlanPacket(kMaxHwmpFrameSize);
   if (!packet) {
     return {};
@@ -464,8 +437,7 @@ static fbl::unique_ptr<Packet> MakeForwardedPerr(
   w.Write<MeshActionHeader>()->mesh_action = action::kHwmpMeshPathSelection;
   common::WritePerr(&w,
                     {
-                        .element_ttl = static_cast<uint8_t>(
-                            incoming_perr.header->element_ttl - 1),
+                        .element_ttl = static_cast<uint8_t>(incoming_perr.header->element_ttl - 1),
                         .num_destinations = num_destinations,
                     },
                     destinations);
@@ -473,11 +445,9 @@ static fbl::unique_ptr<Packet> MakeForwardedPerr(
   return packet;
 }
 
-static void HandlePerr(const common::MacAddr& perr_transmitter_addr,
-                       const common::ParsedPerr& perr,
-                       const MacHeaderWriter& mac_header_writer,
-                       HwmpState* state, PathTable* path_table,
-                       PacketQueue* packets_to_tx) {
+static void HandlePerr(const common::MacAddr& perr_transmitter_addr, const common::ParsedPerr& perr,
+                       const MacHeaderWriter& mac_header_writer, HwmpState* state,
+                       PathTable* path_table, PacketQueue* packets_to_tx) {
   if (perr.header->num_destinations > kPerrMaxDestinations) {
     return;
   }
@@ -499,8 +469,7 @@ static void HandlePerr(const common::MacAddr& perr_transmitter_addr,
     }
 
     uint32_t hwmp_seqno;
-    if (ShouldInvalidatePathByPerr(perr_transmitter_addr, *dest, path_table,
-                                   &hwmp_seqno)) {
+    if (ShouldInvalidatePathByPerr(perr_transmitter_addr, *dest, path_table, &hwmp_seqno)) {
       dests_to_invalidate[num_dests_to_invalidate++] = dest->header->dest_addr;
       WriteForwardedPerrDestination(*dest, hwmp_seqno, &to_forward);
       ++num_dests_to_forward;
@@ -523,9 +492,8 @@ static void HandlePerr(const common::MacAddr& perr_transmitter_addr,
   // Forward the frame
   if (num_dests_to_forward > 0 && perr.header->element_ttl > 1 &&
       state->perr_rate_limiter.RecordEvent(state->timer_mgr.Now())) {
-    if (auto packet =
-            MakeForwardedPerr(mac_header_writer, perr, num_dests_to_forward,
-                              to_forward.WrittenData())) {
+    if (auto packet = MakeForwardedPerr(mac_header_writer, perr, num_dests_to_forward,
+                                        to_forward.WrittenData())) {
       packets_to_tx->Enqueue(std::move(packet));
     }
   }
@@ -533,29 +501,27 @@ static void HandlePerr(const common::MacAddr& perr_transmitter_addr,
 
 PacketQueue HandleHwmpAction(fbl::Span<const uint8_t> elements,
                              const common::MacAddr& action_transmitter_addr,
-                             const common::MacAddr& self_addr,
-                             uint32_t last_hop_metric,
-                             const MacHeaderWriter& mac_header_writer,
-                             HwmpState* state, PathTable* path_table) {
+                             const common::MacAddr& self_addr, uint32_t last_hop_metric,
+                             const MacHeaderWriter& mac_header_writer, HwmpState* state,
+                             PathTable* path_table) {
   PacketQueue ret;
   for (auto [id, raw_body] : common::ElementSplitter(elements)) {
     switch (id) {
       case element_id::kPreq:
         if (auto preq = common::ParsePreq(raw_body)) {
-          HandlePreq(action_transmitter_addr, self_addr, *preq, last_hop_metric,
-                     mac_header_writer, state, path_table, &ret);
+          HandlePreq(action_transmitter_addr, self_addr, *preq, last_hop_metric, mac_header_writer,
+                     state, path_table, &ret);
         }
         break;
       case element_id::kPrep:
         if (auto prep = common::ParsePrep(raw_body)) {
-          HandlePrep(action_transmitter_addr, self_addr, *prep, last_hop_metric,
-                     mac_header_writer, state, path_table, &ret);
+          HandlePrep(action_transmitter_addr, self_addr, *prep, last_hop_metric, mac_header_writer,
+                     state, path_table, &ret);
         }
         break;
       case element_id::kPerr:
         if (auto perr = common::ParsePerr(raw_body)) {
-          HandlePerr(action_transmitter_addr, *perr, mac_header_writer, state,
-                     path_table, &ret);
+          HandlePerr(action_transmitter_addr, *perr, mac_header_writer, state, path_table, &ret);
         }
         break;
       default:
@@ -566,10 +532,11 @@ PacketQueue HandleHwmpAction(fbl::Span<const uint8_t> elements,
 }
 
 // IEEE Std 802.11-2016, 14.10.9.3, case A, Table 14-10
-static fbl::unique_ptr<Packet> MakeOriginalPreq(
-    const common::MacAddr& target_addr, const common::MacAddr& self_addr,
-    const MacHeaderWriter& mac_header_writer, uint32_t our_hwmp_seqno,
-    uint32_t path_discovery_id, const PathTable& path_table) {
+static fbl::unique_ptr<Packet> MakeOriginalPreq(const common::MacAddr& target_addr,
+                                                const common::MacAddr& self_addr,
+                                                const MacHeaderWriter& mac_header_writer,
+                                                uint32_t our_hwmp_seqno, uint32_t path_discovery_id,
+                                                const PathTable& path_table) {
   auto packet = GetWlanPacket(kMaxHwmpFrameSize);
   if (!packet) {
     return {};
@@ -582,8 +549,7 @@ static fbl::unique_ptr<Packet> MakeOriginalPreq(
   w.Write<MeshActionHeader>()->mesh_action = action::kHwmpMeshPathSelection;
 
   const MeshPath* path_to_target = path_table.GetPath(target_addr);
-  auto target_seqno =
-      path_to_target ? path_to_target->hwmp_seqno : std::optional<uint32_t>();
+  auto target_seqno = path_to_target ? path_to_target->hwmp_seqno : std::optional<uint32_t>();
 
   PreqPerTargetFlags target_flags;
   target_flags.set_target_only(kDot11MeshHWMPtargetOnly);
@@ -617,25 +583,21 @@ static fbl::unique_ptr<Packet> MakeOriginalPreq(
 }
 
 zx_status_t EmitOriginalPreq(const common::MacAddr& target_addr,
-                             HwmpState::TargetState* target_state,
-                             const common::MacAddr& self_addr,
-                             const MacHeaderWriter& mac_header_writer,
-                             HwmpState* state, const PathTable& path_table,
-                             PacketQueue* packets_to_tx) {
-  zx_status_t status = state->timer_mgr.Schedule(
-      state->timer_mgr.Now() + WLAN_TU(kDot11MeshHWMPpreqMinIntervalTu),
-      {target_addr}, &target_state->next_attempt);
+                             HwmpState::TargetState* target_state, const common::MacAddr& self_addr,
+                             const MacHeaderWriter& mac_header_writer, HwmpState* state,
+                             const PathTable& path_table, PacketQueue* packets_to_tx) {
+  zx_status_t status =
+      state->timer_mgr.Schedule(state->timer_mgr.Now() + WLAN_TU(kDot11MeshHWMPpreqMinIntervalTu),
+                                {target_addr}, &target_state->next_attempt);
   if (status != ZX_OK) {
-    errorf("[hwmp] failed to schedule a timer: %s\n",
-           zx_status_get_string(status));
+    errorf("[hwmp] failed to schedule a timer: %s\n", zx_status_get_string(status));
     return ZX_ERR_INTERNAL;
   }
   uint32_t our_hwmp_seqno = ++state->our_hwmp_seqno;
   uint32_t path_discovery_id = ++state->next_path_discovery_id;
   target_state->attempts_left -= 1;
-  if (auto packet =
-          MakeOriginalPreq(target_addr, self_addr, mac_header_writer,
-                           our_hwmp_seqno, path_discovery_id, path_table)) {
+  if (auto packet = MakeOriginalPreq(target_addr, self_addr, mac_header_writer, our_hwmp_seqno,
+                                     path_discovery_id, path_table)) {
     packets_to_tx->Enqueue(std::move(packet));
   }
   return ZX_OK;
@@ -643,9 +605,8 @@ zx_status_t EmitOriginalPreq(const common::MacAddr& target_addr,
 
 zx_status_t InitiatePathDiscovery(const common::MacAddr& target_addr,
                                   const common::MacAddr& self_addr,
-                                  const MacHeaderWriter& mac_header_writer,
-                                  HwmpState* state, const PathTable& path_table,
-                                  PacketQueue* packets_to_tx) {
+                                  const MacHeaderWriter& mac_header_writer, HwmpState* state,
+                                  const PathTable& path_table, PacketQueue* packets_to_tx) {
   auto it = state->state_by_target.find(target_addr.ToU64());
   if (it != state->state_by_target.end()) {
     it->second.attempts_left = kDot11MeshHWMPmaxPREQretries;
@@ -653,12 +614,10 @@ zx_status_t InitiatePathDiscovery(const common::MacAddr& target_addr,
   }
 
   it = state->state_by_target
-           .emplace(target_addr.ToU64(),
-                    HwmpState::TargetState{{}, kDot11MeshHWMPmaxPREQretries})
+           .emplace(target_addr.ToU64(), HwmpState::TargetState{{}, kDot11MeshHWMPmaxPREQretries})
            .first;
-  zx_status_t status =
-      EmitOriginalPreq(target_addr, &it->second, self_addr, mac_header_writer,
-                       state, path_table, packets_to_tx);
+  zx_status_t status = EmitOriginalPreq(target_addr, &it->second, self_addr, mac_header_writer,
+                                        state, path_table, packets_to_tx);
   if (status != ZX_OK) {
     state->state_by_target.erase(it);
   }
@@ -666,14 +625,11 @@ zx_status_t InitiatePathDiscovery(const common::MacAddr& target_addr,
 }
 
 zx_status_t HandleHwmpTimeout(const common::MacAddr& self_addr,
-                              const MacHeaderWriter& mac_header_writer,
-                              HwmpState* state, const PathTable& path_table,
-                              PacketQueue* packets_to_tx) {
-  return state->timer_mgr.HandleTimeout([&](auto now, auto event,
-                                            auto timeout_id) {
+                              const MacHeaderWriter& mac_header_writer, HwmpState* state,
+                              const PathTable& path_table, PacketQueue* packets_to_tx) {
+  return state->timer_mgr.HandleTimeout([&](auto now, auto event, auto timeout_id) {
     auto it = state->state_by_target.find(event.addr.ToU64());
-    if (it == state->state_by_target.end() ||
-        it->second.next_attempt != timeout_id) {
+    if (it == state->state_by_target.end() || it->second.next_attempt != timeout_id) {
       return;
     }
 
@@ -684,13 +640,11 @@ zx_status_t HandleHwmpTimeout(const common::MacAddr& self_addr,
       return;
     }
 
-    zx_status_t status =
-        EmitOriginalPreq(event.addr, &it->second, self_addr, mac_header_writer,
-                         state, path_table, packets_to_tx);
+    zx_status_t status = EmitOriginalPreq(event.addr, &it->second, self_addr, mac_header_writer,
+                                          state, path_table, packets_to_tx);
     if (status != ZX_OK) {
-      errorf(
-          "[hwmp] failed to schedule a path request frame transmission: %s\n",
-          zx_status_get_string(status));
+      errorf("[hwmp] failed to schedule a path request frame transmission: %s\n",
+             zx_status_get_string(status));
     }
   });
 }
@@ -698,8 +652,7 @@ zx_status_t HandleHwmpTimeout(const common::MacAddr& self_addr,
 // IEEE Std 802.11-2016, Case B
 PacketQueue OnMissingForwardingPath(const common::MacAddr& peer_to_notify,
                                     const common::MacAddr& missing_destination,
-                                    const MacHeaderWriter& mac_header_writer,
-                                    HwmpState* state) {
+                                    const MacHeaderWriter& mac_header_writer, HwmpState* state) {
   auto packet = GetWlanPacket(kMaxHwmpFrameSize);
   if (!packet) {
     return {};
@@ -718,8 +671,7 @@ PacketQueue OnMissingForwardingPath(const common::MacAddr& peer_to_notify,
   });
   destination_writer.WriteValue<PerrPerDestinationTail>(
       {.reason_code = static_cast<uint16_t>(
-           fuchsia::wlan::mlme::ReasonCode::
-               MESH_PATH_ERROR_NO_FORWARDING_INFORMATION)});
+           fuchsia::wlan::mlme::ReasonCode::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION)});
 
   BufferWriter w(*packet);
   mac_header_writer.WriteMeshMgmtHeader(&w, kAction, peer_to_notify);

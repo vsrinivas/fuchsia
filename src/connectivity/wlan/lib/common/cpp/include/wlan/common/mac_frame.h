@@ -5,8 +5,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_MAC_FRAME_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_MAC_FRAME_H_
 
-#include <ddk/hw/wlan/wlaninfo.h>
 #include <endian.h>
+
+#include <cstdint>
+#include <type_traits>
+
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <fbl/algorithm.h>
 #include <fbl/span.h>
 #include <lib/zx/time.h>
@@ -18,9 +22,6 @@
 #include <wlan/common/status_code.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-
-#include <cstdint>
-#include <type_traits>
 
 namespace wlan {
 
@@ -43,8 +44,7 @@ static constexpr zx::duration TimeUnit = zx::usec(1024);
 //
 template <typename T>
 static inline constexpr zx::duration WLAN_TU(T n) {
-  static_assert(std::is_unsigned<T>::value,
-                "Time unit must be an unsigned integer");
+  static_assert(std::is_unsigned<T>::value, "Time unit must be an unsigned integer");
   return TimeUnit * n;
 }
 
@@ -54,8 +54,7 @@ static inline constexpr zx::duration WLAN_TU(T n) {
 enum FrameType : uint8_t {
   kManagement = 0x00,
   kControl = 0x01,
-  kData =
-      0x02,  // TODO(porce): Distinguish from DataSubtype's kData by enum class.
+  kData = 0x02,  // TODO(porce): Distinguish from DataSubtype's kData by enum class.
   kExtension = 0x03,
 };
 
@@ -193,14 +192,11 @@ class CapabilityInfo : public common::BitField<uint16_t> {
   static CapabilityInfo FromDdk(uint32_t ddk_caps) {
     CapabilityInfo cap{};
 #define BITFLAG_TO_BIT(x, y) ((x & y) > 0 ? 1 : 0)
-    cap.set_short_preamble(
-        BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE));
-    cap.set_spectrum_mgmt(
-        BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT));
-    cap.set_short_slot_time(BITFLAG_TO_BIT(
-        ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME));
-    cap.set_radio_msmt(
-        BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT));
+    cap.set_short_preamble(BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE));
+    cap.set_spectrum_mgmt(BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT));
+    cap.set_short_slot_time(
+        BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME));
+    cap.set_radio_msmt(BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT));
 #undef BITFLAG_TO_BIT
     return cap;
   }
@@ -269,9 +265,7 @@ class FrameControl : public common::BitField<uint16_t> {
 // IEEE Std 802.11-2016, 9.3.3.2
 struct MgmtFrameHeader {
   static constexpr FrameType Type() { return FrameType::kManagement; }
-  static constexpr size_t max_len() {
-    return sizeof(MgmtFrameHeader) + kHtCtrlLen;
-  }
+  static constexpr size_t max_len() { return sizeof(MgmtFrameHeader) + kHtCtrlLen; }
 
   FrameControl fc;
   uint16_t duration;
@@ -306,9 +300,7 @@ struct MgmtFrameHeader {
 
 // IEEE Std 802.11-2016, 9.3.3.3
 struct Beacon {
-  static constexpr ManagementSubtype Subtype() {
-    return ManagementSubtype::kBeacon;
-  }
+  static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kBeacon; }
   static constexpr size_t max_len() { return sizeof(Beacon); }
 
   // 9.4.1.10
@@ -323,16 +315,12 @@ struct Beacon {
 
 // IEEE Std 802.11-2016, 9.3.3.10
 struct ProbeRequest : EmptyHdr {
-  static constexpr ManagementSubtype Subtype() {
-    return ManagementSubtype::kProbeRequest;
-  }
+  static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kProbeRequest; }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.11
 struct ProbeResponse {
-  static constexpr ManagementSubtype Subtype() {
-    return ManagementSubtype::kProbeResponse;
-  }
+  static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kProbeResponse; }
   static constexpr size_t max_len() { return sizeof(ProbeResponse); }
 
   // 9.4.1.10
@@ -357,9 +345,7 @@ enum AuthAlgorithm : uint16_t {
 
 // IEEE Std 802.11-2016, 9.3.3.12
 struct Authentication {
-  static constexpr ManagementSubtype Subtype() {
-    return ManagementSubtype::kAuthentication;
-  }
+  static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAuthentication; }
   static constexpr size_t max_len() { return sizeof(Authentication); }
 
   // 9.4.1.1
@@ -374,9 +360,7 @@ struct Authentication {
 
 // IEEE Std 802.11-2016, 9.3.3.13
 struct Deauthentication {
-  static constexpr ManagementSubtype Subtype() {
-    return ManagementSubtype::kDeauthentication;
-  }
+  static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kDeauthentication; }
   static constexpr size_t max_len() { return sizeof(Deauthentication); }
 
   // 9.4.1.7
@@ -387,9 +371,7 @@ struct Deauthentication {
 
 // IEEE Std 802.11-2016, 9.3.3.6
 struct AssociationRequest {
-  static constexpr ManagementSubtype Subtype() {
-    return ManagementSubtype::kAssociationRequest;
-  }
+  static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAssociationRequest; }
   static constexpr size_t max_len() { return sizeof(AssociationRequest); }
 
   // 9.4.1.4
@@ -404,9 +386,7 @@ constexpr uint16_t kAidMask = (1 << 11) - 1;
 
 // IEEE Std 802.11-2016, 9.3.3.7
 struct AssociationResponse {
-  static constexpr ManagementSubtype Subtype() {
-    return ManagementSubtype::kAssociationResponse;
-  }
+  static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAssociationResponse; }
   static constexpr size_t max_len() { return sizeof(AssociationResponse); }
 
   // 9.4.1.4
@@ -441,9 +421,7 @@ struct TimingAdvertisement {
 
 // IEEE Std 802.11-2016, 9.3.3.5
 struct Disassociation {
-  static constexpr ManagementSubtype Subtype() {
-    return ManagementSubtype::kDisassociation;
-  }
+  static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kDisassociation; }
   static constexpr size_t max_len() { return sizeof(Disassociation); }
 
   // 9.4.1.7
@@ -456,8 +434,7 @@ struct Disassociation {
 struct DataFrameHeader {
   static constexpr FrameType Type() { return FrameType::kData; }
   static constexpr size_t max_len() {
-    return sizeof(DataFrameHeader) + common::kMacAddrLen + kQosCtrlLen +
-           kHtCtrlLen;
+    return sizeof(DataFrameHeader) + common::kMacAddrLen + kQosCtrlLen + kHtCtrlLen;
   }
 
   FrameControl fc;
@@ -497,9 +474,7 @@ struct DataFrameHeader {
     return reinterpret_cast<const common::MacAddr*>(raw() + offset);
   }
 
-  common::MacAddr* addr4() {
-    return const_cast<common::MacAddr*>(const_this()->addr4());
-  }
+  common::MacAddr* addr4() { return const_cast<common::MacAddr*>(const_this()->addr4()); }
 
   const QosControl* qos_ctrl() const {
     if (!HasQosCtrl())
@@ -511,9 +486,7 @@ struct DataFrameHeader {
     return reinterpret_cast<const QosControl*>(raw() + offset);
   }
 
-  QosControl* qos_ctrl() {
-    return const_cast<QosControl*>(const_this()->qos_ctrl());
-  }
+  QosControl* qos_ctrl() { return const_cast<QosControl*>(const_this()->qos_ctrl()); }
 
   const HtControl* ht_ctrl() const {
     if (!fc.HasHtCtrl())
@@ -528,15 +501,11 @@ struct DataFrameHeader {
     return reinterpret_cast<const HtControl*>(raw() + offset);
   }
 
-  HtControl* ht_ctrl() {
-    return const_cast<HtControl*>(const_this()->ht_ctrl());
-  }
+  HtControl* ht_ctrl() { return const_cast<HtControl*>(const_this()->ht_ctrl()); }
 
  private:
   const uint8_t* raw() const { return reinterpret_cast<const uint8_t*>(this); }
-  const DataFrameHeader* const_this() {
-    return const_cast<const DataFrameHeader*>(this);
-  }
+  const DataFrameHeader* const_this() { return const_cast<const DataFrameHeader*>(this); }
 } __PACKED;
 
 struct NullDataHdr : public EmptyHdr {
@@ -602,9 +571,7 @@ struct LlcHeader {
   uint16_t protocol_id_be;  // In network byte order (big endian).
 
   uint16_t protocol_id() const { return be16toh(protocol_id_be); }
-  void set_protocol_id(uint16_t protocol_id) {
-    protocol_id_be = htobe16(protocol_id);
-  }
+  void set_protocol_id(uint16_t protocol_id) { protocol_id_be = htobe16(protocol_id); }
 
   constexpr size_t len() const { return sizeof(*this); }
   static constexpr size_t max_len() { return sizeof(LlcHeader); }
@@ -641,9 +608,7 @@ struct EthernetII {
   uint16_t ether_type_be;  // In network byte order (big endian).
 
   uint16_t ether_type() const { return be16toh(ether_type_be); }
-  void set_ether_type(uint16_t ether_type) {
-    ether_type_be = htobe16(ether_type);
-  }
+  void set_ether_type(uint16_t ether_type) { ether_type_be = htobe16(ether_type); }
 
   constexpr size_t len() const { return sizeof(*this); }
   static constexpr size_t max_len() { return sizeof(EthernetII); }
@@ -655,16 +620,13 @@ struct EapolHdr {
   uint8_t packet_type;
   uint16_t packet_body_length;
 
-  size_t get_packet_body_length() const {
-    return static_cast<size_t>(be16toh(packet_body_length));
-  }
+  size_t get_packet_body_length() const { return static_cast<size_t>(be16toh(packet_body_length)); }
 
   constexpr size_t len() const { return sizeof(*this); }
   static constexpr size_t max_len() { return sizeof(EapolHdr); }
 } __PACKED;
 
-CapabilityInfo IntersectCapInfo(const CapabilityInfo& lhs,
-                                const CapabilityInfo& rhs);
+CapabilityInfo IntersectCapInfo(const CapabilityInfo& lhs, const CapabilityInfo& rhs);
 
 }  // namespace wlan
 

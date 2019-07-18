@@ -5,19 +5,17 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_BUFFER_WRITER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_BUFFER_WRITER_H_
 
+#include <cstring>
+
 #include <fbl/span.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
-
-#include <cstring>
 
 namespace wlan {
 
 class BufferWriter {
  public:
-  explicit BufferWriter(fbl::Span<uint8_t> buf) : buf_(buf) {
-    ZX_ASSERT(buf.data() != nullptr);
-  }
+  explicit BufferWriter(fbl::Span<uint8_t> buf) : buf_(buf) { ZX_ASSERT(buf.data() != nullptr); }
 
   void WriteByte(uint8_t byte) {
     ZX_ASSERT(buf_.size() >= offset_ + 1);
@@ -52,9 +50,7 @@ class BufferWriter {
     offset_ += buf.size();
   }
 
-  fbl::Span<const uint8_t> WrittenData() const {
-    return buf_.subspan(0, offset_);
-  }
+  fbl::Span<const uint8_t> WrittenData() const { return buf_.subspan(0, offset_); }
   size_t WrittenBytes() const { return offset_; }
   size_t RemainingBytes() const { return buf_.size() - offset_; }
   fbl::Span<uint8_t> RemainingBuffer() { return buf_.subspan(offset_); }

@@ -72,18 +72,20 @@ wlan_info_band_info_t FakeBandInfo(wlan_info_band_t band) {
           {
               .ht_capability_info = 0x0063,
               .ampdu_params = 0x17,
-              .supported_mcs_set = {
-                  .bytes = {
-                      // Rx MCS bitmask
-                      // Supported MCS values: 0-7
-                      // clang-format off
+              .supported_mcs_set =
+                  {
+                      .bytes =
+                          {
+                              // Rx MCS bitmask
+                              // Supported MCS values: 0-7
+                              // clang-format off
                         0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                         0x00, 0x00, 0x00, 0x00,
                         // Tx parameters
                         0x01, 0x00, 0x00, 0x00,
-                      // clang-format on
+                              // clang-format on
+                          },
                   },
-              },
               .ht_ext_capabilities = 0x0000,
               .tx_beamforming_capabilities = 0x00000000,
               .asel_capabilities = 0x00,
@@ -104,7 +106,7 @@ wlan_info_band_info_t FakeBandInfo(wlan_info_band_t band) {
   } else {
     bi.supported_channels.base_freq = 2407;
     uint8_t fake[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS] = {1, 2, 3,  4,  5,  6,  7,
-                                           8, 9, 10, 11, 12, 13, 14};
+                                                         8, 9, 10, 11, 12, 13, 14};
     memcpy(bi.supported_channels.channels, fake,
            WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * sizeof(uint8_t));
 

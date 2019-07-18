@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
-#include <wlan/mlme/packet.h>
-
 #include <memory>
 #include <utility>
+
+#include <gtest/gtest.h>
+#include <wlan/mlme/packet.h>
 
 namespace wlan {
 namespace {

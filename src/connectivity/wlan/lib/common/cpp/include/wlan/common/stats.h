@@ -5,11 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_STATS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_STATS_H_
 
-#include <fuchsia/wlan/stats/cpp/fidl.h>
-#include <wlan/common/logging.h>
-
 #include <atomic>
 #include <string>
+
+#include <fuchsia/wlan/stats/cpp/fidl.h>
+#include <wlan/common/logging.h>
 
 namespace wlan {
 
@@ -36,13 +36,11 @@ struct Counter {
   std::atomic_uint64_t count{0};
   std::string name;  // Dynamically set at run-time
   ::fuchsia::wlan::stats::Counter ToFidl() const {
-    return ::fuchsia::wlan::stats::Counter{
-        .count = count.load(std::memory_order_relaxed), .name = name};
+    return ::fuchsia::wlan::stats::Counter{.count = count.load(std::memory_order_relaxed),
+                                           .name = name};
   }
   void Reset() { count = 0; }
-  uint64_t Inc(uint64_t i) {
-    return count.fetch_add(i, std::memory_order_relaxed);
-  }
+  uint64_t Inc(uint64_t i) { return count.fetch_add(i, std::memory_order_relaxed); }
 };
 
 struct PacketCounter {
@@ -53,13 +51,12 @@ struct PacketCounter {
   Counter out_bytes;
   Counter drop_bytes;
   ::fuchsia::wlan::stats::PacketCounter ToFidl() const {
-    return ::fuchsia::wlan::stats::PacketCounter{
-        .in = in.ToFidl(),
-        .out = out.ToFidl(),
-        .drop = drop.ToFidl(),
-        .in_bytes = in_bytes.ToFidl(),
-        .out_bytes = out_bytes.ToFidl(),
-        .drop_bytes = drop_bytes.ToFidl()};
+    return ::fuchsia::wlan::stats::PacketCounter{.in = in.ToFidl(),
+                                                 .out = out.ToFidl(),
+                                                 .drop = drop.ToFidl(),
+                                                 .in_bytes = in_bytes.ToFidl(),
+                                                 .out_bytes = out_bytes.ToFidl(),
+                                                 .drop_bytes = drop_bytes.ToFidl()};
   }
   void Reset() {
     in.Reset();
@@ -78,11 +75,10 @@ struct DispatcherStats {
   PacketCounter ctrl_frame;
   PacketCounter data_frame;
   ::fuchsia::wlan::stats::DispatcherStats ToFidl() const {
-    return ::fuchsia::wlan::stats::DispatcherStats{
-        .any_packet = any_packet.ToFidl(),
-        .mgmt_frame = mgmt_frame.ToFidl(),
-        .ctrl_frame = ctrl_frame.ToFidl(),
-        .data_frame = data_frame.ToFidl()};
+    return ::fuchsia::wlan::stats::DispatcherStats{.any_packet = any_packet.ToFidl(),
+                                                   .mgmt_frame = mgmt_frame.ToFidl(),
+                                                   .ctrl_frame = ctrl_frame.ToFidl(),
+                                                   .data_frame = data_frame.ToFidl()};
   }
   void Reset() {
     any_packet.Reset();
@@ -97,8 +93,7 @@ struct RssiStats {
   ::fuchsia::wlan::stats::RssiStats ToFidl() const {
     std::lock_guard<std::mutex> guard(lock);
     ::fuchsia::wlan::stats::RssiStats rssi_stats{};
-    rssi_stats.hist =
-        std::vector<uint64_t>(hist, hist + ::fuchsia::wlan::stats::RSSI_BINS);
+    rssi_stats.hist = std::vector<uint64_t>(hist, hist + ::fuchsia::wlan::stats::RSSI_BINS);
     return rssi_stats;
   }
   void Reset() {
@@ -134,14 +129,13 @@ struct ClientMlmeStats {
   RssiStats assoc_data_rssi;
   RssiStats beacon_rssi;
   ::fuchsia::wlan::stats::ClientMlmeStats ToFidl() const {
-    return ::fuchsia::wlan::stats::ClientMlmeStats{
-        .svc_msg = svc_msg.ToFidl(),
-        .data_frame = data_frame.ToFidl(),
-        .mgmt_frame = mgmt_frame.ToFidl(),
-        .tx_frame = tx_frame.ToFidl(),
-        .rx_frame = rx_frame.ToFidl(),
-        .assoc_data_rssi = assoc_data_rssi.ToFidl(),
-        .beacon_rssi = beacon_rssi.ToFidl()};
+    return ::fuchsia::wlan::stats::ClientMlmeStats{.svc_msg = svc_msg.ToFidl(),
+                                                   .data_frame = data_frame.ToFidl(),
+                                                   .mgmt_frame = mgmt_frame.ToFidl(),
+                                                   .tx_frame = tx_frame.ToFidl(),
+                                                   .rx_frame = rx_frame.ToFidl(),
+                                                   .assoc_data_rssi = assoc_data_rssi.ToFidl(),
+                                                   .beacon_rssi = beacon_rssi.ToFidl()};
   }
   void Reset() {
     svc_msg.Reset();

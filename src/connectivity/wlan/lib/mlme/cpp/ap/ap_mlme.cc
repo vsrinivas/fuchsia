@@ -58,28 +58,25 @@ zx_status_t ApMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
   return ZX_OK;
 }
 
-zx_status_t ApMlme::HandleMlmeStartReq(
-    const MlmeMsg<wlan_mlme::StartRequest>& req) {
+zx_status_t ApMlme::HandleMlmeStartReq(const MlmeMsg<wlan_mlme::StartRequest>& req) {
   debugfn();
 
   // Only one BSS can be started at a time.
   if (bss_ != nullptr) {
     debugf("BSS %s already running but received MLME-START.request\n",
            device_->GetState()->address().ToString().c_str());
-    return service::SendStartConfirm(
-        device_, wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED);
+    return service::SendStartConfirm(device_,
+                                     wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED);
   }
 
   ObjectId timer_id;
   timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
   timer_id.set_target(to_enum_type(ObjectTarget::kBss));
   fbl::unique_ptr<Timer> timer;
-  zx_status_t status =
-      device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
+  zx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
   if (status != ZX_OK) {
     errorf("Could not create bss timer: %s\n", zx_status_get_string(status));
-    return service::SendStartConfirm(
-        device_, wlan_mlme::StartResultCodes::INTERNAL_ERROR);
+    return service::SendStartConfirm(device_, wlan_mlme::StartResultCodes::INTERNAL_ERROR);
   }
 
   // Configure BSS in driver.
@@ -93,16 +90,13 @@ zx_status_t ApMlme::HandleMlmeStartReq(
 
   // Create and start BSS.
   auto bcn_sender = std::make_unique<BeaconSender>(device_);
-  bss_.reset(
-      new InfraBss(device_, std::move(bcn_sender), bssid, std::move(timer)));
+  bss_.reset(new InfraBss(device_, std::move(bcn_sender), bssid, std::move(timer)));
   bss_->Start(req);
 
-  return service::SendStartConfirm(device_,
-                                   wlan_mlme::StartResultCodes::SUCCESS);
+  return service::SendStartConfirm(device_, wlan_mlme::StartResultCodes::SUCCESS);
 }
 
-zx_status_t ApMlme::HandleMlmeStopReq(
-    const MlmeMsg<wlan_mlme::StopRequest>& req) {
+zx_status_t ApMlme::HandleMlmeStopReq(const MlmeMsg<wlan_mlme::StopRequest>& req) {
   debugfn();
 
   if (bss_ == nullptr) {
@@ -128,8 +122,6 @@ void ApMlme::HwIndication(uint32_t ind) {
 
 HtConfig ApMlme::Ht() const { return bss_->Ht(); }
 
-const fbl::Span<const SupportedRate> ApMlme::Rates() const {
-  return bss_->Rates();
-}
+const fbl::Span<const SupportedRate> ApMlme::Rates() const { return bss_->Rates(); }
 
 }  // namespace wlan

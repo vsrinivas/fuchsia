@@ -5,9 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_FROM_BYTES_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_FROM_BYTES_H_
 
-#include <fbl/span.h>
-
 #include <cstdint>
+
+#include <fbl/span.h>
 
 namespace wlan {
 template <typename T>

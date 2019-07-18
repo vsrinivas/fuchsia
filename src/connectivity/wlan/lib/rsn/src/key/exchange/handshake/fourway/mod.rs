@@ -441,7 +441,7 @@ mod tests {
 
         for update in update_sink {
             if let SecAssocUpdate::Key(_) = update {
-                 panic!("reinstalled key");
+                panic!("reinstalled key");
             }
         }
 

@@ -5,13 +5,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ACTION_FRAME_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ACTION_FRAME_H_
 
+#include <cstdint>
+
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element.h>
 #include <wlan/common/macaddr.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-
-#include <cstdint>
 
 namespace wlan {
 
@@ -111,9 +111,7 @@ enum MeshAction : uint8_t {
 // IEEE Std 802.11-2016, 9.6.5.2
 // TODO(hahnr): Rename all these to *Hdr rather than *Frame.
 struct AddBaRequestFrame {
-  static constexpr action::BaAction BlockAckAction() {
-    return action::BaAction::kAddBaRequest;
-  }
+  static constexpr action::BaAction BlockAckAction() { return action::BaAction::kAddBaRequest; }
   static constexpr size_t max_len() { return sizeof(AddBaRequestFrame); }
 
   uint8_t dialog_token;  // IEEE Std 802.11-2016, 9.4.1.12
@@ -132,14 +130,12 @@ struct AddBaRequestFrame {
 
 // IEEE Std 802.11-2016, 9.6.5.3
 struct AddBaResponseFrame {
-  static constexpr action::BaAction BlockAckAction() {
-    return action::BaAction::kAddBaResponse;
-  }
+  static constexpr action::BaAction BlockAckAction() { return action::BaAction::kAddBaResponse; }
   static constexpr size_t max_len() { return sizeof(AddBaResponseFrame); }
 
-  uint8_t dialog_token;  // IEEE Std 802.11-2016, 9.4.1.12
-  uint16_t status_code;  // TODO(porce): Refactor out mac_frame.h and use type
-                         // StatusCode.
+  uint8_t dialog_token;       // IEEE Std 802.11-2016, 9.4.1.12
+  uint16_t status_code;       // TODO(porce): Refactor out mac_frame.h and use type
+                              // StatusCode.
   BlockAckParameters params;  // 9.4.1.9
   uint16_t timeout;           // 9.4.1.15
 
@@ -162,14 +158,11 @@ class BlockAckDelBaParameters : public common::BitField<uint16_t> {
 
 // IEEE Std 802.11-2016, 9.6.5.4
 struct DelBaFrame {
-  static constexpr action::BaAction BlockAckAction() {
-    return action::BaAction::kDelBa;
-  }
+  static constexpr action::BaAction BlockAckAction() { return action::BaAction::kDelBa; }
   static constexpr size_t max_len() { return sizeof(DelBaFrame); }
 
   BlockAckDelBaParameters params;
-  uint16_t
-      reason_code;  // TODO(porce): Refactor mac_frame.h and use ReasonCode type
+  uint16_t reason_code;  // TODO(porce): Refactor mac_frame.h and use ReasonCode type
   ElementHeader gcr_elem_hdr;
   common::MacAddr gcr_group_addr;
 
@@ -182,9 +175,7 @@ struct DelBaFrame {
 
 // IEEE Std 802.11-2016, 9.6.5.1
 struct ActionFrameBlockAck {
-  static constexpr action::Category ActionCategory() {
-    return action::Category::kBlockAck;
-  }
+  static constexpr action::Category ActionCategory() { return action::Category::kBlockAck; }
   static constexpr size_t max_len() { return sizeof(ActionFrameBlockAck); }
 
   action::BaAction action;
@@ -194,12 +185,8 @@ struct ActionFrameBlockAck {
 
 // IEEE Std 802.11-2016, 9.6.16
 struct SelfProtectedActionHeader {
-  static constexpr action::Category ActionCategory() {
-    return action::Category::kSelfProtected;
-  }
-  static constexpr size_t max_len() {
-    return sizeof(SelfProtectedActionHeader);
-  }
+  static constexpr action::Category ActionCategory() { return action::Category::kSelfProtected; }
+  static constexpr size_t max_len() { return sizeof(SelfProtectedActionHeader); }
 
   action::SelfProtectedAction self_prot_action;
 
@@ -208,9 +195,7 @@ struct SelfProtectedActionHeader {
 
 // IEEE Std 802.11-2016, 9.6.17.1
 struct MeshActionHeader {
-  static constexpr action::Category ActionCategory() {
-    return action::Category::kMesh;
-  }
+  static constexpr action::Category ActionCategory() { return action::Category::kMesh; }
   static constexpr size_t max_len() { return sizeof(MeshActionHeader); }
 
   action::MeshAction mesh_action;

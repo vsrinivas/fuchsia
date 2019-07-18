@@ -21,8 +21,7 @@ class TrafficIndicationMap {
   void SetTrafficIndication(aid_t aid, bool has_bu);
 
   // Write a Partial Virtual Bitmap into the given buffer.
-  zx_status_t WritePartialVirtualBitmap(uint8_t* buf, size_t buf_len,
-                                        size_t* bitmap_len,
+  zx_status_t WritePartialVirtualBitmap(uint8_t* buf, size_t buf_len, size_t* bitmap_len,
                                         uint8_t* bitmap_offset) const;
   size_t BitmapLen() const;
   uint8_t BitmapOffset() const;

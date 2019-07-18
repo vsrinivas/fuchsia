@@ -56,14 +56,13 @@ TEST(TimElement, FindAndParseOk) {
 }
 
 TEST(TimElement, FindAndParseAbsent) {
-  auto tim = FindAndParseTim(
-      std::vector<uint8_t>({0, 3, 'f', 'o', 'o', 7, 3, 'A', 'B', 'C'}));
+  auto tim = FindAndParseTim(std::vector<uint8_t>({0, 3, 'f', 'o', 'o', 7, 3, 'A', 'B', 'C'}));
   ASSERT_FALSE(tim);
 }
 
 TEST(TimElement, FindAndParseInvalid) {
-  auto tim = FindAndParseTim(std::vector<uint8_t>(
-      {0, 3, 'f', 'o', 'o', 5, 2, 1, 2, 7, 3, 'A', 'B', 'C'}));
+  auto tim =
+      FindAndParseTim(std::vector<uint8_t>({0, 3, 'f', 'o', 'o', 5, 2, 1, 2, 7, 3, 'A', 'B', 'C'}));
   ASSERT_FALSE(tim);
 }
 

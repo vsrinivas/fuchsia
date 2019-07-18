@@ -5,6 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_AP_REMOTE_CLIENT_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_AP_REMOTE_CLIENT_H_
 
+#include <optional>
+#include <queue>
+
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
 #include <wlan/common/buffer_writer.h>
@@ -16,9 +19,6 @@
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer_manager.h>
 #include <zircon/types.h>
-
-#include <optional>
-#include <queue>
 
 namespace wlan {
 
@@ -47,8 +47,7 @@ class RemoteClient : public RemoteClientInterface {
   zx_status_t HandleMlmeMsg(const BaseMlmeMsg& mlme_msg) override;
   zx_status_t SendAuthentication(wlan_status_code result);
   zx_status_t SendAssociationResponse(aid_t aid, wlan_status_code result);
-  zx_status_t SendDeauthentication(
-      ::fuchsia::wlan::mlme::ReasonCode reason_code);
+  zx_status_t SendDeauthentication(::fuchsia::wlan::mlme::ReasonCode reason_code);
   zx_status_t SendAddBaRequest();
   zx_status_t SendAddBaResponse(const AddBaRequestFrame& rx_frame);
 
@@ -107,8 +106,7 @@ class BaseState {
 
 class DeauthenticatingState : public BaseState {
  public:
-  DeauthenticatingState(RemoteClient* client,
-                        ::fuchsia::wlan::mlme::ReasonCode reason_code,
+  DeauthenticatingState(RemoteClient* client, ::fuchsia::wlan::mlme::ReasonCode reason_code,
                         bool send_deauth_frame);
 
   void OnEnter() override;
@@ -140,8 +138,7 @@ class DeauthenticatedState : public BaseState {
     REAUTH,
   };
 
-  DeauthenticatedState(RemoteClient* client,
-                       DeauthenticatedState::MoveReason move_reason);
+  DeauthenticatedState(RemoteClient* client, DeauthenticatedState::MoveReason move_reason);
 
   void OnEnter() override;
 
@@ -219,8 +216,7 @@ class AssociatingState : public BaseState {
   static constexpr const char* kName = "Associating";
   static constexpr wlan_tu_t kAssociatingTimeoutTu = 60000;  // ~1 minute
 
-  zx_status_t FinalizeAssociationAttempt(std::optional<uint16_t> aid,
-                                         wlan_status_code status_code);
+  zx_status_t FinalizeAssociationAttempt(std::optional<uint16_t> aid, wlan_status_code status_code);
 
   TimeoutId assoc_timeout_;
 };
@@ -249,10 +245,8 @@ class AssociatedState : public BaseState {
   // TODO(NET-687): Find good BU limit.
   static constexpr size_t kMaxPowerSavingQueueSize = 30;
 
-  zx_status_t HandleMlmeEapolReq(
-      const MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>& req);
-  zx_status_t HandleMlmeDeauthReq(
-      const MlmeMsg<::fuchsia::wlan::mlme::DeauthenticateRequest>& req);
+  zx_status_t HandleMlmeEapolReq(const MlmeMsg<::fuchsia::wlan::mlme::EapolRequest>& req);
+  zx_status_t HandleMlmeDeauthReq(const MlmeMsg<::fuchsia::wlan::mlme::DeauthenticateRequest>& req);
 
   // TODO(hahnr): Use WLAN_MIN_TU once defined.
   static constexpr wlan_tu_t kInactivityTimeoutTu = 300000;  // ~5min

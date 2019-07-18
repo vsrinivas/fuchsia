@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <wlan/common/element.h>
-
 #include <set>
+
+#include <wlan/common/element.h>
 
 namespace wlan {
 
@@ -18,8 +18,7 @@ namespace wlan {
 #define SET_BITFIELD_AND(element, field) \
   element.set_##field(lhs.element.field() & rhs.element.field())
 
-SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs,
-                             const SupportedMcsSet& rhs) {
+SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs, const SupportedMcsSet& rhs) {
   // Find an intersection.
   // Perform bitwise-AND on bitmask fields, which represent MCS
   // Take minimum of numeric values
@@ -43,8 +42,7 @@ SupportedMcsSet IntersectMcs(const SupportedMcsSet& lhs,
 
 // Takes two HtCapabilities/VhtCapabilities, typically, one from the device and
 // the other from the air, and find the capabilities supported by both of them.
-HtCapabilities IntersectHtCap(const HtCapabilities& lhs,
-                              const HtCapabilities& rhs) {
+HtCapabilities IntersectHtCap(const HtCapabilities& lhs, const HtCapabilities& rhs) {
   auto htc = HtCapabilities{};
 
   auto& ht_cap_info = htc.ht_cap_info;
@@ -53,10 +51,8 @@ HtCapabilities IntersectHtCap(const HtCapabilities& lhs,
 
   // TODO(NET-1267): Revisit SM power save mode when necessary. IEEE
   // 802.11-2016 11.2.6
-  if (lhs.ht_cap_info.sm_power_save() ==
-          HtCapabilityInfo::SmPowerSave::DISABLED ||
-      rhs.ht_cap_info.sm_power_save() ==
-          HtCapabilityInfo::SmPowerSave::DISABLED) {
+  if (lhs.ht_cap_info.sm_power_save() == HtCapabilityInfo::SmPowerSave::DISABLED ||
+      rhs.ht_cap_info.sm_power_save() == HtCapabilityInfo::SmPowerSave::DISABLED) {
     ht_cap_info.set_sm_power_save(HtCapabilityInfo::SmPowerSave::DISABLED);
   } else {
     // Assuming a device supporting dynamic power save will support static power
@@ -87,12 +83,9 @@ HtCapabilities IntersectHtCap(const HtCapabilities& lhs,
   auto& ht_ext_cap = htc.ht_ext_cap;
   SET_BITFIELD_AND(ht_ext_cap, pco);
 
-  if (lhs.ht_ext_cap.pco_transition() ==
-          HtExtCapabilities::PcoTransitionTime::PCO_RESERVED ||
-      rhs.ht_ext_cap.pco_transition() ==
-          HtExtCapabilities::PcoTransitionTime::PCO_RESERVED) {
-    ht_ext_cap.set_pco_transition(
-        HtExtCapabilities::PcoTransitionTime::PCO_RESERVED);
+  if (lhs.ht_ext_cap.pco_transition() == HtExtCapabilities::PcoTransitionTime::PCO_RESERVED ||
+      rhs.ht_ext_cap.pco_transition() == HtExtCapabilities::PcoTransitionTime::PCO_RESERVED) {
+    ht_ext_cap.set_pco_transition(HtExtCapabilities::PcoTransitionTime::PCO_RESERVED);
   } else {
     SET_BITFIELD_MAX(ht_ext_cap, pco_transition);
   }
@@ -142,8 +135,7 @@ HtCapabilities IntersectHtCap(const HtCapabilities& lhs,
   return htc;
 }
 
-VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs,
-                                const VhtCapabilities& rhs) {
+VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs, const VhtCapabilities& rhs) {
   auto vhtc = VhtCapabilities{};
 
   auto& vht_cap_info = vhtc.vht_cap_info;
@@ -209,9 +201,8 @@ VhtCapabilities IntersectVhtCap(const VhtCapabilities& lhs,
 #undef SET_BITFIELD_MIN
 #undef SET_BITFIELD_MAX
 
-std::vector<SupportedRate> IntersectRatesAp(
-    const std::vector<SupportedRate>& ap_rates,
-    const std::vector<SupportedRate>& client_rates) {
+std::vector<SupportedRate> IntersectRatesAp(const std::vector<SupportedRate>& ap_rates,
+                                            const std::vector<SupportedRate>& client_rates) {
   std::set<SupportedRate> ap(ap_rates.cbegin(), ap_rates.cend());
   std::set<SupportedRate> client(client_rates.cbegin(), client_rates.cend());
 

@@ -5,9 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_RATE_LIMITER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_RATE_LIMITER_H_
 
-#include <lib/zx/time.h>
-
 #include <queue>
+
+#include <lib/zx/time.h>
 
 namespace wlan {
 

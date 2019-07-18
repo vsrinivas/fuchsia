@@ -5,6 +5,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_PACKET_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_PACKET_H_
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <string>
+#include <type_traits>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/slab_allocator.h>
 #include <fbl/span.h>
@@ -14,12 +20,6 @@
 #include <wlan/mlme/wlan.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
-
-#include <algorithm>
-#include <cstddef>
-#include <cstdint>
-#include <string>
-#include <type_traits>
 
 typedef struct ethernet_netbuf ethernet_netbuf_t;
 
@@ -62,10 +62,8 @@ constexpr size_t kSmallBufferSize = 256;
 template <typename, typename, typename, bool>
 class BufferDebugger;
 
-template <typename SmallSlabAllocator, typename LargeSlabAllocator,
-          typename HugeSlabAllocator>
-class BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator,
-                     true> {
+template <typename SmallSlabAllocator, typename LargeSlabAllocator, typename HugeSlabAllocator>
+class BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator, true> {
  public:
   static void Fail(Buffer::Size size) {
     // TODO(eyw): Use a timer to throttle logging
@@ -103,14 +101,11 @@ class BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator,
         "%zu/%zu/%zu/%zu, "
         "Large: %zu/%zu/%zu/%zu, Huge: %zu/%zu/%zu/%zu\n",
         SmallSlabAllocator::obj_count(), SmallSlabAllocator::max_obj_count(),
-        SmallSlabAllocator::slab_count() * kSmallBuffers,
-        kSmallSlabs * kSmallBuffers, LargeSlabAllocator::obj_count(),
-        LargeSlabAllocator::max_obj_count(),
-        LargeSlabAllocator::slab_count() * kLargeBuffers,
-        kLargeSlabs * kLargeBuffers, HugeSlabAllocator::obj_count(),
-        HugeSlabAllocator::max_obj_count(),
-        HugeSlabAllocator::slab_count() * kHugeBuffers,
-        kHugeSlabs * kHugeBuffers);
+        SmallSlabAllocator::slab_count() * kSmallBuffers, kSmallSlabs * kSmallBuffers,
+        LargeSlabAllocator::obj_count(), LargeSlabAllocator::max_obj_count(),
+        LargeSlabAllocator::slab_count() * kLargeBuffers, kLargeSlabs * kLargeBuffers,
+        HugeSlabAllocator::obj_count(), HugeSlabAllocator::max_obj_count(),
+        HugeSlabAllocator::slab_count() * kHugeBuffers, kHugeSlabs * kHugeBuffers);
   }
 
  private:
@@ -119,25 +114,20 @@ class BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator,
   static bool is_exhausted_huge_;
 };
 
-template <typename SmallSlabAllocator, typename LargeSlabAllocator,
-          typename HugeSlabAllocator>
+template <typename SmallSlabAllocator, typename LargeSlabAllocator, typename HugeSlabAllocator>
 bool BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator,
                     true>::is_exhausted_small_ = false;
 
-template <typename SmallSlabAllocator, typename LargeSlabAllocator,
-          typename HugeSlabAllocator>
+template <typename SmallSlabAllocator, typename LargeSlabAllocator, typename HugeSlabAllocator>
 bool BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator,
                     true>::is_exhausted_large_ = false;
 
-template <typename SmallSlabAllocator, typename LargeSlabAllocator,
-          typename HugeSlabAllocator>
+template <typename SmallSlabAllocator, typename LargeSlabAllocator, typename HugeSlabAllocator>
 bool BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator,
                     true>::is_exhausted_huge_ = false;
 
-template <typename SmallSlabAllocator, typename LargeSlabAllocator,
-          typename HugeSlabAllocator>
-class BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator,
-                     false> {
+template <typename SmallSlabAllocator, typename LargeSlabAllocator, typename HugeSlabAllocator>
+class BufferDebugger<SmallSlabAllocator, LargeSlabAllocator, HugeSlabAllocator, false> {
  public:
   static void Fail(...) {}
   static void PrintCounters() {}
@@ -165,25 +155,24 @@ class FixedBuffer : public Buffer {
 };
 }  // namespace internal
 
-constexpr size_t kSlabOverhead =
-    16;  // overhead for the slab allocator as a whole
+constexpr size_t kSlabOverhead = 16;  // overhead for the slab allocator as a whole
 
 template <size_t NumBuffers, size_t BufferSize>
 class SlabBuffer;
 template <size_t NumBuffers, size_t BufferSize>
-using SlabBufferTraits = fbl::StaticSlabAllocatorTraits<
-    fbl::unique_ptr<SlabBuffer<NumBuffers, BufferSize>>,
-    sizeof(internal::FixedBuffer<BufferSize>) * NumBuffers + kSlabOverhead,
-    ::fbl::Mutex, kBufferDebugEnabled>;
+using SlabBufferTraits =
+    fbl::StaticSlabAllocatorTraits<fbl::unique_ptr<SlabBuffer<NumBuffers, BufferSize>>,
+                                   sizeof(internal::FixedBuffer<BufferSize>) * NumBuffers +
+                                       kSlabOverhead,
+                                   ::fbl::Mutex, kBufferDebugEnabled>;
 
 // A SlabBuffer is an implementation of a Buffer that comes from a
 // fbl::SlabAllocator. The size of the internal::FixedBuffer and the number of
 // buffers is part of the typename of the SlabAllocator, so the SlabBuffer
 // itself is also templated on these parameters.
 template <size_t NumBuffers, size_t BufferSize>
-class SlabBuffer final
-    : public internal::FixedBuffer<BufferSize>,
-      public fbl::SlabAllocated<SlabBufferTraits<NumBuffers, BufferSize>> {};
+class SlabBuffer final : public internal::FixedBuffer<BufferSize>,
+                         public fbl::SlabAllocated<SlabBufferTraits<NumBuffers, BufferSize>> {};
 
 using HugeBufferTraits = SlabBufferTraits<kHugeBuffers, kHugeBufferSize>;
 using LargeBufferTraits = SlabBufferTraits<kLargeBuffers, kLargeBufferSize>;
@@ -250,19 +239,15 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
 
   template <typename T>
   const T* ctrl_data() const {
-    static_assert(std::is_standard_layout<T>::value,
-                  "Control data must have standard layout");
-    static_assert(kCtrlSize >= sizeof(T),
-                  "Control data type too large for Buffer ctrl_data field");
+    static_assert(std::is_standard_layout<T>::value, "Control data must have standard layout");
+    static_assert(kCtrlSize >= sizeof(T), "Control data type too large for Buffer ctrl_data field");
     return FromBytes<T>(buffer_->ctrl(), ctrl_len_);
   }
 
   template <typename T>
   void CopyCtrlFrom(const T& t) {
-    static_assert(std::is_standard_layout<T>::value,
-                  "Control data must have standard layout");
-    static_assert(kCtrlSize >= sizeof(T),
-                  "Control data type too large for Buffer ctrl_data field");
+    static_assert(std::is_standard_layout<T>::value, "Control data must have standard layout");
+    static_assert(kCtrlSize >= sizeof(T), "Control data type too large for Buffer ctrl_data field");
     std::memcpy(buffer_->ctrl(), &t, sizeof(T));
     ctrl_len_ = sizeof(T);
   }

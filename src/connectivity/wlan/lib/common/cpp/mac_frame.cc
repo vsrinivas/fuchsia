@@ -9,8 +9,7 @@
 
 namespace wlan {
 
-CapabilityInfo IntersectCapInfo(const CapabilityInfo& lhs,
-                                const CapabilityInfo& rhs) {
+CapabilityInfo IntersectCapInfo(const CapabilityInfo& lhs, const CapabilityInfo& rhs) {
   auto cap_info = CapabilityInfo{};
 
   cap_info.set_ess(lhs.ess() & rhs.ess());
@@ -26,10 +25,8 @@ CapabilityInfo IntersectCapInfo(const CapabilityInfo& lhs,
   cap_info.set_short_slot_time(lhs.short_slot_time() & rhs.short_slot_time());
   cap_info.set_apsd(lhs.apsd() & rhs.apsd());
   cap_info.set_radio_msmt(lhs.radio_msmt() & rhs.radio_msmt());
-  cap_info.set_delayed_block_ack(lhs.delayed_block_ack() &
-                                 rhs.delayed_block_ack());
-  cap_info.set_immediate_block_ack(lhs.immediate_block_ack() &
-                                   rhs.immediate_block_ack());
+  cap_info.set_delayed_block_ack(lhs.delayed_block_ack() & rhs.delayed_block_ack());
+  cap_info.set_immediate_block_ack(lhs.immediate_block_ack() & rhs.immediate_block_ack());
 
   return cap_info;
 }

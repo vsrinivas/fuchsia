@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cstring>
+
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
@@ -20,8 +22,6 @@
 #include <wlan/protocol/mac.h>
 #include <zircon/status.h>
 
-#include <cstring>
-
 #include "mock_device.h"
 #include "test_bss.h"
 #include "test_utils.h"
@@ -33,24 +33,21 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace {
 
 const uint8_t kBeacon[] = {
-    0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02,
-    0x03, 0x04, 0x05, 0x06, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x10, 0x00,
-    0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, 0x00, 0x01, 0x00,
-    0x00, 0x09, 0x74, 0x65, 0x73, 0x74, 0x20, 0x73, 0x73, 0x69, 0x64,
+    0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x10, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x64, 0x00, 0x01, 0x00, 0x00, 0x09, 0x74, 0x65, 0x73, 0x74, 0x20, 0x73, 0x73, 0x69, 0x64,
 };
 
 const uint8_t kHiddenApBeacon[] = {
-    0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02,
-    0x03, 0x04, 0x05, 0x06, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x10, 0x00,
-    0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, 0x00, 0x01, 0x00,
-    0x00, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x10, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x64, 0x00, 0x01, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
 const uint8_t kProbeResponse[] = {
-    0x50, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02,
-    0x03, 0x04, 0x05, 0x06, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x10, 0x00,
-    0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, 0x00, 0x01, 0x00,
-    0x00, 0x09, 0x74, 0x65, 0x73, 0x74, 0x20, 0x73, 0x73, 0x69, 0x64,
+    0x50, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x10, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x64, 0x00, 0x01, 0x00, 0x00, 0x09, 0x74, 0x65, 0x73, 0x74, 0x20, 0x73, 0x73, 0x69, 0x64,
 };
 
 struct MockOnChannelHandler : OnChannelHandler {
@@ -62,16 +59,14 @@ struct MockOnChannelHandler : OnChannelHandler {
 class ScannerTest : public ::testing::Test {
  public:
   ScannerTest()
-      : chan_sched_(&on_channel_handler_, &mock_dev_,
-                    mock_dev_.CreateTimer(1u)),
+      : chan_sched_(&on_channel_handler_, &mock_dev_, mock_dev_.CreateTimer(1u)),
         scanner_(&mock_dev_, &chan_sched_, mock_dev_.CreateTimer(1u)) {
     mock_dev_.SetChannel(wlan_channel_t{.primary = 11, .cbw = CBW20});
   }
 
  protected:
   zx_status_t Start(wlan_mlme::ScanRequest&& req) {
-    return scanner_.Start(
-        {std::move(req), fuchsia_wlan_mlme_MLMEOnScanResultOrdinal});
+    return scanner_.Start({std::move(req), fuchsia_wlan_mlme_MLMEOnScanResultOrdinal});
   }
 
   fbl::unique_ptr<wlan::Packet> CreatePacket(fbl::Span<const uint8_t> data) {
@@ -90,8 +85,7 @@ class ScannerTest : public ::testing::Test {
     return packet;
   }
 
-  void AssertScanResult(const MlmeMsg<wlan_mlme::ScanResult>& msg,
-                        common::MacAddr bssid) {
+  void AssertScanResult(const MlmeMsg<wlan_mlme::ScanResult>& msg, common::MacAddr bssid) {
     wlan_mlme::BSSDescription bss;
     msg.body()->bss.Clone(&bss);
 
@@ -111,8 +105,8 @@ class ScannerTest : public ::testing::Test {
   }
 
   void AssertScanEnd(wlan_mlme::ScanResultCodes expected_code) {
-    auto scan_ends = mock_dev_.GetServiceMsgs<wlan_mlme::ScanEnd>(
-        fuchsia_wlan_mlme_MLMEOnScanEndOrdinal);
+    auto scan_ends =
+        mock_dev_.GetServiceMsgs<wlan_mlme::ScanEnd>(fuchsia_wlan_mlme_MLMEOnScanEndOrdinal);
     ASSERT_EQ(scan_ends.size(), 1ULL);
     EXPECT_EQ(123u, scan_ends[0].body()->txn_id);
     EXPECT_EQ(expected_code, scan_ends[0].body()->code);
@@ -222,8 +216,8 @@ TEST_F(ScannerTest, PassiveScanning) {
   chan_sched_.HandleIncomingFrame(std::move(packet));
   chan_sched_.HandleTimeout();
 
-  auto results = mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(
-      fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
+  auto results =
+      mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
   ASSERT_EQ(results.size(), 1ULL);
   common::MacAddr frame_bssid({0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
   AssertScanResult(results[0], frame_bssid);
@@ -254,8 +248,7 @@ TEST_F(ScannerTest, ActiveScanning) {
       0x00, 0x00,                           // ssid IE
       0x01, 0x06, 12, 24, 48, 54, 96, 108,  // supported rates IE
   };
-  EXPECT_RANGES_EQ(fbl::Span<const uint8_t>(frame.data(), frame.len()),
-                   expected);
+  EXPECT_RANGES_EQ(fbl::Span<const uint8_t>(frame.data(), frame.len()), expected);
 
   // Mock receiving a probe response during scan. Verify that scan result is
   // constructed.
@@ -264,8 +257,8 @@ TEST_F(ScannerTest, ActiveScanning) {
   chan_sched_.HandleIncomingFrame(std::move(packet));
   chan_sched_.HandleTimeout();
 
-  auto results = mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(
-      fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
+  auto results =
+      mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
   ASSERT_EQ(results.size(), 1ULL);
   common::MacAddr frame_bssid({0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
   AssertScanResult(results[0], frame_bssid);
@@ -292,8 +285,8 @@ TEST_F(ScannerTest, BeaconFromHiddenAp) {
   mock_dev_.SetTime(zx::time(1));
   chan_sched_.HandleTimeout();
 
-  auto results = mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(
-      fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
+  auto results =
+      mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
   ASSERT_EQ(results.size(), 1ULL);
   common::MacAddr frame_bssid({0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
   AssertScanResult(results[0], frame_bssid);

@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <utility>
+
 #include <wlan/mlme/timer.h>
 #include <zircon/system/public/zircon/assert.h>
 
-#include <utility>
-
 namespace wlan {
 
-Timer::Timer(TimerScheduler* scheduler, uint64_t id)
-    : scheduler_(scheduler), id_(id) {}
+Timer::Timer(TimerScheduler* scheduler, uint64_t id) : scheduler_(scheduler), id_(id) {}
 
 Timer::~Timer() {}
 
@@ -24,8 +23,7 @@ zx_status_t Timer::CancelTimer() {
   return scheduler_->Cancel(this);
 }
 
-SystemTimer::SystemTimer(TimerScheduler* scheduler, uint64_t id,
-                         zx::timer timer)
+SystemTimer::SystemTimer(TimerScheduler* scheduler, uint64_t id, zx::timer timer)
     : Timer(scheduler, id), timer_(std::move(timer)) {}
 
 }  // namespace wlan

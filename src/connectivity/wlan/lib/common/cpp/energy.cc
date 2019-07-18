@@ -3,22 +3,19 @@
 // found in the LICENSE file.
 
 #include <math.h>
-#include <wlan/common/energy.h>
 
 #include <limits>
+
+#include <wlan/common/energy.h>
 
 namespace wlan {
 namespace common {
 
 mWatt::mWatt(uint16_t v) : EnergyType<uint16_t, mWatt>(v) {}
 
-mWatt operator+(const mWatt& lhs, const mWatt& rhs) {
-  return mWatt(lhs.val + rhs.val);
-}
+mWatt operator+(const mWatt& lhs, const mWatt& rhs) { return mWatt(lhs.val + rhs.val); }
 
-mWatt operator-(const mWatt& lhs, const mWatt& rhs) {
-  return mWatt(lhs.val - rhs.val);
-}
+mWatt operator-(const mWatt& lhs, const mWatt& rhs) { return mWatt(lhs.val - rhs.val); }
 
 mWatt operator-(const mWatt& rhs) { return mWatt(-rhs.val); }
 
@@ -84,13 +81,9 @@ dBm operator+(const dBm& lhs, const dBm& rhs) { return add_dBm(lhs, rhs); }
 
 dBmh::dBmh(int16_t v) : EnergyType<int16_t, dBmh>(v) {}
 
-dBmh operator+(const dBmh& lhs, const dBh& rhs) {
-  return dBmh(lhs.val + rhs.val);
-}
+dBmh operator+(const dBmh& lhs, const dBh& rhs) { return dBmh(lhs.val + rhs.val); }
 
-dBmh operator-(const dBmh& lhs, const dBh& rhs) {
-  return dBmh(lhs.val - rhs.val);
-}
+dBmh operator-(const dBmh& lhs, const dBh& rhs) { return dBmh(lhs.val - rhs.val); }
 
 dB to_dB(dBh u) { return dB(u.val / 2); }
 

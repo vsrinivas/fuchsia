@@ -5,10 +5,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_MOVING_AVERAGE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_MOVING_AVERAGE_H_
 
-#include <zircon/assert.h>
-
 #include <limits>
 #include <type_traits>
+
+#include <zircon/assert.h>
 
 #include "energy.h"
 
@@ -17,13 +17,10 @@ namespace common {
 
 template <typename ValueType, typename SumType, uint32_t N>
 class MovingAverage {
-  static_assert(std::numeric_limits<ValueType>::max() * N <
-                    std::numeric_limits<SumType>::max(),
+  static_assert(std::numeric_limits<ValueType>::max() * N < std::numeric_limits<SumType>::max(),
                 "'SumType' too small and cannot hold the maximum sum.");
-  static_assert(std::is_arithmetic<ValueType>::value,
-                "'ValueType' must be numeric.");
-  static_assert(std::is_arithmetic<SumType>::value,
-                "'SumType' must be numeric.");
+  static_assert(std::is_arithmetic<ValueType>::value, "'ValueType' must be numeric.");
+  static_assert(std::is_arithmetic<SumType>::value, "'SumType' must be numeric.");
 
  public:
   ValueType avg() const { return (n == 0 ? 0 : sum / n); }

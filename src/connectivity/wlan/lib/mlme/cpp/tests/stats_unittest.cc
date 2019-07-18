@@ -17,9 +17,7 @@ namespace {
 class StatsTest : public ::testing::Test {};
 
 TEST_F(StatsTest, DispatcherStatsReset) {
-  common::WlanStats<common::DispatcherStats,
-                    ::fuchsia::wlan::stats::DispatcherStats>
-      stats_;
+  common::WlanStats<common::DispatcherStats, ::fuchsia::wlan::stats::DispatcherStats> stats_;
 
   WLAN_STATS_INC(any_packet.in);
   WLAN_STATS_INC(any_packet.in);
@@ -39,9 +37,7 @@ TEST_F(StatsTest, DispatcherStatsReset) {
 }
 
 TEST_F(StatsTest, RssiStatsReset) {
-  common::WlanStats<common::ClientMlmeStats,
-                    ::fuchsia::wlan::stats::ClientMlmeStats>
-      stats_;
+  common::WlanStats<common::ClientMlmeStats, ::fuchsia::wlan::stats::ClientMlmeStats> stats_;
 
   ASSERT_EQ(WLAN_RSSI_HIST_GET(beacon_rssi, -5), 0u);
   ASSERT_EQ(WLAN_RSSI_HIST_GET(beacon_rssi, -77), 0u);
@@ -60,19 +56,13 @@ TEST_F(StatsTest, RssiStatsReset) {
 }
 
 TEST_F(StatsTest, RssiStatsIncAndGet) {
-  common::WlanStats<common::ClientMlmeStats,
-                    ::fuchsia::wlan::stats::ClientMlmeStats>
-      stats_;
+  common::WlanStats<common::ClientMlmeStats, ::fuchsia::wlan::stats::ClientMlmeStats> stats_;
 
   ASSERT_EQ(WLAN_RSSI_HIST_INC(beacon_rssi, 0), 1u);
   ASSERT_EQ(WLAN_RSSI_HIST_GET(beacon_rssi, 0), 1u);
 
-  ASSERT_EQ(
-      WLAN_RSSI_HIST_INC(beacon_rssi, -::fuchsia::wlan::stats::RSSI_BINS + 1),
-      1u);
-  ASSERT_EQ(
-      WLAN_RSSI_HIST_GET(beacon_rssi, -::fuchsia::wlan::stats::RSSI_BINS + 1),
-      1u);
+  ASSERT_EQ(WLAN_RSSI_HIST_INC(beacon_rssi, -::fuchsia::wlan::stats::RSSI_BINS + 1), 1u);
+  ASSERT_EQ(WLAN_RSSI_HIST_GET(beacon_rssi, -::fuchsia::wlan::stats::RSSI_BINS + 1), 1u);
 
   ASSERT_EQ(WLAN_RSSI_HIST_INC(beacon_rssi, 1), 0u);
   ASSERT_EQ(WLAN_RSSI_HIST_GET(beacon_rssi, 1), 0u);

@@ -19,8 +19,7 @@ namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-InfraBss::InfraBss(DeviceInterface* device,
-                   fbl::unique_ptr<BeaconSender> bcn_sender,
+InfraBss::InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
                    const common::MacAddr& bssid, fbl::unique_ptr<Timer> timer)
     : bssid_(bssid),
       device_(device),
@@ -55,8 +54,8 @@ void InfraBss::Start(const MlmeMsg<wlan_mlme::StartRequest>& req) {
 
   auto status = device_->SetChannel(chan);
   if (status != ZX_OK) {
-    errorf("[infra-bss] [%s] requested start on channel %u failed: %d\n",
-           bssid_.ToString().c_str(), req.body()->channel, status);
+    errorf("[infra-bss] [%s] requested start on channel %u failed: %d\n", bssid_.ToString().c_str(),
+           req.body()->channel, status);
   }
   chan_ = chan;
 
@@ -73,8 +72,7 @@ void InfraBss::Start(const MlmeMsg<wlan_mlme::StartRequest>& req) {
   }
 
   debugbss("[infra-bss] [%s] starting BSS\n", bssid_.ToString().c_str());
-  debugbss("    SSID: \"%s\"\n",
-           debug::ToAsciiOrHexStr(req.body()->ssid).c_str());
+  debugbss("    SSID: \"%s\"\n", debug::ToAsciiOrHexStr(req.body()->ssid).c_str());
   debugbss("    Beacon Period: %u\n", req.body()->beacon_period);
   debugbss("    DTIM Period: %u\n", req.body()->dtim_period);
   debugbss("    Channel: %u\n", req.body()->channel);
@@ -140,13 +138,11 @@ void InfraBss::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
 
 void InfraBss::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
   auto mgmt_frame = frame.View();
-  bool to_bss =
-      (bssid_ == mgmt_frame.hdr()->addr1 && bssid_ == mgmt_frame.hdr()->addr3);
+  bool to_bss = (bssid_ == mgmt_frame.hdr()->addr1 && bssid_ == mgmt_frame.hdr()->addr3);
 
   // Special treatment for ProbeRequests which can be addressed towards
   // broadcast address.
-  if (auto possible_probe_req_frame =
-          mgmt_frame.CheckBodyType<ProbeRequest>()) {
+  if (auto possible_probe_req_frame = mgmt_frame.CheckBodyType<ProbeRequest>()) {
     if (auto mgmt_probe_req_frame = possible_probe_req_frame.CheckLength()) {
       // Drop all ProbeRequests which are neither targeted to this BSS nor to
       // broadcast address.
@@ -174,8 +170,7 @@ void InfraBss::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
   // Register the client if it's not yet known.
   const auto& client_addr = mgmt_frame.hdr()->addr2;
   if (!HasClient(client_addr)) {
-    if (auto auth_frame =
-            mgmt_frame.CheckBodyType<Authentication>().CheckLength()) {
+    if (auto auth_frame = mgmt_frame.CheckBodyType<Authentication>().CheckLength()) {
       HandleNewClientAuthAttempt(auth_frame);
     }
   }
@@ -203,8 +198,7 @@ void InfraBss::HandleAnyDataFrame(DataFrame<>&& frame) {
 void InfraBss::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
   auto ctrl_frame = frame.View();
 
-  if (auto pspoll_frame =
-          ctrl_frame.CheckBodyType<PsPollFrame>().CheckLength()) {
+  if (auto pspoll_frame = ctrl_frame.CheckBodyType<PsPollFrame>().CheckLength()) {
     if (pspoll_frame.body()->bssid != bssid_) {
       return;
     }
@@ -219,8 +213,7 @@ void InfraBss::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
   }
 }
 
-zx_status_t InfraBss::ScheduleTimeout(wlan_tu_t tus,
-                                      const common::MacAddr& client_addr,
+zx_status_t InfraBss::ScheduleTimeout(wlan_tu_t tus, const common::MacAddr& client_addr,
                                       TimeoutId* id) {
   return timer_mgr_.Schedule(timer_mgr_.Now() + WLAN_TU(tus), client_addr, id);
 }
@@ -228,15 +221,13 @@ zx_status_t InfraBss::ScheduleTimeout(wlan_tu_t tus,
 void InfraBss::CancelTimeout(TimeoutId id) { timer_mgr_.Cancel(id); }
 
 zx_status_t InfraBss::HandleTimeout() {
-  zx_status_t status =
-      timer_mgr_.HandleTimeout([&](auto _now, auto addr, auto timeout_id) {
-        if (auto client = GetClient(addr)) {
-          client->HandleTimeout(timeout_id);
-        }
-      });
+  zx_status_t status = timer_mgr_.HandleTimeout([&](auto _now, auto addr, auto timeout_id) {
+    if (auto client = GetClient(addr)) {
+      client->HandleTimeout(timeout_id);
+    }
+  });
   if (status != ZX_OK) {
-    errorf("[infra-bss] failed to rearm the timer: %s\n",
-           zx_status_get_string(status));
+    errorf("[infra-bss] failed to rearm the timer: %s\n", zx_status_get_string(status));
   }
   return status;
 }
@@ -254,8 +245,7 @@ void InfraBss::HandleEthFrame(EthFrame&& eth_frame) {
     if (auto data_frame = EthToDataFrame(eth_frame, false)) {
       SendDataFrame(DataFrame<>(data_frame->Take()));
     } else {
-      errorf("[infra-bss] [%s] couldn't convert ethernet frame\n",
-             bssid_.ToString().c_str());
+      errorf("[infra-bss] [%s] couldn't convert ethernet frame\n", bssid_.ToString().c_str());
     }
   }
 }
@@ -267,24 +257,21 @@ zx_status_t InfraBss::HandleMlmeMsg(const BaseMlmeMsg& msg) {
 
   auto peer_addr = service::GetPeerAddr(msg);
   if (!peer_addr.has_value()) {
-    warnf("[infra-bss] received unsupported MLME msg; ordinal: %lu\n",
-          msg.ordinal());
+    warnf("[infra-bss] received unsupported MLME msg; ordinal: %lu\n", msg.ordinal());
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (auto client = GetClient(peer_addr.value())) {
     return client->HandleMlmeMsg(msg);
   } else {
-    warnf(
-        "[infra-bss] unrecognized peer address in MlmeMsg: %s -- ordinal: %lu\n",
-        peer_addr.value().ToString().c_str(), msg.ordinal());
+    warnf("[infra-bss] unrecognized peer address in MlmeMsg: %s -- ordinal: %lu\n",
+          peer_addr.value().ToString().c_str(), msg.ordinal());
   }
 
   return ZX_OK;
 }
 
-void InfraBss::HandleNewClientAuthAttempt(
-    const MgmtFrameView<Authentication>& frame) {
+void InfraBss::HandleNewClientAuthAttempt(const MgmtFrameView<Authentication>& frame) {
   auto& client_addr = frame.hdr()->addr2;
   ZX_DEBUG_ASSERT(!HasClient(client_addr));
 
@@ -299,8 +286,7 @@ void InfraBss::HandleNewClientAuthAttempt(
   clients_.emplace(client_addr, std::move(client));
 }
 
-zx_status_t InfraBss::HandleMlmeSetKeysReq(
-    const MlmeMsg<wlan_mlme::SetKeysRequest>& req) {
+zx_status_t InfraBss::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysRequest>& req) {
   debugfn();
 
   if (!IsRsn()) {
@@ -338,8 +324,8 @@ void InfraBss::StopTrackingClient(const wlan::common::MacAddr& client_addr) {
   auto iter = clients_.find(client_addr);
   ZX_DEBUG_ASSERT(iter != clients_.end());
   if (iter == clients_.end()) {
-    errorf("[infra-bss] [%s] unknown client deauthenticated: %s\n",
-           bssid_.ToString().c_str(), client_addr.ToString().c_str());
+    errorf("[infra-bss] [%s] unknown client deauthenticated: %s\n", bssid_.ToString().c_str(),
+           client_addr.ToString().c_str());
     return;
   }
 
@@ -353,8 +339,8 @@ void InfraBss::HandleClientDisassociation(aid_t aid) {
   ps_cfg_.GetTim()->SetTrafficIndication(aid, false);
 }
 
-void InfraBss::HandleClientBuChange(const common::MacAddr& client_addr,
-                                    aid_t aid, size_t bu_count) {
+void InfraBss::HandleClientBuChange(const common::MacAddr& client_addr, aid_t aid,
+                                    size_t bu_count) {
   debugfn();
   auto client = GetClient(client_addr);
   ZX_DEBUG_ASSERT(client != nullptr);
@@ -400,12 +386,10 @@ zx_status_t InfraBss::BufferFrame(fbl::unique_ptr<Packet> packet) {
   // Drop oldest frame if queue reached its limit.
   if (bu_queue_.size() >= kMaxGroupAddressedBu) {
     bu_queue_.pop();
-    warnf("[infra-bss] [%s] dropping oldest group addressed frame\n",
-          bssid_.ToString().c_str());
+    warnf("[infra-bss] [%s] dropping oldest group addressed frame\n", bssid_.ToString().c_str());
   }
 
-  debugps("[infra-bss] [%s] buffer outbound frame\n",
-          bssid_.ToString().c_str());
+  debugps("[infra-bss] [%s] buffer outbound frame\n", bssid_.ToString().c_str());
   bu_queue_.push(std::move(packet));
   ps_cfg_.GetTim()->SetTrafficIndication(kGroupAdressedAid, true);
   return ZX_OK;
@@ -443,19 +427,17 @@ zx_status_t InfraBss::SendNextBu() {
     // Set `more` bit if there are more BU available.
     // IEEE Std 802.11-2016, 9.2.4.1.8
     fc->set_more_data(bu_queue_.size() > 0);
-    debugps("[infra-bss] [%s] sent group addressed BU\n",
-            bssid_.ToString().c_str());
+    debugps("[infra-bss] [%s] sent group addressed BU\n", bssid_.ToString().c_str());
     return device_->SendWlan(std::move(packet));
   } else {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 }
 
-std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(
-    const EthFrame& eth_frame, bool needs_protection) {
+std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(const EthFrame& eth_frame,
+                                                             bool needs_protection) {
   size_t payload_len = eth_frame.body_len();
-  size_t max_frame_len =
-      DataFrameHeader::max_len() + LlcHeader::max_len() + payload_len;
+  size_t max_frame_len = DataFrameHeader::max_len() + LlcHeader::max_len() + payload_len;
   auto packet = GetWlanPacket(max_frame_len);
   if (packet == nullptr) {
     errorf(
@@ -489,8 +471,7 @@ std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(
   finspect("Outbound data frame: len %zu\n", w.WrittenBytes());
   finspect("  wlan hdr: %s\n", debug::Describe(*data_hdr).c_str());
   finspect("  llc  hdr: %s\n", debug::Describe(*llc_hdr).c_str());
-  finspect("  frame   : %s\n",
-           debug::HexDump(packet->data(), packet->len()).c_str());
+  finspect("  frame   : %s\n", debug::HexDump(packet->data(), packet->len()).c_str());
 
   // Ralink appears to setup BlockAck session AND AMPDU handling
   // TODO(porce): Use a separate sequence number space in that case
@@ -511,13 +492,13 @@ void InfraBss::OnBcnTxComplete() {
     return;
   }
 
-  debugps("[infra-bss] [%s] sending %zu group addressed BU\n",
-          bssid_.ToString().c_str(), bu_queue_.size());
+  debugps("[infra-bss] [%s] sending %zu group addressed BU\n", bssid_.ToString().c_str(),
+          bu_queue_.size());
   while (bu_queue_.size() > 0) {
     auto status = SendNextBu();
     if (status != ZX_OK) {
-      errorf("[infra-bss] [%s] could not send group addressed BU: %d\n",
-             bssid_.ToString().c_str(), status);
+      errorf("[infra-bss] [%s] could not send group addressed BU: %d\n", bssid_.ToString().c_str(),
+             status);
       return;
     }
   }
@@ -549,8 +530,8 @@ HtConfig InfraBss::Ht() const {
 }
 
 const fbl::Span<const SupportedRate> InfraBss::Rates() const {
-  const auto rates = GetRatesByChannel(device_->GetWlanInfo().ifc_info,
-                                       device_->GetState()->channel().primary);
+  const auto rates =
+      GetRatesByChannel(device_->GetWlanInfo().ifc_info, device_->GetState()->channel().primary);
   static_assert(sizeof(SupportedRate) == sizeof(rates[0]));
   return {reinterpret_cast<const SupportedRate*>(rates.data()), rates.size()};
 }

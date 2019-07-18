@@ -80,8 +80,7 @@ TEST_F(TimTest, WriteEmptyPartialVirtualBitmap) {
   // Write PVB to buffer.
   size_t bitmap_len;
   uint8_t bitmap_offset;
-  auto status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len,
-                                               &bitmap_offset);
+  auto status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len, &bitmap_offset);
 
   // PVB should be 1 byte in size and empty since there is no traffic.
   EXPECT_EQ(status, ZX_OK);
@@ -108,8 +107,7 @@ TEST_F(TimTest, WriteNoOffsetPopulatedPartialVirtualBitmap) {
   // Write PVB to buffer.
   size_t bitmap_len;
   uint8_t bitmap_offset;
-  auto status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len,
-                                               &bitmap_offset);
+  auto status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len, &bitmap_offset);
 
   // PVB should be 5 bytes in size due to the large spread of AIDs.
   EXPECT_EQ(status, ZX_OK);
@@ -134,8 +132,7 @@ TEST_F(TimTest, WriteOffsetPopulatedPartialVirtualBitmap) {
   // Write PVB to buffer.
   size_t bitmap_len;
   uint8_t bitmap_offset;
-  auto status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len,
-                                               &bitmap_offset);
+  auto status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len, &bitmap_offset);
 
   // PVB should be 3 bytes in size and yield an offset.
   EXPECT_EQ(status, ZX_OK);
@@ -160,8 +157,7 @@ TEST_F(TimTest, WriteChangingPartialVirtualBitmap) {
   // Write PVB to buffer.
   size_t bitmap_len;
   uint8_t bitmap_offset;
-  auto status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len,
-                                               &bitmap_offset);
+  auto status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len, &bitmap_offset);
 
   // PVB should be 3 bytes in size and yield an offset.
   EXPECT_EQ(status, ZX_OK);
@@ -183,8 +179,7 @@ TEST_F(TimTest, WriteChangingPartialVirtualBitmap) {
   buf[2] = 0xFF;
 
   // Write PVB to buffer.
-  status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len,
-                                          &bitmap_offset);
+  status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len, &bitmap_offset);
 
   // PVB should now only be 1 byte in size but keep the same offset.
   EXPECT_EQ(status, ZX_OK);
@@ -206,8 +201,7 @@ TEST_F(TimTest, WriteChangingPartialVirtualBitmap) {
   tim_.SetTrafficIndication(9, true);
 
   // Write PVB to buffer.
-  status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len,
-                                          &bitmap_offset);
+  status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len, &bitmap_offset);
 
   // PVB should now be 5 bytes in size and have no offset.
   EXPECT_EQ(status, ZX_OK);
@@ -233,8 +227,7 @@ TEST_F(TimTest, WriteLastBytePartialVirtualBitmap) {
   // Write PVB to buffer.
   size_t bitmap_len;
   uint8_t bitmap_offset;
-  auto status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len,
-                                               &bitmap_offset);
+  auto status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len, &bitmap_offset);
 
   // PVB should be 1 byte in size and have an offset of 125 bytes (largest
   // possible offset).
@@ -262,8 +255,7 @@ TEST_F(TimTest, WriteMaxSizedPartialVirtualBitmap) {
   // Write PVB to buffer.
   size_t bitmap_len;
   uint8_t bitmap_offset;
-  auto status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len,
-                                               &bitmap_offset);
+  auto status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len, &bitmap_offset);
 
   // PVB should be 251 bytes in size (maximum size) and have no offset.
   EXPECT_EQ(status, ZX_OK);
@@ -293,8 +285,7 @@ TEST_F(TimTest, IgnoreGroupTrafficInPartialVirtualBitmap) {
   // Write PVB to buffer.
   size_t bitmap_len;
   uint8_t bitmap_offset;
-  auto status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len,
-                                               &bitmap_offset);
+  auto status = tim_.WritePartialVirtualBitmap(buf, sizeof(buf), &bitmap_len, &bitmap_offset);
 
   // PVB should be 3 bytes in size and have an offset and thus effectively
   // ignore the group traffic of AID 0.

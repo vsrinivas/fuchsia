@@ -25,8 +25,7 @@ namespace {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 struct MockBss : public BssInterface {
-  zx_status_t ScheduleTimeout(wlan_tu_t tus, const common::MacAddr& client_addr,
-                              TimeoutId* id) {
+  zx_status_t ScheduleTimeout(wlan_tu_t tus, const common::MacAddr& client_addr, TimeoutId* id) {
     return ZX_OK;
   }
 
@@ -46,15 +45,11 @@ struct MockBss : public BssInterface {
   HtConfig Ht() const { return {}; }
   const fbl::Span<const SupportedRate> Rates() const { return {}; }
 
-  zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t SendDataFrame(DataFrame<>&& data_frame, uint32_t flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t DeliverEthernet(fbl::Span<const uint8_t> frame) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  zx_status_t DeliverEthernet(fbl::Span<const uint8_t> frame) { return ZX_ERR_NOT_SUPPORTED; }
 
   void OnPreTbtt() {}
   void OnBcnTxComplete() {}

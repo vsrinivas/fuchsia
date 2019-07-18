@@ -29,8 +29,7 @@ struct OffChannelHandler {
   // schedule another
   //     off-channel request.
   // (b) If switching back on channel, return `false`
-  virtual bool EndOffChannelTime(bool interrupted,
-                                 OffChannelRequest* next_req) = 0;
+  virtual bool EndOffChannelTime(bool interrupted, OffChannelRequest* next_req) = 0;
 
   virtual ~OffChannelHandler() = default;
 };

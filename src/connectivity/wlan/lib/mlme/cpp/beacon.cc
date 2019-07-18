@@ -20,8 +20,7 @@ static void WriteDsssParamSet(BufferWriter* w, const BeaconConfig& config) {
   common::WriteDsssParamSet(w, config.channel.primary);
 }
 
-static void WriteTim(BufferWriter* w, const PsCfg* ps_cfg,
-                     size_t* rel_tim_ele_offset) {
+static void WriteTim(BufferWriter* w, const PsCfg* ps_cfg, size_t* rel_tim_ele_offset) {
   if (!ps_cfg) {
     return;
   }
@@ -33,8 +32,7 @@ static void WriteTim(BufferWriter* w, const PsCfg* ps_cfg,
   size_t bitmap_len;
   uint8_t bitmap_offset;
   uint8_t pvb[kMaxTimBitmapLen];
-  ps_cfg->GetTim()->WritePartialVirtualBitmap(pvb, sizeof(pvb), &bitmap_len,
-                                              &bitmap_offset);
+  ps_cfg->GetTim()->WritePartialVirtualBitmap(pvb, sizeof(pvb), &bitmap_len, &bitmap_offset);
 
   TimHeader header;
   header.dtim_count = ps_cfg->dtim_count();
@@ -85,8 +83,7 @@ static void WriteRsne(BufferWriter* w, const BeaconConfig& config) {
   }
 }
 
-static void WriteMeshConfiguration(BufferWriter* w,
-                                   const BeaconConfig& config) {
+static void WriteMeshConfiguration(BufferWriter* w, const BeaconConfig& config) {
   if (config.mesh_config != nullptr) {
     common::WriteMeshConfiguration(w, *config.mesh_config);
   }
@@ -98,8 +95,7 @@ static void WriteMeshId(BufferWriter* w, const BeaconConfig& config) {
   }
 }
 
-static void WriteElements(BufferWriter* w, const BeaconConfig& config,
-                          size_t* rel_tim_ele_offset) {
+static void WriteElements(BufferWriter* w, const BeaconConfig& config, size_t* rel_tim_ele_offset) {
   RatesWriter rates_writer{config.rates};
   // TODO(hahnr): Query from hardware which IEs must be filled out here.
   WriteSsid(w, config);
@@ -137,8 +133,7 @@ static void SetBssType(T* bcn, BssType bss_type) {
 template <typename T>
 static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config,
                                               const common::MacAddr& recv_addr,
-                                              MgmtFrame<T>* buffer,
-                                              size_t* tim_ele_offset) {
+                                              MgmtFrame<T>* buffer, size_t* tim_ele_offset) {
   constexpr size_t reserved_ie_len = 256;
   constexpr size_t max_frame_size =
       MgmtFrameHeader::max_len() + Beacon::max_len() + reserved_ie_len;
@@ -185,12 +180,10 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config,
 
 zx_status_t BuildBeacon(const BeaconConfig& config, MgmtFrame<Beacon>* buffer,
                         size_t* tim_ele_offset) {
-  return BuildBeaconOrProbeResponse(config, common::kBcastMac, buffer,
-                                    tim_ele_offset);
+  return BuildBeaconOrProbeResponse(config, common::kBcastMac, buffer, tim_ele_offset);
 }
 
-zx_status_t BuildProbeResponse(const BeaconConfig& config,
-                               const common::MacAddr& recv_addr,
+zx_status_t BuildProbeResponse(const BeaconConfig& config, const common::MacAddr& recv_addr,
                                MgmtFrame<ProbeResponse>* buffer) {
   return BuildBeaconOrProbeResponse(config, recv_addr, buffer, nullptr);
 }

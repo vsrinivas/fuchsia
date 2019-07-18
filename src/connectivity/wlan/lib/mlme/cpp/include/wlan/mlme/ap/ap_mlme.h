@@ -35,10 +35,8 @@ class ApMlme : public Mlme {
   const fbl::Span<const SupportedRate> Rates() const;
 
  private:
-  zx_status_t HandleMlmeStartReq(
-      const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
-  zx_status_t HandleMlmeStopReq(
-      const MlmeMsg<::fuchsia::wlan::mlme::StopRequest>& req);
+  zx_status_t HandleMlmeStartReq(const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
+  zx_status_t HandleMlmeStopReq(const MlmeMsg<::fuchsia::wlan::mlme::StopRequest>& req);
 
   DeviceInterface* const device_;
   fbl::unique_ptr<InfraBss> bss_;

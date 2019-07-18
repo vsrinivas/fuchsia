@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
+#include <cstring>
+#include <memory>
+#include <utility>
+
 #include <ddk/hw/wlan/ieee80211.h>
 #include <gtest/gtest.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/wlan.h>
-
-#include <algorithm>
-#include <cstring>
-#include <memory>
-#include <utility>
 
 namespace wlan {
 namespace {
@@ -110,8 +110,7 @@ TEST_F(Elements, TsInfoScheduleSetting) {
 
   ts_info.p1.set_apsd(0);
   ts_info.p2.set_schedule(1);
-  EXPECT_EQ(ts_info.GetScheduleSetting(),
-            TsScheduleSetting::kScheduledPsmp_GcrSp);
+  EXPECT_EQ(ts_info.GetScheduleSetting(), TsScheduleSetting::kScheduledPsmp_GcrSp);
 
   ts_info.p1.set_apsd(1);
   EXPECT_EQ(ts_info.GetScheduleSetting(), TsScheduleSetting::kScheduledApsd);
@@ -189,8 +188,7 @@ TEST(VhtCapabilities, DdkConversion) {
 
   auto ddk2 = ieee.ToDdk();
   EXPECT_EQ(ddk.vht_capability_info, ddk2.vht_capability_info);
-  EXPECT_EQ(ddk.supported_vht_mcs_and_nss_set,
-            ddk2.supported_vht_mcs_and_nss_set);
+  EXPECT_EQ(ddk.supported_vht_mcs_and_nss_set, ddk2.supported_vht_mcs_and_nss_set);
 }
 
 TEST(VhtOperation, DdkConversion) {
@@ -283,9 +281,7 @@ TEST(Intersector, IntersectRates) {
   std::vector<RateVector> list = {
       {{}, {}, {}},
       {{SupportedRate(12)}, {SupportedRate(12)}, {SupportedRate(12)}},
-      {{SupportedRate::basic(12)},
-       {SupportedRate(12)},
-       {SupportedRate::basic(12)}},
+      {{SupportedRate::basic(12)}, {SupportedRate(12)}, {SupportedRate::basic(12)}},
       {{SupportedRate(12)}, {SupportedRate::basic(12)}, {SupportedRate(12)}},
       {{SupportedRate::basic(12)}, {}, {}},
       {{}, {SupportedRate::basic(12)}, {}},

@@ -20,8 +20,7 @@
 namespace wlan {
 
 template <typename T>
-zx_status_t SerializeServiceMsg(fidl::Encoder* enc, T* msg,
-                                zx_txid_t txid = 0) {
+zx_status_t SerializeServiceMsg(fidl::Encoder* enc, T* msg, zx_txid_t txid = 0) {
   // Encode our message of type T. The encoder will take care of extending the
   // buffer to accommodate out-of-line data (e.g., vectors, strings, and
   // nullable data).
@@ -36,8 +35,7 @@ zx_status_t SerializeServiceMsg(fidl::Encoder* enc, T* msg,
 
   auto msg_body = encoded.payload();
   const char* err_msg = nullptr;
-  zx_status_t status =
-      fidl_validate(T::FidlType, msg_body.data(), msg_body.size(), 0, &err_msg);
+  zx_status_t status = fidl_validate(T::FidlType, msg_body.data(), msg_body.size(), 0, &err_msg);
   if (status != ZX_OK) {
     errorf("could not validate encoded message: %s\n", err_msg);
   }
@@ -45,8 +43,8 @@ zx_status_t SerializeServiceMsg(fidl::Encoder* enc, T* msg,
 }
 
 template <typename T>
-static zx_status_t SendServiceMsg(DeviceInterface* device, T* message,
-                                  uint64_t ordinal, zx_txid_t txid = 0) {
+static zx_status_t SendServiceMsg(DeviceInterface* device, T* message, uint64_t ordinal,
+                                  zx_txid_t txid = 0) {
   fidl::Encoder enc(ordinal);
 
   zx_status_t status = SerializeServiceMsg(&enc, message, txid);
@@ -66,17 +64,14 @@ class BaseMlmeMsg {
 
   template <typename M>
   const MlmeMsg<M>* As() const {
-    return get_type_id() == MlmeMsg<M>::type_id()
-               ? static_cast<const MlmeMsg<M>*>(this)
-               : nullptr;
+    return get_type_id() == MlmeMsg<M>::type_id() ? static_cast<const MlmeMsg<M>*>(this) : nullptr;
   }
 
   zx_txid_t txid() const { return txid_; }
   uint64_t ordinal() const { return ordinal_; }
 
  protected:
-  BaseMlmeMsg(uint64_t ordinal, zx_txid_t txid)
-      : ordinal_(ordinal), txid_(txid) {}
+  BaseMlmeMsg(uint64_t ordinal, zx_txid_t txid) : ordinal_(ordinal), txid_(txid) {}
   BaseMlmeMsg(BaseMlmeMsg&&) = default;
   virtual const void* get_type_id() const = 0;
 
@@ -97,10 +92,8 @@ class MlmeMsg : public BaseMlmeMsg {
   MlmeMsg(MlmeMsg&&) = default;
   ~MlmeMsg() override = default;
 
-  static constexpr uint64_t kNoOrdinal =
-      0;  // Not applicable or does not matter
-  static std::optional<MlmeMsg<M>> Decode(fbl::Span<uint8_t> span,
-                                          uint64_t ordinal = kNoOrdinal) {
+  static constexpr uint64_t kNoOrdinal = 0;  // Not applicable or does not matter
+  static std::optional<MlmeMsg<M>> Decode(fbl::Span<uint8_t> span, uint64_t ordinal = kNoOrdinal) {
     BufferReader reader(span);
     auto h = reader.Read<fidl_message_header_t>();
     if (h == nullptr) {
@@ -110,8 +103,7 @@ class MlmeMsg : public BaseMlmeMsg {
 
     if (ordinal != kNoOrdinal && ordinal != h->ordinal) {
       // Generated code uses hexadecimal to represent ordinal
-      warnf("Mismatched ordinal: expected: 0x%0lx, actual: 0x%0lx\n", ordinal,
-            h->ordinal);
+      warnf("Mismatched ordinal: expected: 0x%0lx, actual: 0x%0lx\n", ordinal, h->ordinal);
       return {};
     }
 
@@ -119,17 +111,15 @@ class MlmeMsg : public BaseMlmeMsg {
     // out-of-line pointers to be offsets into the span).
     auto payload = span.subspan(reader.ReadBytes());
     const char* err_msg = nullptr;
-    auto status = fidl_decode(M::FidlType, payload.data(), payload.size(),
-                              nullptr, 0, &err_msg);
+    auto status = fidl_decode(M::FidlType, payload.data(), payload.size(), nullptr, 0, &err_msg);
     if (status != ZX_OK) {
       errorf("could not decode received message: %s\n", err_msg);
       return {};
     }
 
     // Construct a fidl Message and decode it into M.
-    fidl::Message msg(
-        fidl::BytePart(payload.data(), payload.size(), payload.size()),
-        fidl::HandlePart());
+    fidl::Message msg(fidl::BytePart(payload.data(), payload.size(), payload.size()),
+                      fidl::HandlePart());
     fidl::Decoder decoder(std::move(msg));
     return {{fidl::DecodeAs<M>(&decoder, 0), h->ordinal, h->txid}};
   }
@@ -152,44 +142,31 @@ namespace service {
 std::optional<common::MacAddr> GetPeerAddr(const BaseMlmeMsg& msg);
 zx_status_t SendJoinConfirm(DeviceInterface* device,
                             ::fuchsia::wlan::mlme::JoinResultCodes result_code);
-zx_status_t SendAuthConfirm(
-    DeviceInterface* device, const common::MacAddr& peer_sta,
-    ::fuchsia::wlan::mlme::AuthenticateResultCodes code);
-zx_status_t SendAuthIndication(
-    DeviceInterface* device, const common::MacAddr& peer_sta,
-    ::fuchsia::wlan::mlme::AuthenticationTypes auth_type);
-zx_status_t SendDeauthConfirm(DeviceInterface* device,
-                              const common::MacAddr& peer_sta);
-zx_status_t SendDeauthIndication(DeviceInterface* device,
-                                 const common::MacAddr& peer_sta,
+zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta,
+                            ::fuchsia::wlan::mlme::AuthenticateResultCodes code);
+zx_status_t SendAuthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
+                               ::fuchsia::wlan::mlme::AuthenticationTypes auth_type);
+zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta);
+zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                  ::fuchsia::wlan::mlme::ReasonCode code);
 zx_status_t SendAssocConfirm(DeviceInterface* device,
-                             ::fuchsia::wlan::mlme::AssociateResultCodes code,
-                             uint16_t aid = 0);
-zx_status_t SendAssocIndication(
-    DeviceInterface* device, const common::MacAddr& peer_sta,
-    uint16_t listen_interval, fbl::Span<const uint8_t> ssid,
-    std::optional<fbl::Span<const uint8_t>> rsn_body);
-zx_status_t SendDisassociateIndication(DeviceInterface* device,
-                                       const common::MacAddr& peer_sta,
+                             ::fuchsia::wlan::mlme::AssociateResultCodes code, uint16_t aid = 0);
+zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
+                                uint16_t listen_interval, fbl::Span<const uint8_t> ssid,
+                                std::optional<fbl::Span<const uint8_t>> rsn_body);
+zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                        uint16_t code);
 
-zx_status_t SendSignalReportIndication(DeviceInterface* device,
-                                       common::dBm rssi_dbm);
+zx_status_t SendSignalReportIndication(DeviceInterface* device, common::dBm rssi_dbm);
 
-zx_status_t SendEapolConfirm(
-    DeviceInterface* device,
-    ::fuchsia::wlan::mlme::EapolResultCodes result_code);
+zx_status_t SendEapolConfirm(DeviceInterface* device,
+                             ::fuchsia::wlan::mlme::EapolResultCodes result_code);
 zx_status_t SendEapolIndication(DeviceInterface* device, const EapolHdr& eapol,
-                                const common::MacAddr& src,
-                                const common::MacAddr& dst);
+                                const common::MacAddr& src, const common::MacAddr& dst);
 
-zx_status_t SendStartConfirm(DeviceInterface* device,
-                             ::fuchsia::wlan::mlme::StartResultCodes code);
-zx_status_t SendStopConfirm(DeviceInterface* device,
-                            ::fuchsia::wlan::mlme::StopResultCodes code);
-zx_status_t SendMeshPathTable(DeviceInterface* device,
-                              ::fuchsia::wlan::mesh::MeshPathTable& table,
+zx_status_t SendStartConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::StartResultCodes code);
+zx_status_t SendStopConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::StopResultCodes code);
+zx_status_t SendMeshPathTable(DeviceInterface* device, ::fuchsia::wlan::mesh::MeshPathTable& table,
                               uint64_t ordinal, zx_txid_t txid);
 
 }  // namespace service

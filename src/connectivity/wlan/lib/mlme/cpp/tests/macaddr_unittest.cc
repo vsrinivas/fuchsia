@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <array>
+
 #include <gtest/gtest.h>
 #include <wlan/common/macaddr.h>
-
-#include <array>
 
 namespace wlan {
 namespace common {
@@ -85,8 +85,8 @@ TEST_F(MacAddrTest, Conversion) {
   MacAddr addr({0x11, 0x22, 0x33, 0x44, 0x55, 0x66});
   addr.CopyTo(arr);
 
-  EXPECT_EQ(true, arr[0] == 0x11 && arr[1] == 0x22 && arr[2] == 0x33 &&
-                      arr[3] == 0x44 && arr[4] == 0x55 && arr[5] == 0x66);
+  EXPECT_EQ(true, arr[0] == 0x11 && arr[1] == 0x22 && arr[2] == 0x33 && arr[3] == 0x44 &&
+                      arr[4] == 0x55 && arr[5] == 0x66);
   EXPECT_EQ(true, memcmp(addr.byte, arr, kMacAddrLen) == 0);
 
   MacAddr addr2;

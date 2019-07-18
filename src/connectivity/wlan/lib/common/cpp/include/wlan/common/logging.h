@@ -76,8 +76,7 @@ constexpr bool kBufferDebugEnabled = kLogLevel & kLogBuffer;
 // clang-format on
 
 #define MAC_ADDR_FMT "%02x:%02x:%02x:%02x:%02x:%02x"
-#define MAC_ADDR_ARGS(a) \
-  ((a)[0]), ((a)[1]), ((a)[2]), ((a)[3]), ((a)[4]), ((a)[5])
+#define MAC_ADDR_ARGS(a) ((a)[0]), ((a)[1]), ((a)[2]), ((a)[3]), ((a)[4]), ((a)[5])
 
 }  // namespace wlan
 

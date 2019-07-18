@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <wlan/common/band.h>
-#include <wlan/common/channel.h>
-#include <wlan/mlme/debug.h>
-#include <wlan/mlme/mac_frame.h>
-
 #include <cstring>
 #include <iomanip>
 #include <sstream>
 #include <string>
+
+#include <wlan/common/band.h>
+#include <wlan/common/channel.h>
+#include <wlan/mlme/debug.h>
+#include <wlan/mlme/mac_frame.h>
 
 namespace wlan {
 namespace debug {
@@ -80,8 +80,7 @@ std::string Describe(const SequenceControl& sc) {
 }
 
 std::string Describe(const FrameControl& fc, const common::MacAddr& addr1,
-                     const common::MacAddr& addr2,
-                     const common::MacAddr& addr3) {
+                     const common::MacAddr& addr2, const common::MacAddr& addr3) {
   // TODO(porce): Support A-MSDU case
   char buf[1024];
   size_t offset = 0;
@@ -103,8 +102,8 @@ std::string Describe(const FrameControl& fc, const common::MacAddr& addr1,
              addr2.ToString().c_str(), addr3.ToString().c_str());
       break;
     case 0x3:
-      BUFFER("[ra] %s  [ta] %s  [da] %s", addr1.ToString().c_str(),
-             addr2.ToString().c_str(), addr3.ToString().c_str());
+      BUFFER("[ra] %s  [ta] %s  [da] %s", addr1.ToString().c_str(), addr2.ToString().c_str(),
+             addr3.ToString().c_str());
       break;
     default:
       break;
@@ -229,9 +228,7 @@ std::string DumpToAscii(const uint8_t bytes[], size_t bytes_len) {
   return std::string(buf);
 }
 
-std::string HexDump(const uint8_t bytes[], size_t bytes_len) {
-  return HexDump({bytes, bytes_len});
-}
+std::string HexDump(const uint8_t bytes[], size_t bytes_len) { return HexDump({bytes, bytes_len}); }
 
 std::string HexDump(fbl::Span<const uint8_t> bytes) {
   // Generate a string in following format
@@ -287,8 +284,7 @@ std::string HexDumpOneline(fbl::Span<const uint8_t> bytes) {
     }
   }
   buf[offset] = ' ';
-  offset = 3 * kBytesLenLimit + 2 +
-           2;  // Fast-forward to align to the ASCII start position
+  offset = 3 * kBytesLenLimit + 2 + 2;  // Fast-forward to align to the ASCII start position
   BUFFER("%s", DumpToAscii(bytes.data(), bytes.size()).c_str());
 
   return std::string(buf);
@@ -384,8 +380,7 @@ std::string Describe(const Packet& p) {
     case Packet::Peer::kWlan: {
       if (auto mgmt_frame = MgmtFrameView<>::CheckType(&p).CheckLength()) {
         BUFFER("\n  wlan hdr:%s ", Describe(*mgmt_frame.hdr()).c_str());
-      } else if (auto data_frame =
-                     DataFrameView<>::CheckType(&p).CheckLength()) {
+      } else if (auto data_frame = DataFrameView<>::CheckType(&p).CheckLength()) {
         BUFFER("\n  wlan hdr:%s ", Describe(*data_frame.hdr()).c_str());
       }
       break;
@@ -401,8 +396,8 @@ std::string Describe(const Packet& p) {
 std::string Describe(const AmsduSubframeHeader& hdr) {
   char buf[128];
   size_t offset = 0;
-  BUFFER("[da] %s [sa] %s [msdu_len] %u", hdr.da.ToString().c_str(),
-         hdr.sa.ToString().c_str(), hdr.msdu_len());
+  BUFFER("[da] %s [sa] %s [msdu_len] %u", hdr.da.ToString().c_str(), hdr.sa.ToString().c_str(),
+         hdr.msdu_len());
   return std::string(buf);
 }
 
