@@ -109,6 +109,6 @@ Googler-only channels, see [go/fuchsia-rust-googlers].
 [fargo]: https://fuchsia.googlesource.com/fargo
 [rustfmt-install]: https://github.com/rust-lang-nursery/rustfmt#quick-start
 [rustfmt-toml]: /build/rustfmt.toml
-[fidl-tutorial]: /docs/languages/fidl/tutorial/tutorial-rust.md
+[fidl-tutorial]: /docs/development/languages/fidl/tutorial/tutorial-rust.md
 [rust@fuchsia.com]: https://groups.google.com/a/fuchsia.com/forum/#!forum/rust-fuchsia
 [go/fuchsia-rust-googlers]: https://goto.google.com/fuchsia-rust-googlers

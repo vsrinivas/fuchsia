@@ -11,7 +11,7 @@ that expose information.
 
 # Quick Links
 
-**Not sure where to start? [Quick Start](quickstart.md)** 
+**Not sure where to start? [Quick Start](quickstart.md)**
 
 * [iquery](iquery.md) &mdash; The userspace tool for inspecting components.
 * [Getting started with Inspect](gsw-inspect.md) &mdash; A quick start guide.
@@ -72,7 +72,7 @@ The manager for a component's environment may expose its own information
 about the component to the hub. For instance, appmgr exposes
 `system_objects` for each component.
 
-# [C++ Interface](/garnet/public/lib/inspect/inspect.h)
+# [C++ Interface](/garnet/public/lib/inspect_deprecated/inspect.h)
 
 Class `Inspector` is the main entrypoint into using the Inspect API.
 Method `CreateTree` returns a new `Tree` object that wraps a VMO.
@@ -101,7 +101,7 @@ dynamic children and values, though these features are planned for VMO.
 > Since this interface is deprecated, you will see the term "object"
 > instead of "node".
 
-## [Object Wrapper](/garnet/public/lib/inspect/deprecated/expose.h)
+## [Object Wrapper](/garnet/public/lib/inspect_deprecated/deprecated/expose.h)
 
 Class `Object` is the implementation of a node in C++. It implements
 the `Vnode` and `Inspect` interfaces to expose the node through the
@@ -126,7 +126,7 @@ children and on-demand children provided by callback.
 `Metric` allows for typed addition and subtraction. The `Set*` methods set
 the type of the metric, and arithmetic operations do not modify this type.
 
-## [ObjectDir](/garnet/public/lib/inspect/deprecated/object_dir.h)
+## [ObjectDir](/garnet/public/lib/inspect_deprecated/deprecated/object_dir.h)
 
 Class `ObjectDir` is a lightweight wrapper around a refcounted pointer
 to an `Object`. `ObjectDirs` are safe to copy, and provide a stable
@@ -135,7 +135,7 @@ reference to a single node.
 `ObjectDir` simplifies traversing a tree of nodes by name and setting
 properties/metrics on those nodes with an STL-style wrapper.
 
-## [ExposedObject](/garnet/public/lib/inspect/deprecated/exposed_object.h)
+## [ExposedObject](/garnet/public/lib/inspect_deprecated/deprecated/exposed_object.h)
 
 Class `ExposedObject` is a base class simplifying management of complex
 persistent hierarchies of nodes. It is the recommended implementation
