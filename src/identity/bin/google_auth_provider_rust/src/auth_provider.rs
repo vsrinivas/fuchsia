@@ -6,8 +6,9 @@ use crate::constants::{AUTHORIZE_URI, DEFAULT_SCOPES, FUCHSIA_CLIENT_ID, REDIREC
 use crate::error::{AuthProviderError, ResultExt};
 use crate::http::HttpClient;
 use crate::oauth::{
-    build_request_with_auth_code, parse_auth_code_from_redirect, parse_response_with_refresh_token,
-    AccessToken, AuthCode, RefreshToken,
+    build_request_with_auth_code, build_request_with_refresh_token, parse_auth_code_from_redirect,
+    parse_response_with_refresh_token, parse_response_without_refresh_token, AccessToken, AuthCode,
+    RefreshToken,
 };
 use crate::openid::{build_user_info_request, parse_user_info_response};
 use crate::web::StandaloneWebFrame;
@@ -22,7 +23,7 @@ use fidl_fuchsia_auth::{
     AuthProviderGetPersistentCredentialFromAttestationJwtResponder,
     AuthProviderGetPersistentCredentialResponder, AuthProviderRequest, AuthProviderRequestStream,
     AuthProviderRevokeAppOrPersistentCredentialResponder, AuthProviderStatus, AuthToken,
-    AuthenticationUiContextMarker, FirebaseToken, UserProfileInfo,
+    AuthenticationUiContextMarker, FirebaseToken, TokenType, UserProfileInfo,
 };
 use fuchsia_scenic::ViewTokenPair;
 use futures::prelude::*;
@@ -133,7 +134,7 @@ where
         &self,
         auth_ui_context: Option<ClientEnd<AuthenticationUiContextMarker>>,
         user_profile_id: Option<String>,
-    ) -> AuthProviderResult<(RefreshToken, UserProfileInfo)> {
+    ) -> AuthProviderResult<(String, UserProfileInfo)> {
         match auth_ui_context {
             Some(ui_context) => {
                 let auth_code = await!(self.get_auth_code(ui_context, user_profile_id))?;
@@ -141,7 +142,7 @@ where
                 let (refresh_token, access_token) = await!(self.exchange_auth_code(auth_code))?;
                 info!("Received refresh token of length {:?}", &refresh_token.0.len());
                 let user_profile_info = await!(self.get_user_profile_info(access_token))?;
-                Ok((refresh_token, user_profile_info))
+                Ok((refresh_token.0, user_profile_info))
             }
             None => Err(AuthProviderError::new(AuthProviderStatus::BadRequest)),
         }
@@ -151,12 +152,20 @@ where
     /// interface.
     async fn get_app_access_token(
         &self,
-        _credential: String,
-        _client_id: Option<String>,
-        _scopes: Vec<String>,
+        credential: String,
+        client_id: Option<String>,
+        scopes: Vec<String>,
     ) -> AuthProviderResult<AuthToken> {
-        // TODO(satsukiu): implement
-        Err(AuthProviderError::new(AuthProviderStatus::InternalError))
+        if credential.is_empty() || client_id.as_ref().map(String::is_empty) == Some(true) {
+            return Err(AuthProviderError::new(AuthProviderStatus::BadRequest));
+        }
+
+        let request =
+            build_request_with_refresh_token(RefreshToken(credential), scopes, client_id)?;
+        let (response_body, status) = await!(self.http_client.request(request))?;
+        let (access_token, expires_in) =
+            parse_response_without_refresh_token(response_body, status)?;
+        Ok(AuthToken { token_type: TokenType::AccessToken, token: access_token.0, expires_in })
     }
 
     /// Implementation of `GetAppIdToken` method for the `AuthProvider`
@@ -312,19 +321,19 @@ trait Responder: Sized {
 }
 
 impl Responder for AuthProviderGetPersistentCredentialResponder {
-    type Data = (RefreshToken, UserProfileInfo);
+    type Data = (String, UserProfileInfo);
     const METHOD_NAME: &'static str = "GetPersistentCredential";
 
     fn send_raw(
         self,
         status: AuthProviderStatus,
-        data: Option<(RefreshToken, UserProfileInfo)>,
+        data: Option<(String, UserProfileInfo)>,
     ) -> Result<(), fidl::Error> {
         match data {
             None => self.send(status, None, None),
             Some((refresh_token, mut user_profile_info)) => self.send(
                 status,
-                Some(refresh_token.0.as_str()),
+                Some(refresh_token.as_str()),
                 Some(OutOfLine(&mut user_profile_info)),
             ),
         }
@@ -619,14 +628,56 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_get_app_access_token() -> Result<(), Error> {
-        let auth_provider = get_auth_provider_proxy(None);
+    async fn test_get_app_access_token_success() -> Result<(), Error> {
+        let http_result = "{\"access_token\": \"test-access-token\", \"expires_in\": 3600}";
+        let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::OK);
+        let auth_provider = get_auth_provider_proxy(Some(mock_http));
+        let (result_status, result_token) = await!(auth_provider.get_app_access_token(
+            "credential",
+            None,
+            &mut vec![].into_iter()
+        ))?;
+        assert_eq!(result_status, AuthProviderStatus::Ok);
+        assert_eq!(
+            result_token.unwrap(),
+            Box::new(AuthToken {
+                token_type: TokenType::AccessToken,
+                token: "test-access-token".to_string(),
+                expires_in: 3600,
+            })
+        );
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_app_access_token_failures() -> Result<(), Error> {
+        // Invalid request
+        let mock_http = TestHttpClient::with_error(AuthProviderStatus::InternalError);
+        let auth_provider = get_auth_provider_proxy(Some(mock_http));
+        let result = await!(auth_provider.get_app_access_token("", None, &mut vec![].into_iter()))?;
+        assert_eq!(result.0, AuthProviderStatus::BadRequest);
+
+        // Error response
+        let http_result = "{\"error\": \"invalid_scope\", \"error_description\": \"bad scope\"}";
+        let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::BAD_REQUEST);
+        let auth_provider = get_auth_provider_proxy(Some(mock_http));
+        let result = await!(auth_provider.get_app_access_token(
+            "credential",
+            None,
+            &mut vec!["bad-scope"].into_iter()
+        ))?;
+        assert_eq!(result.0, AuthProviderStatus::OauthServerError);
+
+        // Network error
+        let mock_http = TestHttpClient::with_error(AuthProviderStatus::NetworkError);
+        let auth_provider = get_auth_provider_proxy(Some(mock_http));
         let result = await!(auth_provider.get_app_access_token(
             "credential",
             None,
             &mut vec![].into_iter()
         ))?;
-        assert_eq!(result.0, AuthProviderStatus::InternalError);
+        assert_eq!(result.0, AuthProviderStatus::NetworkError);
+
         Ok(())
     }
 
