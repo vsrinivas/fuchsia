@@ -492,8 +492,9 @@ zx_status_t ValidateKernelPayload(const fzl::ResizeableVmoMapper& mapper, size_t
 #endif
 
 // Attempt to bind an FVM driver to a partition fd.
-fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& partition_fd, zx::duration timeout) {
-    char path[PATH_MAX];
+fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
+                                  const fbl::unique_fd& partition_fd, zx::duration timeout) {
+    char path[PATH_MAX] = {};
     zx_status_t status = GetTopoPathFromFd(partition_fd, path, sizeof(path));
     if (status != ZX_OK) {
         ERROR("Failed to get topological path\n");
@@ -503,9 +504,9 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& partition_fd, zx::durati
     // We assume the FVM will either have completed binding, or is not bound at all. This is ensured
     // by the paver always waiting for the FVM to bind after invoking ControllerBind.
     char fvm_path[PATH_MAX];
-    snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", path);
+    snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", &path[5]);
 
-    fbl::unique_fd fvm(open(fvm_path, O_RDWR));
+    fbl::unique_fd fvm(openat(devfs_root.get(), fvm_path, O_RDWR));
     if (fvm) {
         return fvm;
     }
@@ -523,11 +524,11 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& partition_fd, zx::durati
         return fbl::unique_fd();
     }
 
-    if (wait_for_device(fvm_path, timeout.get()) != ZX_OK) {
+    if (wait_for_device_at(devfs_root.get(), fvm_path, timeout.get()) != ZX_OK) {
         ERROR("Error waiting for fvm driver to bind\n");
         return fbl::unique_fd();
     }
-    return fbl::unique_fd(open(fvm_path, O_RDWR));
+    return fbl::unique_fd(openat(devfs_root.get(), fvm_path, O_RDWR));
 }
 
 } // namespace
@@ -536,8 +537,8 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& partition_fd, zx::durati
 //
 // On success, returns a file descriptor to an FVM.
 // On failure, returns -1
-fbl::unique_fd FvmPartitionFormat(fbl::unique_fd partition_fd, size_t slice_size,
-                                  BindOption option) {
+fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_fd partition_fd,
+                                  size_t slice_size, BindOption option) {
     // Although the format (based on the magic in the FVM superblock)
     // indicates this is (or at least was) an FVM image, it may be invalid.
     //
@@ -548,7 +549,7 @@ fbl::unique_fd FvmPartitionFormat(fbl::unique_fd partition_fd, size_t slice_size
     if (option == BindOption::TryBind) {
         disk_format_t df = detect_disk_format(partition_fd.get());
         if (df == DISK_FORMAT_FVM) {
-            fvm_fd = TryBindToFvmDriver(partition_fd, zx::sec(3));
+            fvm_fd = TryBindToFvmDriver(devfs_root, partition_fd, zx::sec(3));
             if (fvm_fd) {
                 LOG("Found already formatted FVM.\n");
                 VolumeInfo info;
@@ -590,7 +591,7 @@ fbl::unique_fd FvmPartitionFormat(fbl::unique_fd partition_fd, size_t slice_size
         }
     }
 
-    return TryBindToFvmDriver(partition_fd, zx::sec(3));
+    return TryBindToFvmDriver(devfs_root, partition_fd, zx::sec(3));
 }
 
 namespace {
@@ -892,11 +893,17 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd,
         return ZX_ERR_IO;
     }
 
+    fbl::unique_fd devfs_root(open("/dev", O_RDWR));
+    if (!devfs_root) {
+        ERROR("Couldn't open devfs root\n");
+        return ZX_ERR_IO;
+    }
+
     fvm::sparse_image_t* hdr = reader->Image();
     // Acquire an fd to the FVM, either by finding one that already
     // exists, or formatting a new one.
-    fbl::unique_fd fvm_fd(
-        FvmPartitionFormat(std::move(partition_fd2), hdr->slice_size, BindOption::TryBind));
+    fbl::unique_fd fvm_fd(FvmPartitionFormat(devfs_root, std::move(partition_fd2), hdr->slice_size,
+                                             BindOption::TryBind));
     if (!fvm_fd) {
         ERROR("Couldn't find FVM partition\n");
         return ZX_ERR_IO;
@@ -932,7 +939,8 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd,
     if (free_slices < requested_slices) {
         Warn("Not enough space to non-destructively pave",
              "Automatically reinitializing FVM; Expect data loss");
-        fvm_fd = FvmPartitionFormat(std::move(partition_fd), hdr->slice_size, BindOption::Reformat);
+        fvm_fd = FvmPartitionFormat(devfs_root, std::move(partition_fd), hdr->slice_size,
+                                    BindOption::Reformat);
         if (!fvm_fd) {
             ERROR("Couldn't reformat FVM partition.\n");
             return ZX_ERR_IO;

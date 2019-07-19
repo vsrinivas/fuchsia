@@ -45,9 +45,8 @@ void CreateBadBlockMap(void* buffer) {
 void BlockDevice::Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
                          fbl::unique_ptr<BlockDevice>* device) {
     ramdisk_client_t* client;
-    ASSERT_EQ(ramdisk_create_at_with_guid(devfs_root.get(), kBlockSize, kBlockCount, guid,
-                                          ZBI_PARTITION_GUID_LEN, &client),
-              ZX_OK);
+    ASSERT_OK(ramdisk_create_at_with_guid(devfs_root.get(), kBlockSize, kBlockCount, guid,
+                                          ZBI_PARTITION_GUID_LEN, &client));
     device->reset(new BlockDevice(client));
 }
 

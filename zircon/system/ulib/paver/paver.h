@@ -23,8 +23,8 @@ enum class BindOption {
 };
 
 // Public for testing.
-fbl::unique_fd FvmPartitionFormat(fbl::unique_fd partition_fd, size_t slice_size,
-                                  BindOption option);
+fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_fd partition_fd,
+                                  size_t slice_size, BindOption option);
 
 class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
 public:

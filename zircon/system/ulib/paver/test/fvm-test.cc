@@ -30,7 +30,10 @@ public:
         args.disable_block_watcher = true;
         ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
 
-        BlockDevice::Create(devmgr_.devfs_root(), kFvmType, &device_);
+        fbl::unique_fd ctl;
+        ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &ctl));
+
+        ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kFvmType, &device_));
         ASSERT_TRUE(device_);
     }
 
@@ -42,37 +45,44 @@ public:
         return fbl::unique_fd(dup(device_->fd()));
     }
 
+    const fbl::unique_fd& devfs_root() { return devmgr_.devfs_root(); }
+
 private:
     IsolatedDevmgr devmgr_;
     std::unique_ptr<BlockDevice> device_;
 };
 
 TEST_F(FvmTest, FormatFvmEmpty) {
-    fbl::unique_fd fvm_part = FvmPartitionFormat(fd(), kSliceSize, paver::BindOption::Reformat);
+    fbl::unique_fd fvm_part = FvmPartitionFormat(devfs_root(), fd(), kSliceSize,
+                                                 paver::BindOption::Reformat);
     ASSERT_TRUE(fvm_part.is_valid());
 }
 
 TEST_F(FvmTest, TryBindEmpty) {
-    fbl::unique_fd fvm_part = FvmPartitionFormat(fd(), kSliceSize, paver::BindOption::TryBind);
+    fbl::unique_fd fvm_part = FvmPartitionFormat(devfs_root(), fd(), kSliceSize,
+                                                 paver::BindOption::TryBind);
     ASSERT_TRUE(fvm_part.is_valid());
 }
 
 TEST_F(FvmTest, TryBindAlreadyFormatted) {
     ASSERT_OK(fvm_init(borrow_fd(), kSliceSize));
-    fbl::unique_fd fvm_part = FvmPartitionFormat(fd(), kSliceSize, paver::BindOption::TryBind);
+    fbl::unique_fd fvm_part = FvmPartitionFormat(devfs_root(), fd(), kSliceSize,
+                                                 paver::BindOption::TryBind);
     ASSERT_TRUE(fvm_part.is_valid());
 }
 
 TEST_F(FvmTest, TryBindAlreadyBound) {
-    fbl::unique_fd fvm_part = FvmPartitionFormat(fd(), kSliceSize, paver::BindOption::Reformat);
+    fbl::unique_fd fvm_part = FvmPartitionFormat(devfs_root(), fd(), kSliceSize,
+                                                 paver::BindOption::Reformat);
     ASSERT_TRUE(fvm_part.is_valid());
 
-    fvm_part = FvmPartitionFormat(fd(), kSliceSize, paver::BindOption::TryBind);
+    fvm_part = FvmPartitionFormat(devfs_root(), fd(), kSliceSize, paver::BindOption::TryBind);
     ASSERT_TRUE(fvm_part.is_valid());
 }
 
 TEST_F(FvmTest, TryBindAlreadyFormattedWrongSliceSize) {
     ASSERT_OK(fvm_init(borrow_fd(), kSliceSize * 2));
-    fbl::unique_fd fvm_part = FvmPartitionFormat(fd(), kSliceSize, paver::BindOption::TryBind);
+    fbl::unique_fd fvm_part = FvmPartitionFormat(devfs_root(), fd(), kSliceSize,
+                                                 paver::BindOption::TryBind);
     ASSERT_TRUE(fvm_part.is_valid());
 }
