@@ -442,20 +442,30 @@ where
         loop {
             match self.connections.poll_next_unpin(cx) {
                 Poll::Ready(Some((maybe_request, mut connection))) => {
-                    if let Some(Ok(request)) = maybe_request {
-                        match self.handle_request(request, &mut connection) {
-                            Ok(ConnectionState::Alive) => {
-                                self.connections.push(connection.into_future())
-                            }
-                            Ok(ConnectionState::Closed) => (),
-                            // An error occurred while processing a request.  We will just close
+                    let state = match maybe_request {
+                        Some(Ok(request)) => self
+                            .handle_request(request, &mut connection)
+                            // If an error occurred while processing a request we will just close
                             // the connection, effectively closing the underlying channel in the
-                            // destructor.
-                            _ => (),
+                            // destructor.  Make one last attempt to call `handle_close` in case we
+                            // have any modifications in the connection buffer.
+                            .unwrap_or(ConnectionState::Dropped),
+                        Some(Err(_)) | None => {
+                            // If the connection was closed by the peer (`None`) or an error has
+                            // occurred (`Some(Err)`), we still need to make sure we run the
+                            // `on_write` handler.  There is nowhere to report any errors to, so we
+                            // just ignore those.
+                            ConnectionState::Dropped
+                        }
+                    };
+
+                    match state {
+                        ConnectionState::Alive => self.connections.push(connection.into_future()),
+                        ConnectionState::Closed => (),
+                        ConnectionState::Dropped => {
+                            let _ = self.handle_close(&mut connection, |_status| Ok(()));
                         }
                     }
-                    // Similarly to the error that occurs while handing a FIDL request, any
-                    // connection level errors cause the connection to be closed.
                 }
                 // Even when we have no connections any more we still report Pending state, as we
                 // may get more connections open in the future.
@@ -933,6 +943,25 @@ mod tests {
                 assert_write!(proxy, "Wrong");
                 assert_write!(proxy, " format");
                 assert_close_err!(proxy, Status::INVALID_ARGS);
+            },
+        );
+    }
+
+    #[test]
+    fn write_and_drop_connection() {
+        let (write_call_sender, write_call_receiver) = oneshot::channel::<()>();
+        let mut write_call_sender = Some(write_call_sender);
+        run_server_client(
+            OPEN_RIGHT_WRITABLE,
+            write_only(100, |content| {
+                assert_eq!(*&content, b"Updated content");
+                write_call_sender.take().unwrap().send(()).unwrap();
+                Ok(())
+            }),
+            async move |proxy| {
+                assert_write!(proxy, "Updated content");
+                drop(proxy);
+                await!(write_call_receiver).unwrap();
             },
         );
     }

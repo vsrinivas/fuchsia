@@ -29,10 +29,16 @@ use {
     std::{io::Write, iter, mem, pin::Pin},
 };
 
-/// return type for handle_request functions
+/// Return type for [`handle_request`] functions.
 pub enum ConnectionState {
+    /// Connection is still alive.
     Alive,
+    /// Connection have received Node::Close message and the [`handle_close`] method has been
+    /// already called for this connection.
     Closed,
+    /// Connection has been dropped by the peer or an error has occured.  [`handle_close`] still
+    /// need to be called (though it would not be able to report the status to the peer).
+    Dropped,
 }
 
 /// FileConnection represents the buffered connection of a single client to a pseudo file. It

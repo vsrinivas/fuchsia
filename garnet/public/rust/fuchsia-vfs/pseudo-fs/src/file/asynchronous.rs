@@ -206,8 +206,8 @@ where
     // safe to get a mutable reference from a pinned one.
     unsafe_unpinned!(responder: Option<FileCloseResponder>);
 
-    pub fn new(res: OnWriteRes, responder: FileCloseResponder) -> Self {
-        OnWriteFuture { res, responder: Some(responder) }
+    pub fn new(res: OnWriteRes, responder: Option<FileCloseResponder>) -> Self {
+        OnWriteFuture { res, responder }
     }
 }
 
@@ -220,13 +220,17 @@ where
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.as_mut().res().poll_unpin(cx) {
             Poll::Ready(Ok(())) => {
-                // if the responder fails here we have no recourse.
-                let _ = self.as_mut().responder().take().unwrap().send(Status::OK.into_raw());
+                if let Some(responder) = self.as_mut().responder().take() {
+                    // If the responder fails here we have no recourse.
+                    let _ = responder.send(Status::OK.into_raw());
+                }
                 Poll::Ready(())
             }
             Poll::Ready(Err(e)) => {
-                // if the responder fails here we have no recourse.
-                let _ = self.as_mut().responder().take().unwrap().send(e.into_raw());
+                if let Some(responder) = self.as_mut().responder().take() {
+                    // If the responder fails here we have no recourse.
+                    let _ = responder.send(e.into_raw());
+                }
                 Poll::Ready(())
             }
             Poll::Pending => Poll::Pending,
@@ -336,7 +340,7 @@ where
                 })
             }
             FileRequest::Close { responder } => {
-                self.handle_close(connection, responder)?;
+                self.handle_close(connection, Some(responder))?;
                 Ok(HandleRequestResult {
                     connection_state: ConnectionState::Closed,
                     added_new_connection: false,
@@ -367,7 +371,7 @@ where
     fn handle_close(
         &mut self,
         connection: &mut FileConnection,
-        responder: FileCloseResponder,
+        responder: Option<FileCloseResponder>,
     ) -> Result<(), fidl::Error> {
         if let Some(on_write) = &mut self.on_write {
             if let Some(fut) = connection.handle_close(|buf| Some(on_write(buf)), None) {
@@ -376,7 +380,11 @@ where
             }
         }
 
-        responder.send(Status::OK.into_raw())
+        if let Some(responder) = responder {
+            responder.send(Status::OK.into_raw())
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -480,16 +488,47 @@ where
             loop {
                 match self.connections.poll_next_unpin(cx) {
                     Poll::Ready(Some((maybe_request, mut connection))) => {
-                        if let Some(Ok(request)) = maybe_request {
-                            match self.handle_request(request, &mut connection) {
-                                Ok(HandleRequestResult {
-                                    connection_state: ConnectionState::Alive,
-                                    added_new_connection,
-                                }) => {
-                                    rerun_connections |= added_new_connection;
-                                    self.connections.push(connection.into_future())
+                        let state = match maybe_request {
+                            Some(Ok(request)) => self
+                                .handle_request(request, &mut connection)
+                                // If an error occurred while processing a request we will just
+                                // close the connection, effectively closing the underlying channel
+                                // in the destructor.  Make one last attempt to call `handle_close`
+                                // in case we have any modifications in the connection buffer.
+                                .unwrap_or(HandleRequestResult {
+                                    connection_state: ConnectionState::Dropped,
+                                    added_new_connection: false,
+                                }),
+                            Some(Err(_)) | None => {
+                                // If the connection was closed by the peer (`None`) or an error
+                                // has occurred (`Some(Err)`), we still need to make sure we run
+                                // the `on_write` handler.  There is nowhere to report any errors
+                                // to, so we just ignore those.
+                                HandleRequestResult {
+                                    connection_state: ConnectionState::Dropped,
+                                    added_new_connection: false,
                                 }
-                                _ => (),
+                            }
+                        };
+
+                        match state {
+                            HandleRequestResult {
+                                connection_state: ConnectionState::Alive,
+                                added_new_connection,
+                            } => {
+                                rerun_connections |= added_new_connection;
+                                self.connections.push(connection.into_future())
+                            }
+                            HandleRequestResult {
+                                connection_state: ConnectionState::Closed,
+                                added_new_connection,
+                            } => rerun_connections |= added_new_connection,
+                            HandleRequestResult {
+                                connection_state: ConnectionState::Dropped,
+                                added_new_connection,
+                            } => {
+                                rerun_connections |= added_new_connection;
+                                let _ = self.handle_close(&mut connection, None);
                             }
                         }
                     }
@@ -835,6 +874,28 @@ mod tests {
                 assert_write!(proxy, "Wrong");
                 assert_write!(proxy, " format");
                 assert_close_err!(proxy, Status::INVALID_ARGS);
+            },
+        );
+    }
+
+    #[test]
+    fn write_and_drop_connection() {
+        let (write_call_sender, write_call_receiver) = oneshot::channel::<()>();
+        let mut write_call_sender = Some(write_call_sender);
+        run_server_client(
+            OPEN_RIGHT_WRITABLE,
+            write_only(100, move |content| {
+                let write_call_sender = write_call_sender.take().unwrap();
+                async move {
+                    assert_eq!(*&content, b"Updated content");
+                    write_call_sender.send(()).unwrap();
+                    Ok(())
+                }
+            }),
+            async move |proxy| {
+                assert_write!(proxy, "Updated content");
+                drop(proxy);
+                await!(write_call_receiver).unwrap();
             },
         );
     }
