@@ -81,8 +81,15 @@ static zx_status_t try_dispatch_user_exception(zx_excp_type_t type, arm64_iframe
   return try_dispatch_user_data_fault_exception(type, iframe, esr, 0);
 }
 
-__NO_RETURN static void exception_die(arm64_iframe_t* iframe, uint32_t esr) {
+// Prints exception details and then panics.
+__NO_RETURN static void exception_die(arm64_iframe_t* iframe, uint32_t esr, const char* format,
+                                      ...) {
   platform_panic_start();
+
+  va_list args;
+  va_start(args, format);
+  vprintf(format, args);
+  va_end(args);
 
   uint32_t ec = BITS_SHIFT(esr, 31, 26);
   uint32_t il = BIT(esr, 25);
@@ -100,8 +107,7 @@ static void arm64_unknown_handler(arm64_iframe_t* iframe, uint exception_flags, 
   /* this is for a lot of reasons, but most of them are undefined instructions */
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* trapped inside the kernel, this is bad */
-    printf("unknown exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
-    exception_die(iframe, esr);
+    exception_die(iframe, esr, "unknown exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
   }
   try_dispatch_user_exception(ZX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr);
 }
@@ -109,8 +115,7 @@ static void arm64_unknown_handler(arm64_iframe_t* iframe, uint exception_flags, 
 static void arm64_brk_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* trapped inside the kernel, this is bad */
-    printf("BRK in kernel: PC at %#" PRIx64 "\n", iframe->elr);
-    exception_die(iframe, esr);
+    exception_die(iframe, esr, "BRK in kernel: PC at %#" PRIx64 "\n", iframe->elr);
   }
   try_dispatch_user_exception(ZX_EXCP_SW_BREAKPOINT, iframe, esr);
 }
@@ -119,8 +124,7 @@ static void arm64_hw_debug_exception_handler(arm64_iframe_t* iframe, uint except
                                              uint32_t esr) {
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* trapped inside the kernel, this is bad */
-    printf("HW breakpoint in kernel: PC at %#" PRIx64 "\n", iframe->elr);
-    exception_die(iframe, esr);
+    exception_die(iframe, esr, "HW breakpoint in kernel: PC at %#" PRIx64 "\n", iframe->elr);
   }
 
   // We don't need to save the debug state because it doesn't change by an exception. The only
@@ -135,8 +139,7 @@ static void arm64_hw_debug_exception_handler(arm64_iframe_t* iframe, uint except
 static void arm64_step_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* trapped inside the kernel, this is bad */
-    printf("software step in kernel: PC at %#" PRIx64 "\n", iframe->elr);
-    exception_die(iframe, esr);
+    exception_die(iframe, esr, "software step in kernel: PC at %#" PRIx64 "\n", iframe->elr);
   }
   // TODO(ZX-3037): Is it worth separating this into two separate exceptions?
   try_dispatch_user_exception(ZX_EXCP_HW_BREAKPOINT, iframe, esr);
@@ -145,8 +148,7 @@ static void arm64_step_handler(arm64_iframe_t* iframe, uint exception_flags, uin
 static void arm64_fpu_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* we trapped a floating point instruction inside our own EL, this is bad */
-    printf("invalid fpu use in kernel: PC at %#" PRIx64 "\n", iframe->elr);
-    exception_die(iframe, esr);
+    exception_die(iframe, esr, "invalid fpu use in kernel: PC at %#" PRIx64 "\n", iframe->elr);
   }
   arm64_fpu_exception(iframe, exception_flags);
 }
@@ -186,9 +188,8 @@ static void arm64_instruction_abort_handler(arm64_iframe_t* iframe, uint excepti
       return;
   }
 
-  printf("instruction abort: PC at %#" PRIx64 ", is_user %d, FAR %" PRIx64 "\n", iframe->elr,
-         is_user, far);
-  exception_die(iframe, esr);
+  exception_die(iframe, esr, "instruction abort: PC at %#" PRIx64 ", is_user %d, FAR %" PRIx64 "\n",
+                iframe->elr, is_user, far);
 }
 
 static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
@@ -245,13 +246,13 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
 
   /* decode the iss */
   if (BIT(iss, 24)) { /* ISV bit */
-    printf("data fault: PC at %#" PRIx64 ", FAR %#" PRIx64 ", iss %#x (DFSC %#x)\n", iframe->elr,
-           far, iss, BITS(iss, 5, 0));
+    exception_die(iframe, esr,
+                  "data fault: PC at %#" PRIx64 ", FAR %#" PRIx64 ", iss %#x (DFSC %#x)\n",
+                  iframe->elr, far, iss, BITS(iss, 5, 0));
   } else {
-    printf("data fault: PC at %#" PRIx64 ", FAR %#" PRIx64 ", iss 0x%x\n", iframe->elr, far, iss);
+    exception_die(iframe, esr, "data fault: PC at %#" PRIx64 ", FAR %#" PRIx64 ", iss 0x%x\n",
+                  iframe->elr, far, iss);
   }
-
-  exception_die(iframe, esr);
 }
 
 static inline void arm64_restore_percpu_pointer() {
@@ -283,8 +284,7 @@ extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flag
       break;
     case 0b010001: /* syscall from arm32 */
     case 0b010101: /* syscall from arm64 */
-      printf("syscalls should be handled in assembly\n");
-      exception_die(iframe, esr);
+      exception_die(iframe, esr, "syscalls should be handled in assembly\n");
       break;
     case 0b100000: /* instruction abort from lower level */
     case 0b100001: /* instruction abort from same level */
@@ -312,15 +312,14 @@ extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flag
       /* TODO: properly decode more of these */
       if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
         /* trapped inside the kernel, this is bad */
-        printf("unhandled exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
-        exception_die(iframe, esr);
+        exception_die(iframe, esr, "unhandled exception in kernel: PC at %#" PRIx64 "\n",
+                      iframe->elr);
       }
       /* let the user exception handler get a shot at it */
       kcounter_add(exceptions_unhandled, 1);
       if (try_dispatch_user_exception(ZX_EXCP_GENERAL, iframe, esr) == ZX_OK)
         break;
-      printf("unhandled synchronous exception\n");
-      exception_die(iframe, esr);
+      exception_die(iframe, esr, "unhandled synchronous exception\n");
     }
   }
 
