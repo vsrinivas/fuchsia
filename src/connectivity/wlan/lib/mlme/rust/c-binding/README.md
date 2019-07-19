@@ -10,20 +10,18 @@ cargo install cbindgen
 
 ## Generate Cargo.toml file
 
-Generate a Cargo.toml for `wlan-mlme-c` by running the following command:
+Generate a Cargo.toml for `wlan-mlme-c` by running the following commands:
 ```
-cd $FUCHSIA_DIR/garnet/lib/rust/wlan-mlme-c
-rm Cargo.lock Cargo.toml
-fx gen-cargo .
+find $FUCHSIA_DIR/src/connectivity/wlan/lib/mlme/rust/c-binding/ -name 'Cargo.*' | xargs rm
+fx gen-cargo //src/connectivity/wlan/lib/mlme/rust/c-binding:_wlan-mlme-c_rustc_artifact
 ```
 
 ## Command line
 
 ```
-cbindgen $FUCHSIA_DIR/garnet/lib/rust/wlan-mlme-c/ -o $FUCHSIA_DIR/garnet/lib/rust/wlan-mlme-c/bindings.h
+cbindgen $FUCHSIA_DIR/src/connectivity/wlan/lib/mlme/rust/c-binding/ -o $FUCHSIA_DIR/src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h
+fx format-code --files=$FUCHSIA_DIR/src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h
 ```
-
-After re-generating the bindings also run `fx format-code` to format the generated bindings.
 
 ## Troubleshooting
 
