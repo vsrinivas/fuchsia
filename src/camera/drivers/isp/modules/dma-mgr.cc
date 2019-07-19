@@ -137,25 +137,12 @@ zx_status_t DmaManager::Start(
   return ZX_OK;
 }
 
-void DmaManager::OnPrimaryFrameWritten() {
-  if (!current_format_->HasSecondaryChannel() || secondary_frame_written_) {
-    secondary_frame_written_ = false;
-    OnFrameWritten();
-  } else {
-    primary_frame_written_ = true;
-  }
-}
-
-void DmaManager::OnSecondaryFrameWritten() {
-  if (primary_frame_written_) {
-    primary_frame_written_ = false;
-    OnFrameWritten();
-  } else {
-    secondary_frame_written_ = true;
-  }
-}
 
 void DmaManager::OnFrameWritten() {
+  // If we have not started streaming, just skip.
+  if (!enabled_) {
+    return;
+  }
   ZX_ASSERT(frame_available_callback_ != nullptr);
   ZX_ASSERT(write_locked_buffers_.size() > 0);
   fuchsia_camera_common_FrameAvailableEvent event;

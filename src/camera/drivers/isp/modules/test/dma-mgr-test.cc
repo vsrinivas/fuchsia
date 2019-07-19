@@ -190,9 +190,7 @@ TEST_F(DmaMgrTest, BasicConnectionTest) {
   EXPECT_FALSE(CheckWriteEnabled(Stream::Downscaled));
   EXPECT_TRUE(CheckWriteEnabled(Stream::FullResolution));
   EXPECT_EQ(full_resolution_callbacks_.size(), 0);
-  full_resolution_dma_->OnPrimaryFrameWritten();
-  EXPECT_EQ(full_resolution_callbacks_.size(), 0);
-  full_resolution_dma_->OnSecondaryFrameWritten();
+  full_resolution_dma_->OnFrameWritten();
   EXPECT_EQ(full_resolution_callbacks_.size(), 1);
 }
 
@@ -239,8 +237,7 @@ TEST_F(DmaMgrTest, RunOutOfBuffers) {
   // Now mark them all written:
   for (uint32_t i = 0; i < kFullResNumberOfBuffers; ++i) {
     SetMagicWriteAddresses();
-    full_resolution_dma_->OnPrimaryFrameWritten();
-    full_resolution_dma_->OnSecondaryFrameWritten();
+    full_resolution_dma_->OnFrameWritten();
     CheckNoDmaWriteAddress(Stream::FullResolution);
     EXPECT_EQ(full_resolution_callbacks_.size(), i + 1);
     EXPECT_EQ(full_resolution_callbacks_.back().frame_status,
@@ -271,21 +268,18 @@ TEST_F(DmaMgrTest, RunOutOfBuffers) {
 // Make sure a new address is written to the dma frame every time we call
 // OnNewFrame:
 TEST_F(DmaMgrTest, DieOnInvalidFrameWritten) {
-  // We should die because we don't have a callback registered:
-  ASSERT_DEATH(([this]() {
-    full_resolution_dma_->OnPrimaryFrameWritten();
-    full_resolution_dma_->OnSecondaryFrameWritten();
+  // We should not die because the dma is not enabled:
+  ASSERT_NO_DEATH(([this]() {
+    full_resolution_dma_->OnFrameWritten();
   }));
   ConnectToStreams();
   // Now we should die because we don't have any frames that we are writing:
   ASSERT_DEATH(([this]() {
-    full_resolution_dma_->OnPrimaryFrameWritten();
-    full_resolution_dma_->OnSecondaryFrameWritten();
+    full_resolution_dma_->OnFrameWritten();
   }));
   full_resolution_dma_->OnNewFrame();
   ASSERT_NO_DEATH(([this]() {
-    full_resolution_dma_->OnPrimaryFrameWritten();
-    full_resolution_dma_->OnSecondaryFrameWritten();
+    full_resolution_dma_->OnFrameWritten();
   }));
 }
 
@@ -297,8 +291,7 @@ TEST_F(DmaMgrTest, MultipleStartCalls) {
 
   // Read lock one of the full_res frames:
   full_resolution_dma_->OnNewFrame();
-  full_resolution_dma_->OnPrimaryFrameWritten();
-  full_resolution_dma_->OnSecondaryFrameWritten();
+  full_resolution_dma_->OnFrameWritten();
 
   // Now connect the dmamgr to a "different" set of buffers.
   // DmaMgr cannot tell the difference between vmos, so we can just pass in the
@@ -307,8 +300,7 @@ TEST_F(DmaMgrTest, MultipleStartCalls) {
 
   // Now we should die because we don't have any frames that we are writing:
   ASSERT_DEATH(([this]() {
-    downscaled_dma_->OnPrimaryFrameWritten();
-    downscaled_dma_->OnSecondaryFrameWritten();
+    downscaled_dma_->OnFrameWritten();
   }));
 
   // Releasing frames should also fail:
@@ -327,8 +319,7 @@ TEST_F(DmaMgrTest, MultipleStartCalls) {
   CheckDmaWroteAddress(Stream::FullResolution);
   // Make sure we can mark the frame written.
   ASSERT_NO_DEATH(([this]() {
-    full_resolution_dma_->OnPrimaryFrameWritten();
-    full_resolution_dma_->OnSecondaryFrameWritten();
+    full_resolution_dma_->OnFrameWritten();
   }));
   // Make sure we can release the frame.
   ASSERT_EQ(full_resolution_callbacks_.size(), 1);
