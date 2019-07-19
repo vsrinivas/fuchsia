@@ -152,14 +152,16 @@ class DmaMgrTest : public zxtest::Test {
   }
 
   void ConnectToStreams() {
-    zx_status_t status = full_resolution_dma_->Start(
+    zx_status_t status = full_resolution_dma_->Configure(
         full_resolution_buffer_collection_,
         fit::bind_member(this, &DmaMgrTest::FullResCallback));
     EXPECT_OK(status);
-    status = downscaled_dma_->Start(
+    status = downscaled_dma_->Configure(
         downscaled_buffer_collection_,
         fit::bind_member(this, &DmaMgrTest::DownScaledCallback));
     EXPECT_OK(status);
+    full_resolution_dma_->Enable();
+    downscaled_dma_->Enable();
   }
 
   void TearDown() override {
@@ -180,6 +182,22 @@ class DmaMgrTest : public zxtest::Test {
   std::vector<fuchsia_camera_common_FrameAvailableEvent> downscaled_callbacks_;
 };
 
+TEST_F(DmaMgrTest, EnableDeathTest) {
+  // We should die because we don't have a callback registered:
+  ASSERT_DEATH(([this]() {
+    full_resolution_dma_->Enable();
+  }));
+  // But since we are not enabled, OnNewFrame does nothing.
+  ASSERT_NO_DEATH(([this]() {
+    full_resolution_dma_->OnNewFrame();
+  }));
+  ConnectToStreams();
+  ASSERT_NO_DEATH(([this]() {
+    full_resolution_dma_->Enable();
+  }));
+}
+
+
 TEST_F(DmaMgrTest, BasicConnectionTest) {
   EXPECT_FALSE(CheckWriteEnabled(Stream::Downscaled));
   EXPECT_FALSE(CheckWriteEnabled(Stream::FullResolution));
@@ -190,6 +208,25 @@ TEST_F(DmaMgrTest, BasicConnectionTest) {
   EXPECT_FALSE(CheckWriteEnabled(Stream::Downscaled));
   EXPECT_TRUE(CheckWriteEnabled(Stream::FullResolution));
   EXPECT_EQ(full_resolution_callbacks_.size(), 0);
+  full_resolution_dma_->OnFrameWritten();
+  EXPECT_EQ(full_resolution_callbacks_.size(), 1);
+}
+
+TEST_F(DmaMgrTest, EnableCallbacksTest) {
+  ConnectToStreams();
+  full_resolution_dma_->Disable();
+
+  full_resolution_dma_->OnNewFrame();
+  // Test that the outputs are not enabled:
+  EXPECT_FALSE(CheckWriteEnabled(Stream::FullResolution));
+  EXPECT_EQ(full_resolution_callbacks_.size(), 0);
+  full_resolution_dma_->OnFrameWritten();
+  EXPECT_EQ(full_resolution_callbacks_.size(), 0);
+
+  full_resolution_dma_->Enable();
+  full_resolution_dma_->OnNewFrame();
+  // Test that the outputs are enabled:
+  EXPECT_TRUE(CheckWriteEnabled(Stream::FullResolution));
   full_resolution_dma_->OnFrameWritten();
   EXPECT_EQ(full_resolution_callbacks_.size(), 1);
 }
@@ -284,7 +321,7 @@ TEST_F(DmaMgrTest, DieOnInvalidFrameWritten) {
 }
 
 // Make sure we can switch the dma manager to a different BufferCollection:
-TEST_F(DmaMgrTest, MultipleStartCalls) {
+TEST_F(DmaMgrTest, MultipleConfigureCalls) {
   ConnectToStreams();
   // Put downscaled in a write lock state
   downscaled_dma_->OnNewFrame();

@@ -24,16 +24,16 @@ class DmaManager {
   DmaManager(Stream stream_type, ddk::MmioView isp_mmio_local)
       : isp_mmio_local_(isp_mmio_local), stream_type_(stream_type) {}
 
-  // Initialize the format and buffers of the DMA Writer.  Calling this
-  // function enables the DMA's streaming functions.
+  // Initialize the format and buffers of the DMA Writer.
   // |buffer_collection| contains the vmos that the DMA will write to, and
   // the image format that dictates the DMA's configuration.
   // |frame_available_callback| will be called when the DMA is done writing
   // to a buffer.
-  // A note on making multiple Start() calls:
-  // The way to transition the DMA manager to another format is to call Start()
-  // with a different buffer collection.  However, doing so will remove all
-  // knowledge of the locked status of frames of the previous BufferCollection.
+  // A note on making multiple Configure() calls:
+  // It is possible to transition the DMA manager to another format by calling
+  // Configure() with a different buffer collection.  However, doing so will
+  // remove all knowledge of the locked status of frames of the previous
+  // BufferCollection.
   // This has the following effects:
   //  - Frames that are currently being written will be dropped.  Calls to
   //  On*FrameWritten()
@@ -43,7 +43,7 @@ class DmaManager {
   //  - ReleaseFrame calls with currently used indices (relating to the old
   //  BufferCollection)
   //    will return errors.
-  zx_status_t Start(
+  zx_status_t Configure(
       fuchsia_sysmem_BufferCollectionInfo buffer_collection,
       fit::function<void(fuchsia_camera_common_FrameAvailableEvent)>
           frame_available_callback);
@@ -61,6 +61,16 @@ class DmaManager {
   // Releases the write lock on the frame and calls the
   // frame_available_callback.
   void OnFrameWritten();
+
+  // Allow the streaming of frames to a consumer.
+  void Enable();
+
+  // Stop writing frames and sending them to the consumer.
+  // If frames are currently being written, they will be dropped.
+  void Disable();
+
+
+  bool enabled() { return enabled_; }
 
  private:
   bool enabled_ = false;
