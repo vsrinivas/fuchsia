@@ -45,9 +45,12 @@ void SessionCtlApp::ExecuteRemoveModCommand(const fxl::CommandLine& command_line
     return;
   }
 
-  // Get the mod name and default the story name to the mod name
+  // Get the mod name and default the story name to the mod name's hash
   std::string mod_name = command_line.positional_args().at(1);
-  std::string story_name = mod_name;
+  if (mod_name.find(":") == std::string::npos) {
+    mod_name = fxl::StringPrintf(kFuchsiaPkgPath, mod_name.c_str(), mod_name.c_str());
+  }
+  std::string story_name = std::to_string(std::hash<std::string>{}(mod_name));
 
   // If the story_name flag isn't set, the story name will remain defaulted to
   // the mod name

@@ -250,10 +250,13 @@ TEST_F(SessionCtlAppTest, RemoveMod) {
   });
 
   // Assert session_storage still contains the story
-  auto story_data = GetStoryData(mod);
+  std::string mod_package_name = fxl::StringPrintf(kFuchsiaPkgPath, mod, mod);
+  std::string mod_hash = std::to_string(std::hash<std::string>{}(mod_package_name));
+  auto story_data = GetStoryData(mod_hash);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ(mod, story_data->story_name());
-  EXPECT_EQ(mod, test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
+  EXPECT_EQ(mod_hash, story_data->story_name());
+  EXPECT_EQ(mod_package_name,
+            test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
   EXPECT_EQ(2, test_executor_.execute_count());
 }
 
@@ -284,9 +287,11 @@ TEST_F(SessionCtlAppTest, RemoveModOverrideDefault) {
   // Assert session_storage still contains the story
   auto story_name = "s";
   auto story_data = GetStoryData(story_name);
+  std::string mod_package_name = fxl::StringPrintf(kFuchsiaPkgPath, mod_name, mod_name);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(story_name, story_data->story_name());
-  EXPECT_EQ(mod_name, test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
+  EXPECT_EQ(mod_package_name,
+            test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
   EXPECT_EQ(2, test_executor_.execute_count());
 }
 
