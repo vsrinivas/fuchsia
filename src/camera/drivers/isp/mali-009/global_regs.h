@@ -517,21 +517,6 @@ class IspGlobalMonitor_Status
 class IspGlobalMonitor_Failures
     : public hwreg::RegisterBase<IspGlobalMonitor_Failures, uint32_t> {
  public:
-  // [0] : temper_dma_lsb_wtr_axi_alarm
-  //     [1] : temper_dma_lsb_rdr_axi_alarm
-  //     [2] : temper_dma_msb_wtr_axi_alarm
-  //     [3] : temper_dma_msb_rdr_axi_alarm
-  //     [4] : FR UV dma axi alarm
-  //     [5] : FR dma axi alarm
-  //     [6] : DS UV dma axi alarm
-  //     [7] : DS dma axi alarm
-  //     [8] : Temper LSB dma frame dropped
-  //     [9] : Temper MSB dma frame dropped
-  //     [10]: FR UV-DMA frame dropped
-  //     [11]: FR Y-DMA frame dropped
-  //     [12]: DS UV-DMA frame dropped
-  //     [13]: DS Y-DMA frame dropped
-  DEF_FIELD(29, 16, dma_alarms);
   DEF_BIT(0, fr_y_dma_wfifo_fail_full);
   DEF_BIT(1, fr_y_dma_wfifo_fail_empty);
   DEF_BIT(2, fr_uv_dma_wfifo_fail_full);
@@ -544,6 +529,24 @@ class IspGlobalMonitor_Failures
   DEF_BIT(9, temper_dma_wfifo_fail_full);
   DEF_BIT(10, temper_dma_rfifo_fail_empty);
   DEF_BIT(11, temper_dma_rfifo_fail_full);
+
+  // DMA Alarms:
+  DEF_BIT(16, temper_dma_lsb_wtr_axi_alarm);
+  DEF_BIT(17, temper_dma_lsb_rdr_axi_alarm);
+  DEF_BIT(18, temper_dma_msb_wtr_axi_alarm);
+  DEF_BIT(19, temper_dma_msb_rdr_axi_alarm);
+  DEF_BIT(20, fr_uv_dma_axi_alarm);
+  DEF_BIT(21, fr_dma_axi_alarm);
+  DEF_BIT(22, ds_uv_dma_axi_alarm);
+  DEF_BIT(23, ds_dma_axi_alarm);
+  DEF_BIT(24, temper_lsb_dma_frame_dropped);
+  DEF_BIT(25, temper_msb_dma_frame_dropped);
+  DEF_BIT(26, fr_uv_dma_frame_dropped);
+  DEF_BIT(27, fr_y_dma_frame_dropped);
+  DEF_BIT(28, ds_uv_dma_frame_dropped);
+  DEF_BIT(29, ds_y_dma_frame_dropped);
+
+
   static auto Get() {
     return hwreg::RegisterAddr<IspGlobalMonitor_Failures>(0x54);
   }
