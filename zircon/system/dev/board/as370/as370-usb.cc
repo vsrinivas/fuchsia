@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <unistd.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/usb-peripheral-config.h>
 #include <lib/mmio/mmio.h>
-#include <usb/dwc2/metadata.h>
 #include <soc/as370/as370-reset.h>
 #include <soc/as370/as370-usb.h>
+#include <usb/dwc2/metadata.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
-
-#include <unistd.h>
 
 #include "as370.h"
 
@@ -55,12 +55,13 @@ constexpr dwc2_metadata_t dwc2_metadata = {
     // larger than the minimum requirements.
     .rx_fifo_size = 1024,   // for all OUT endpoints.
     .nptx_fifo_size = 256,  // for endpoint zero IN direction.
-    .tx_fifo_sizes = {
-        512,    // for CDC ethernet bulk IN.
-        4,      // for CDC ethernet interrupt IN.
-        512,    // for test function bulk IN.
-        16,     // for test function interrupt IN.
-    },
+    .tx_fifo_sizes =
+        {
+            512,  // for CDC ethernet bulk IN.
+            4,    // for CDC ethernet interrupt IN.
+            512,  // for test function bulk IN.
+            16,   // for test function interrupt IN.
+        },
 };
 
 // Statically assigned dummy MAC address.
@@ -74,7 +75,7 @@ using FunctionDescriptor = fuchsia_hardware_usb_peripheral_FunctionDescriptor;
 static pbus_metadata_t usb_metadata[] = {
     {
         .type = DEVICE_METADATA_USB_CONFIG,
-        .data_buffer = nullptr, // filled in later
+        .data_buffer = nullptr,  // filled in later
         .data_size = 0,
     },
     {
@@ -89,21 +90,21 @@ static pbus_metadata_t usb_metadata[] = {
     },
 };
 
-static const pbus_dev_t dwc2_dev = [](){
-    pbus_dev_t dev = {};
-    dev.name = "dwc2-usb";
-    dev.vid = PDEV_VID_GENERIC;
-    dev.pid = PDEV_PID_GENERIC;
-    dev.did = PDEV_DID_USB_DWC2;
-    dev.mmio_list = dwc2_mmios;
-    dev.mmio_count = countof(dwc2_mmios);
-    dev.irq_list = dwc2_irqs;
-    dev.irq_count = countof(dwc2_irqs);
-    dev.bti_list = usb_btis;
-    dev.bti_count = countof(usb_btis);
-    dev.metadata_list = usb_metadata;
-    dev.metadata_count = countof(usb_metadata);
-    return dev;
+static const pbus_dev_t dwc2_dev = []() {
+  pbus_dev_t dev = {};
+  dev.name = "dwc2-usb";
+  dev.vid = PDEV_VID_GENERIC;
+  dev.pid = PDEV_PID_GENERIC;
+  dev.did = PDEV_DID_USB_DWC2;
+  dev.mmio_list = dwc2_mmios;
+  dev.mmio_count = countof(dwc2_mmios);
+  dev.irq_list = dwc2_irqs;
+  dev.irq_count = countof(dwc2_irqs);
+  dev.bti_list = usb_btis;
+  dev.bti_count = countof(usb_btis);
+  dev.metadata_list = usb_metadata;
+  dev.metadata_count = countof(usb_metadata);
+  return dev;
 }();
 
 constexpr pbus_mmio_t usb_phy_mmios[] = {
@@ -117,17 +118,17 @@ constexpr pbus_mmio_t usb_phy_mmios[] = {
     },
 };
 
-static const pbus_dev_t usb_phy_dev = [](){
-    pbus_dev_t dev = {};
-    dev.name = "aml-usb-phy-v2";
-    dev.vid = PDEV_VID_SYNAPTICS;
-    dev.pid = PDEV_PID_SYNAPTICS_AS370;
-    dev.did = PDEV_DID_AS370_USB_PHY;
-    dev.mmio_list = usb_phy_mmios;
-    dev.mmio_count = countof(usb_phy_mmios);
-    dev.bti_list = usb_btis;
-    dev.bti_count = countof(usb_btis);
-    return dev;
+static const pbus_dev_t usb_phy_dev = []() {
+  pbus_dev_t dev = {};
+  dev.name = "aml-usb-phy-v2";
+  dev.vid = PDEV_VID_SYNAPTICS;
+  dev.pid = PDEV_PID_SYNAPTICS_AS370;
+  dev.did = PDEV_DID_AS370_USB_PHY;
+  dev.mmio_list = usb_phy_mmios;
+  dev.mmio_count = countof(usb_phy_mmios);
+  dev.bti_list = usb_btis;
+  dev.bti_count = countof(usb_btis);
+  return dev;
 }();
 
 static const zx_bind_inst_t root_match[] = {
@@ -140,51 +141,51 @@ static const zx_bind_inst_t dwc2_phy_match[] = {
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC2),
 };
 static const device_component_part_t dwc2_phy_component[] = {
-    { countof(root_match), root_match },
-    { countof(dwc2_phy_match), dwc2_phy_match },
+    {countof(root_match), root_match},
+    {countof(dwc2_phy_match), dwc2_phy_match},
 };
 static const device_component_t dwc2_components[] = {
-    { countof(dwc2_phy_component), dwc2_phy_component },
+    {countof(dwc2_phy_component), dwc2_phy_component},
 };
 
 zx_status_t As370::UsbInit() {
-    auto status = pbus_.DeviceAdd(&usb_phy_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
-        return status;
-    }
+  auto status = pbus_.DeviceAdd(&usb_phy_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
+    return status;
+  }
 
-    constexpr size_t alignment = alignof(UsbConfig) > __STDCPP_DEFAULT_NEW_ALIGNMENT__
-                                     ? alignof(UsbConfig)
-                                     : __STDCPP_DEFAULT_NEW_ALIGNMENT__;
-    constexpr size_t config_size = sizeof(UsbConfig) + 2 * sizeof(FunctionDescriptor);
-    UsbConfig* config = reinterpret_cast<UsbConfig*>(
-        aligned_alloc(alignment, ROUNDUP(config_size, alignment)));
-    if (!config) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    config->vid = GOOGLE_USB_VID;
-    config->pid = GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID;
-    strcpy(config->manufacturer, kManufacturer);
-    strcpy(config->serial, kSerial);
-    strcpy(config->product, kProduct);
-    config->functions[0].interface_class = USB_CLASS_COMM;
-    config->functions[0].interface_subclass = USB_CDC_SUBCLASS_ETHERNET;
-    config->functions[0].interface_protocol = 0;
-    config->functions[1].interface_class = USB_CLASS_VENDOR;
-    config->functions[1].interface_subclass = 0;
-    config->functions[1].interface_protocol = 0;
-    usb_metadata[0].data_size = config_size;
-    usb_metadata[0].data_buffer = config;
+  constexpr size_t alignment = alignof(UsbConfig) > __STDCPP_DEFAULT_NEW_ALIGNMENT__
+                                   ? alignof(UsbConfig)
+                                   : __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+  constexpr size_t config_size = sizeof(UsbConfig) + 2 * sizeof(FunctionDescriptor);
+  UsbConfig* config =
+      reinterpret_cast<UsbConfig*>(aligned_alloc(alignment, ROUNDUP(config_size, alignment)));
+  if (!config) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  config->vid = GOOGLE_USB_VID;
+  config->pid = GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID;
+  strcpy(config->manufacturer, kManufacturer);
+  strcpy(config->serial, kSerial);
+  strcpy(config->product, kProduct);
+  config->functions[0].interface_class = USB_CLASS_COMM;
+  config->functions[0].interface_subclass = USB_CDC_SUBCLASS_ETHERNET;
+  config->functions[0].interface_protocol = 0;
+  config->functions[1].interface_class = USB_CLASS_VENDOR;
+  config->functions[1].interface_subclass = 0;
+  config->functions[1].interface_protocol = 0;
+  usb_metadata[0].data_size = config_size;
+  usb_metadata[0].data_buffer = config;
 
-    status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_components, countof(dwc2_components), 1);
-    free(config);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
-        return status;
-    }
+  status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_components, countof(dwc2_components), 1);
+  free(config);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 }  // namespace board_as370

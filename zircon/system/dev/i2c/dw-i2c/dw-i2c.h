@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_I2C_DW_I2C_DW_I2C_H_
+#define ZIRCON_SYSTEM_DEV_I2C_DW_I2C_DW_I2C_H_
+
+#include <thread>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/i2cimpl.h>
@@ -13,7 +16,6 @@
 #include <lib/mmio/mmio.h>
 #include <lib/zx/event.h>
 #include <lib/zx/interrupt.h>
-#include <thread>
 
 #include "dw-i2c-regs.h"
 
@@ -162,3 +164,5 @@ class DwI2cBus {
 };
 
 }  // namespace dw_i2c
+
+#endif  // ZIRCON_SYSTEM_DEV_I2C_DW_I2C_DW_I2C_H_

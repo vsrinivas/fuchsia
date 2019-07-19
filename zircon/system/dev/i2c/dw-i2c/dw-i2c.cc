@@ -2,6 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "dw-i2c.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
+#include <unistd.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -17,14 +25,6 @@
 #include <lib/sync/completion.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <threads.h>
-#include <unistd.h>
-
-#include "dw-i2c.h"
 
 namespace dw_i2c {
 
