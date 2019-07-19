@@ -81,6 +81,11 @@ It is important to try to follow documentation style guidelines to ensure that t
 created by a large number of contributors can flow together. See
 [Documentation Style Guide](documentation_style_guide.md).
 
+## How can I link to source code in my documentation?
+
+Use absolute paths starting with '/', like [`/zircon/public/sysroot/BUILD.gn`](/zircon/public/sysroot/BUILD.gn).
+Never use relative paths with ".." that point to content outside of `/docs` or `/zircon/docs` directories.
+
 ## How can I expose my documentation?
 
 Documentation is only useful when users can find it. Adding links to or from existing documentation
