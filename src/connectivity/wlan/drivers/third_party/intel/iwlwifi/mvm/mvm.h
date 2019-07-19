@@ -38,6 +38,8 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 
 #include <threads.h>
+
+#include <wlan/protocol/info.h>
 #include <zircon/listnode.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
@@ -123,12 +125,6 @@ struct iwl_mvm_phy_ctxt {
   uint32_t ref;
 
   enum nl80211_chan_width width;
-
-  /*
-   * TODO: This should probably be removed. Currently here only for rate
-   * scaling algorithm
-   */
-  struct ieee80211_channel* channel;
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
   /* Frequency Manager tx power limit*/
@@ -1608,16 +1604,15 @@ void iwl_mvm_rx_shared_mem_cfg_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buff
 
 /* MVM PHY */
 int iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
-                         struct cfg80211_chan_def* chandef, uint8_t chains_static,
-                         uint8_t chains_dynamic);
+                         wlan_channel_t* chandef, uint8_t chains_static, uint8_t chains_dynamic);
 int iwl_mvm_phy_ctxt_changed(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
                              struct cfg80211_chan_def* chandef, uint8_t chains_static,
                              uint8_t chains_dynamic);
 void iwl_mvm_phy_ctxt_ref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt);
 void iwl_mvm_phy_ctxt_unref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt);
 int iwl_mvm_phy_ctx_count(struct iwl_mvm* mvm);
-uint8_t iwl_mvm_get_channel_width(struct cfg80211_chan_def* chandef);
-uint8_t iwl_mvm_get_ctrl_pos(struct cfg80211_chan_def* chandef);
+uint8_t iwl_mvm_get_channel_width(wlan_channel_t* chandef);
+uint8_t iwl_mvm_get_ctrl_pos(wlan_channel_t* chandef);
 
 /* MAC (virtual interface) programming */
 int iwl_mvm_mac_ctxt_init(struct iwl_mvm* mvm, struct ieee80211_vif* vif);

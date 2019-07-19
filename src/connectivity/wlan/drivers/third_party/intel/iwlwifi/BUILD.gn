@@ -37,6 +37,7 @@ source_set("core") {
     "mvm/fw.c",
     "mvm/mac80211.c",
     "mvm/ops.c",
+    "mvm/phy-ctxt.c",
     "mvm/rxmq.c",
     "mvm/scan.c",
     "mvm/tof.c",
@@ -46,6 +47,7 @@ source_set("core") {
   ]
 
   deps = [
+    "//garnet/lib/wlan/protocol:protocol",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
   ]

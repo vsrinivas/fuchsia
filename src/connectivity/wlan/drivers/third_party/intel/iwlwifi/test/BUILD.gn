@@ -103,6 +103,18 @@ executable("pcie_test") {
   ]
 }
 
+executable("phy-ctxt_test") {
+  output_name = "phy-ctxt_test"
+  testonly = true
+
+  sources = [
+    "phy-ctxt_test.cc",
+  ]
+
+  defines = testing_defines
+  deps = testing_deps
+}
+
 executable("utils_test") {
   output_name = "utils_test"
   testonly = true
@@ -123,6 +135,7 @@ unittest_package("iwlwifi_test") {
     ":mvm_test",
     ":notif-wait_test",
     ":pcie_test",
+    ":phy-ctxt_test",
     ":utils_test",
   ]
 
@@ -141,6 +154,10 @@ unittest_package("iwlwifi_test") {
     },
     {
       name = "pcie_test"
+      environments = basic_envs
+    },
+    {
+      name = "phy-ctxt_test"
       environments = basic_envs
     },
     {

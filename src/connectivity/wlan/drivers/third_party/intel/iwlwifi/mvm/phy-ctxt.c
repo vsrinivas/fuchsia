@@ -33,22 +33,23 @@
  *
  *****************************************************************************/
 
-#include <net/mac80211.h>
+#include <wlan/protocol/info.h>
 
-#include "fw-api.h"
-#include "mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
 /* Maps the driver specific channel width definition to the fw values */
-uint8_t iwl_mvm_get_channel_width(struct cfg80211_chan_def* chandef) {
-  switch (chandef->width) {
-    case NL80211_CHAN_WIDTH_20_NOHT:
-    case NL80211_CHAN_WIDTH_20:
+uint8_t iwl_mvm_get_channel_width(wlan_channel_t* chandef) {
+  switch (chandef->cbw) {
+    case CBW20:
       return PHY_VHT_CHANNEL_MODE20;
-    case NL80211_CHAN_WIDTH_40:
+    case CBW40ABOVE:
+    case CBW40BELOW:  // fall-thru
       return PHY_VHT_CHANNEL_MODE40;
-    case NL80211_CHAN_WIDTH_80:
+    case CBW80:
       return PHY_VHT_CHANNEL_MODE80;
-    case NL80211_CHAN_WIDTH_160:
+    case CBW160:
       return PHY_VHT_CHANNEL_MODE160;
     default:
       WARN(1, "Invalid channel width=%u", chandef->width);
@@ -58,10 +59,107 @@ uint8_t iwl_mvm_get_channel_width(struct cfg80211_chan_def* chandef) {
 
 /*
  * Maps the driver specific control channel position (relative to the center
- * freq) definitions to the the fw values
+ * freq) definitions to the the fw values.
+ *
+ * Here is the channel list: https://en.wikipedia.org/wiki/List_of_WLAN_channels
  */
-uint8_t iwl_mvm_get_ctrl_pos(struct cfg80211_chan_def* chandef) {
-  switch (chandef->chan->center_freq - chandef->center_freq1) {
+uint8_t iwl_mvm_get_ctrl_pos(wlan_channel_t* chandef) {
+  uint8_t primary = chandef->primary;
+  uint8_t cbw = chandef->cbw;
+  uint8_t base;
+
+  if (chandef->cbw == CBW20) {
+    // 20Mhz always uses the default value.
+    return PHY_VHT_CTRL_POS_1_BELOW;
+  }
+
+  // TODO(WLAN-1216): move out the center freq calculation into a shared lib.
+
+  if (36 <= primary && primary <= 64) {
+    base = 36;
+  } else if (100 <= primary && primary <= 128) {
+    base = 100;
+  } else if (132 <= primary && primary <= 144) {
+    if (cbw == CBW160) {  // This group doesn't support 160MHz primary channels. Use default value.
+      return PHY_VHT_CTRL_POS_1_BELOW;
+    }
+    base = 132;
+  } else if (149 <= primary && primary <= 161) {
+    if (cbw == CBW160) {  // This group doesn't support 160MHz primary channels. Use default value.
+      return PHY_VHT_CTRL_POS_1_BELOW;
+    }
+    base = 149;
+  } else {
+    // 2.4GHz band or invalid channel index. Use default value.
+    return PHY_VHT_CTRL_POS_1_BELOW;
+  }
+
+  uint8_t offset_to_base = primary - base;
+  uint8_t mask;                          // used to mask the chan_index.
+                                         // # of 1's means the bandwidth.
+  bool has_bit2 = offset_to_base & 0x4;  // for HT40+/- checking
+  switch (chandef->cbw) {
+    case CBW40ABOVE:   // The secondary channel is above the primary.
+      mask = 0x7;      // Keep 3 bits.
+      if (has_bit2) {  // Channel 40, 48, 56 ... doesn't allow HT40+.
+        return PHY_VHT_CTRL_POS_1_BELOW;
+      }
+      break;
+    case CBW40BELOW:    // The secondary channel is below the primary.
+      mask = 0x7;       // Keep 3 bits.
+      if (!has_bit2) {  // Channel 36, 44, 52 ... doesn't allow HT40-.
+        return PHY_VHT_CTRL_POS_1_BELOW;
+      }
+      break;
+    case CBW80:
+      mask = 0xf;  // Keep 4 bits.
+      break;
+    case CBW160:
+      mask = 0x1f;  // Keep 5 bits.
+      break;
+    /*
+     * The FW is expected to check the control channel position only
+     * when in HT/VHT and the channel width is not 20MHz. Return
+     * this value as the default one.
+     */
+    default:
+      IWL_WARN(chandef, "Invalid channel bandwidth (primary=%u cbw=%u)\n", chandef->primary,
+               chandef->cbw);
+      return PHY_VHT_CTRL_POS_1_BELOW;
+  }
+
+  // Now, calculate offset from the primary channel index to the center.
+  //
+  // Take primary channel 48 @80MHz channel as example:
+  //
+  //            primary          | freq |           | mask=0xf |  half
+  //            channel          |offset| chan num  | (CBW80)  |bandwidth=8 (40MHz)
+  //  ==============================================================================
+  //
+  //   36  -------------------->     0    base           ^          ^
+  //        base index                                   |          |
+  //   40                           20    base + 4       |          |
+  //                                      -------------- | -------- | <----------- center freq/index
+  //   44                           40    base + 8       |     ^    v    | 10Mhz
+  //                                                     |     |
+  //   48  -------------------->    60    base + 12      |     v --- This is offset_to_center.
+  //        offset_to_base = 12                          |
+  //                                80                   v
+  //
+  // We can get:
+  //
+  //   offset_to_base = 48 - 36       # = 12 indexes
+  //   mask = 0xf                     # 80MHz
+  //   half_bandwidth = 8             # 40MHz
+  //   center_index = 8 - 2 = 6       # 30MHz (offset to the base index)
+  //   offset_to_center = 12 - 6 = 6  # 60MHz - 30MHz = +30MHz
+  //
+  uint8_t half_bandwith = (mask + 1) / 2;    // # of channel indexes within the half bandwidth.
+  uint8_t center_index = half_bandwith - 2;  // 2 indexes = 2 * 5MHz = 10Mhz.
+  int offset_to_center = (offset_to_base & mask) - center_index;
+
+  const int mhz_per_index = 5;  // 5 MHz for each channel index.
+  switch (offset_to_center * mhz_per_index) {
     case -70:
       return PHY_VHT_CTRL_POS_4_BELOW;
     case -50:
@@ -79,13 +177,8 @@ uint8_t iwl_mvm_get_ctrl_pos(struct cfg80211_chan_def* chandef) {
     case 70:
       return PHY_VHT_CTRL_POS_4_ABOVE;
     default:
-      WARN(1, "Invalid channel definition");
-    case 0:
-      /*
-       * The FW is expected to check the control channel position only
-       * when in HT/VHT and the channel width is not 20MHz. Return
-       * this value as the default one.
-       */
+      IWL_WARN(chandef, "Invalid channel definition (primary=%u cbw=%u)\n", chandef->primary,
+               chandef->cbw);
       return PHY_VHT_CTRL_POS_1_BELOW;
   }
 }
@@ -106,14 +199,14 @@ static void iwl_mvm_phy_ctxt_cmd_hdr(struct iwl_mvm_phy_ctxt* ctxt, struct iwl_p
  * Add the phy configuration to the PHY context command
  */
 static void iwl_mvm_phy_ctxt_cmd_data(struct iwl_mvm* mvm, struct iwl_phy_context_cmd* cmd,
-                                      struct cfg80211_chan_def* chandef, uint8_t chains_static,
+                                      wlan_channel_t* chandef, uint8_t chains_static,
                                       uint8_t chains_dynamic) {
   uint8_t active_cnt, idle_cnt;
 
   /* Set the channel info data */
-  cmd->ci.band = (chandef->chan->band == NL80211_BAND_2GHZ ? PHY_BAND_24 : PHY_BAND_5);
+  cmd->ci.band = (chandef->primary < 14 ? PHY_BAND_24 : PHY_BAND_5);
 
-  cmd->ci.channel = chandef->chan->hw_value;
+  cmd->ci.channel = chandef->primary;
   cmd->ci.width = iwl_mvm_get_channel_width(chandef);
   cmd->ci.ctrl_pos = iwl_mvm_get_ctrl_pos(chandef);
 
@@ -121,6 +214,7 @@ static void iwl_mvm_phy_ctxt_cmd_data(struct iwl_mvm* mvm, struct iwl_phy_contex
   idle_cnt = chains_static;
   active_cnt = chains_dynamic;
 
+#if 0   // NEEDS_PORTING
   /* In scenarios where we only ever use a single-stream rates,
    * i.e. legacy 11b/g/a associations, single-stream APs or even
    * static SMPS, enable both chains to get diversity, improving
@@ -132,6 +226,7 @@ static void iwl_mvm_phy_ctxt_cmd_data(struct iwl_mvm* mvm, struct iwl_phy_contex
     idle_cnt = 2;
     active_cnt = 2;
   }
+#endif  // NEEDS_PORTING
 
   cmd->rxchain_info = cpu_to_le32(iwl_mvm_get_valid_rx_ant(mvm) << PHY_RX_CHAIN_VALID_POS);
   cmd->rxchain_info |= cpu_to_le32(idle_cnt << PHY_RX_CHAIN_CNT_POS);
@@ -152,7 +247,7 @@ static void iwl_mvm_phy_ctxt_cmd_data(struct iwl_mvm* mvm, struct iwl_phy_contex
  * configuration changed from the previous apply.
  */
 static int iwl_mvm_phy_ctxt_apply(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
-                                  struct cfg80211_chan_def* chandef, uint8_t chains_static,
+                                  wlan_channel_t* chandef, uint8_t chains_static,
                                   uint8_t chains_dynamic, uint32_t action, uint32_t apply_time) {
   struct iwl_phy_context_cmd cmd;
   int ret;
@@ -174,12 +269,9 @@ static int iwl_mvm_phy_ctxt_apply(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* 
  * Send a command to add a PHY context based on the current HW configuration.
  */
 int iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
-                         struct cfg80211_chan_def* chandef, uint8_t chains_static,
-                         uint8_t chains_dynamic) {
+                         wlan_channel_t* chandef, uint8_t chains_static, uint8_t chains_dynamic) {
   WARN_ON(!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) && ctxt->ref);
   lockdep_assert_held(&mvm->mutex);
-
-  ctxt->channel = chandef->chan;
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
   ctxt->fm_tx_power_limit = IWL_DEFAULT_MAX_TX_POWER;
@@ -189,6 +281,7 @@ int iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
                                 FW_CTXT_ACTION_ADD, 0);
 }
 
+#if 0   // NEEDS_PORTING
 /*
  * Update the number of references to the given PHY context. This is valid only
  * in case the PHY context was already created, i.e., its reference count > 0.
@@ -275,3 +368,4 @@ int iwl_mvm_phy_ctx_count(struct iwl_mvm* mvm) {
 
   return hweight8(phy_ctxt_counter);
 }
+#endif  // NEEDS_PORTING
