@@ -221,8 +221,7 @@ class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
   void ResetLogger(const std::vector<fuchsia::logger::LogMessage>& messages) {
     stub_logger_.reset(new StubLogger());
     stub_logger_->set_messages(messages);
-    FXL_CHECK(service_directory_provider_.AddService(stub_logger_->GetHandler(dispatcher())) ==
-              ZX_OK);
+    FXL_CHECK(service_directory_provider_.AddService(stub_logger_->GetHandler()) == ZX_OK);
   }
 
   // Resets the underlying |stub_channel_provider| with the given |channel|.

@@ -9,7 +9,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async_promise/executor.h>
 #include <lib/fit/single_threaded_executor.h>
-#include <lib/gtest/real_loop_fixture.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
@@ -28,7 +28,7 @@ using fuchsia::ui::scenic::ScreenshotData;
 
 constexpr bool kSuccess = true;
 
-class TakeScreenshotTest : public gtest::RealLoopFixture {
+class TakeScreenshotTest : public gtest::TestLoopFixture {
  public:
   TakeScreenshotTest() : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
 
@@ -46,7 +46,7 @@ class TakeScreenshotTest : public gtest::RealLoopFixture {
         fuchsia::feedback::TakeScreenshot(dispatcher(),
                                           service_directory_provider_.service_directory(), timeout)
             .then([&result](fit::result<ScreenshotData>& res) { result = std::move(res); }));
-    RunLoopUntil([&result] { return !!result; });
+    RunLoopFor(timeout);
     return result;
   }
 
@@ -103,7 +103,7 @@ TEST_F(TakeScreenshotTest, Fail_ScenicClosesConnection) {
 TEST_F(TakeScreenshotTest, Fail_ScenicNeverReturns) {
   ResetScenic(std::make_unique<StubScenicNeverReturns>());
 
-  fit::result<ScreenshotData> result = TakeScreenshot(/*timeout=*/zx::msec(10));
+  fit::result<ScreenshotData> result = TakeScreenshot();
 
   ASSERT_TRUE(result.is_error());
 }

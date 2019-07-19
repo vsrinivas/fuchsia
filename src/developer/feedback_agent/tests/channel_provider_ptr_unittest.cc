@@ -8,7 +8,7 @@
 
 #include <lib/async_promise/executor.h>
 #include <lib/fit/single_threaded_executor.h>
-#include <lib/gtest/real_loop_fixture.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
@@ -23,7 +23,7 @@ namespace fuchsia {
 namespace feedback {
 namespace {
 
-class RetrieveCurrentChannelTest : public gtest::RealLoopFixture {
+class RetrieveCurrentChannelTest : public gtest::TestLoopFixture {
  public:
   RetrieveCurrentChannelTest()
       : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
@@ -43,7 +43,7 @@ class RetrieveCurrentChannelTest : public gtest::RealLoopFixture {
         fuchsia::feedback::RetrieveCurrentChannel(
             dispatcher(), service_directory_provider_.service_directory(), timeout)
             .then([&result](fit::result<std::string>& res) { result = std::move(res); }));
-    RunLoopUntil([&result] { return !!result; });
+    RunLoopFor(timeout);
     return result;
   }
 
@@ -93,7 +93,7 @@ TEST_F(RetrieveCurrentChannelTest, Fail_ChannelProviderClosesConnection) {
 TEST_F(RetrieveCurrentChannelTest, Fail_ChannelProviderNeverReturns) {
   ResetChannelProvider(std::make_unique<StubUpdateInfoNeverReturns>());
 
-  fit::result<std::string> result = RetrieveCurrentChannel(/*timeout=*/zx::msec(10));
+  fit::result<std::string> result = RetrieveCurrentChannel();
 
   ASSERT_TRUE(result.is_error());
 }

@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include <fuchsia/logger/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
 
@@ -73,7 +74,14 @@ void StubLoggerNeverCallsLogManyBeforeDone::DumpLogs(
   log_listener_ptr->Done();
 }
 
-void StubLoggerSleepsAfterOneMessage::DumpLogs(
+void StubLoggerBindsToLogListenerButNeverCalls::DumpLogs(
+    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+    std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
+  log_listener_ptr_ = log_listener.Bind();
+  FXL_CHECK(log_listener_ptr_.is_bound());
+}
+
+void StubLoggerDelaysAfterOneMessage::DumpLogs(
     fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   FXL_CHECK(messages_.size() > 1u)
@@ -84,12 +92,15 @@ void StubLoggerSleepsAfterOneMessage::DumpLogs(
   log_listener_ptr->LogMany(
       std::vector<fuchsia::logger::LogMessage>(messages_.begin(), messages_.begin() + 1));
 
-  FX_LOGS(INFO) << "Stub logger sleeping for " << sleep_.to_msecs() << "ms";
-  zx::nanosleep(zx::deadline_after(sleep_));
-
-  log_listener_ptr->LogMany(
-      std::vector<fuchsia::logger::LogMessage>(messages_.begin() + 1, messages_.end()));
-  log_listener_ptr->Done();
+  FX_LOGS(INFO) << "Stub logger delaying the remaining messages for " << delay_.to_msecs() << "ms";
+  FXL_CHECK(async::PostDelayedTask(
+                dispatcher_,
+                [this, log_listener_ptr = std::move(log_listener_ptr)] {
+                  log_listener_ptr->LogMany(std::vector<fuchsia::logger::LogMessage>(
+                      messages_.begin() + 1, messages_.end()));
+                  log_listener_ptr->Done();
+                },
+                delay_) == ZX_OK);
 }
 
 }  // namespace feedback

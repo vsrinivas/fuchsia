@@ -29,10 +29,9 @@ fuchsia::logger::LogMessage BuildLogMessage(const int32_t severity, const std::s
 // Stub Log service to return canned responses to Log::DumpLogs().
 class StubLogger : public fuchsia::logger::Log {
  public:
-  // Returns a request handler for binding to this stub service. We pass a dispatcher to be able to
-  // run it on a different loop than the default one.
-  fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler(async_dispatcher_t* dispatcher) {
-    return bindings_.GetHandler(this, dispatcher);
+  // Returns a request handler for binding to this stub service.
+  fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler() {
+    return bindings_.GetHandler(this);
   }
 
   // |fuchsia::logger::Log|.
@@ -79,15 +78,28 @@ class StubLoggerNeverCallsLogManyBeforeDone : public StubLogger {
                 std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 };
 
-class StubLoggerSleepsAfterOneMessage : public StubLogger {
+class StubLoggerBindsToLogListenerButNeverCalls : public StubLogger {
  public:
-  StubLoggerSleepsAfterOneMessage(zx::duration sleep) : sleep_(sleep) {}
+  void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+                std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
+
+ private:
+  // Owns the connection with the log listener so that it doesn't get closed when DumpLogs()
+  // returns and we can test the timeout on the log listener side.
+  fuchsia::logger::LogListenerPtr log_listener_ptr_;
+};
+
+class StubLoggerDelaysAfterOneMessage : public StubLogger {
+ public:
+  StubLoggerDelaysAfterOneMessage(async_dispatcher_t* dispatcher, zx::duration delay)
+      : dispatcher_(dispatcher), delay_(delay) {}
 
   void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
                 std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 
  private:
-  zx::duration sleep_;
+  async_dispatcher_t* dispatcher_;
+  zx::duration delay_;
 };
 
 }  // namespace feedback

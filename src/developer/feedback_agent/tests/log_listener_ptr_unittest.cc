@@ -11,7 +11,7 @@
 #include <lib/async_promise/executor.h>
 #include <lib/fit/single_threaded_executor.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/gtest/real_loop_fixture.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/syslog/logger.h>
@@ -49,42 +49,30 @@ MATCHER_P(MatchesStringBuffer, expected, "'" + std::string(expected) + "'") {
   return DoStringBufferMatch(arg, expected, result_listener);
 }
 
-class CollectSystemLogTest : public gtest::RealLoopFixture {
+class CollectSystemLogTest : public gtest::TestLoopFixture {
  public:
-  CollectSystemLogTest()
-      : executor_(dispatcher()),
-        service_directory_provider_loop_(&kAsyncLoopConfigNoAttachToThread),
-        service_directory_provider_(service_directory_provider_loop_.dispatcher()) {
-    // We run the service directory provider in a different loop and thread so that the stub logger
-    // can sleep (blocking call) without affecting the main loop.
-    FXL_CHECK(service_directory_provider_loop_.StartThread("service directory provider thread") ==
-              ZX_OK);
-  }
-
-  ~CollectSystemLogTest() { service_directory_provider_loop_.Shutdown(); }
+  CollectSystemLogTest() : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
 
  protected:
   void ResetStubLogger(std::unique_ptr<StubLogger> stub_logger) {
     stub_logger_ = std::move(stub_logger);
     if (stub_logger_) {
-      FXL_CHECK(service_directory_provider_.AddService(stub_logger_->GetHandler(
-                    service_directory_provider_loop_.dispatcher())) == ZX_OK);
+      FXL_CHECK(service_directory_provider_.AddService(stub_logger_->GetHandler()) == ZX_OK);
     }
   }
 
-  fit::result<fuchsia::mem::Buffer> CollectSystemLog(zx::duration timeout = zx::sec(1)) {
+  fit::result<fuchsia::mem::Buffer> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
     fit::result<fuchsia::mem::Buffer> result;
     executor_.schedule_task(
         fuchsia::feedback::CollectSystemLog(
             dispatcher(), service_directory_provider_.service_directory(), timeout)
             .then([&result](fit::result<fuchsia::mem::Buffer>& res) { result = std::move(res); }));
-    RunLoopUntil([&result] { return !!result; });
+    RunLoopFor(timeout);
     return result;
   }
 
  private:
   async::Executor executor_;
-  async::Loop service_directory_provider_loop_;
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
 
   std::unique_ptr<StubLogger> stub_logger_;
@@ -141,13 +129,15 @@ TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsFromLogListenerAfterOneMessage
 }
 
 TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
-  // The logger will sleep after the first message and longer than the log collection timeout,
-  // resulting in partial logs.
-  const zx::duration logger_sleep = zx::sec(1);
-  const zx::duration log_collection_timeout = zx::msec(500);
+  // The logger will delay sending the rest of the messages after the first message.
+  // The delay needs to be longer than the log collection timeout to get partial logs.
+  // Since we are using a test loop with a fake clock, the actual durations don't matter so we can
+  // set them arbitrary long.
+  const zx::duration logger_delay = zx::sec(10);
+  const zx::duration log_collection_timeout = zx::sec(1);
 
   std::unique_ptr<StubLogger> stub_logger =
-      std::make_unique<StubLoggerSleepsAfterOneMessage>(logger_sleep);
+      std::make_unique<StubLoggerDelaysAfterOneMessage>(dispatcher(), logger_delay);
   stub_logger->set_messages({
       BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
       BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
@@ -156,10 +146,16 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
 
   fit::result<fuchsia::mem::Buffer> result = CollectSystemLog(log_collection_timeout);
 
+  // First, we check that the log collection terminated with partial logs after the timeout.
   ASSERT_TRUE(result.is_ok());
   fuchsia::mem::Buffer logs = result.take_value();
-  EXPECT_THAT(logs, MatchesStringBuffer("[15604.000][07559][07687][] INFO: this line "
-                                        "should appear in the partial logs\n"));
+  EXPECT_THAT(
+      logs, MatchesStringBuffer(
+                "[15604.000][07559][07687][] INFO: this line should appear in the partial logs\n"));
+
+  // Then, we check that nothing crashes when the server tries to send the rest of the messages
+  // after the connection has been lost.
+  ASSERT_TRUE(RunLoopFor(logger_delay));
 }
 
 TEST_F(CollectSystemLogTest, Fail_EmptyLog) {
@@ -202,7 +198,15 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
   ASSERT_TRUE(result.is_error());
 }
 
-class LogListenerTest : public gtest::RealLoopFixture {
+TEST_F(CollectSystemLogTest, Fail_LogCollectionTimesOut) {
+  ResetStubLogger(std::make_unique<StubLoggerBindsToLogListenerButNeverCalls>());
+
+  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+
+  ASSERT_TRUE(result.is_error());
+}
+
+class LogListenerTest : public gtest::TestLoopFixture {
  public:
   LogListenerTest() : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
 
@@ -217,15 +221,18 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   stub_logger->set_messages({
       BuildLogMessage(FX_LOG_INFO, "msg"),
   });
-  FXL_CHECK(service_directory_provider_.AddService(stub_logger->GetHandler(dispatcher())) == ZX_OK);
+  FXL_CHECK(service_directory_provider_.AddService(stub_logger->GetHandler()) == ZX_OK);
 
+  // Since we are using a test loop with a fake clock, the actual duration doesn't matter so we can
+  // set it arbitrary long.
+  const zx::duration timeout = zx::sec(1);
   fit::result<void> result;
   std::unique_ptr<LogListener> log_listener =
       std::make_unique<LogListener>(dispatcher(), service_directory_provider_.service_directory());
   executor_.schedule_task(
       log_listener->CollectLogs(/*timeout=*/zx::sec(1))
           .then([&result](const fit::result<void>& res) { result = std::move(res); }));
-  RunLoopUntil([&result] { return !!result; });
+  RunLoopFor(timeout);
 
   // First, we check we have had a successful flow.
   ASSERT_TRUE(result.is_ok());
