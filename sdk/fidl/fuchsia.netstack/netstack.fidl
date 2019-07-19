@@ -35,8 +35,8 @@ struct NetTrafficStats {
 };
 
 struct NetInterfaceStats {
-    // Placeholder for all statistics regarding the network interface,
-    // including, but not limited to traffic itself.
+    /// Placeholder for all statistics regarding the network interface,
+    /// including, but not limited to traffic itself.
 
     int64 up_since; // Unix epoch.
 
@@ -47,8 +47,8 @@ struct NetInterfaceStats {
 struct InterfaceConfig {
     string name;
     uint32 metric;
-    // Deprecated; to configure a network interface, use SetDhcpClientStatus
-    // and SetInterfaceAddress instead.
+    /// Deprecated; to configure a network interface, use SetDhcpClientStatus
+    /// and SetInterfaceAddress instead.
     IpAddressConfig ip_address_config;
 };
 
@@ -57,7 +57,7 @@ union IpAddressConfig {
     bool dhcp;
 };
 
-// https://linux.die.net/man/7/netdevice
+/// https://linux.die.net/man/7/netdevice
 struct NetInterface {
     uint32 id;
     uint32 flags;
@@ -71,7 +71,7 @@ struct NetInterface {
     bytes hwaddr;
 };
 
-// New version that includes a metric value.
+/// New version that includes a metric value.
 // TODO(NET-2078): Move this to NetInterface once Chromium stops using
 // netstack.fidl.
 struct NetInterface2 {
@@ -88,7 +88,7 @@ struct NetInterface2 {
     bytes hwaddr;
 };
 
-// Flags for NetInterface.flags.
+/// Flags for NetInterface.flags.
 const uint32 NetInterfaceFlagUp = 0x01; // Set if the interface is up.
 const uint32 NetInterfaceFlagDhcp = 0x02; // Set if DHCP is enabled.
 
@@ -99,7 +99,7 @@ struct RouteTableEntry {
     uint32 nicid;
 };
 
-// New version that includes a metric value.
+/// New version that includes a metric value.
 // TODO(NET-2078): Move this to NetInterface once Chromium stops using
 // netstack.fidl.
 struct RouteTableEntry2 {
@@ -117,58 +117,58 @@ struct SocketAddress {
 
 [Discoverable]
 protocol Netstack {
-    // Finds the port number from a given service name and protocol. [service] can be a
-    // number like "42", or a service name like "http". If [protocol] is UNSPECIFIED,
-    // the service is checked for TCP first, then UDP.
+    /// Finds the port number from a given service name and protocol. [service] can be a
+    /// number like "42", or a service name like "http". If [protocol] is UNSPECIFIED,
+    /// the service is checked for TCP first, then UDP.
     GetPortForService(string service, Protocol protocol) -> (uint16 port);
 
-    // Finds the IP address for a given host name and port. This may issue network
-    // requests via DNS to look up domain names. E.g.
-    // GetAddress("example.com", 80) -> [{142.42.42.1}]
+    /// Finds the IP address for a given host name and port. This may issue network
+    /// requests via DNS to look up domain names. E.g.
+    /// GetAddress("example.com", 80) -> [{142.42.42.1}]
     GetAddress(string address, uint16 port) -> (vector<SocketAddress> addresses, NetErr err);
 
-    // Returns the list of registered network interfaces.
+    /// Returns the list of registered network interfaces.
     GetInterfaces() -> (vector<NetInterface> interfaces);
     GetInterfaces2() -> (vector<NetInterface2> interfaces);
 
-    // DEPRECATED: see devicesettings.fidl
-    // Returns the netstack's node name.
-    // 5: GetNodeName() -> (string node_name);
+    /// DEPRECATED: see devicesettings.fidl
+    /// Returns the netstack's node name.
+    /// 5: GetNodeName() -> (string node_name);
 
-    // Returns current route table.
+    /// Returns current route table.
     GetRouteTable() -> (vector<RouteTableEntry> rt);
     GetRouteTable2() -> (vector<RouteTableEntry2> rt);
 
     // TODO (porce): Separate interfaces.
     GetStats(uint32 nicid) -> (NetInterfaceStats stats);
 
-    // Get stats for all NICs on the stack.
+    /// Get stats for all NICs on the stack.
     GetAggregateStats(request<fuchsia.io.Node> object);
 
-    // Sets the status (up or down) for the interface with the given nicid.
+    /// Sets the status (up or down) for the interface with the given nicid.
     SetInterfaceStatus(uint32 nicid, bool enabled);
 
-    // Sets the address for the interface with the given nicid.
-    // Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
+    /// Sets the address for the interface with the given nicid.
+    /// Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
     SetInterfaceAddress(uint32 nicid, fuchsia.net.IpAddress addr, uint8 prefixLen) -> (NetErr result);
 
-    // Removes the address for the interface with the given nicid.
-    // Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
+    /// Removes the address for the interface with the given nicid.
+    /// Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
     RemoveInterfaceAddress(uint32 nicid, fuchsia.net.IpAddress addr, uint8 prefixLen) -> (NetErr result);
 
-    // Sets the route metric for the interface with the given nicid.
+    /// Sets the route metric for the interface with the given nicid.
     SetInterfaceMetric(uint32 nicid, uint32 metric) -> (NetErr result);
 
     SetDhcpClientStatus(uint32 nicid, bool enabled) -> (NetErr result);
 
-    // Creates a bridge and returns the newly created nicid or an
-    // error if the creation fails.
+    /// Creates a bridge and returns the newly created nicid or an
+    /// error if the creation fails.
     BridgeInterfaces(vector<uint32> nicids) -> (NetErr result, uint32 nicid);
 
     AddEthernetDevice(string topological_path, InterfaceConfig interfaceConfig, fuchsia.hardware.ethernet.Device device) -> (uint32 nicid);
 
-    // Begin a route transaction for atomically getting and setting the route
-    // table.  Returns true if a transaction can be started.
+    /// Begin a route transaction for atomically getting and setting the route
+    /// table.  Returns true if a transaction can be started.
     StartRouteTableTransaction(request<RouteTableTransaction> routeTableTransaction) -> (zx.status status);
 
     -> OnInterfacesChanged(vector<NetInterface> interfaces);
