@@ -4,7 +4,7 @@
 
 use crate::auth_provider::{self, GoogleAuthProvider};
 use crate::http::UrlLoaderHttpClient;
-use crate::web::StandaloneWebFrame;
+use crate::web::DefaultStandaloneWebFrame;
 use failure::Error;
 use fidl::endpoints::{create_proxy, ClientEnd};
 use fidl_fuchsia_auth::{
@@ -79,7 +79,8 @@ impl WebFrameSupplier {
 }
 
 impl auth_provider::WebFrameSupplier for WebFrameSupplier {
-    fn new_standalone_frame(&self) -> Result<StandaloneWebFrame, failure::Error> {
+    type Frame = DefaultStandaloneWebFrame;
+    fn new_standalone_frame(&self) -> Result<DefaultStandaloneWebFrame, failure::Error> {
         let context_provider = connect_to_service::<ContextProviderMarker>()?;
         let (context_proxy, context_server_end) = create_proxy::<ContextMarker>()?;
 
@@ -102,6 +103,6 @@ impl auth_provider::WebFrameSupplier for WebFrameSupplier {
 
         let (frame_proxy, frame_server_end) = create_proxy::<FrameMarker>()?;
         context_proxy.create_frame(frame_server_end)?;
-        Ok(StandaloneWebFrame::new(context_proxy, frame_proxy))
+        Ok(DefaultStandaloneWebFrame::new(context_proxy, frame_proxy))
     }
 }

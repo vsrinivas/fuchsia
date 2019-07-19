@@ -34,11 +34,13 @@ type AuthProviderResult<T> = Result<T, AuthProviderError>;
 
 /// Trait for structs capable of creating new Web frames.
 pub trait WebFrameSupplier {
+    /// The concrete `StandaloneWebFrame` type the supplier produces.
+    type Frame: StandaloneWebFrame;
     /// Creates a new `StandaloneWebFrame`.  This method guarantees that the
     /// new frame is in its own web context.
     /// Although implementation of this method does not require state, `self`
     /// is added here to allow injection of mocks with canned responses.
-    fn new_standalone_frame(&self) -> Result<StandaloneWebFrame, Error>;
+    fn new_standalone_frame(&self) -> Result<Self::Frame, Error>;
 }
 
 /// An implementation of the `AuthProvider` FIDL protocol that communicates
@@ -437,14 +439,38 @@ mod tests {
 
     use super::*;
     use crate::http::HttpRequest;
-    use fidl::endpoints::{create_proxy, create_proxy_and_stream, create_request_stream};
+    use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_auth::{AuthProviderMarker, AuthProviderProxy};
-    use fidl_fuchsia_web::{ContextMarker, FrameMarker};
+    use fidl_fuchsia_ui_views::ViewToken;
     use fuchsia_async as fasync;
     use futures::future::{ready, FutureObj};
     use hyper::StatusCode;
 
-    /// A no-op implementation of `WebFrameSupplier`
+    /// A mock implementation of StandaloneWebFrame
+    struct TestWebFrame;
+
+    impl StandaloneWebFrame for TestWebFrame {
+        fn display_url<'a>(
+            &'a mut self,
+            _view_token: ViewToken,
+            _url: Url,
+        ) -> FutureObj<'a, AuthProviderResult<()>> {
+            FutureObj::new(Box::new(ready(Err(AuthProviderError::new(
+                AuthProviderStatus::InternalError,
+            )))))
+        }
+
+        fn wait_for_redirect<'a>(
+            &'a mut self,
+            _redirect_target: Url,
+        ) -> FutureObj<'a, AuthProviderResult<Url>> {
+            FutureObj::new(Box::new(ready(Err(AuthProviderError::new(
+                AuthProviderStatus::InternalError,
+            )))))
+        }
+    }
+
+    /// A mock implementation of `WebFrameSupplier`
     struct TestWebFrameSupplier;
 
     impl TestWebFrameSupplier {
@@ -454,11 +480,9 @@ mod tests {
     }
 
     impl WebFrameSupplier for TestWebFrameSupplier {
-        fn new_standalone_frame(&self) -> Result<StandaloneWebFrame, Error> {
-            let (context, _) = create_proxy::<ContextMarker>()?;
-
-            let (frame, _) = create_request_stream::<FrameMarker>()?;
-            Ok(StandaloneWebFrame::new(context, frame.into_proxy()?))
+        type Frame = TestWebFrame;
+        fn new_standalone_frame(&self) -> Result<TestWebFrame, Error> {
+            Ok(TestWebFrame {})
         }
     }
 
@@ -500,7 +524,7 @@ mod tests {
             create_proxy_and_stream::<AuthProviderMarker>()
                 .expect("Failed to create proxy and stream");
 
-        let frame_supplier = TestWebFrameSupplier {};
+        let frame_supplier = TestWebFrameSupplier::new();
         let http = http_client
             .unwrap_or(TestHttpClient::with_error(AuthProviderStatus::UnsupportedProvider));
 
