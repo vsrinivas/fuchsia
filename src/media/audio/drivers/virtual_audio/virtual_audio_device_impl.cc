@@ -1,6 +1,5 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_device_impl.h"
 
@@ -20,76 +19,18 @@ fbl::unique_ptr<VirtualAudioDeviceImpl> VirtualAudioDeviceImpl::Create(
   return fbl::unique_ptr<VirtualAudioDeviceImpl>(new VirtualAudioDeviceImpl(owner, is_input));
 }
 
-// We initialize no member variables here, nor in the class declaration -- we do
-// everything within Init() so that ResetConfiguration() has the same effect.
+// Don't initialize here or in ctor; do it all in Init() so ResetConfiguration has same effect.
 VirtualAudioDeviceImpl::VirtualAudioDeviceImpl(VirtualAudioControlImpl* owner, bool is_input)
     : owner_(owner), is_input_(is_input) {
   ZX_DEBUG_ASSERT(owner_);
+
   Init();
 }
 
 // If we have not already destroyed our child stream, do so now.
-VirtualAudioDeviceImpl::~VirtualAudioDeviceImpl() {
-  RemoveStream();
-  input_binding_ = nullptr;
-  output_binding_ = nullptr;
-}
+VirtualAudioDeviceImpl::~VirtualAudioDeviceImpl() { RemoveStream(); }
 
-void VirtualAudioDeviceImpl::PostToDispatcher(fit::closure task_to_post) {
-  owner_->PostToDispatcher(std::move(task_to_post));
-}
-
-void VirtualAudioDeviceImpl::SetBinding(
-    fidl::Binding<fuchsia::virtualaudio::Input,
-                  fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding) {
-  ZX_ASSERT(is_input_);
-  ZX_DEBUG_ASSERT(output_binding_ == nullptr);
-
-  input_binding_ = binding;
-  ZX_DEBUG_ASSERT(input_binding_->is_bound());
-}
-
-void VirtualAudioDeviceImpl::SetBinding(
-    fidl::Binding<fuchsia::virtualaudio::Output,
-                  fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding) {
-  ZX_ASSERT(!is_input_);
-  ZX_DEBUG_ASSERT(input_binding_ == nullptr);
-
-  output_binding_ = binding;
-  ZX_DEBUG_ASSERT(output_binding_->is_bound());
-}
-
-bool VirtualAudioDeviceImpl::CreateStream(zx_device_t* devnode) {
-  stream_ = VirtualAudioStream::CreateStream(this, devnode, is_input_);
-  return (stream_ != nullptr);
-}
-
-// Allows a child stream to signal to its parent that it has gone away.
-void VirtualAudioDeviceImpl::ClearStream() { stream_ = nullptr; }
-
-// Removes this device's child stream by calling its Unbind method. This may
-// already have occurred, so first check it for null.
-//
-// TODO(mpuryear): This may not be the right way to safely unwind in all
-// cases: it makes some threading assumptions that cannot necessarily be
-// enforced. But until ZX-3461 is addressed, the current VAD code appears to
-// be safe -- all RemoveStream callers are on the devhost primary thread:
-//   ~VirtualAudioDeviceImpl from DevHost removing parent,
-//   ~VirtualAudioDeviceImpl from Input|Output FIDL channel disconnecting
-//   fuchsia.virtualaudio.Control.Disable
-//   fuchsia.virtualaudio.Input|Output.Remove
-void VirtualAudioDeviceImpl::RemoveStream() {
-  if (stream_ != nullptr) {
-    // This bool tells the stream that its Unbind is originating from us (the
-    // parent), so that it doesn't call us back.
-    stream_->shutdown_by_parent_ = true;
-    stream_->DdkUnbind();
-
-    // Now that the stream has done its shutdown, we release our reference.
-    stream_ = nullptr;
-  }
-}
-
+// Initialize (or reset) a device's static configuration.
 void VirtualAudioDeviceImpl::Init() {
   device_name_ = kDefaultDeviceName;
   mfr_name_ = kDefaultManufacturerName;
@@ -119,6 +60,91 @@ void VirtualAudioDeviceImpl::Init() {
   override_notification_frequency_ = false;
 }
 
+// Receive and cache a virtualaudio::Input binding, forwarded from the virtual_audio_service.
+// ControlImpl has already associated us with the binding: when it closes we will auto-destruct.
+void VirtualAudioDeviceImpl::SetBinding(
+    fidl::Binding<fuchsia::virtualaudio::Input,
+                  fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding) {
+  ZX_ASSERT(is_input_);
+  ZX_DEBUG_ASSERT(output_binding_ == nullptr);
+
+  input_binding_ = binding;
+  ZX_DEBUG_ASSERT(input_binding_->is_bound());
+}
+
+// Receive and cache a virtualaudio::Output binding, forwarded from the virtual_audio_service.
+// ControlImpl has already associated us with the binding: when it closes we will auto-destruct.
+void VirtualAudioDeviceImpl::SetBinding(
+    fidl::Binding<fuchsia::virtualaudio::Output,
+                  fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding) {
+  ZX_ASSERT(!is_input_);
+  ZX_DEBUG_ASSERT(input_binding_ == nullptr);
+
+  output_binding_ = binding;
+  ZX_DEBUG_ASSERT(output_binding_->is_bound());
+}
+
+// In response to an Input::Add or Output::Add call, create the stream (activate the device).
+bool VirtualAudioDeviceImpl::CreateStream(zx_device_t* devnode) {
+  stream_ = VirtualAudioStream::CreateStream(this, devnode, is_input_);
+  return (stream_ != nullptr);
+}
+
+// Remove our child stream by calling its Unbind. This may already have occurred; check for null.
+//
+// TODO(mpuryear): This may not safely unwind in all cases: it makes some threading assumptions that
+// cannot necessarily be enforced. But until ZX-3461 is addressed, the current VAD code appears to
+// be safe -- all RemoveStream callers are on the devhost primary thread:
+//   ~VirtualAudioDeviceImpl from DevHost removing parent,
+//   ~VirtualAudioDeviceImpl from Input|Output FIDL channel disconnecting
+//   fuchsia.virtualaudio.Control.Disable
+//   fuchsia.virtualaudio.Input|Output.Remove
+void VirtualAudioDeviceImpl::RemoveStream() {
+  if (stream_ != nullptr) {
+    // Clear any queued dispatcher tasks, and no longer accept new tasks.
+    task_queue_->StopAndClear();
+
+    // This bool tells the stream that Unbind originates from us (parent), so don't call us back.
+    stream_->shutdown_by_parent_ = true;
+
+    // DdkUnbind won't return until any in-flight calls to PostToDispatcher are quiesced (Unbind
+    // calls Shutdown which deactivates its execution domain, and all PostToDispatcher calls are
+    // made from this execution domain). This guarantee is critical, because Add changes what
+    // task_queue_ points to. If calls to PostToDispatcher WERE still outstanding, then it would be
+    // possible that Add could be called before task_queue_->Enqueue runs, causing us to erroneously
+    // run a task associated with the older stream, in the context of the new stream.
+    stream_->DdkUnbind();
+
+    // Now that the stream has done its shutdown, we release our reference.
+    stream_ = nullptr;
+  }
+  input_binding_ = nullptr;
+  output_binding_ = nullptr;
+}
+
+// In most cases, stream DdkUnbind is called by us (the parent DeviceImpl), above in RemoveStream.
+// In the other cases, this RemoveStream is eventually called, but we should not RE-call DdkUnbind
+// at that point. To cover those other cases, this ClearStream method allows the child stream to
+// signal to its parent that it has gone away. Conversely, the flag shutdown_by_parent_ provides the
+// device->stream signal in the other cases (such as when RemoveStream is called during the device
+// dtor), to let the stream know that it need not and should not call us.
+void VirtualAudioDeviceImpl::ClearStream() {
+  // Clear any queued dispatcher tasks, and no longer accept new tasks.
+  task_queue_->StopAndClear();
+
+  // Forget about this stream, but don't do more right now -- our RemoveStream will be called later.
+  stream_ = nullptr;
+}
+
+// Use closure_queue to post a dispatcher task -- cancellable if stream or device is destroyed.
+void VirtualAudioDeviceImpl::PostToDispatcher(fit::closure task_to_post) {
+  // We know task_queue_ isn't changing which ClosureQueue it's holding as this line is running,
+  // because RemoveStream always runs on the same thread as Add (the main devhost thread, the FIDL
+  // dispatch thread, the ClosureQueue's destination thread), and RemoveStream quiesces all calls to
+  // PostToDispatcher before it returns (and thus before Add changes what task_queue_ points to).
+  task_queue_->Enqueue(std::move(task_to_post));
+}
+
 //
 // virtualaudio::Configuration implementation
 //
@@ -135,7 +161,6 @@ void VirtualAudioDeviceImpl::SetUniqueId(std::array<uint8_t, 16> unique_id) {
 };
 
 // After creation or reset, one default format range is always available.
-// As soon as a format range is explicitly added, this default is removed.
 void VirtualAudioDeviceImpl::AddFormatRange(uint32_t format_flags, uint32_t min_rate,
                                             uint32_t max_rate, uint8_t min_chans, uint8_t max_chans,
                                             uint16_t rate_family_flags) {
@@ -212,8 +237,16 @@ void VirtualAudioDeviceImpl::Add() {
     return;
   }
 
+  // This ClosureQueue is created when stream is created), deactivated (via StopAndClear) when
+  // stream is removed, and synchronized by being on devhost dispatcher thread (our FIDL thread).
+  // DeviceImpl and Stream both call PostToDispatcher, and all are quiesced before we get here.
+  // DeviceImpl makes those calls on the FIDL thread (task_queue_'s destination thread); all are
+  // enqueued and subsequently discarded (via StopAndClear) upon RemoveStream. Stream makes those
+  // calls in its execution domain, which is synchronously deactivated during its DdkUnbind.
+  task_queue_.emplace(owner_->dispatcher(), thrd_current());
   if (!CreateStream(owner_->dev_node())) {
     zxlogf(ERROR, "CreateStream failed\n");
+    task_queue_->StopAndClear();
     return;
   }
 }
@@ -231,10 +264,10 @@ void VirtualAudioDeviceImpl::Remove() {
     return;
   }
 
-  // If stream_ exists, null our copy and call SimpleAudioStream::DdkUnbind
-  // (which eventually calls ShutdownHook and re-nulls). This is necessary
-  // because stream terminations can come either from "device" (direct DdkUnbind
-  // call), or from "parent" (Control::Disable, Device::Remove, ~DeviceImpl).
+  // If stream_ exists, null our copy and call SimpleAudioStream::DdkUnbind (which eventually calls
+  // ShutdownHook and re-nulls). This is necessary because stream terminations can come either from
+  // "device" (direct DdkUnbind call), or from "parent" (Control::Disable, Device::Remove,
+  // ~DeviceImpl).
   RemoveStream();
 }
 
@@ -252,10 +285,12 @@ void VirtualAudioDeviceImpl::GetFormat(
 void VirtualAudioDeviceImpl::NotifySetFormat(uint32_t frames_per_second, uint32_t sample_format,
                                              uint32_t num_channels, zx_duration_t external_delay) {
   PostToDispatcher([this, frames_per_second, sample_format, num_channels, external_delay]() {
-    if (input_binding_ && input_binding_->is_bound()) {
+    if (is_input_) {
+      ZX_ASSERT(input_binding_ && input_binding_->is_bound());
       input_binding_->events().OnSetFormat(frames_per_second, sample_format, num_channels,
                                            external_delay);
-    } else if (output_binding_ && output_binding_->is_bound()) {
+    } else {
+      ZX_ASSERT(output_binding_ && output_binding_->is_bound());
       output_binding_->events().OnSetFormat(frames_per_second, sample_format, num_channels,
                                             external_delay);
     }
@@ -275,9 +310,11 @@ void VirtualAudioDeviceImpl::GetGain(fuchsia::virtualaudio::Device::GetGainCallb
 void VirtualAudioDeviceImpl::NotifySetGain(bool current_mute, bool current_agc,
                                            float current_gain_db) {
   PostToDispatcher([this, current_mute, current_agc, current_gain_db]() {
-    if (input_binding_ && input_binding_->is_bound()) {
+    if (is_input_) {
+      ZX_ASSERT(input_binding_ && input_binding_->is_bound());
       input_binding_->events().OnSetGain(current_mute, current_agc, current_gain_db);
-    } else if (output_binding_ && output_binding_->is_bound()) {
+    } else {
+      ZX_ASSERT(output_binding_ && output_binding_->is_bound());
       output_binding_->events().OnSetGain(current_mute, current_agc, current_gain_db);
     }
   });
@@ -299,19 +336,20 @@ void VirtualAudioDeviceImpl::NotifyBufferCreated(zx::vmo ring_buffer_vmo,
                                                  uint32_t notifications_per_ring) {
   PostToDispatcher([this, ring_buffer_vmo = std::move(ring_buffer_vmo), num_ring_buffer_frames,
                     notifications_per_ring]() mutable {
-    if (input_binding_ && input_binding_->is_bound()) {
+    if (is_input_) {
+      ZX_ASSERT(input_binding_ && input_binding_->is_bound());
       input_binding_->events().OnBufferCreated(std::move(ring_buffer_vmo), num_ring_buffer_frames,
                                                notifications_per_ring);
-    } else if (output_binding_ && output_binding_->is_bound()) {
+    } else {
+      ZX_ASSERT(output_binding_ && output_binding_->is_bound());
       output_binding_->events().OnBufferCreated(std::move(ring_buffer_vmo), num_ring_buffer_frames,
                                                 notifications_per_ring);
     }
   });
 }
 
-// Override the systemwide position notification cadence set by AudioCore, in
-// favor of this per-stream notification cadence.
-// Update the static config, and if active, tell device to dynamically change.
+// Override AudioCore's systemwide position notification cadence, in favor of a per-stream
+// notification cadence. Update the static config, and if active, tell device to dynamically change.
 void VirtualAudioDeviceImpl::SetNotificationFrequency(uint32_t notifications_per_ring) {
   // This is a DeviceImpl property (stream has a property with same name)
   override_notification_frequency_ = true;
@@ -325,9 +363,11 @@ void VirtualAudioDeviceImpl::SetNotificationFrequency(uint32_t notifications_per
 // Deliver Start notification on binding's thread, if binding is valid.
 void VirtualAudioDeviceImpl::NotifyStart(zx_time_t start_time) {
   PostToDispatcher([this, start_time]() {
-    if (input_binding_ && input_binding_->is_bound()) {
+    if (is_input_) {
+      ZX_ASSERT(input_binding_ && input_binding_->is_bound());
       input_binding_->events().OnStart(start_time);
-    } else if (output_binding_ && output_binding_->is_bound()) {
+    } else {
+      ZX_ASSERT(output_binding_ && output_binding_->is_bound());
       output_binding_->events().OnStart(start_time);
     }
   });
@@ -336,9 +376,11 @@ void VirtualAudioDeviceImpl::NotifyStart(zx_time_t start_time) {
 // Deliver Stop notification on binding's thread, if binding is valid.
 void VirtualAudioDeviceImpl::NotifyStop(zx_time_t stop_time, uint32_t ring_buffer_position) {
   PostToDispatcher([this, stop_time, ring_buffer_position]() {
-    if (input_binding_ && input_binding_->is_bound()) {
+    if (is_input_) {
+      ZX_ASSERT(input_binding_ && input_binding_->is_bound());
       input_binding_->events().OnStop(stop_time, ring_buffer_position);
-    } else if (output_binding_ && output_binding_->is_bound()) {
+    } else {
+      ZX_ASSERT(output_binding_ && output_binding_->is_bound());
       output_binding_->events().OnStop(stop_time, ring_buffer_position);
     }
   });
@@ -358,9 +400,11 @@ void VirtualAudioDeviceImpl::GetPosition(
 void VirtualAudioDeviceImpl::NotifyPosition(uint32_t ring_buffer_position,
                                             zx_time_t time_for_position) {
   PostToDispatcher([this, ring_buffer_position, time_for_position]() {
-    if (input_binding_ && input_binding_->is_bound()) {
+    if (is_input_) {
+      ZX_ASSERT(input_binding_ && input_binding_->is_bound());
       input_binding_->events().OnPositionNotify(ring_buffer_position, time_for_position);
-    } else if (output_binding_ && output_binding_->is_bound()) {
+    } else {
+      ZX_ASSERT(output_binding_ && output_binding_->is_bound());
       output_binding_->events().OnPositionNotify(ring_buffer_position, time_for_position);
     }
   });

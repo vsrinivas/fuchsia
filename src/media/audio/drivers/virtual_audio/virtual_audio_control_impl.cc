@@ -148,10 +148,6 @@ void VirtualAudioControlImpl::ReleaseBindings() {
   output_bindings_.CloseAll();
 }
 
-void VirtualAudioControlImpl::PostToDispatcher(fit::closure task_to_post) const {
-  async::PostTask(dispatcher(), std::move(task_to_post));
-}
-
 // Allow subsequent new stream creation -- but do not automatically reactivate
 // any streams that may have been deactivated (removed) by the previous Disable.
 // Upon construction, the default state of this object is Enabled. The (empty)
