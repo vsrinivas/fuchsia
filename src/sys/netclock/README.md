@@ -41,3 +41,19 @@ notification tests, dead test instances can stack up quickly during a developmen
 ### Formatting
 
 Minimum before submitting a CL: `fx rustfmt //src/sys/netclock:bin`. Prefer `fx format-code`.
+
+## Concepts
+
+### Minimum UTC ("backstop" time)
+
+Devices store a minimum UTC value at `/config/build-info/minimum-utc-stamp`, which is generated at
+build time and included in the system image. It is stored as a Unix epoch (seconds since 1970,
+excluding leap seconds) and can be quickly observed on your current device. An example from the
+time of writing:
+
+```
+$ [fx shell --] cat /config/build-info/minimum-utc-stamp | date
+Wed 17 Jul 2019 03:56:35 PM PDT
+```
+
+All reads of the UTC clock on a device must return a value at or after the time stored in the file.

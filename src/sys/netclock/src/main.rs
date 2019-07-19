@@ -51,14 +51,13 @@ async fn main() -> Result<(), Error> {
 fn backstop_time(path: impl AsRef<Path>) -> Result<DateTime<Utc>, Error> {
     let file_contents =
         std::fs::read_to_string(path.as_ref()).context("reading backstop time from disk")?;
-    let build_time_repr = file_contents.trim();
-    let parsed_offset = DateTime::parse_from_rfc3339(build_time_repr)?;
-    let utc = parsed_offset.with_timezone(&Utc);
+    let parsed_offset = NaiveDateTime::parse_from_str(file_contents.trim(), "%s")?;
+    let utc = DateTime::from_utc(parsed_offset, Utc);
     Ok(utc)
 }
 
 fn assert_backstop_time_correct() {
-    let expected_minimum = backstop_time("/config/build-info/latest-commit-date").unwrap();
+    let expected_minimum = backstop_time("/config/build-info/minimum-utc-stamp").unwrap();
     let current_utc = Utc::now();
     assert!(
         expected_minimum <= current_utc,
@@ -208,7 +207,7 @@ mod tests {
 
     #[test]
     fn fixed_backstop_check() {
-        let test_backstop = backstop_time("/pkg/data/latest-commit-date").unwrap();
+        let test_backstop = backstop_time("/pkg/data/y2k").unwrap();
         let before_test_backstop =
             Utc.from_utc_datetime(&NaiveDate::from_ymd(1999, 1, 1).and_hms(0, 0, 0));
         let after_test_backstop =

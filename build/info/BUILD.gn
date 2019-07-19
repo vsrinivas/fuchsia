@@ -37,6 +37,10 @@ package("build-info") {
       dest = "latest-commit-date"
       path = build_info_files.latest_commit_date
     },
+    {
+      dest = "minimum-utc-stamp"
+      path = build_info_files.minimum_utc_stamp
+    },
   ]
 }
 
@@ -57,7 +61,7 @@ action("latest-commit-date") {
   ]
   outputs = [
     build_info_files.latest_commit_date,
-    build_info_files.latest_unix_stamp,
+    build_info_files.minimum_utc_stamp,
   ]
   script = "gen-latest-commit-date.sh"
   args = rebase_path([ "//integration/" ] + outputs, root_build_dir)

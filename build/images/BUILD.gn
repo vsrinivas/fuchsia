@@ -587,7 +587,7 @@ action("devmgr_config.txt") {
     args += [
       "--contents",
       "--entry=devmgr.epoch=" +
-          rebase_path(build_info_files.latest_unix_stamp, root_build_dir),
+          rebase_path(build_info_files.minimum_utc_stamp, root_build_dir),
       "--no-contents",
       "--reset-rewrite",
     ]

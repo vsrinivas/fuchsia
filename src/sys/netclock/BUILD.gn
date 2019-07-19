@@ -88,8 +88,8 @@ test_package("netclock_bin_test") {
 
   resources = [
     {
-      path = "test/latest-commit-date"
-      dest = "latest-commit-date"
+      path = "test/y2k"
+      dest = "y2k"
     }
   ]
 }
