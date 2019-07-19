@@ -21,6 +21,8 @@
 
 #include "src/developer/crashpad_agent/config.h"
 #include "src/developer/crashpad_agent/crash_server.h"
+#include "src/developer/crashpad_agent/feedback_data_provider_ptr.h"
+#include "src/developer/crashpad_agent/inspect_manager.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/misc/uuid.h"
@@ -34,15 +36,17 @@ class CrashpadAgent : public Analyzer {
   //
   // Returns nullptr if the agent cannot be instantiated, e.g., because the local report database
   // cannot be accessed.
-  static std::unique_ptr<CrashpadAgent> TryCreate(
-      async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services);
   static std::unique_ptr<CrashpadAgent> TryCreate(async_dispatcher_t* dispatcher,
                                                   std::shared_ptr<::sys::ServiceDirectory> services,
-                                                  Config config);
+                                                  InspectManager* inspect_manager);
+  static std::unique_ptr<CrashpadAgent> TryCreate(async_dispatcher_t* dispatcher,
+                                                  std::shared_ptr<::sys::ServiceDirectory> services,
+                                                  Config config, InspectManager* inspect_manager);
   static std::unique_ptr<CrashpadAgent> TryCreate(async_dispatcher_t* dispatcher,
                                                   std::shared_ptr<::sys::ServiceDirectory> services,
                                                   Config config,
-                                                  std::unique_ptr<CrashServer> crash_server);
+                                                  std::unique_ptr<CrashServer> crash_server,
+                                                  InspectManager* inspect_manager);
 
   // |fuchsia::crash::Analyzer|
   void OnNativeException(zx::process process, zx::thread thread,
@@ -55,7 +59,7 @@ class CrashpadAgent : public Analyzer {
  private:
   CrashpadAgent(async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
                 Config config, std::unique_ptr<crashpad::CrashReportDatabase> database,
-                std::unique_ptr<CrashServer> crash_server);
+                std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager);
 
   fit::promise<void> OnNativeException(zx::process process, zx::thread thread);
   fit::promise<void> OnManagedRuntimeException(std::string component_url,
@@ -66,7 +70,7 @@ class CrashpadAgent : public Analyzer {
   // or reading the annotations from its minidump.
   //
   // Either |annotations| or |read_annotations_from_minidump| must be set, but only one of them.
-  bool UploadReport(const crashpad::UUID& local_report_id,
+  bool UploadReport(const crashpad::UUID& local_report_id, const std::string& program_name,
                     const std::map<std::string, std::string>* annotations,
                     bool read_annotations_from_minidump);
 
@@ -81,6 +85,7 @@ class CrashpadAgent : public Analyzer {
   const Config config_;
   const std::unique_ptr<crashpad::CrashReportDatabase> database_;
   const std::unique_ptr<CrashServer> crash_server_;
+  InspectManager* inspect_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAgent);
 };

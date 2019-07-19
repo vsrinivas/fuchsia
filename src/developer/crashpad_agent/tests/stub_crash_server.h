@@ -14,6 +14,7 @@ namespace fuchsia {
 namespace crash {
 
 extern const char kStubCrashServerUrl[];
+extern const char kStubServerReportId[];
 
 class StubCrashServer : public CrashServer {
  public:

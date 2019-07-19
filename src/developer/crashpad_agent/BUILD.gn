@@ -57,6 +57,8 @@ source_set("src") {
     "crashpad_agent.h",
     "feedback_data_provider_ptr.cc",
     "feedback_data_provider_ptr.h",
+    "inspect_manager.cc",
+    "inspect_manager.h",
     "report_annotations.cc",
     "report_annotations.h",
     "report_attachments.cc",
@@ -66,6 +68,7 @@ source_set("src") {
 
   public_deps = [
     "//garnet/public/lib/async_promise",
+    "//garnet/public/lib/inspect_deprecated:component",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",

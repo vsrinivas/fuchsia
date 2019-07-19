@@ -15,6 +15,7 @@
 #include <lib/fdio/spawn.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/job.h>
@@ -86,8 +87,11 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
     // "attachments" should be kept in sync with the value defined in
     // //crashpad/client/crash_report_database_generic.cc
     attachments_dir_ = files::JoinPath(config.crashpad_database.path, "attachments");
+    inspect_node_ = ::inspect_deprecated::Node("root");
+    inspect_manager_ = std::make_unique<InspectManager>(&inspect_node_);
     agent_ = CrashpadAgent::TryCreate(dispatcher(), service_directory_provider_.service_directory(),
-                                      std::move(config), std::move(crash_server_));
+                                      std::move(config), std::move(crash_server_),
+                                      inspect_manager_.get());
     FXL_CHECK(agent_);
   }
 
@@ -196,6 +200,7 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
   std::unique_ptr<CrashpadAgent> agent_;
   files::ScopedTempDir database_path_;
   std::unique_ptr<StubCrashServer> crash_server_;
+  ::inspect_deprecated::Node inspect_node_;
 
  private:
   void RemoveCurrentDirectory(std::vector<std::string>* dirs) {
@@ -205,6 +210,7 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
   std::unique_ptr<StubFeedbackDataProvider> stub_feedback_data_provider_;
   std::string attachments_dir_;
+  std::unique_ptr<InspectManager> inspect_manager_;
 };
 
 TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
@@ -515,6 +521,48 @@ TEST_F(CrashpadAgentTest, OneFeedbackDataProviderConnectionPerAnalysis) {
   // The unbinding is asynchronous so we need to run the loop until all the outstanding connections
   // are actually closed in the stub.
   RunLoopUntil([this] { return current_num_feedback_data_provider_bindings() == 0u; });
+}
+
+TEST_F(CrashpadAgentTest, ReportIsReflectedInInspect) {
+  RunOneCrashAnalysis();
+
+  EXPECT_THAT(*inspect_node_.children(), testing::ElementsAre("kernel"));
+
+  // Root contains a "kernel" node.
+  std::shared_ptr<component::Object> kernel =
+      inspect_node_.object_dir().object()->GetChild("kernel");
+  ASSERT_NE(nullptr, kernel);
+  EXPECT_EQ("kernel", kernel->name());
+
+  // "kernel" node contains a node for the crash report, with a "creation_time" property.
+  component::Object::StringOutputVector report_ids = kernel->GetChildren();
+  EXPECT_EQ(1u, report_ids->size());
+  std::string report_id = report_ids->front();
+  std::shared_ptr<component::Object> report = kernel->GetChild(report_id);
+  ASSERT_NE(nullptr, report);
+  EXPECT_EQ(report_id, report->name());
+
+  fidl::VectorPtr<fuchsia::inspect::Property> props = report->ToFidl().properties;
+  EXPECT_EQ(1u, props->size());
+  EXPECT_EQ("creation_time", props->front().key);
+
+  // Report node contains a child "crash_server" node with "id" and "creation_time" properties.
+  EXPECT_THAT(*report->GetChildren(), testing::ElementsAre("crash_server"));
+  std::shared_ptr<component::Object> crash_server = report->GetChild("crash_server");
+  ASSERT_NE(nullptr, crash_server);
+  EXPECT_EQ("crash_server", crash_server->name());
+
+  props = crash_server->ToFidl().properties;
+  EXPECT_EQ(2u, props->size());
+
+  // Sort by keys to make them easier to test.
+  std::sort(props->begin(), props->end(),
+            [](const fuchsia::inspect::Property& lhs, const fuchsia::inspect::Property& rhs) {
+              return lhs.key < rhs.key;
+            });
+  EXPECT_EQ("creation_time", (*props)[0].key);
+  EXPECT_EQ("id", (*props)[1].key);
+  EXPECT_EQ(kStubServerReportId, (*props)[1].value.str());
 }
 
 }  // namespace

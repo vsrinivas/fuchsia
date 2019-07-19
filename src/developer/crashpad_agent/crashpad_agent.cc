@@ -57,16 +57,20 @@ using fuchsia::feedback::Data;
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
 const char kOverrideConfigPath[] = "/config/data/override_config.json";
 
+const char kKernelProgramName[] = "kernel";
+
 }  // namespace
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services) {
+    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+    InspectManager* inspect_manager) {
   Config config;
 
   if (files::IsFile(kOverrideConfigPath)) {
     const zx_status_t status = ParseConfig(kOverrideConfigPath, &config);
     if (status == ZX_OK) {
-      return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(config));
+      return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(config),
+                                      inspect_manager);
     }
     FX_PLOGS(ERROR, status) << "Failed to read override config file at " << kOverrideConfigPath
                             << " - falling back to default config file";
@@ -76,7 +80,8 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
   // or we failed to parse it.
   const zx_status_t status = ParseConfig(kDefaultConfigPath, &config);
   if (status == ZX_OK) {
-    return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(config));
+    return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(config),
+                                    inspect_manager);
   }
   FX_PLOGS(ERROR, status) << "Failed to read default config file at " << kDefaultConfigPath;
 
@@ -86,18 +91,18 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
-    Config config) {
+    Config config, InspectManager* inspect_manager) {
   std::unique_ptr<CrashServer> crash_server;
   if (config.crash_server.enable_upload && config.crash_server.url) {
     crash_server = std::make_unique<CrashServer>(*config.crash_server.url);
   }
   return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(config),
-                                  std::move(crash_server));
+                                  std::move(crash_server), inspect_manager);
 }
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
-    Config config, std::unique_ptr<CrashServer> crash_server) {
+    Config config, std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager) {
   if (!files::IsDirectory(config.crashpad_database.path)) {
     files::CreateDirectory(config.crashpad_database.path);
   }
@@ -115,24 +120,27 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
   // settings.
   database->GetSettings()->SetUploadsEnabled(config.crash_server.enable_upload);
 
-  return std::unique_ptr<CrashpadAgent>(new CrashpadAgent(dispatcher, std::move(services),
-                                                          std::move(config), std::move(database),
-                                                          std::move(crash_server)));
+  return std::unique_ptr<CrashpadAgent>(
+      new CrashpadAgent(dispatcher, std::move(services), std::move(config), std::move(database),
+                        std::move(crash_server), inspect_manager));
 }
 
 CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
                              std::shared_ptr<::sys::ServiceDirectory> services, Config config,
                              std::unique_ptr<crashpad::CrashReportDatabase> database,
-                             std::unique_ptr<CrashServer> crash_server)
+                             std::unique_ptr<CrashServer> crash_server,
+                             InspectManager* inspect_manager)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       services_(services),
       config_(std::move(config)),
       database_(std::move(database)),
-      crash_server_(std::move(crash_server)) {
+      crash_server_(std::move(crash_server)),
+      inspect_manager_(inspect_manager) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(services_);
   FXL_DCHECK(database_);
+  FXL_DCHECK(inspect_manager_);
   if (config.crash_server.enable_upload) {
     FXL_DCHECK(crash_server_);
   }
@@ -267,7 +275,7 @@ fit::promise<void> CrashpadAgent::OnNativeException(zx::process process, zx::thr
         // For userspace, we read back the annotations from the minidump instead of passing them as
         // argument like for kernel crashes because the Crashpad handler augmented them with the
         // modules' annotations.
-        if (!UploadReport(local_report_id, /*annotations=*/nullptr,
+        if (!UploadReport(local_report_id, process_name, /*annotations=*/nullptr,
                           /*read_annotations_from_minidump=*/true)) {
           return fit::error();
         }
@@ -310,7 +318,7 @@ fit::promise<void> CrashpadAgent::OnManagedRuntimeException(std::string componen
           return fit::error();
         }
 
-        if (!UploadReport(local_report_id, &annotations,
+        if (!UploadReport(local_report_id, component_url, &annotations,
                           /*read_annotations_from_minidump=*/false)) {
           return fit::error();
         }
@@ -341,7 +349,7 @@ fit::promise<void> CrashpadAgent::OnKernelPanicCrashLog(fuchsia::mem::Buffer cra
         }
         const std::map<std::string, std::string> annotations =
             MakeDefaultAnnotations(feedback_data,
-                                   /*program_name=*/"kernel");
+                                   /*program_name=*/kKernelProgramName);
         AddKernelPanicAttachments(report.get(), feedback_data, std::move(crash_log));
 
         // Finish new local crash report.
@@ -353,7 +361,7 @@ fit::promise<void> CrashpadAgent::OnKernelPanicCrashLog(fuchsia::mem::Buffer cra
           return fit::error();
         }
 
-        if (!UploadReport(local_report_id, &annotations,
+        if (!UploadReport(local_report_id, kKernelProgramName, &annotations,
                           /*read_annotations_from_minidump=*/false)) {
           return fit::error();
         }
@@ -362,8 +370,12 @@ fit::promise<void> CrashpadAgent::OnKernelPanicCrashLog(fuchsia::mem::Buffer cra
 }
 
 bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
+                                 const std::string& program_name,
                                  const std::map<std::string, std::string>* annotations,
                                  bool read_annotations_from_minidump) {
+  InspectManager::Report* inspect_report =
+      inspect_manager_->AddReport(program_name, local_report_id);
+
   bool uploads_enabled;
   if ((!database_->GetSettings()->GetUploadsEnabled(&uploads_enabled) || !uploads_enabled)) {
     FX_LOGS(INFO) << "upload to remote crash server disabled. Local crash report, ID "
@@ -439,6 +451,7 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
     return false;
   }
   database_->RecordUploadComplete(std::move(report), server_report_id);
+  inspect_report->MarkUploaded(server_report_id);
   FX_LOGS(INFO) << "successfully uploaded crash report at "
                    "https://crash.corp.google.com/"
                 << server_report_id;

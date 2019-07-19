@@ -8,11 +8,12 @@ namespace crash {
 
 const char kStubCrashServerUrl[] = "localhost:1234";
 
+const char kStubServerReportId[] = "server-report-id";
+
 bool StubCrashServer::MakeRequest(const crashpad::HTTPHeaders& headers,
                                   std::unique_ptr<crashpad::HTTPBodyStream> stream,
                                   std::string* server_report_id) {
-  // TODO(frousseau): check this is the one written in the local Crashpad database.
-  *server_report_id = "untestedReportdId";
+  *server_report_id = kStubServerReportId;
   return request_return_value_;
 }
 
