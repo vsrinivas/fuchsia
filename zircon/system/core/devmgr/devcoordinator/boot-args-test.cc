@@ -9,13 +9,13 @@
 void CreateBootArgs(const char* config, size_t size, devmgr::BootArgs* boot_args) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(size, 0, &vmo);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   status = vmo.write(config, 0, size);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   status = devmgr::BootArgs::Create(std::move(vmo), size, boot_args);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 }
 
 TEST(BootArgsTestCase, CreateZeroSized) {

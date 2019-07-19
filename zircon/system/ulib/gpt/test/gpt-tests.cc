@@ -297,20 +297,20 @@ void LibGptTest::Reset() {
     fd_.reset(open(disk_path_, O_RDWR));
 
     ASSERT_TRUE(fd_.is_valid(), "Could not open block device\n");
-    ASSERT_EQ(GptDevice::Create(fd_.get(), GetBlockSize(), GetBlockCount(), &gpt), ZX_OK);
+    ASSERT_OK(GptDevice::Create(fd_.get(), GetBlockSize(), GetBlockCount(), &gpt));
     gpt_ = std::move(gpt);
 }
 
 void LibGptTest::Finalize() {
     ASSERT_FALSE(gpt_->Valid(), "Valid GPT on uninitialized disk");
 
-    ASSERT_EQ(gpt_->Finalize(), ZX_OK, "Failed to finalize");
+    ASSERT_OK(gpt_->Finalize(), "Failed to finalize");
     ASSERT_TRUE(gpt_->Valid(), "Invalid GPT after finalize");
 }
 
 void LibGptTest::Sync() {
 
-    ASSERT_EQ(gpt_->Sync(), ZX_OK, "Failed to sync");
+    ASSERT_OK(gpt_->Sync(), "Failed to sync");
     ASSERT_TRUE(gpt_->Valid(), "Invalid GPT after sync");
 }
 
@@ -351,7 +351,7 @@ void LibGptTest::InitDisk(const char* disk_path) {
     ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status,
                                                   &block_info),
               ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
 
     blk_size_ = block_info.block_size;
     blk_count_ = block_info.block_count;
@@ -398,7 +398,7 @@ void LibGptTest::TearDownDisk() {
 }
 
 void LibGptTest::TearDownRamDisk() {
-    ASSERT_EQ(ramdisk_destroy(ramdisk_), ZX_OK);
+    ASSERT_OK(ramdisk_destroy(ramdisk_));
 }
 
 void LibGptTest::Teardown() {
@@ -443,7 +443,7 @@ void RemovePartitionsHelper(LibGptTest* libGptTest, Partitions* partitions, uint
         }
         ASSERT_TRUE(partitions->IsCreated(index), "Partition already removed");
         const gpt_partition_t* p = partitions->GetPartition(index);
-        ASSERT_EQ(libGptTest->RemovePartition(p->guid), ZX_OK, "Failed to remove partition");
+        ASSERT_OK(libGptTest->RemovePartition(p->guid), "Failed to remove partition");
         partitions->ClearCreated(index);
     }
 }
@@ -509,7 +509,7 @@ void RemovePartitions(LibGptTest* libGptTest, Partitions* partitions, uint32_t r
 // Removes all partitions and verifies them.
 void RemoveAllPartitions(LibGptTest* libGptTest, Partitions* partitions, bool sync) {
     ASSERT_LE(partitions->GetCount(), partitions->CreatedCount(), "Not all partitions populated");
-    ASSERT_EQ(libGptTest->RemoveAllPartitions(), ZX_OK, "Failed to remove all partition");
+    ASSERT_OK(libGptTest->RemoveAllPartitions(), "Failed to remove all partition");
 
     for (uint32_t i = 0; i < partitions->GetCount(); i++) {
         partitions->ClearCreated(i);
@@ -738,16 +738,16 @@ void PartitionFlagsFlip(LibGptTest* libGptTest, Partitions* partitions, uint32_t
 
     // Get the current flags
     uint64_t old_flags, updated_flags;
-    ASSERT_EQ(libGptTest->GetPartitionFlags(index, &old_flags), ZX_OK, "");
+    ASSERT_OK(libGptTest->GetPartitionFlags(index, &old_flags), "");
 
     uint64_t new_flags = ~old_flags;
     partitions->SetPartitionFlags(index, new_flags);
 
     // Change the flags
-    ASSERT_EQ(libGptTest->SetPartitionFlags(index, new_flags), ZX_OK, "");
+    ASSERT_OK(libGptTest->SetPartitionFlags(index, new_flags), "");
 
     // Get the changes and verify
-    ASSERT_EQ(libGptTest->GetPartitionFlags(index, &updated_flags), ZX_OK, "");
+    ASSERT_OK(libGptTest->GetPartitionFlags(index, &updated_flags), "");
     ASSERT_EQ(new_flags, updated_flags, "Flags update failed");
     PartitionVerify(libGptTest, partitions);
 }
@@ -778,14 +778,14 @@ void DiffsTestHelper(LibGptTest* libGptTest, uint32_t total_partitions) {
     Partitions partitions(total_partitions, libGptTest->GetUsableStartBlock(),
                           libGptTest->GetUsableLastBlock());
     AddPartitions(libGptTest, &partitions, false);
-    EXPECT_EQ(libGptTest->GetDiffs(0, &diffs), ZX_OK, "Diffs zero after adding partition");
+    EXPECT_OK(libGptTest->GetDiffs(0, &diffs), "Diffs zero after adding partition");
 
     EXPECT_EQ(diffs,
               gpt::kGptDiffType | gpt::kGptDiffGuid | gpt::kGptDiffFirst | gpt::kGptDiffLast |
                   gpt::kGptDiffName,
               "Unexpected diff after creating partition");
     libGptTest->Sync();
-    EXPECT_EQ(libGptTest->GetDiffs(0, &diffs), ZX_OK, "");
+    EXPECT_OK(libGptTest->GetDiffs(0, &diffs), "");
     EXPECT_EQ(diffs, 0, "Diffs not zero after syncing partition");
 }
 

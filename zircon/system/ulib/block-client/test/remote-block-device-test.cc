@@ -235,7 +235,7 @@ TEST(RemoteBlockDeviceTest, VolumeManagerOrdinals) {
 
     // Other block functions still function correctly.
     fuchsia_hardware_block_BlockInfo block_info;
-    EXPECT_EQ(ZX_OK, device->BlockGetInfo(&block_info));
+    EXPECT_OK(device->BlockGetInfo(&block_info));
 
     // Sending any FVM method other than "VolumeQuery" also returns an error.
     EXPECT_EQ(ZX_ERR_PEER_CLOSED, device->VolumeExtend(0, 0));

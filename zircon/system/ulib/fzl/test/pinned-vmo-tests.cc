@@ -17,7 +17,7 @@ static constexpr size_t kVmoTestSize = 512 << 10; // 512KB
 class PinnedVmoTester : public zxtest::Test {
 public:
     void Init() {
-        ASSERT_EQ(zx::vmo::create(kVmoTestSize, 0, &vmo_), ZX_OK);
+        ASSERT_OK(zx::vmo::create(kVmoTestSize, 0, &vmo_));
     }
 
     void InitContiguous() {
@@ -29,7 +29,7 @@ public:
     void Pin(uint32_t rights) {
         // Make sure our handles are valid:
         EXPECT_TRUE(vmo_.is_valid());
-        EXPECT_EQ(pinned_vmo_.Pin(vmo_, *zx::unowned_bti(bti_handle_), rights), ZX_OK);
+        EXPECT_OK(pinned_vmo_.Pin(vmo_, *zx::unowned_bti(bti_handle_), rights));
     }
 
     // Check that the PinnedVmo is pinned; that it has regions
@@ -71,7 +71,7 @@ public:
 };
 
 void PinnedVmoTester::SetUp() {
-    ASSERT_EQ(fake_bti_create(&bti_handle_), ZX_OK);
+    ASSERT_OK(fake_bti_create(&bti_handle_));
     EXPECT_NE(bti_handle_, ZX_HANDLE_INVALID);
 }
 
@@ -102,7 +102,7 @@ TEST(PinnedVmoTests, FailPinArgsTest) {
     zx::vmo vmo;
     zx::bti bti;
     EXPECT_EQ(pinned_vmo.Pin(vmo, bti, ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE), ZX_ERR_INVALID_ARGS);
-    ASSERT_EQ(zx::vmo::create(kVmoTestSize, 0, &vmo), ZX_OK);
+    ASSERT_OK(zx::vmo::create(kVmoTestSize, 0, &vmo));
     EXPECT_EQ(pinned_vmo.Pin(vmo, bti, ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE), ZX_ERR_INVALID_ARGS);
 }
 

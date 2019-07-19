@@ -31,7 +31,7 @@ void AssignVmos(size_t num_vmos, size_t vmo_size, zx::vmo* vmos) {
     zx_status_t status;
     for (size_t i = 0; i < num_vmos; ++i) {
         status = zx::vmo::create(vmo_size, 0, &vmos[i]);
-        EXPECT_EQ(status, ZX_OK);
+        EXPECT_OK(status);
     }
 }
 
@@ -47,7 +47,7 @@ public:
 
     void Init() {
         AssignVmos(kNumVmos, kVmoTestSize, vmo_handles_);
-        ASSERT_EQ(pool_.Init(vmo_handles_, kNumVmos), ZX_OK);
+        ASSERT_OK(pool_.Init(vmo_handles_, kNumVmos));
     }
 
     void FillBuffers(size_t num_buffers) {
@@ -61,24 +61,24 @@ public:
     // Create vmos for each handle in an array of vmo handles:
     void CreateContiguousVmos(size_t num_vmos, size_t vmo_size, zx::vmo* vmos) {
         if (bti_handle_ == ZX_HANDLE_INVALID) {
-            ASSERT_EQ(fake_bti_create(&bti_handle_), ZX_OK, "");
+            ASSERT_OK(fake_bti_create(&bti_handle_), "");
         }
         for (size_t i = 0; i < num_vmos; ++i) {
             zx_status_t status = zx::vmo::create_contiguous(*zx::unowned_bti(bti_handle_),
                                                             vmo_size, 0, &vmos[i]);
-            ASSERT_EQ(status, ZX_OK);
+            ASSERT_OK(status);
         }
     }
 
     void InitContiguous() {
         CreateContiguousVmos(kNumVmos, kVmoTestSize, vmo_handles_);
-        ASSERT_EQ(pool_.Init(vmo_handles_, kNumVmos), ZX_OK);
+        ASSERT_OK(pool_.Init(vmo_handles_, kNumVmos));
     }
 
     void PinVmos(fzl::VmoPool::RequireContig require_contiguous,
                  fzl::VmoPool::RequireLowMem require_low_memory) {
         if (bti_handle_ == ZX_HANDLE_INVALID) {
-            ASSERT_EQ(fake_bti_create(&bti_handle_), ZX_OK, "");
+            ASSERT_OK(fake_bti_create(&bti_handle_), "");
         }
         EXPECT_EQ(pool_.PinVmos(*zx::unowned_bti(bti_handle_),
                                 require_contiguous, require_low_memory),
@@ -87,7 +87,7 @@ public:
     }
 
     void MapVmos() {
-        EXPECT_EQ(pool_.MapVmos(), ZX_OK);
+        EXPECT_OK(pool_.MapVmos());
         is_mapped_ = true;
     }
 
@@ -188,7 +188,7 @@ public:
         uint32_t hashing_index = 0;
         for (size_t i = 0; i < kNumVmos; ++i) {
             hashing_index = (hashing_index + kHashingSeed) % kNumVmos;
-            ASSERT_EQ(pool_.ReleaseBuffer(hashing_index), ZX_OK);
+            ASSERT_OK(pool_.ReleaseBuffer(hashing_index));
         }
     }
 
@@ -235,7 +235,7 @@ TEST_F(VmoPoolTester, ReleaseBeforeComplete) {
     Init();
     auto buffer = pool_.LockBufferForWrite();
     ASSERT_TRUE(buffer.has_value());
-    EXPECT_EQ(buffer->Release(), ZX_OK);
+    EXPECT_OK(buffer->Release());
 
     // Now check accounting:
     CheckAccounting(0);

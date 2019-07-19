@@ -54,20 +54,20 @@ void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
                              fbl::unique_ptr<SkipBlockDevice>* device) {
     fzl::VmoMapper mapper;
     zx::vmo vmo;
-    ASSERT_EQ(ZX_OK, mapper.CreateAndMap((kPageSize + kOobSize) * kPagesPerBlock * kNumBlocks,
+    ASSERT_OK(mapper.CreateAndMap((kPageSize + kOobSize) * kPagesPerBlock * kNumBlocks,
                                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
     memset(mapper.start(), 0xff, mapper.size());
     CreateBadBlockMap(mapper.start());
     vmo.op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, 0, mapper.size(), nullptr, 0);
     zx::vmo dup;
-    ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup), ZX_OK);
+    ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
 
     fuchsia_hardware_nand_RamNandInfo info = nand_info;
     info.vmo = dup.release();
     fbl::RefPtr<ramdevice_client::RamNandCtl> ctl;
-    ASSERT_EQ(ramdevice_client::RamNandCtl::Create(&ctl), ZX_OK);
+    ASSERT_OK(ramdevice_client::RamNandCtl::Create(&ctl));
     std::optional<ramdevice_client::RamNand> ram_nand;
-    ASSERT_EQ(ramdevice_client::RamNand::Create(ctl, &info, &ram_nand), ZX_OK);
+    ASSERT_OK(ramdevice_client::RamNand::Create(ctl, &info, &ram_nand));
     device->reset(new SkipBlockDevice(std::move(ctl), *std::move(ram_nand),
                                       std::move(mapper)));
 }

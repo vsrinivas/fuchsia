@@ -65,7 +65,7 @@ TEST_F(PciDriverTests, TestRunner) {
              PCI_TEST_BUS_ID, PCI_TEST_DEV_ID, PCI_TEST_FUNC_ID, kProtocolTestDriverName);
     st = devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), proto_driver_path,
                                                        &protocol_fd_);
-    ASSERT_EQ(ZX_OK, st);
+    ASSERT_OK(st);
     zx::channel ch;
     struct fuchsia_device_test_TestReport report = {};
 

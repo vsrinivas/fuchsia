@@ -51,7 +51,7 @@ class Server : public gen::ControlFlow::Interface {
 
 void SpinUp(zx::channel server, Server* impl, async::Loop* loop) {
   zx_status_t status = fidl::Bind(loop->dispatcher(), std::move(server), impl);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_OK(status);
 }
 
 // Block until the next dispatcher iteration.
@@ -59,9 +59,9 @@ void SpinUp(zx::channel server, Server* impl, async::Loop* loop) {
 // the server must have processed the return value from the handler.
 void WaitUntilNextIteration(async_dispatcher_t* dispatcher) {
   zx::eventpair ep0, ep1;
-  ASSERT_EQ(zx::eventpair::create(0, &ep0, &ep1), ZX_OK);
+  ASSERT_OK(zx::eventpair::create(0, &ep0, &ep1));
   async::PostTask(dispatcher, [ep = std::move(ep1)]() {
-    EXPECT_EQ(ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED), ZX_OK);
+    EXPECT_OK(ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED));
   });
 
   zx_signals_t signals = 0;
@@ -73,17 +73,17 @@ void WaitUntilNextIteration(async_dispatcher_t* dispatcher) {
 
 TEST(ControlFlowTest, ServerShutdown) {
   auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToThread);
-  ASSERT_EQ(loop->StartThread("test_llcpp_controlflow_server"), ZX_OK);
+  ASSERT_OK(loop->StartThread("test_llcpp_controlflow_server"));
   Server server_impl;
 
   constexpr uint32_t kNumIterations = 50;
   for (uint32_t i = 0; i < kNumIterations; i++) {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
     ASSERT_NO_FATAL_FAILURES(SpinUp(std::move(server_chan), &server_impl, loop.get()));
 
     // Send the shutdown message
-    ASSERT_EQ(fidl_test_llcpp_controlflow_ControlFlowShutdown(client_chan.get()), ZX_OK);
+    ASSERT_OK(fidl_test_llcpp_controlflow_ControlFlowShutdown(client_chan.get()));
 
     ASSERT_NO_FATAL_FAILURES(WaitUntilNextIteration(loop->dispatcher()));
 
@@ -98,7 +98,7 @@ TEST(ControlFlowTest, ServerShutdown) {
           ZX_OK);
       ASSERT_EQ(out_bytes, sizeof(epitaph));
       ASSERT_EQ(out_handles, 0);
-      ASSERT_EQ(static_cast<zx_status_t>(epitaph.hdr.reserved0), ZX_OK);
+      ASSERT_OK(static_cast<zx_status_t>(epitaph.hdr.reserved0));
     }
 
     // Verify that the remote end of |client_chan| has been closed
@@ -118,13 +118,13 @@ TEST(ControlFlowTest, ServerShutdown) {
 TEST(ControlFlowTest, NoReplyMustSendEpitaph) {
   // Send epitaph from a call with no reply.
   auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToThread);
-  ASSERT_EQ(loop->StartThread("test_llcpp_controlflow_server"), ZX_OK);
+  ASSERT_OK(loop->StartThread("test_llcpp_controlflow_server"));
   Server server_impl;
 
   constexpr uint32_t kNumIterations = 50;
   for (uint32_t i = 0; i < kNumIterations; i++) {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
     ASSERT_NO_FATAL_FAILURES(SpinUp(std::move(server_chan), &server_impl, loop.get()));
 
     // Send the epitaph request message
@@ -165,20 +165,20 @@ TEST(ControlFlowTest, NoReplyMustSendEpitaph) {
 TEST(ControlFlowTest, MustSendEpitaph) {
   // Send epitaph from a call with reply.
   auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToThread);
-  ASSERT_EQ(loop->StartThread("test_llcpp_controlflow_server"), ZX_OK);
+  ASSERT_OK(loop->StartThread("test_llcpp_controlflow_server"));
   Server server_impl;
 
   constexpr uint32_t kNumIterations = 50;
   for (uint32_t i = 0; i < kNumIterations; i++) {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
     ASSERT_NO_FATAL_FAILURES(SpinUp(std::move(server_chan), &server_impl, loop.get()));
 
     // Manually write the epitaph request message, since the epitaph will cause the C bindings
     // to fail.
     fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphRequest request = {};
     request.hdr.ordinal = fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphOrdinal;
-    ASSERT_EQ(client_chan.write(0, &request, sizeof(request), nullptr, 0), ZX_OK);
+    ASSERT_OK(client_chan.write(0, &request, sizeof(request), nullptr, 0));
 
     ASSERT_NO_FATAL_FAILURES(WaitUntilNextIteration(loop->dispatcher()));
 

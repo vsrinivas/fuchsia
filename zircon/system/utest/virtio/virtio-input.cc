@@ -39,7 +39,7 @@ TEST_F(VirtioInputTest, MultiTouchReportDescriptor) {
     size_t desc_len;
     zx_status_t status = touch.GetDescriptor(HID_DESCRIPTION_TYPE_REPORT,
                                              reinterpret_cast<void**>(&desc), &desc_len);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     size_t paradise_size;
     const uint8_t* paradise_desc = get_paradise_touch_report_desc(&paradise_size);

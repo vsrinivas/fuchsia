@@ -53,11 +53,11 @@ TEST(VmoTestCase, ReadWrite) {
     // allocate an object and read/write from it
     const size_t len = PAGE_SIZE * 4;
     status = zx_vmo_create(len, 0, &vmo);
-    EXPECT_EQ(status, ZX_OK, "vm_object_create");
+    EXPECT_OK(status, "vm_object_create");
 
     char buf[len];
     status = zx_vmo_read(vmo, buf, 0, sizeof(buf));
-    EXPECT_EQ(status, ZX_OK, "vm_object_read");
+    EXPECT_OK(status, "vm_object_read");
 
     // make sure it's full of zeros
     size_t count = 0;
@@ -71,7 +71,7 @@ TEST(VmoTestCase, ReadWrite) {
 
     memset(buf, 0x99, sizeof(buf));
     status = zx_vmo_write(vmo, buf, 0, sizeof(buf));
-    EXPECT_EQ(status, ZX_OK, "vm_object_write");
+    EXPECT_OK(status, "vm_object_write");
 
     // map it
     uintptr_t ptr;
@@ -99,7 +99,7 @@ TEST(VmoTestCase, ReadWriteRange) {
     // allocate an object
     const size_t len = PAGE_SIZE * 4;
     status = zx_vmo_create(len, 0, &vmo);
-    EXPECT_EQ(status, ZX_OK, "vm_object_create");
+    EXPECT_OK(status, "vm_object_create");
 
     // fail to read past end
     char buf[len * 2];
@@ -108,7 +108,7 @@ TEST(VmoTestCase, ReadWriteRange) {
 
     // Successfully read 0 bytes at end
     status = zx_vmo_read(vmo, buf, len, 0);
-    EXPECT_EQ(status, ZX_OK, "vm_object_read zero at end");
+    EXPECT_OK(status, "vm_object_read zero at end");
 
     // Fail to read 0 bytes past end
     status = zx_vmo_read(vmo, buf, len + 1, 0);
@@ -120,7 +120,7 @@ TEST(VmoTestCase, ReadWriteRange) {
 
     // Successfully write 0 bytes at end
     status = zx_vmo_write(vmo, buf, len, 0);
-    EXPECT_EQ(status, ZX_OK, "vm_object_write zero at end");
+    EXPECT_OK(status, "vm_object_write zero at end");
 
     // Fail to read 0 bytes past end
     status = zx_vmo_write(vmo, buf, len + 1, 0);
@@ -426,10 +426,10 @@ TEST(VmoTestCase, Info) {
         zx_iommu_desc_dummy_t desc;
         EXPECT_EQ(zx_iommu_create((*root_res).get(), ZX_IOMMU_TYPE_DUMMY,
                                   &desc, sizeof(desc), iommu.reset_and_get_address()), ZX_OK);
-        EXPECT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+        EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
         len = PAGE_SIZE * 12;
-        EXPECT_EQ(zx::vmo::create_contiguous(bti, len, 0, &vmo), ZX_OK);
+        EXPECT_OK(zx::vmo::create_contiguous(bti, len, 0, &vmo));
 
         status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
         EXPECT_OK(status, "vm_info_test: info_vmo");
@@ -508,7 +508,7 @@ zx_rights_t GetHandleRights(zx_handle_t h) {
     zx_status_t s = zx_object_get_info(h, ZX_INFO_HANDLE_BASIC, &info,
                                        sizeof(info), nullptr, nullptr);
     if (s != ZX_OK) {
-        EXPECT_EQ(s, ZX_OK);  // Poison the test
+        EXPECT_OK(s);  // Poison the test
         return 0;
     }
     return info.rights;
@@ -919,7 +919,7 @@ TEST(VmoTestCase, CacheOp) {
             EXPECT_EQ(zx_iommu_create((*root_res).get(), ZX_IOMMU_TYPE_DUMMY,
                                       &desc, sizeof(desc), iommu.reset_and_get_address()), ZX_OK);
 
-            EXPECT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+            EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
             // There's a chance this will flake if we're unable to get size
             // bytes that are physically contiguous.
@@ -1076,7 +1076,7 @@ TEST(VmoTestCase, DecommitMisaligned) {
 TEST(VmoTestCase, ResizeHazard) {
     const size_t size = PAGE_SIZE * 2;
     zx_handle_t vmo;
-    ASSERT_EQ(zx_vmo_create(size, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
+    ASSERT_OK(zx_vmo_create(size, ZX_VMO_RESIZABLE, &vmo));
 
     uintptr_t ptr_rw;
     EXPECT_OK(zx_vmar_map(

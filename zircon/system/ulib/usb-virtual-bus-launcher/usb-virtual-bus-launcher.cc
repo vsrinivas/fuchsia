@@ -49,7 +49,7 @@ USBVirtualBusBase::USBVirtualBusBase() {
             fdio_get_service_handle(fd.release(), virtual_bus_handle_.reset_and_get_address()));
   fd = fbl::unique_fd(openat(devmgr_.devfs_root().get(), "class", O_RDONLY));
 
-  ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_virtual_bus_BusEnable, virtual_bus_handle_.get()));
+  ASSERT_OK(FidlCall(fuchsia_hardware_usb_virtual_bus_BusEnable, virtual_bus_handle_.get()));
   while (fdio_watch_directory(fd.get(), WaitForFile, ZX_TIME_INFINITE,
                               const_cast<char*>("usb-peripheral")) != ZX_ERR_STOP)
     ;
@@ -60,7 +60,7 @@ USBVirtualBusBase::USBVirtualBusBase() {
     ;
   devpath = fbl::String::Concat({fbl::String("class/usb-peripheral/"), fbl::String(devpath)});
   fd = fbl::unique_fd(openat(devmgr_.devfs_root().get(), devpath.c_str(), O_RDWR));
-  ASSERT_EQ(ZX_OK, fdio_get_service_handle(fd.release(), peripheral_.reset_and_get_address()));
+  ASSERT_OK(fdio_get_service_handle(fd.release(), peripheral_.reset_and_get_address()));
   ASSERT_EQ(ZX_OK,
             FidlCall(fuchsia_hardware_usb_peripheral_DeviceClearFunctions, peripheral_.get()));
 }

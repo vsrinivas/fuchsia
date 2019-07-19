@@ -161,7 +161,7 @@ TEST(ChannelInternalTest, TransferChannelWithPendingCallInSourceProcess) {
         ASSERT_EQ(zx::process::create(*zx::job::default_job(), "mini-pi-channel-test", 3u, 0, &proc,
                                       &vmar),
                   ZX_OK);
-        ASSERT_EQ(zx::thread::create(proc, "mini-p-channel-test-thrd", 2u, 0u, &thread), ZX_OK);
+        ASSERT_OK(zx::thread::create(proc, "mini-p-channel-test-thrd", 2u, 0u, &thread));
 
         zx::channel cmd_channel;
         ASSERT_OK(start_mini_process_etc(proc.get(), thread.get(), vmar.get(), local.release(),

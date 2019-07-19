@@ -203,7 +203,7 @@ class CrashAnalyzerStub {
     }
 
     zx_status_t status = fuchsia_crash_AnalyzerOnNativeException_reply(txn, &result);
-    EXPECT_EQ(status, ZX_OK);
+    EXPECT_OK(status);
     return status;
   }
 

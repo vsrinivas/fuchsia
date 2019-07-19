@@ -482,8 +482,8 @@ TEST(SdmmcTest, WritePolled) {
         GetMockReg<MsdcTxData>(mock_regs).ExpectWrite(single_block_data[i]);
     }
 
-    EXPECT_EQ(sdmmc.SdmmcRequest(&req), ZX_OK);
-    EXPECT_EQ(req.status, ZX_OK);
+    EXPECT_OK(sdmmc.SdmmcRequest(&req));
+    EXPECT_OK(req.status);
     EXPECT_EQ(req.response[0], 0x80dcd8ff);
     ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
 
@@ -530,8 +530,8 @@ TEST(SdmmcTest, WritePolled) {
         GetMockReg<MsdcTxData>(mock_regs).ExpectWrite(multi_block_data[i]);
     }
 
-    EXPECT_EQ(sdmmc.SdmmcRequest(&req), ZX_OK);
-    EXPECT_EQ(req.status, ZX_OK);
+    EXPECT_OK(sdmmc.SdmmcRequest(&req));
+    EXPECT_OK(req.status);
     EXPECT_EQ(req.response[0], 0xaa30091e);
     mock_regs.VerifyAll();
 }

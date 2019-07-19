@@ -28,7 +28,7 @@ public:
         args.driver_search_paths.push_back("/boot/driver");
         args.use_system_svchost = true;
         args.disable_block_watcher = true;
-        ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
+        ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
 
         fbl::unique_fd ctl;
         ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &ctl));

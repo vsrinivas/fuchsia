@@ -15,7 +15,7 @@ namespace {
 TEST(Status, OkStatus) {
   Status s{};
   EXPECT_TRUE(s.ok());
-  EXPECT_EQ(s.code(), ZX_OK);
+  EXPECT_OK(s.code());
 }
 
 TEST(Status, ErrorStatus) {

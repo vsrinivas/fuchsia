@@ -47,23 +47,23 @@ TEST(FidlDDKDispatcherTest, TransactionTest) {
 
     // Create the isolated Devmgr.
     zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     // Wait for the driver to be created
     fbl::unique_fd fd;
     status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
                                                            "sys/platform/11:09:d/ddk-fidl",
                                                            &fd);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     // Get a FIDL channel to the device
     status = fdio_get_service_handle(fd.get(), &driver_channel);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     fuchsia::hardware::serial::Class device_class;
     status = fuchsia::hardware::serial::Device::Call::GetClass_Deprecated(
         zx::unowned_channel(driver_channel), &device_class);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     // Confirm the result of the call
     ASSERT_EQ(fuchsia::hardware::serial::Class::CONSOLE, device_class);

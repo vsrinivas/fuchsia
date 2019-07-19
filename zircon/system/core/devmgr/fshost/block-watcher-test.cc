@@ -103,7 +103,7 @@ TEST(AddDeviceTestCase, AddGPTDevice) {
         bool attached = false;
     };
     GptDevice device;
-    EXPECT_EQ(ZX_OK, device.Add());
+    EXPECT_OK(device.Add());
     EXPECT_TRUE(device.attached);
 }
 
@@ -122,7 +122,7 @@ TEST(AddDeviceTestCase, AddFVMDevice) {
         bool attached = false;
     };
     FvmDevice device;
-    EXPECT_EQ(ZX_OK, device.Add());
+    EXPECT_OK(device.Add());
     EXPECT_TRUE(device.attached);
 }
 
@@ -141,7 +141,7 @@ TEST(AddDeviceTestCase, AddMBRDevice) {
         bool attached = false;
     };
     MbrDevice device;
-    EXPECT_EQ(ZX_OK, device.Add());
+    EXPECT_OK(device.Add());
     EXPECT_TRUE(device.attached);
 }
 
@@ -226,7 +226,7 @@ TEST(AddDeviceTestCase, AddValidBlobDevice) {
         bool mounted = false;
     };
     BlobDevice device;
-    EXPECT_EQ(ZX_OK, device.Add());
+    EXPECT_OK(device.Add());
     EXPECT_TRUE(device.checked);
     EXPECT_FALSE(device.formatted);
     EXPECT_TRUE(device.mounted);
@@ -263,7 +263,7 @@ TEST(AddDeviceTestCase, AddInvalidMinfsDevice) {
         bool mounted = false;
     };
     MinfsDevice device;
-    EXPECT_EQ(ZX_OK, device.Add());
+    EXPECT_OK(device.Add());
     EXPECT_TRUE(device.checked);
     EXPECT_TRUE(device.formatted);
     EXPECT_TRUE(device.mounted);
@@ -309,7 +309,7 @@ TEST(AddDeviceTestCase, AddUnknownFormatMinfsDevice) {
     MinfsDevice device;
     EXPECT_FALSE(device.formatted);
     EXPECT_FALSE(device.mounted);
-    EXPECT_EQ(ZX_OK, device.Add());
+    EXPECT_OK(device.Add());
     EXPECT_TRUE(device.formatted);
     EXPECT_TRUE(device.mounted);
 }
@@ -358,7 +358,7 @@ TEST(AddDeviceTestCase, AddUnknownFormatZxcryptDevice) {
         bool formatted_filesystem = false;
     };
     ZxcryptDevice device;
-    EXPECT_EQ(ZX_OK, device.Add());
+    EXPECT_OK(device.Add());
     EXPECT_TRUE(device.formatted_zxcrypt);
     EXPECT_FALSE(device.formatted_filesystem);
 }
@@ -391,7 +391,7 @@ TEST(AddDeviceTestCase, AddUnknownFormatBootPartitionDevice) {
         bool checked_unsealed_zxcrypt = false;
     };
     BootPartDevice device;
-    EXPECT_EQ(ZX_OK, device.Add());
+    EXPECT_OK(device.Add());
     EXPECT_FALSE(device.checked_unsealed_zxcrypt);
 }
 
@@ -419,7 +419,7 @@ TEST(AddDeviceTestCase, AddPermanentlyMiskeyedZxcryptVolume) {
         bool formatted = false;
     };
     ZxcryptVolume volume;
-    EXPECT_EQ(ZX_OK, volume.EnsureUnsealedAndFormatIfNeeded());
+    EXPECT_OK(volume.EnsureUnsealedAndFormatIfNeeded());
     EXPECT_TRUE(volume.preformat_unseal_attempt_count > 1);
     EXPECT_TRUE(volume.formatted);
     EXPECT_EQ(volume.postformat_unseal_attempt_count, 1);
@@ -449,7 +449,7 @@ TEST(AddDeviceTestCase, AddTransientlyMiskeyedZxcryptVolume) {
         bool formatted = false;
     };
     ZxcryptVolume volume;
-    EXPECT_EQ(ZX_OK, volume.EnsureUnsealedAndFormatIfNeeded());
+    EXPECT_OK(volume.EnsureUnsealedAndFormatIfNeeded());
     EXPECT_FALSE(volume.formatted);
     EXPECT_EQ(volume.unseal_attempt_count, 2);
 }

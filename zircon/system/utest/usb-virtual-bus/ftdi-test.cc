@@ -79,7 +79,7 @@ TEST_F(FtdiTest, ReadAndWriteTest) {
 
   uint8_t read_data[3] = {};
   zx_status_t status = ReadWithTimeout(fd.get(), read_data, sizeof(read_data), &bytes_sent);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_OK(status);
   ASSERT_EQ(bytes_sent, sizeof(read_data));
   for (size_t i = 0; i < sizeof(write_data); i++) {
     ASSERT_EQ(read_data[i], write_data[i]);
@@ -91,7 +91,7 @@ TEST_F(FtdiTest, ReadAndWriteTest) {
 
   uint8_t read_data2[5] = {};
   status = ReadWithTimeout(fd.get(), read_data2, sizeof(read_data2), &bytes_sent);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_OK(status);
   ASSERT_EQ(bytes_sent, sizeof(read_data2));
   for (size_t i = 0; i < sizeof(write_data2); i++) {
     ASSERT_EQ(read_data2[i], write_data2[i]);

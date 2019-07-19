@@ -30,8 +30,8 @@ void TestSetup(size_t allocated_blocks, size_t allocated_nodes, bool fragmented,
     // Allocate the initial nodes and blocks.
     fbl::Vector<ReservedNode> nodes;
     fbl::Vector<ReservedExtent> extents;
-    ASSERT_EQ(ZX_OK, (*out_allocator)->ReserveNodes(allocated_nodes, &nodes));
-    ASSERT_EQ(ZX_OK, (*out_allocator)->ReserveBlocks(allocated_blocks, &extents));
+    ASSERT_OK((*out_allocator)->ReserveNodes(allocated_nodes, &nodes));
+    ASSERT_OK((*out_allocator)->ReserveBlocks(allocated_blocks, &extents));
     if (fragmented) {
         ASSERT_EQ(allocated_blocks, extents.size());
     }
@@ -47,7 +47,7 @@ void TestSetup(size_t allocated_blocks, size_t allocated_nodes, bool fragmented,
         return NodePopulator::IterationCommand::Continue;
     };
     NodePopulator populator(out_allocator->get(), std::move(extents), std::move(nodes));
-    ASSERT_EQ(ZX_OK, populator.Walk(on_node, on_extent));
+    ASSERT_OK(populator.Walk(on_node, on_extent));
 }
 
 // Iterate over the null blob.
@@ -103,7 +103,7 @@ TEST(AllocatedExtentIteratorTest, InlineNode) {
         ASSERT_EQ(blocks_seen, iter.BlockIndex());
 
         const Extent* extent;
-        ASSERT_EQ(ZX_OK, iter.Next(&extent));
+        ASSERT_OK(iter.Next(&extent));
         ASSERT_TRUE(allocated_extents[i] == *extent);
         blocks_seen += extent->Length();
     }
@@ -149,7 +149,7 @@ TEST(AllocatedExtentIteratorTest, MultiNode) {
         ASSERT_EQ(blocks_seen, iter.BlockIndex());
 
         const Extent* extent;
-        ASSERT_EQ(ZX_OK, iter.Next(&extent));
+        ASSERT_OK(iter.Next(&extent));
         ASSERT_TRUE(allocated_extents[i] == *extent);
         blocks_seen += extent->Length();
     }
@@ -188,7 +188,7 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
         ASSERT_TRUE(!iter.Done());
         const Extent* extent;
         for (size_t i = 0; i < kInlineMaxExtents - 1; i++) {
-            ASSERT_EQ(ZX_OK, iter.Next(&extent));
+            ASSERT_OK(iter.Next(&extent));
         }
         ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter.Next(&extent));
     }
@@ -204,7 +204,7 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
         ASSERT_TRUE(!iter.Done());
         const Extent* extent;
         for (size_t i = 0; i < kInlineMaxExtents - 1; i++) {
-            ASSERT_EQ(ZX_OK, iter.Next(&extent));
+            ASSERT_OK(iter.Next(&extent));
         }
         ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter.Next(&extent));
     }
@@ -222,7 +222,7 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
 //        ASSERT_TRUE(!iter.Done());
 //        const Extent* extent;
 //        for (size_t i = 0; i < kInlineMaxExtents - 1; i++) {
-//            ASSERT_EQ(ZX_OK, iter.Next(&extent));
+//            ASSERT_OK(iter.Next(&extent));
 //        }
 //        ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter.Next(&extent));
 //    }
@@ -264,7 +264,7 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorFragmented) {
         // "i + 1" is arbitrary, but it checks trying a request for "at least
         // one" block, and some additional request sizes. It doesn't matter in
         // the fragmented case, since the |actual_length| should always be one.
-        ASSERT_EQ(ZX_OK, iter.Next(static_cast<uint32_t>(i + 1), &actual_length, &actual_start));
+        ASSERT_OK(iter.Next(static_cast<uint32_t>(i + 1), &actual_length, &actual_start));
         ASSERT_EQ(1, actual_length);
         ASSERT_EQ(allocated_extents[i].Start(), actual_start);
         blocks_seen += actual_length;
@@ -304,7 +304,7 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
         ASSERT_FALSE(iter.Done());
         uint32_t actual_length;
         uint64_t actual_start;
-        ASSERT_EQ(ZX_OK, iter.Next(10000, &actual_length, &actual_start));
+        ASSERT_OK(iter.Next(10000, &actual_length, &actual_start));
         ASSERT_EQ(kAllocatedBlocks, actual_length);
         ASSERT_EQ(allocated_extents[0].Start(), actual_start);
         ASSERT_TRUE(iter.Done());
@@ -322,7 +322,7 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
         while (!iter.Done()) {
             uint32_t actual_length;
             uint64_t actual_start;
-            ASSERT_EQ(ZX_OK, iter.Next(static_cast<uint32_t>(request_size),
+            ASSERT_OK(iter.Next(static_cast<uint32_t>(request_size),
                                        &actual_length, &actual_start));
             ASSERT_EQ(fbl::min(request_size, kAllocatedBlocks - blocks_seen), actual_length);
             ASSERT_EQ(allocated_extents[0].Start() + blocks_seen, actual_start);

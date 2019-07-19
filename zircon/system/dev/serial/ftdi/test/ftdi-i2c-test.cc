@@ -150,7 +150,7 @@ TEST_F(FtdiI2cTest, DdkLifetimeTest) {
   serial_.PushExpectedRead(std::move(first_read));
 
   // Check that bind works.
-  ASSERT_EQ(ZX_OK, device->Bind());
+  ASSERT_OK(device->Bind());
   device->DdkUnbind();
   EXPECT_TRUE(ddk_.Ok());
 

@@ -55,10 +55,10 @@ void IspTest::SetUp() {
 
   zx_status_t status = devmgr_integration_test::RecursiveWaitForFile(
       devfs_root, "class/isp-device-test/000", &fd_);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   status = fdio_get_service_handle(fd_.get(), &handle_);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 }
 
 TEST_F(IspTest, BasicConnectionTest) {
@@ -66,8 +66,8 @@ TEST_F(IspTest, BasicConnectionTest) {
   zx_status_t out_status;
   zx_status_t status =
       fuchsia_camera_test_IspTesterRunTests(handle_, &out_status, &report);
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_EQ(ZX_OK, out_status);
+  ASSERT_OK(status);
+  ASSERT_OK(out_status);
   EXPECT_EQ(1, report.test_count);
   EXPECT_EQ(1, report.success_count);
   EXPECT_EQ(0, report.failure_count);

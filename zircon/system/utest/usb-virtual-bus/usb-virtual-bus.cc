@@ -40,9 +40,9 @@ void USBVirtualBus::InitUMS(fbl::String* devpath) {
   device_desc.bcdDevice = htole16(0x0100);
   // iManufacturer; iProduct and iSerialNumber are filled in later
   device_desc.bNumConfigurations = 1;
-  ASSERT_EQ(ZX_OK, AllocateString(peripheral_, "Google", &device_desc.iManufacturer));
-  ASSERT_EQ(ZX_OK, AllocateString(peripheral_, "USB test drive", &device_desc.iProduct));
-  ASSERT_EQ(ZX_OK, AllocateString(peripheral_, "ebfd5ad49d2a", &device_desc.iSerialNumber));
+  ASSERT_OK(AllocateString(peripheral_, "Google", &device_desc.iManufacturer));
+  ASSERT_OK(AllocateString(peripheral_, "USB test drive", &device_desc.iProduct));
+  ASSERT_OK(AllocateString(peripheral_, "ebfd5ad49d2a", &device_desc.iSerialNumber));
   device_desc.idVendor = htole16(0x18D1);
   device_desc.idProduct = htole16(0xA021);
   ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_peripheral_DeviceSetDeviceDescriptor,
@@ -54,11 +54,11 @@ void USBVirtualBus::InitUMS(fbl::String* devpath) {
       .interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY,
   };
 
-  ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_peripheral_DeviceAddFunction, peripheral_.get(),
+  ASSERT_OK(FidlCall(fuchsia_hardware_usb_peripheral_DeviceAddFunction, peripheral_.get(),
                             &ums_function_desc));
   zx::channel handles[2];
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, handles, handles + 1));
-  ASSERT_EQ(ZX_OK, fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListener(peripheral_.get(),
+  ASSERT_OK(zx::channel::create(0, handles, handles + 1));
+  ASSERT_OK(fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListener(peripheral_.get(),
                                                                                 handles[1].get()));
   ASSERT_EQ(ZX_OK,
             FidlCall(fuchsia_hardware_usb_peripheral_DeviceBindFunctions, peripheral_.get()));
@@ -97,11 +97,11 @@ void USBVirtualBus::InitUsbHid(fbl::String* devpath) {
       .interface_protocol = 0,
   };
 
-  ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_peripheral_DeviceAddFunction, peripheral_.get(),
+  ASSERT_OK(FidlCall(fuchsia_hardware_usb_peripheral_DeviceAddFunction, peripheral_.get(),
                             &usb_hid_function_desc));
   zx::channel handles[2];
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, handles, handles + 1));
-  ASSERT_EQ(ZX_OK, fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListener(peripheral_.get(),
+  ASSERT_OK(zx::channel::create(0, handles, handles + 1));
+  ASSERT_OK(fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListener(peripheral_.get(),
                                                                                 handles[1].get()));
   ASSERT_EQ(ZX_OK,
             FidlCall(fuchsia_hardware_usb_peripheral_DeviceBindFunctions, peripheral_.get()));
@@ -145,11 +145,11 @@ void USBVirtualBus::InitFtdi(fbl::String* devpath) {
       .interface_protocol = USB_PROTOCOL_TEST_FTDI,
   };
 
-  ASSERT_EQ(ZX_OK, FidlCall(fuchsia_hardware_usb_peripheral_DeviceAddFunction, peripheral_.get(),
+  ASSERT_OK(FidlCall(fuchsia_hardware_usb_peripheral_DeviceAddFunction, peripheral_.get(),
                             &ums_function_desc));
   zx::channel handles[2];
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, handles, handles + 1));
-  ASSERT_EQ(ZX_OK, fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListener(peripheral_.get(),
+  ASSERT_OK(zx::channel::create(0, handles, handles + 1));
+  ASSERT_OK(fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListener(peripheral_.get(),
                                                                                 handles[1].get()));
   ASSERT_EQ(ZX_OK,
             FidlCall(fuchsia_hardware_usb_peripheral_DeviceBindFunctions, peripheral_.get()));

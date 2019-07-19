@@ -278,7 +278,7 @@ TEST_F(PaverTest, WriteCompleteSingle) {
     ASSERT_EQ(size, sizeof(kFakeData));
     paver_.Close();
     Wait();
-    ASSERT_EQ(paver_.exit_code(), ZX_OK);
+    ASSERT_OK(paver_.exit_code());
     ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteBootloader);
 }
 
@@ -327,7 +327,7 @@ TEST_F(PaverTest, WriteZirconA) {
     ASSERT_EQ(size, sizeof(kFakeData));
     paver_.Close();
     Wait();
-    ASSERT_EQ(paver_.exit_code(), ZX_OK);
+    ASSERT_OK(paver_.exit_code());
     ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
 }
 
@@ -339,7 +339,7 @@ TEST_F(PaverTest, WriteVbMetaA) {
     ASSERT_EQ(size, sizeof(kFakeData));
     paver_.Close();
     Wait();
-    ASSERT_EQ(paver_.exit_code(), ZX_OK);
+    ASSERT_OK(paver_.exit_code());
     ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
 }
 
@@ -351,7 +351,7 @@ TEST_F(PaverTest, WriteSshAuth) {
     ASSERT_EQ(size, sizeof(kFakeData));
     paver_.Close();
     Wait();
-    ASSERT_EQ(paver_.exit_code(), ZX_OK);
+    ASSERT_OK(paver_.exit_code());
     ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteDataFile);
 }
 
@@ -363,7 +363,7 @@ TEST_F(PaverTest, WriteFvm) {
     ASSERT_EQ(size, sizeof(kFakeData));
     paver_.Close();
     Wait();
-    ASSERT_EQ(paver_.exit_code(), ZX_OK);
+    ASSERT_OK(paver_.exit_code());
     ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteVolumes);
 }
 

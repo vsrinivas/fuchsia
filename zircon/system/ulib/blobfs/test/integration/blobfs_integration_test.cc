@@ -1116,7 +1116,7 @@ static bool InvalidOps(BlobfsTest* blobfsTest) {
     // Test that a blob fd cannot unmount the entire blobfs.
     zx_status_t status;
     fzl::FdioCaller caller(std::move(fd));
-    ASSERT_EQ(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status), ZX_OK);
+    ASSERT_OK(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status));
     ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
     fd.reset(caller.release().release());
 
@@ -1606,7 +1606,7 @@ static bool QueryDevicePath(BlobfsTest* blobfsTest) {
                                                      device_path, sizeof(device_buffer),
                                                      &path_len), ZX_OK);
     dirfd = caller.release();
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
     ASSERT_GT(path_len, 0, "Device path not found");
 
     char actual_path[PATH_MAX];
@@ -1721,7 +1721,7 @@ static bool CorruptAtMount(BlobfsTest* blobfsTest) {
     zx_status_t status;
     ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(caller.borrow_channel(), offset,
                                                          length, &status), ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
 
     // Verify that shrink was successful.
     uint64_t start_slices[1];
@@ -1733,7 +1733,7 @@ static bool CorruptAtMount(BlobfsTest* blobfsTest) {
     ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
                 caller.borrow_channel(), start_slices, fbl::count_of(start_slices), &status,
                 ranges, &actual_ranges_count), ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
     ASSERT_EQ(actual_ranges_count, 1);
     ASSERT_FALSE(ranges[0].allocated);
     ASSERT_EQ(ranges[0].count,
@@ -1754,13 +1754,13 @@ static bool CorruptAtMount(BlobfsTest* blobfsTest) {
     length = 2;
     ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(caller.borrow_channel(), offset,
                                                          length, &status), ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
 
     // Verify that extend was successful.
     ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
                 caller.borrow_channel(), start_slices, fbl::count_of(start_slices), &status,
                 ranges, &actual_ranges_count), ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
     ASSERT_EQ(actual_ranges_count, 1);
     ASSERT_TRUE(ranges[0].allocated);
     ASSERT_EQ(ranges[0].count, 2);
@@ -1770,7 +1770,7 @@ static bool CorruptAtMount(BlobfsTest* blobfsTest) {
     ASSERT_EQ(mount(fd.release(), MOUNT_PATH, DISK_FORMAT_BLOBFS, &options,
                     launch_stdio_async), ZX_OK);
 
-    ASSERT_EQ(umount(MOUNT_PATH), ZX_OK);
+    ASSERT_OK(umount(MOUNT_PATH));
     fd.reset(blobfsTest->GetFd());
     ASSERT_TRUE(fd, "Could not open ramdisk");
     caller.reset(fd.get());
@@ -1779,7 +1779,7 @@ static bool CorruptAtMount(BlobfsTest* blobfsTest) {
     ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
                 caller.borrow_channel(), start_slices, fbl::count_of(start_slices), &status,
                 ranges, &actual_ranges_count), ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
     ASSERT_EQ(actual_ranges_count, 1);
     ASSERT_TRUE(ranges[0].allocated);
     ASSERT_EQ(ranges[0].count, 1);

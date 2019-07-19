@@ -76,16 +76,16 @@ protected:
     void SetUp() override {
         outgoing_ = std::make_unique<svc::Outgoing>(loop_->dispatcher());
 
-        ASSERT_EQ(ZX_OK, zx::vmo::create(1024, 0, &kernel_));
-        ASSERT_EQ(ZX_OK, zx::vmo::create(1024, 0, &bootdata_));
+        ASSERT_OK(zx::vmo::create(1024, 0, &kernel_));
+        ASSERT_OK(zx::vmo::create(1024, 0, &bootdata_));
 
         ASSERT_EQ(ZBI_RESULT_OK, sys_calls_.zbi.Reset());
         ASSERT_EQ(ZBI_RESULT_OK, sys_calls_.zbi.Check(nullptr));
 
-        ASSERT_EQ(ZX_OK, bootdata_.write(sys_calls_.zbi_data, 0, 512));
+        ASSERT_OK(bootdata_.write(sys_calls_.zbi_data, 0, 512));
 
         zx::channel listening;
-        ASSERT_EQ(ZX_OK, zx::channel::create(0, &suspend_service_, &listening));
+        ASSERT_OK(zx::channel::create(0, &suspend_service_, &listening));
 
         context_.devmgr_channel = zx::unowned_channel(suspend_service_);
 
@@ -131,7 +131,7 @@ TEST_F(MexecTest, Success) {
     void* data = nullptr;
     ASSERT_EQ(ZBI_RESULT_OK, sys_calls_.zbi.CreateSection(50, ZBI_TYPE_CRASHLOG, 0, 0, &data));
 
-    ASSERT_EQ(ZX_OK, kernel_.write(kKernelText.c_str(), 0, kKernelText.length()));
+    ASSERT_OK(kernel_.write(kKernelText.c_str(), 0, kKernelText.length()));
 
     auto status = internal::PerformMexec(static_cast<void*>(&context_),
                                          kernel_.get(), bootdata_.get(),

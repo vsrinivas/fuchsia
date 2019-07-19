@@ -1253,7 +1253,7 @@ TEST(ChannelTest, WriteSelfHandleReturnsNotSupported) {
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, unowned_local->write(0, nullptr, 0, &local_handle, 1));
 
     zx_signals_t signals;
-    ASSERT_EQ(ZX_OK, remote.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), &signals));
+    ASSERT_OK(remote.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), &signals));
     ASSERT_EQ(ZX_CHANNEL_PEER_CLOSED, signals);
 }
 

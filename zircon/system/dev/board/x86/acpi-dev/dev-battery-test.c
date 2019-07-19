@@ -38,7 +38,7 @@ void create_battery_device(void) {
     mtx_init(&dev->lock, mtx_plain);
 
     zx_status_t status = zx_event_create(0, &dev->event);
-    EXPECT_EQ(status, ZX_OK);
+    EXPECT_OK(status);
 
     dev->bst_buffer.Length = ACPI_ALLOCATE_BUFFER;
     dev->bst_buffer.Pointer = NULL;

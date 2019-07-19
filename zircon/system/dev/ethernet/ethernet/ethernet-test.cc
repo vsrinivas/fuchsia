@@ -125,13 +125,13 @@ private:
 
 TEST(EthernetTest, BindTest) {
     EthernetTester tester;
-    EXPECT_EQ(eth::EthDev0::EthBind(nullptr, fake_ddk::kFakeParent), ZX_OK, "Bind failed");
+    EXPECT_OK(eth::EthDev0::EthBind(nullptr, fake_ddk::kFakeParent), "Bind failed");
 }
 
 TEST(EthernetTest, DdkLifecycleTest) {
     EthernetTester tester;
     eth::EthDev0* eth(new eth::EthDev0(fake_ddk::kFakeParent));
-    EXPECT_EQ(eth->AddDevice(), ZX_OK, "AddDevice Failed");
+    EXPECT_OK(eth->AddDevice(), "AddDevice Failed");
     eth->DdkUnbind();
     EXPECT_TRUE(tester.ddk().Ok());
     eth->DdkRelease();
@@ -140,9 +140,9 @@ TEST(EthernetTest, DdkLifecycleTest) {
 TEST(EthernetTest, OpenTest) {
     EthernetTester tester;
     eth::EthDev0* eth(new eth::EthDev0(fake_ddk::kFakeParent));
-    EXPECT_EQ(eth->AddDevice(), ZX_OK, "AddDevice Failed");
+    EXPECT_OK(eth->AddDevice(), "AddDevice Failed");
     zx_device_t* eth_instance;
-    EXPECT_EQ(eth->DdkOpen(&eth_instance, 0), ZX_OK, "Open Failed");
+    EXPECT_OK(eth->DdkOpen(&eth_instance, 0), "Open Failed");
     eth->DdkUnbind();
     eth->DdkRelease();
 }
@@ -198,11 +198,11 @@ private:
 
 TEST(EthernetTest, MultipleOpenTest) {
     EthernetDeviceTest test;
-    EXPECT_EQ(test.edev->DdkOpen(nullptr, 0), ZX_OK, "Instance 1 open failed");
-    EXPECT_EQ(test.edev->DdkOpen(nullptr, 0), ZX_OK, "Instance 2 open failed");
-    EXPECT_EQ(test.edev->DdkClose(0), ZX_OK, "Instance 0 close failed");
-    EXPECT_EQ(test.edev->DdkClose(0), ZX_OK, "Instance 1 close failed");
-    EXPECT_EQ(test.edev->DdkClose(0), ZX_OK, "Instance 2 close failed");
+    EXPECT_OK(test.edev->DdkOpen(nullptr, 0), "Instance 1 open failed");
+    EXPECT_OK(test.edev->DdkOpen(nullptr, 0), "Instance 2 open failed");
+    EXPECT_OK(test.edev->DdkClose(0), "Instance 0 close failed");
+    EXPECT_OK(test.edev->DdkClose(0), "Instance 1 close failed");
+    EXPECT_OK(test.edev->DdkClose(0), "Instance 2 close failed");
 }
 
 TEST(EthernetTest, SetClientNameTest) {

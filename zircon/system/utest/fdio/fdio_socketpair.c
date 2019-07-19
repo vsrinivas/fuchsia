@@ -370,14 +370,14 @@ TEST(SocketpairTest, CloneOrUnwrapAndWrap) {
 
     zx_handle_t handle = ZX_HANDLE_INVALID;
     status = fdio_fd_clone(fds[0], &handle);
-    ASSERT_EQ(status, ZX_OK, "fdio_fd_clone() failed");
+    ASSERT_OK(status, "fdio_fd_clone() failed");
 
     int cloned_fd = -1;
     status = fdio_fd_create(handle, &cloned_fd);
     EXPECT_EQ(status, 0, "fdio_fd_create(..., &cloned_fd) failed");
 
     status = fdio_fd_transfer(fds[0], &handle);
-    ASSERT_EQ(status, ZX_OK, "fdio_fd_transfer() failed");
+    ASSERT_OK(status, "fdio_fd_transfer() failed");
 
     int transferred_fd = -1;
     status = fdio_fd_create(handle, &transferred_fd);

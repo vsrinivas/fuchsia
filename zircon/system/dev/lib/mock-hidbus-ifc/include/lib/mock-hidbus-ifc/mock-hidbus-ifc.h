@@ -21,8 +21,8 @@ namespace mock_hidbus_ifc {
 // mock_hidbus_ifc::MockHidbusIfc<some_report_struct_t> mock_ifc;
 // SomeDriver dut;
 //
-// ASSERT_EQ(ZX_OK, dut.HidbusStart(mock_ifc.proto()));
-// ASSERT_EQ(ZX_OK, mock_ifc.WaitForReports(5));
+// ASSERT_OK(dut.HidbusStart(mock_ifc.proto()));
+// ASSERT_OK(mock_ifc.WaitForReports(5));
 //
 // for (const some_report_struct_t& report : mock_ifc.Reports()) {
 //     // Do something

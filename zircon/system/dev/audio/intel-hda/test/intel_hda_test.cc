@@ -65,19 +65,19 @@ TEST(IntelHda, BasicStreamInfo) {
       audio::utils::AudioOutput::Create(kFirstDevice);
   ASSERT_NE(stream, nullptr);
   zx_status_t status = stream->Open();
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_OK(status);
 
   // Fetch manufacturer information, and ensure it is something other than
   // the empty string.
   audio_stream_cmd_get_string_resp_t manufacturer;
   status = stream->GetString(AUDIO_STREAM_STR_ID_MANUFACTURER, &manufacturer);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_OK(status);
   EXPECT_GT(StringResponseAsStringView(&manufacturer).length(), 0);
 
   // Fetch supported audio formats, and ensure it is non-empty.
   fbl::Vector<audio_stream_format_range_t> formats;
   status = stream->GetSupportedFormats(&formats);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_OK(status);
   EXPECT_GT(formats.size(), 0);
 }
 

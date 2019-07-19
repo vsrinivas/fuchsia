@@ -22,7 +22,7 @@ class LoggerTest : public zxtest::Test {
 protected:
     void SetUp() override {
         zx::channel remote;
-        ASSERT_EQ(ZX_OK, zx::channel::create(0, &local_, &remote));
+        ASSERT_OK(zx::channel::create(0, &local_, &remote));
         ASSERT_EQ(ZX_OK,
                   driver_unit_test::Logger::CreateInstance(std::move(remote)));
         logger_ = driver_unit_test::Logger::GetInstance();
@@ -56,7 +56,7 @@ void DecodeMessage(const zx::channel& channel, uint64_t want_ordinal, const fidl
     zx_signals_t pending;
     const zx_signals_t wait = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     auto deadline = zx::deadline_after(zx::sec(5));
-    ASSERT_EQ(ZX_OK, channel.wait_one(wait, deadline, &pending));
+    ASSERT_OK(channel.wait_one(wait, deadline, &pending));
     ASSERT_TRUE(pending & ZX_CHANNEL_READABLE);
 
     // Create the data buffer and copy the data into it.
@@ -69,21 +69,21 @@ void DecodeMessage(const zx::channel& channel, uint64_t want_ordinal, const fidl
         .num_handles = 0,
     };
 
-    ASSERT_EQ(ZX_OK, channel.read(0, buf.get(), nullptr /* handles */, buf_size,
+    ASSERT_OK(channel.read(0, buf.get(), nullptr /* handles */, buf_size,
                                   0 /* num_handles */, &fidl_msg.num_bytes, nullptr));
     ASSERT_GE(fidl_msg.num_bytes, sizeof(fidl_message_header_t));
 
     // Decode the message in-place.
     auto* hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
     ASSERT_EQ(want_ordinal, hdr->ordinal);
-    ASSERT_EQ(ZX_OK, fidl_decode_msg(want_type, &fidl_msg, nullptr));
+    ASSERT_OK(fidl_decode_msg(want_type, &fidl_msg, nullptr));
 
     *out_data = std::move(buf);
     *out_data_size = fidl_msg.num_bytes;
 }
 
 TEST_F(LoggerTest, LogMessage) {
-    ASSERT_EQ(ZX_OK, driver_unit_test::Logger::SendLogMessage(kLogMessage));
+    ASSERT_OK(driver_unit_test::Logger::SendLogMessage(kLogMessage));
 
     fbl::unique_ptr<uint8_t[]> data_buf;
     uint32_t data_size;

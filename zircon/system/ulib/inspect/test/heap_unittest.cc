@@ -20,7 +20,7 @@ using inspect::ScanBlocks;
 
 zx::vmo MakeVmo(size_t size) {
   zx::vmo ret;
-  EXPECT_EQ(ZX_OK, zx::vmo::create(size, 0, &ret));
+  EXPECT_OK(zx::vmo::create(size, 0, &ret));
   return ret;
 }
 
@@ -98,17 +98,17 @@ TEST(Heap, Allocate) {
 
   // Allocate a series of small blocks, they should all be in order.
   BlockIndex b;
-  EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+  EXPECT_OK(heap.Allocate(kMinAllocationSize, &b));
   EXPECT_EQ(0u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+  EXPECT_OK(heap.Allocate(kMinAllocationSize, &b));
   EXPECT_EQ(1u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+  EXPECT_OK(heap.Allocate(kMinAllocationSize, &b));
   EXPECT_EQ(2u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+  EXPECT_OK(heap.Allocate(kMinAllocationSize, &b));
   EXPECT_EQ(3u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+  EXPECT_OK(heap.Allocate(kMinAllocationSize, &b));
   EXPECT_EQ(4u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+  EXPECT_OK(heap.Allocate(kMinAllocationSize, &b));
   EXPECT_EQ(5u, b);
 
   // Free blocks, leaving some in the middle to ensure they chain.
@@ -117,11 +117,11 @@ TEST(Heap, Allocate) {
   heap.Free(0);
 
   // Allocate small blocks again to see that we get the same ones in reverse order.
-  EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+  EXPECT_OK(heap.Allocate(kMinAllocationSize, &b));
   EXPECT_EQ(0u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+  EXPECT_OK(heap.Allocate(kMinAllocationSize, &b));
   EXPECT_EQ(4u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+  EXPECT_OK(heap.Allocate(kMinAllocationSize, &b));
   EXPECT_EQ(2u, b);
 
   // Free everything except for the first two.
@@ -144,13 +144,13 @@ TEST(Heap, Allocate) {
   // Leave a small free hole at 0, allocate something large
   // and observe it takes the free largest block.
   heap.Free(0);
-  EXPECT_EQ(ZX_OK, heap.Allocate(2048, &b));
+  EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(128u, b);
 
   // Free the last small allocation, the next large allocation
   // takes the first half of the buffer.
   heap.Free(1);
-  EXPECT_EQ(ZX_OK, heap.Allocate(2048, &b));
+  EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(0u, b);
 
   MatchDebugBlockVectors({{0, BlockType::kReserved, 7}, {128, BlockType::kReserved, 7}},
@@ -159,16 +159,16 @@ TEST(Heap, Allocate) {
   // Allocate twice in the first half, free in reverse order
   // to ensure buddy freeing works left to right and right to left.
   heap.Free(0);
-  EXPECT_EQ(ZX_OK, heap.Allocate(1024, &b));
+  EXPECT_OK(heap.Allocate(1024, &b));
   EXPECT_EQ(0u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(1024, &b));
+  EXPECT_OK(heap.Allocate(1024, &b));
   EXPECT_EQ(64u, b);
   heap.Free(0);
   heap.Free(64);
 
   // Ensure the freed blocks all merged into one big block and that we
   // can use the whole space at position 0.
-  EXPECT_EQ(ZX_OK, heap.Allocate(2048, &b));
+  EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(0u, b);
   heap.Free(0);
 
@@ -183,13 +183,13 @@ TEST(Heap, MergeBlockedByAllocation) {
 
   // Allocate 4 small blocks at the beginning of the buffer.
   BlockIndex b;
-  EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+  EXPECT_OK(heap.Allocate(kMinAllocationSize, &b));
   EXPECT_EQ(0u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+  EXPECT_OK(heap.Allocate(kMinAllocationSize, &b));
   EXPECT_EQ(1u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+  EXPECT_OK(heap.Allocate(kMinAllocationSize, &b));
   EXPECT_EQ(2u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(kMinAllocationSize, &b));
+  EXPECT_OK(heap.Allocate(kMinAllocationSize, &b));
   EXPECT_EQ(3u, b);
 
   // Free position 2 first, then 0 and 1.
@@ -224,11 +224,11 @@ TEST(Heap, Extend) {
 
   // Allocate many large blocks, so the VMO needs to be extended.
   BlockIndex b;
-  EXPECT_EQ(ZX_OK, heap.Allocate(2048, &b));
+  EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(0u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(2048, &b));
+  EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(128u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(2048, &b));
+  EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(256u, b);
 
   MatchDebugBlockVectors({{0, BlockType::kReserved, 7},
@@ -237,9 +237,9 @@ TEST(Heap, Extend) {
                           {384, BlockType::kFree, 7}},
                          dump(heap));
 
-  EXPECT_EQ(ZX_OK, heap.Allocate(2048, &b));
+  EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(384u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(2048, &b));
+  EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(512u, b);
 
   heap.Free(0);
@@ -266,17 +266,17 @@ TEST(Heap, ExtendFailure) {
 
   // Allocate many large blocks, so the VMO needs to be extended.
   BlockIndex b;
-  EXPECT_EQ(ZX_OK, heap.Allocate(2048, &b));
+  EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(0u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(2048, &b));
+  EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(128u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(2048, &b));
+  EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(256u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(2048, &b));
+  EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(384u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(2048, &b));
+  EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(512u, b);
-  EXPECT_EQ(ZX_OK, heap.Allocate(2048, &b));
+  EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(640u, b);
   EXPECT_EQ(ZX_ERR_NO_MEMORY, heap.Allocate(2048, &b));
 

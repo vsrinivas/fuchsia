@@ -46,7 +46,7 @@ using inspect::ValueBlockFields;
 
 zx::vmo MakeVmo(size_t size) {
   zx::vmo ret;
-  EXPECT_EQ(ZX_OK, zx::vmo::create(size, 0, &ret));
+  EXPECT_OK(zx::vmo::create(size, 0, &ret));
   return ret;
 }
 

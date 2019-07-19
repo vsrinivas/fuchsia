@@ -41,7 +41,7 @@ TEST(TimersTest, SetNegativeDeadline) {
 
 TEST(TimersTest, SetNegativeDeadlineMax) {
   zx::timer timer;
-  ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer), ZX_OK);
+  ASSERT_OK(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer));
   zx::duration slack;
   ASSERT_OK(timer.set(zx::time(ZX_TIME_INFINITE_PAST), slack));
   zx_signals_t pending;

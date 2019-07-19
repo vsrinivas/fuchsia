@@ -38,7 +38,7 @@ TEST(VectorExtentIteratorTest, Null) {
                                  &space_manager, &allocator));
 
     fbl::Vector<ReservedExtent> extents;
-    ASSERT_EQ(ZX_OK, allocator->ReserveBlocks(kAllocatedExtents, &extents));
+    ASSERT_OK(allocator->ReserveBlocks(kAllocatedExtents, &extents));
     ASSERT_EQ(0, extents.size());
 
     VectorExtentIterator iter(extents);
@@ -60,7 +60,7 @@ TEST(VectorExtentIteratorTest, MultiExtent) {
                                  &space_manager, &allocator));
 
     fbl::Vector<ReservedExtent> extents;
-    ASSERT_EQ(ZX_OK, allocator->ReserveBlocks(kAllocatedExtents, &extents));
+    ASSERT_OK(allocator->ReserveBlocks(kAllocatedExtents, &extents));
     ASSERT_EQ(kAllocatedExtents, extents.size());
 
     VectorExtentIterator iter(extents);
@@ -70,7 +70,7 @@ TEST(VectorExtentIteratorTest, MultiExtent) {
         ASSERT_FALSE(iter.Done());
 
         const Extent* extent;
-        ASSERT_EQ(ZX_OK, iter.Next(&extent));
+        ASSERT_OK(iter.Next(&extent));
         ASSERT_TRUE(extents[i].extent() == *extent);
         blocks_seen += extent->Length();
         ASSERT_EQ(blocks_seen, iter.BlockIndex());
@@ -90,7 +90,7 @@ TEST(VectorExtentIteratorTest, BlockIterator) {
                                  &space_manager, &allocator));
 
     fbl::Vector<ReservedExtent> extents;
-    ASSERT_EQ(ZX_OK, allocator->ReserveBlocks(kAllocatedExtents, &extents));
+    ASSERT_OK(allocator->ReserveBlocks(kAllocatedExtents, &extents));
     ASSERT_EQ(kAllocatedExtents, extents.size());
 
     VectorExtentIterator vector_iter(extents);
@@ -103,7 +103,7 @@ TEST(VectorExtentIteratorTest, BlockIterator) {
         ASSERT_FALSE(iter.Done());
         uint32_t actual_length;
         uint64_t actual_start;
-        ASSERT_EQ(ZX_OK, iter.Next(1, &actual_length, &actual_start));
+        ASSERT_OK(iter.Next(1, &actual_length, &actual_start));
         ASSERT_EQ(1, actual_length);
         ASSERT_EQ(extents[i].extent().Start(), actual_start);
         blocks_seen += actual_length;
@@ -129,7 +129,7 @@ void ValidateStreamBlocks(fbl::Vector<ReservedExtent> extents, uint32_t block_co
         return ZX_OK;
     };
 
-    ASSERT_EQ(ZX_OK, StreamBlocks(&block_iter, block_count, stream_callback));
+    ASSERT_OK(StreamBlocks(&block_iter, block_count, stream_callback));
     ASSERT_TRUE(block_iter.Done());
 }
 
@@ -145,7 +145,7 @@ TEST(VectorExtentIteratorTest, StreamBlocksFragmented) {
                                  &space_manager, &allocator));
 
     fbl::Vector<ReservedExtent> extents;
-    ASSERT_EQ(ZX_OK, allocator->ReserveBlocks(kAllocatedBlocks, &extents));
+    ASSERT_OK(allocator->ReserveBlocks(kAllocatedBlocks, &extents));
     ASSERT_EQ(kAllocatedExtents, extents.size());
 
     ValidateStreamBlocks(std::move(extents), kAllocatedBlocks);
@@ -163,7 +163,7 @@ TEST(VectorExtentIteratorTest, StreamBlocksContiguous) {
                                  &space_manager, &allocator));
 
     fbl::Vector<ReservedExtent> extents;
-    ASSERT_EQ(ZX_OK, allocator->ReserveBlocks(kAllocatedBlocks, &extents));
+    ASSERT_OK(allocator->ReserveBlocks(kAllocatedBlocks, &extents));
     ASSERT_EQ(kAllocatedExtents, extents.size());
 
     ValidateStreamBlocks(std::move(extents), kAllocatedBlocks);
@@ -181,7 +181,7 @@ TEST(VectorExtentIteratorTest, StreamBlocksInvalidLength) {
                                  &space_manager, &allocator));
 
     fbl::Vector<ReservedExtent> extents;
-    ASSERT_EQ(ZX_OK, allocator->ReserveBlocks(kAllocatedBlocks, &extents));
+    ASSERT_OK(allocator->ReserveBlocks(kAllocatedBlocks, &extents));
     ASSERT_EQ(kAllocatedExtents, extents.size());
 
     VectorExtentIterator vector_iter(extents);

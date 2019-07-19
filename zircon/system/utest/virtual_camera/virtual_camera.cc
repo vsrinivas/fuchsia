@@ -71,21 +71,21 @@ void VirtualCameraTest::SetUp() {
     args.driver_search_paths.push_back("/boot/driver/test");
     args.device_list.push_back(kDeviceEntry);
     zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr_);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
 
     status = devmgr_integration_test::RecursiveWaitForFile(
         devmgr_.devfs_root(), "sys/platform/11:05:b/virtual_camera", &fd_);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     status = fdio_get_service_handle(fd_.get(), &device_handle_);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 }
 
 TEST_F(VirtualCameraTest, GetDeviceInfoGetFormatsTest) {
     fuchsia_hardware_camera_DeviceInfo device_info;
     zx_status_t status =
         fuchsia_hardware_camera_ControlV2GetDeviceInfo(device_handle_, &device_info);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
     EXPECT_EQ(1, device_info.max_stream_count);
     EXPECT_EQ(fuchsia_hardware_camera_CAMERA_OUTPUT_STREAM,
               device_info.output_capabilities);
@@ -96,7 +96,7 @@ TEST_F(VirtualCameraTest, GetDeviceInfoGetFormatsTest) {
     int32_t out_status;
     status = fuchsia_hardware_camera_ControlV2GetFormats(
         device_handle_, 1, formats, &total_count, &actual_count, &out_status);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
     auto format = formats[0];
     EXPECT_EQ(640, format.format.width);
     EXPECT_EQ(480, format.format.height);
@@ -109,28 +109,28 @@ TEST_F(VirtualCameraTest, GetDeviceInfoGetFormatsTest) {
     zx::eventpair driver_token;
     zx::eventpair stream_token;
     status = zx::eventpair::create(0, &stream_token, &driver_token);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     zx::channel client_request;
     zx::channel server_request;
     status = zx::channel::create(0, &client_request, &server_request);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
     status = Gralloc(format, 2, &info_0_, vmos_0_);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
     status = fuchsia_hardware_camera_ControlV2CreateStream(
         device_handle_, &info_0_, &format.rate, server_request.release(), driver_token.release());
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     // Not fully implemented yet - this is a sanity check.
     zx_handle_t stream_handle = client_request.release();
     status = fuchsia_camera_common_StreamStart(stream_handle);
-    EXPECT_EQ(ZX_OK, status);
+    EXPECT_OK(status);
 
     stream_token.reset();
     zx_signals_t pending;
     zx::time deadline = zx::deadline_after(zx::sec(5));
     zx::channel client = zx::channel(stream_handle);
-    ASSERT_EQ(ZX_OK, client.wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, &pending));
+    ASSERT_OK(client.wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, &pending));
     ASSERT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED);
 }
 

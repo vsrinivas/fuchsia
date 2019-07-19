@@ -99,7 +99,7 @@ public:
 
 TEST(FvmClientTest, ResetSlicesOneSliceRange) {
     MockOneSliceRangeDevice device;
-    EXPECT_EQ(ZX_OK, ResetAllSlices2(&device));
+    EXPECT_OK(ResetAllSlices2(&device));
     EXPECT_TRUE(device.shrink_called_);
 }
 
@@ -155,7 +155,7 @@ public:
 
 TEST(FvmClientTest, ResetSlicesManySliceRanges) {
     MockManySliceRangesDevice device;
-    EXPECT_EQ(ZX_OK, ResetAllSlices2(&device));
+    EXPECT_OK(ResetAllSlices2(&device));
     EXPECT_TRUE(device.shrink_called_[0]);
     EXPECT_TRUE(device.shrink_called_[1]);
 }

@@ -32,17 +32,17 @@ protected:
     void Wipe() {
         for (uint32_t offset = 0; offset < mtd_ptr_->Size(); offset += mtd_ptr_->BlockSize()) {
             bool is_bad_block;
-            ASSERT_EQ(ZX_OK, mtd_ptr_->IsBadBlock(offset, &is_bad_block));
+            ASSERT_OK(mtd_ptr_->IsBadBlock(offset, &is_bad_block));
             if (is_bad_block) {
                 continue;
             }
-            ASSERT_EQ(ZX_OK, mtd_ptr_->EraseBlock(offset));
+            ASSERT_OK(mtd_ptr_->EraseBlock(offset));
         }
     }
 
     // Zero-index-based block erase.
     void EraseBlockAtIndex(uint32_t index) {
-        ASSERT_EQ(ZX_OK, mtd_ptr_->EraseBlock(mtd_ptr_->BlockSize() * index));
+        ASSERT_OK(mtd_ptr_->EraseBlock(mtd_ptr_->BlockSize() * index));
     }
 
     void SetUp() override {
@@ -82,34 +82,34 @@ protected:
 TEST_F(MtdRsTest, ReadWriteTest) {
     std::vector<uint8_t> nonsense_buffer = {12, 14, 22, 0, 12, 8, 0, 0, 0, 3, 45, 0xFF};
 
-    ASSERT_EQ(ZX_OK, nand_->WriteBuffer(nonsense_buffer, 10, &num_copies_written_));
+    ASSERT_OK(nand_->WriteBuffer(nonsense_buffer, 10, &num_copies_written_));
     ASSERT_EQ(10, num_copies_written_);
-    ASSERT_EQ(ZX_OK, nand_->ReadToBuffer(&out_buffer_));
+    ASSERT_OK(nand_->ReadToBuffer(&out_buffer_));
     ASSERT_EQ(out_buffer_, nonsense_buffer);
 
     std::vector<uint8_t> page_crossing_buffer(mtd_ptr_->PageSize() * 2 + 13, 0xF5);
-    ASSERT_EQ(ZX_OK, nand_->WriteBuffer(page_crossing_buffer, 10, &num_copies_written_));
+    ASSERT_OK(nand_->WriteBuffer(page_crossing_buffer, 10, &num_copies_written_));
     ASSERT_EQ(10, num_copies_written_);
-    ASSERT_EQ(ZX_OK, nand_->ReadToBuffer(&out_buffer_));
+    ASSERT_OK(nand_->ReadToBuffer(&out_buffer_));
     ASSERT_EQ(out_buffer_, page_crossing_buffer);
 }
 
 TEST_F(MtdRsTest, ReadWriteTestWithErasedBlock) {
     std::vector<uint8_t> page_crossing_buffer(mtd_ptr_->PageSize() * 2 + 13, 0xF5);
-    ASSERT_EQ(ZX_OK, nand_->WriteBuffer(page_crossing_buffer, 20, &num_copies_written_));
+    ASSERT_OK(nand_->WriteBuffer(page_crossing_buffer, 20, &num_copies_written_));
     ASSERT_EQ(20, num_copies_written_);
 
     EraseBlockAtIndex(0);
     EraseBlockAtIndex(1);
     EraseBlockAtIndex(2);
     EraseBlockAtIndex(3);
-    ASSERT_EQ(ZX_OK, nand_->ReadToBuffer(&out_buffer_));
+    ASSERT_OK(nand_->ReadToBuffer(&out_buffer_));
     ASSERT_EQ(out_buffer_, page_crossing_buffer);
 }
 
 TEST_F(MtdRsTest, ReadWriteTestWithCorruptedBlockValidHeader) {
     std::vector<uint8_t> page_crossing_buffer(mtd_ptr_->PageSize() * 2 + 13, 0xF5);
-    ASSERT_EQ(ZX_OK, nand_->WriteBuffer(page_crossing_buffer, 10, &num_copies_written_));
+    ASSERT_OK(nand_->WriteBuffer(page_crossing_buffer, 10, &num_copies_written_));
     ASSERT_EQ(10, num_copies_written_);
 
     EraseBlockAtIndex(0);
@@ -121,13 +121,13 @@ TEST_F(MtdRsTest, ReadWriteTestWithCorruptedBlockValidHeader) {
         MakeFakePage(0x40, 0x40404040, 0x40404040);
     ASSERT_EQ(ZX_OK, mtd_ptr_->WritePage(
                          block_three_start, page_of_nonsense.data(), nullptr));
-    ASSERT_EQ(ZX_OK, nand_->ReadToBuffer(&out_buffer_));
+    ASSERT_OK(nand_->ReadToBuffer(&out_buffer_));
     ASSERT_EQ(out_buffer_, page_crossing_buffer);
 }
 
 TEST_F(MtdRsTest, ReadWiteTestWithCorruptedBlockWrongCrc) {
     std::vector<uint8_t> page_crossing_buffer(mtd_ptr_->PageSize() * 2 + 13, 0xF5);
-    ASSERT_EQ(ZX_OK, nand_->WriteBuffer(page_crossing_buffer, 10, &num_copies_written_));
+    ASSERT_OK(nand_->WriteBuffer(page_crossing_buffer, 10, &num_copies_written_));
     ASSERT_EQ(10, num_copies_written_);
 
     EraseBlockAtIndex(0);
@@ -139,13 +139,13 @@ TEST_F(MtdRsTest, ReadWiteTestWithCorruptedBlockWrongCrc) {
     std::vector<uint8_t> page_of_nonsense = MakeFakePage(0x40, 1, 34);
     ASSERT_EQ(ZX_OK, mtd_ptr_->WritePage(
                          block_three_start, page_of_nonsense.data(), nullptr));
-    ASSERT_EQ(ZX_OK, nand_->ReadToBuffer(&out_buffer_));
+    ASSERT_OK(nand_->ReadToBuffer(&out_buffer_));
     ASSERT_EQ(out_buffer_, page_crossing_buffer);
 }
 
 TEST_F(MtdRsTest, ReadWriteTestWithCorruptedBlockWrongHeader) {
     std::vector<uint8_t> page_crossing_buffer(mtd_ptr_->PageSize() * 2 + 13, 0xF5);
-    ASSERT_EQ(ZX_OK, nand_->WriteBuffer(page_crossing_buffer, 10, &num_copies_written_));
+    ASSERT_OK(nand_->WriteBuffer(page_crossing_buffer, 10, &num_copies_written_));
     ASSERT_EQ(10, num_copies_written_);
 
     EraseBlockAtIndex(0);
@@ -158,7 +158,7 @@ TEST_F(MtdRsTest, ReadWriteTestWithCorruptedBlockWrongHeader) {
     page_of_nonsense[0] = 'z';
     ASSERT_EQ(ZX_OK, mtd_ptr_->WritePage(
                          block_three_start, page_of_nonsense.data(), nullptr));
-    ASSERT_EQ(ZX_OK, nand_->ReadToBuffer(&out_buffer_));
+    ASSERT_OK(nand_->ReadToBuffer(&out_buffer_));
     ASSERT_EQ(out_buffer_, page_crossing_buffer);
 }
 
@@ -168,7 +168,7 @@ TEST_F(MtdRsTest, ReadEmptyMtd) {
 
 TEST_F(MtdRsTest, TestBlockWriteLimits) {
     std::vector<uint8_t> some_bits = {1, 2, 3, 5, 10, 9, 25, 83};
-    ASSERT_EQ(ZX_OK, nand_->WriteBuffer(some_bits, max_blocks_, &num_copies_written_));
+    ASSERT_OK(nand_->WriteBuffer(some_bits, max_blocks_, &num_copies_written_));
     ASSERT_EQ(max_blocks_ - 1, num_copies_written_);
 }
 

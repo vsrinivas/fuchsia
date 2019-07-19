@@ -48,7 +48,7 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookSuccess) {
     ASSERT_GT(child_fd.get(), 0);
 
     zx::channel parent_device_handle;
-    ASSERT_EQ(ZX_OK, fdio_get_service_handle(parent_fd.release(),
+    ASSERT_OK(fdio_get_service_handle(parent_fd.release(),
                parent_device_handle.reset_and_get_address()));
     ASSERT_TRUE((parent_device_handle.get() != ZX_HANDLE_INVALID), "");
 
@@ -89,7 +89,7 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingAddInBind) {
     ASSERT_GT(parent_fd.get(), 0);
 
     zx::channel parent_device_handle;
-    ASSERT_EQ(ZX_OK, fdio_get_service_handle(parent_fd.release(),
+    ASSERT_OK(fdio_get_service_handle(parent_fd.release(),
                parent_device_handle.reset_and_get_address()));
     ASSERT_TRUE((parent_device_handle.get() != ZX_HANDLE_INVALID), "");
 
@@ -130,7 +130,7 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingRemoveInUnbind)
     ASSERT_GT(parent_fd.get(), 0);
 
     zx::channel parent_device_handle;
-    ASSERT_EQ(ZX_OK, fdio_get_service_handle(parent_fd.release(),
+    ASSERT_OK(fdio_get_service_handle(parent_fd.release(),
                parent_device_handle.reset_and_get_address()));
     ASSERT_TRUE((parent_device_handle.get() != ZX_HANDLE_INVALID), "");
 

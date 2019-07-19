@@ -86,7 +86,7 @@ TEST(PbusTest, Enumeration) {
                                    "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5/component", &fd));
     EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:6/component", &fd));
     EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "composite-dev/composite", &fd));
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "composite-dev-2/composite", &fd), ZX_OK);
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "composite-dev-2/composite", &fd));
 
     const int dirfd = devmgr.devfs_root().get();
     struct stat st;

@@ -16,7 +16,7 @@ using inspect::Snapshot;
 
 TEST(Snapshot, ValidRead) {
   fzl::OwnedVmoMapper vmo;
-  ASSERT_EQ(ZX_OK, vmo.CreateAndMap(4096, "test"));
+  ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   memset(vmo.start(), 'a', 4096);
   Block* header = reinterpret_cast<Block*>(vmo.start());
   header->header = HeaderBlockFields::Order::Make(0) |
@@ -28,7 +28,7 @@ TEST(Snapshot, ValidRead) {
   Snapshot snapshot;
   zx_status_t status = Snapshot::Create(vmo.vmo(), &snapshot);
 
-  EXPECT_EQ(ZX_OK, status);
+  EXPECT_OK(status);
   EXPECT_EQ(4096u, snapshot.size());
 
   // Make sure that the data was actually fully copied to the snapshot.
@@ -39,7 +39,7 @@ TEST(Snapshot, ValidRead) {
 
 TEST(Snapshot, InvalidWritePending) {
   fzl::OwnedVmoMapper vmo;
-  ASSERT_EQ(ZX_OK, vmo.CreateAndMap(4096, "test"));
+  ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
   header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
@@ -56,7 +56,7 @@ TEST(Snapshot, InvalidWritePending) {
 
 TEST(Snapshot, ValidPendingSkipCheck) {
   fzl::OwnedVmoMapper vmo;
-  ASSERT_EQ(ZX_OK, vmo.CreateAndMap(4096, "test"));
+  ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
   header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
@@ -67,13 +67,13 @@ TEST(Snapshot, ValidPendingSkipCheck) {
   Snapshot snapshot;
   zx_status_t status = Snapshot::Create(
       vmo.vmo(), {.read_attempts = 100, .skip_consistency_check = true}, &snapshot);
-  EXPECT_EQ(ZX_OK, status);
+  EXPECT_OK(status);
   EXPECT_EQ(4096u, snapshot.size());
 }
 
 TEST(Snapshot, InvalidGenerationChange) {
   fzl::OwnedVmoMapper vmo;
-  ASSERT_EQ(ZX_OK, vmo.CreateAndMap(4096, "test"));
+  ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
   header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
@@ -91,7 +91,7 @@ TEST(Snapshot, InvalidGenerationChange) {
 
 TEST(Snapshot, ValidGenerationChangeSkipCheck) {
   fzl::OwnedVmoMapper vmo;
-  ASSERT_EQ(ZX_OK, vmo.CreateAndMap(4096, "test"));
+  ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
   header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
@@ -104,13 +104,13 @@ TEST(Snapshot, ValidGenerationChangeSkipCheck) {
       vmo.vmo(), {.read_attempts = 100, .skip_consistency_check = true},
       [header](uint8_t* buffer, size_t buffer_size) { header->payload.u64 += 2; }, &snapshot);
 
-  EXPECT_EQ(ZX_OK, status);
+  EXPECT_OK(status);
   EXPECT_EQ(4096u, snapshot.size());
 }
 
 TEST(Snapshot, InvalidBadMagicNumber) {
   fzl::OwnedVmoMapper vmo;
-  ASSERT_EQ(ZX_OK, vmo.CreateAndMap(4096, "test"));
+  ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
   header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
@@ -125,7 +125,7 @@ TEST(Snapshot, InvalidBadMagicNumber) {
 
 TEST(Snapshot, InvalidBadMagicNumberSkipCheck) {
   fzl::OwnedVmoMapper vmo;
-  ASSERT_EQ(ZX_OK, vmo.CreateAndMap(4096, "test"));
+  ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
   header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |

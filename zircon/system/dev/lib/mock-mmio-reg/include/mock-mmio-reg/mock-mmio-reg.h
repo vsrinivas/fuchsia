@@ -31,7 +31,7 @@ namespace ddk_mock {
 //     .ExpectWrite(1024)
 //     .ReadReturns(0);
 //
-// EXPECT_EQ(dut.SomeMethod(), ZX_OK);
+// EXPECT_OK(dut.SomeMethod());
 // mock_registers.VerifyAll();
 
 class MockMmioReg {

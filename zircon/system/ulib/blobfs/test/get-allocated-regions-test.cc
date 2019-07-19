@@ -14,10 +14,10 @@ namespace {
 using id_allocator::IdAllocator;
 
 void MakeBitmapFrom(const fbl::Vector<uint8_t>& bit_vector, RawBitmap* out_bitmap) {
-    ASSERT_EQ(ZX_OK, out_bitmap->Reset(bit_vector.size()));
+    ASSERT_OK(out_bitmap->Reset(bit_vector.size()));
     for (size_t i = 0; i < bit_vector.size(); i++) {
         if (bit_vector[i] == 1) {
-            ASSERT_EQ(ZX_OK, out_bitmap->Set(i, i + 1));
+            ASSERT_OK(out_bitmap->Set(i, i + 1));
         }
     }
 }
@@ -40,7 +40,7 @@ TEST(GetAllocatedRegionsTest, Full) {
     ASSERT_NO_FAILURES(MakeBitmapFrom(bit_vector, &block_map));
 
     std::unique_ptr<IdAllocator> id_allocator;
-    ASSERT_EQ(IdAllocator::Create(0, &id_allocator), ZX_OK);
+    ASSERT_OK(IdAllocator::Create(0, &id_allocator));
 
     Allocator allocator(&space_manager, std::move(block_map), std::move(node_map),
                         std::move(id_allocator));
@@ -62,7 +62,7 @@ TEST(GetAllocatedRegionsTest, Fragmented) {
     ASSERT_NO_FAILURES(MakeBitmapFrom(bit_vector, &block_map));
 
     std::unique_ptr<IdAllocator> id_allocator;
-    ASSERT_EQ(IdAllocator::Create(0, &id_allocator), ZX_OK);
+    ASSERT_OK(IdAllocator::Create(0, &id_allocator));
 
     Allocator allocator(&space_manager, std::move(block_map), std::move(node_map),
                         std::move(id_allocator));
@@ -87,7 +87,7 @@ TEST(GetAllocatedRegionsTest, Length) {
     ASSERT_NO_FAILURES(MakeBitmapFrom(bit_vector, &block_map));
 
     std::unique_ptr<IdAllocator> id_allocator;
-    ASSERT_EQ(IdAllocator::Create(0, &id_allocator), ZX_OK);
+    ASSERT_OK(IdAllocator::Create(0, &id_allocator));
 
     Allocator allocator(&space_manager, std::move(block_map), std::move(node_map),
                         std::move(id_allocator));

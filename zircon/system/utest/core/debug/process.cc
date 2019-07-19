@@ -93,7 +93,7 @@ TEST(ProcessDebugUtilsTest, XorShiftIsOk) {
 TEST_F(ProcessDebugTest, ReadMemoryAtOffsetIsOk) {
     // Write pattern via VMO and read it via zx_process_read_memory().
     auto xr = MakeXorShiftBuf(kVmoSize);
-    ASSERT_EQ(vmo().write(xr.get(), 0u, kVmoSize), ZX_OK);
+    ASSERT_OK(vmo().write(xr.get(), 0u, kVmoSize));
 
     auto buf = std::make_unique<uint32_t[]>(kVmoSize);
     size_t actual = 0u;

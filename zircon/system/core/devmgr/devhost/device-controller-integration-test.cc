@@ -54,11 +54,11 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
   fbl::unique_fd root_fd;
   zx_status_t status =
       devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test", &root_fd);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   zx::channel test_root;
   status = fdio_get_service_handle(root_fd.release(), test_root.reset_and_get_address());
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   char devpath[fuchsia_device_test_MAX_DEVICE_PATH_LEN + 1];
   size_t devpath_count;
@@ -66,8 +66,8 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
   status = fuchsia_device_test_RootDeviceCreateDevice(test_root.get(), driver_name,
                                                       strlen(driver_name), &call_status, devpath,
                                                       sizeof(devpath) - 1, &devpath_count);
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_EQ(ZX_OK, call_status);
+  ASSERT_OK(status);
+  ASSERT_OK(call_status);
   devpath[devpath_count] = 0;
   ASSERT_STR_NE(devpath, kDevPrefix);
 
@@ -75,10 +75,10 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
   fbl::unique_fd fd;
   status =
       devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), relative_devpath, &fd);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   status = fdio_get_service_handle(fd.release(), dev_channel->reset_and_get_address());
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 }
 
 TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
@@ -93,7 +93,7 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
   };
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   zx::channel dev_channel;
   CreateTestDevice(devmgr, kPassDriverName, &dev_channel);
@@ -102,8 +102,8 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kPassDriverName);
   zx_status_t call_status;
   status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_EQ(ZX_OK, call_status);
+  ASSERT_OK(status);
+  ASSERT_OK(call_status);
 
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
 }
@@ -120,7 +120,7 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
   };
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   zx::channel dev_channel;
   CreateTestDevice(devmgr, kFailDriverName, &dev_channel);
@@ -129,7 +129,7 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kFailDriverName);
   zx_status_t call_status;
   status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
   ASSERT_EQ(ZX_ERR_BAD_STATE, call_status);
 
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
@@ -148,7 +148,7 @@ TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
   };
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   zx::channel dev_channel;
   CreateTestDevice(devmgr, kFailDriverName, &dev_channel);
@@ -157,7 +157,7 @@ TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kFailDriverName);
   zx_status_t call_status;
   status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
   ASSERT_EQ(ZX_ERR_BAD_STATE, call_status);
 
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
@@ -170,7 +170,7 @@ TEST(DeviceControllerIntegrationTest, DefaultTestsDisabledBind) {
   args.use_system_svchost = true;
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   zx::channel dev_channel;
   CreateTestDevice(devmgr, kFailDriverName, &dev_channel);
@@ -179,8 +179,8 @@ TEST(DeviceControllerIntegrationTest, DefaultTestsDisabledBind) {
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kFailDriverName);
   zx_status_t call_status;
   status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_EQ(ZX_OK, call_status);
+  ASSERT_OK(status);
+  ASSERT_OK(call_status);
 
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
 }
@@ -199,7 +199,7 @@ TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
   };
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   zx::channel dev_channel;
   CreateTestDevice(devmgr, kFailDriverName, &dev_channel);
@@ -208,8 +208,8 @@ TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kFailDriverName);
   zx_status_t call_status;
   status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_EQ(ZX_OK, call_status);
+  ASSERT_OK(status);
+  ASSERT_OK(call_status);
 
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
 }

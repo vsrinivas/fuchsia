@@ -20,7 +20,7 @@ void CheckMultiple(LogicalToPhysicalMap ltop_map, fbl::Vector<fbl::Vector<uint32
         for (i = 0; i < expected[copy].size(); i++) {
             uint32_t physical;
             zx_status_t status = ltop_map.GetPhysical(copy, i, &physical);
-            ASSERT_EQ(status, ZX_OK);
+            ASSERT_OK(status);
             EXPECT_EQ(physical, expected[copy][i]);
         }
         uint32_t physical;

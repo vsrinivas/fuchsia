@@ -143,7 +143,7 @@ TEST(HidButtonsTest, DirectButtonBind) {
     zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq);
     device.SetupGpio(std::move(irq), 0);
 
-    EXPECT_EQ(ZX_OK, device.BindTest());
+    EXPECT_OK(device.BindTest());
     device.ShutDownTest();
     ASSERT_NO_FATAL_FAILURES(mock_gpios[0].VerifyAndClear());
 }
@@ -161,7 +161,7 @@ TEST(HidButtonsTest, DirectButtonPush) {
         .ExpectRead(ZX_OK, 1);                       // Still pushed, ok to continue.
     mock_gpios[0].ExpectRead(ZX_OK, 1);              // Read value to prepare report.
 
-    EXPECT_EQ(ZX_OK, device.BindTest());
+    EXPECT_OK(device.BindTest());
     device.FakeInterrupt();
     device.ShutDownTest();
     ASSERT_NO_FATAL_FAILURES(mock_gpios[0].VerifyAndClear());
@@ -180,7 +180,7 @@ TEST(HidButtonsTest, DirectButtonUnpushedReport) {
         .ExpectRead(ZX_OK, 0);                        // Still not pushed, ok to continue.
     mock_gpios[0].ExpectRead(ZX_OK, 0);               // Read value to prepare report.
 
-    EXPECT_EQ(ZX_OK, device.BindTest());
+    EXPECT_OK(device.BindTest());
     hidbus_ifc_protocol_ops_t ops = {};
     ops.io_queue = [](void* ctx, const void* buffer, size_t size) {
         buttons_input_rpt_t report_volume_up = {};
@@ -210,7 +210,7 @@ TEST(HidButtonsTest, DirectButtonPushedReport) {
         .ExpectRead(ZX_OK, 1);                       // Still pushed, ok to continue.
     mock_gpios[0].ExpectRead(ZX_OK, 1);              // Read value to prepare report.
 
-    EXPECT_EQ(ZX_OK, device.BindTest());
+    EXPECT_OK(device.BindTest());
     hidbus_ifc_protocol_ops_t ops = {};
     ops.io_queue = [](void* ctx, const void* buffer, size_t size) {
         buttons_input_rpt_t report_volume_up = {};
@@ -252,7 +252,7 @@ TEST(HidButtonsTest, DirectButtonPushUnpushPush) {
         .ExpectRead(ZX_OK, 1);                       // Still pushed, ok to continue.
     mock_gpios[0].ExpectRead(ZX_OK, 1);              // Read value to prepare report.
 
-    EXPECT_EQ(ZX_OK, device.BindTest());
+    EXPECT_OK(device.BindTest());
     device.FakeInterrupt();
     device.FakeInterrupt();
     device.FakeInterrupt();
@@ -282,7 +282,7 @@ TEST(HidButtonsTest, DirectButtonFlaky) {
     // Read value to generate report.
     mock_gpios[0].ExpectRead(ZX_OK, 1); // Pushed.
 
-    EXPECT_EQ(ZX_OK, device.BindTest());
+    EXPECT_OK(device.BindTest());
     device.FakeInterrupt();
     device.ShutDownTest();
     ASSERT_NO_FATAL_FAILURES(mock_gpios[0].VerifyAndClear());
@@ -297,7 +297,7 @@ TEST(HidButtonsTest, MatrixButtonBind) {
         device.SetupGpio(std::move(irqs[i]), i);
     }
 
-    EXPECT_EQ(ZX_OK, device.BindTest());
+    EXPECT_OK(device.BindTest());
     device.ShutDownTest();
     for (size_t i = 0; i < countof(gpios_matrix); ++i) {
         ASSERT_NO_FATAL_FAILURES(mock_gpios[i].VerifyAndClear());
@@ -313,7 +313,7 @@ TEST(HidButtonsTest, MatrixButtonPush) {
         device.SetupGpio(std::move(irqs[i]), i);
     }
 
-    EXPECT_EQ(ZX_OK, device.BindTest());
+    EXPECT_OK(device.BindTest());
 
     // Reconfigure Polarity due to interrupt.
     mock_gpios[0].ExpectRead(ZX_OK, 1)               // Pushed.

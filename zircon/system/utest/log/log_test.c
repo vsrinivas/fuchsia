@@ -280,7 +280,7 @@ TEST(LogTestCase, LogToLoggerWithSeverity) {
         ASSERT_EQ(ZX_OK, zx_socket_read(server_socket, 0, buf,
                                         LOG_MAX_DATAGRAM_LEN, &actual),
                   "failed to read from socket");
-        EXPECT_EQ(ZX_OK, zx_handle_close(server_socket),
+        EXPECT_OK(zx_handle_close(server_socket),
                   "failed to close socket");
 
         log_packet_t* packet = (log_packet_t*)buf;

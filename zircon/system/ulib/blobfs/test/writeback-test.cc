@@ -18,11 +18,11 @@ TEST(EnqueuePaginatedTest, EnqueueSmallRequests) {
     fbl::unique_ptr<WritebackWork> work;
 
     constexpr size_t kXferSize = kWritebackCapacity * kBlockSize;
-    ASSERT_EQ(ZX_OK, zx::vmo::create(kXferSize, 0, &vmo));
-    ASSERT_EQ(ZX_OK, transaction_manager.CreateWork(&work, nullptr));
+    ASSERT_OK(zx::vmo::create(kXferSize, 0, &vmo));
+    ASSERT_OK(transaction_manager.CreateWork(&work, nullptr));
     ASSERT_EQ(ZX_OK, EnqueuePaginated(&work, &transaction_manager, nullptr, vmo, 0, 0,
                                       kXferSize / kBlockSize));
-    ASSERT_EQ(ZX_OK, transaction_manager.EnqueueWork(std::move(work), EnqueueType::kData));
+    ASSERT_OK(transaction_manager.EnqueueWork(std::move(work), EnqueueType::kData));
 }
 
 // Enqueue a request which does not fit within writeback buffer.
@@ -32,11 +32,11 @@ TEST(EnqueuePaginatedTest, EnqueueLargeRequests) {
     fbl::unique_ptr<WritebackWork> work;
 
     constexpr size_t kXferSize = kWritebackCapacity * kBlockSize;
-    ASSERT_EQ(ZX_OK, zx::vmo::create(kXferSize, 0, &vmo));
-    ASSERT_EQ(ZX_OK, transaction_manager.CreateWork(&work, nullptr));
+    ASSERT_OK(zx::vmo::create(kXferSize, 0, &vmo));
+    ASSERT_OK(transaction_manager.CreateWork(&work, nullptr));
     ASSERT_EQ(ZX_OK, EnqueuePaginated(&work, &transaction_manager, nullptr, vmo, 0, 0,
                                       kXferSize / kBlockSize));
-    ASSERT_EQ(ZX_OK, transaction_manager.EnqueueWork(std::move(work), EnqueueType::kData));
+    ASSERT_OK(transaction_manager.EnqueueWork(std::move(work), EnqueueType::kData));
 }
 
 // Enqueue multiple requests at once, which combine to be larger than the writeback buffer.
@@ -45,8 +45,8 @@ TEST(EnqueuePaginatedTest, EnqueueMany) {
     zx::vmo vmo;
     fbl::unique_ptr<WritebackWork> work;
 
-    ASSERT_EQ(ZX_OK, zx::vmo::create(kWritebackCapacity * kBlockSize, 0, &vmo));
-    ASSERT_EQ(ZX_OK, transaction_manager.CreateWork(&work, nullptr));
+    ASSERT_OK(zx::vmo::create(kWritebackCapacity * kBlockSize, 0, &vmo));
+    ASSERT_OK(transaction_manager.CreateWork(&work, nullptr));
 
     constexpr size_t kSegments = 4;
     constexpr size_t kBufferSizeBytes = kWritebackCapacity * kBlockSize;
@@ -57,7 +57,7 @@ TEST(EnqueuePaginatedTest, EnqueueMany) {
                                           (i * kXferSize) / kBlockSize,
                                           (i * kXferSize) / kBlockSize, kXferSize / kBlockSize));
     }
-    ASSERT_EQ(ZX_OK, transaction_manager.EnqueueWork(std::move(work), EnqueueType::kData));
+    ASSERT_OK(transaction_manager.EnqueueWork(std::move(work), EnqueueType::kData));
 }
 
 // Test that multiple completion callbacks may be added to a single WritebackWork.
@@ -66,8 +66,8 @@ TEST(WritebackWorkTest, WritebackWorkOrder) {
     zx::vmo vmo;
     fbl::unique_ptr<WritebackWork> work;
 
-    ASSERT_EQ(ZX_OK, zx::vmo::create(kBlockSize, 0, &vmo));
-    ASSERT_EQ(ZX_OK, transaction_manager.CreateWork(&work, nullptr));
+    ASSERT_OK(zx::vmo::create(kBlockSize, 0, &vmo));
+    ASSERT_OK(transaction_manager.CreateWork(&work, nullptr));
 
     bool alpha_completion_done = false;
     bool beta_completion_done = false;
@@ -104,7 +104,7 @@ TEST(FlushRequestsTest, FlushNoRequests) {
         }
     } manager;
     fbl::Vector<BufferedOperation> operations;
-    EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations));
+    EXPECT_OK(FlushWriteRequests(&manager, operations));
 }
 
 TEST(FlushRequestsTest, FlushOneRequest) {
@@ -121,7 +121,7 @@ TEST(FlushRequestsTest, FlushOneRequest) {
     } manager;
     fbl::Vector<BufferedOperation> operations;
     operations.push_back(BufferedOperation{kVmoid, Operation{OperationType::kWrite, 1, 2, 3}});
-    EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations));
+    EXPECT_OK(FlushWriteRequests(&manager, operations));
 }
 
 TEST(FlushRequestsTest, FlushManyRequests) {
@@ -144,7 +144,7 @@ TEST(FlushRequestsTest, FlushManyRequests) {
     fbl::Vector<BufferedOperation> operations;
     operations.push_back(BufferedOperation{kVmoidA, Operation{OperationType::kWrite, 1, 2, 3}});
     operations.push_back(BufferedOperation{kVmoidB, Operation{OperationType::kWrite, 4, 5, 6}});
-    EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations));
+    EXPECT_OK(FlushWriteRequests(&manager, operations));
 }
 
 // This acts as a regression test against a previous implementation of
@@ -172,7 +172,7 @@ TEST(FlushRequestsTest, FlushAVeryLargeNumberOfRequests) {
         operations.push_back(
             BufferedOperation{kVmoid, Operation{OperationType::kWrite, i * 2, i * 2, 1}});
     }
-    EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations));
+    EXPECT_OK(FlushWriteRequests(&manager, operations));
 }
 
 TEST(FlushRequestsTest, BadFlush) {
@@ -189,7 +189,7 @@ TEST(FlushRequestsTest, BadFlush) {
 TEST(WritebackQueueTest, DestroyWritebackWithoutTeardown) {
     MockTransactionManager transaction_manager;
     fbl::unique_ptr<WritebackQueue> writeback_;
-    EXPECT_EQ(ZX_OK, WritebackQueue::Create(&transaction_manager, kWritebackCapacity, &writeback_));
+    EXPECT_OK(WritebackQueue::Create(&transaction_manager, kWritebackCapacity, &writeback_));
     writeback_.reset();
 }
 

@@ -94,10 +94,10 @@ TEST(VmoCloneTestCase, Decommit) {
               zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
 
     // close the clone handle
-    EXPECT_EQ(ZX_OK, zx_handle_close(clone_vmo), "handle_close");
+    EXPECT_OK(zx_handle_close(clone_vmo), "handle_close");
 
     // Once the clone is closed, decommit should work
-    EXPECT_EQ(ZX_OK, zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
+    EXPECT_OK(zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
 
     // close the original handle
     EXPECT_OK(zx_handle_close(vmo), "handle_close");
@@ -166,7 +166,7 @@ zx_rights_t GetHandleRights(zx_handle_t h) {
     zx_status_t s = zx_object_get_info(h, ZX_INFO_HANDLE_BASIC, &info,
                                        sizeof(info), nullptr, nullptr);
     if (s != ZX_OK) {
-        EXPECT_EQ(s, ZX_OK);  // Poison the test
+        EXPECT_OK(s);  // Poison the test
         return 0;
     }
     return info.rights;
@@ -200,7 +200,7 @@ TEST(VmoCloneTestCase, Rights) {
                                   0, PAGE_SIZE, &clone),
               ZX_OK);
 
-    EXPECT_EQ(zx_handle_close(reduced_rights_vmo), ZX_OK);
+    EXPECT_OK(zx_handle_close(reduced_rights_vmo));
 
     ASSERT_EQ(zx_object_set_property(clone, ZX_PROP_NAME,
                                      kNewVmoName, sizeof(kNewVmoName)),
@@ -218,9 +218,9 @@ TEST(VmoCloneTestCase, Rights) {
               ZX_OK);
     EXPECT_STR_EQ(newname, kNewVmoName, "clone VMO name");
 
-    EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
+    EXPECT_OK(zx_handle_close(vmo));
     EXPECT_EQ(GetHandleRights(clone), kNewVmoRights);
-    EXPECT_EQ(zx_handle_close(clone), ZX_OK);
+    EXPECT_OK(zx_handle_close(clone));
 }
 
 // Check that non-resizable VMOs cannot get resized.
@@ -263,7 +263,7 @@ TEST(VmoCloneTestCase, NoResize) {
 
 TEST(VmoCloneTestCase, NoPagerClone) {
     zx::vmo vmo;
-    ASSERT_EQ(zx::vmo::create(PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo));
 
     zx::vmo clone;
     ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, PAGE_SIZE, &clone),

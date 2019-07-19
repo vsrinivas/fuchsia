@@ -165,7 +165,7 @@ TEST(HandleFDTest, TransferFD) {
     // fd --> handle
     zx_handle_t handle = ZX_HANDLE_INVALID;
     status = fdio_fd_transfer(fds[0], &handle);
-    ASSERT_EQ(status, ZX_OK, "failed to transfer fds to handle");
+    ASSERT_OK(status, "failed to transfer fds to handle");
 
     // handle --> fd
     ASSERT_EQ(fdio_fd_create(handle, &fds[0]), ZX_OK,
@@ -189,7 +189,7 @@ TEST(HandleFDTest, TransferDevice) {
     // fd --> handle
     zx_handle_t handle = ZX_HANDLE_INVALID;
     zx_status_t status = fdio_fd_transfer(fd, &handle);
-    ASSERT_EQ(status, ZX_OK, "failed to transfer fds to handles");
+    ASSERT_OK(status, "failed to transfer fds to handles");
 
     // handle --> fd
     ASSERT_EQ(fdio_fd_create(handle, &fd), ZX_OK,

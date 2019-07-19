@@ -44,17 +44,17 @@ void HidDriverTest::SetUp() {
     args.driver_search_paths.push_back("/boot/driver");
     args.device_list.push_back(kDeviceEntry);
     zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr_);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     // Wait for HidCtl to be created
     status = devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
                                                            "sys/platform/11:04:0/hidctl",
                                                            &hidctl_fd_);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     // Get a FIDL channel to HidCtl
     status = fdio_get_service_handle(hidctl_fd_.get(), &hidctl_fdio_channel_);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 }
 
 const uint8_t kBootMouseReportDesc[50] = {
@@ -97,13 +97,13 @@ TEST_F(HidDriverTest, BootMouseTest) {
                                                                      kBootMouseReportDesc,
                                                                      sizeof(kBootMouseReportDesc),
                                                                      &hidctl_channel);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     // Open the corresponding /dev/class/input/ device
     fbl::unique_fd fd_device;
     status = devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "class/input/000",
                                                            &fd_device);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     // Send a single mouse report
     hid_boot_mouse_report_t mouse_report = {};
@@ -114,7 +114,7 @@ TEST_F(HidDriverTest, BootMouseTest) {
                              &mouse_report,
                              sizeof(mouse_report),
                              NULL);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     // Check that the report comes through
     hid_boot_mouse_report_t test_report = {};
@@ -126,13 +126,13 @@ TEST_F(HidDriverTest, BootMouseTest) {
     // Open a FIDL channel to the HID device
     zx_handle_t device_fdio_channel;
     status = fdio_get_service_handle(fd_device.get(), &device_fdio_channel);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
 
     // Check that report descriptors have the same length
     uint16_t len;
     status =
         fuchsia_hardware_input_DeviceGetReportDescSize(device_fdio_channel, &len);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
     ASSERT_EQ(sizeof(kBootMouseReportDesc), len);
 
     // Check that report descriptors match completely
@@ -140,7 +140,7 @@ TEST_F(HidDriverTest, BootMouseTest) {
     size_t actual;
     status = fuchsia_hardware_input_DeviceGetReportDesc(
         device_fdio_channel, buf, len, &actual);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
     ASSERT_EQ(sizeof(kBootMouseReportDesc), actual);
     for (size_t i = 0; i < sizeof(kBootMouseReportDesc); i++) {
         if (kBootMouseReportDesc[i] != buf[i]) {

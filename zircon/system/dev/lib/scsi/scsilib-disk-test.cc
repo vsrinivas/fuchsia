@@ -196,12 +196,12 @@ TEST_F(ScsilibDiskTest, TestCreateReadDestroy) {
   read.rw.length = 1;      // Read one block
   read.rw.offset_dev = 1;  // Read logical block 1
   read.rw.offset_vmo = 0;
-  EXPECT_EQ(zx_vmo_create(PAGE_SIZE, 0, &read.rw.vmo), ZX_OK);
+  EXPECT_OK(zx_vmo_create(PAGE_SIZE, 0, &read.rw.vmo));
   bind.device()->BlockImplQueue(&read, done, nullptr);  // NOTE: Assumes synchronous controller
 
   // Make sure the contents of the VMO we read into match the expected test pattern
   DiskBlock check_buffer = {};
-  EXPECT_EQ(zx_vmo_read(read.rw.vmo, check_buffer, 0, sizeof(DiskBlock)), ZX_OK);
+  EXPECT_OK(zx_vmo_read(read.rw.vmo, check_buffer, 0, sizeof(DiskBlock)));
   for (uint i = 0; i < sizeof(DiskBlock); i++) {
     EXPECT_EQ(check_buffer[i], 0x01);
   }

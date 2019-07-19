@@ -22,7 +22,7 @@ void OpenHelper(const zx::channel& directory, const char* path, zx::channel* res
     // Open the requested path from the provded directory, and wait for the open
     // response on the accompanying channel.
     zx::channel client, server;
-    ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client, &server));
     ASSERT_EQ(fuchsia_io_DirectoryOpen(directory.get(), ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DESCRIBE,
                                        0, path, strlen(path), server.release()), ZX_OK);
     zx_signals_t pending;
@@ -49,7 +49,7 @@ void FidlOpenValidator(const zx::channel& directory, const char* path,
     ASSERT_EQ(actual_handles, expected_handles);
     auto response = reinterpret_cast<fs::OnOpenMsg*>(buf);
     ASSERT_EQ(response->primary.hdr.ordinal, fuchsia_io_NodeOnOpenOrdinal);
-    ASSERT_EQ(response->primary.s, ZX_OK);
+    ASSERT_OK(response->primary.s);
     ASSERT_EQ(response->extra.tag, expected_tag);
     zx_handle_close_many(handles, actual_handles);
 }
@@ -78,10 +78,10 @@ void FidlOpenErrorValidator(const zx::channel& directory, const char* path) {
 TEST(FidlTestCase, Open) {
     {
         zx::channel dev_client, dev_server;
-        ASSERT_EQ(zx::channel::create(0, &dev_client, &dev_server), ZX_OK);
+        ASSERT_OK(zx::channel::create(0, &dev_client, &dev_server));
         fdio_ns_t* ns;
-        ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
-        ASSERT_EQ(fdio_ns_connect(ns, "/dev", ZX_FS_RIGHT_READABLE, dev_server.release()), ZX_OK);
+        ASSERT_OK(fdio_ns_get_installed(&ns));
+        ASSERT_OK(fdio_ns_connect(ns, "/dev", ZX_FS_RIGHT_READABLE, dev_server.release()));
         ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "zero", fuchsia_io_NodeInfoTag_device, 1));
         ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "class/platform-bus/000",
                                              fuchsia_io_NodeInfoTag_device, 1));
@@ -93,10 +93,10 @@ TEST(FidlTestCase, Open) {
 
     {
         zx::channel dev_client, dev_server;
-        ASSERT_EQ(zx::channel::create(0, &dev_client, &dev_server), ZX_OK);
+        ASSERT_OK(zx::channel::create(0, &dev_client, &dev_server));
         fdio_ns_t* ns;
-        ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
-        ASSERT_EQ(fdio_ns_connect(ns, "/boot", ZX_FS_RIGHT_READABLE, dev_server.release()), ZX_OK);
+        ASSERT_OK(fdio_ns_get_installed(&ns));
+        ASSERT_OK(fdio_ns_connect(ns, "/boot", ZX_FS_RIGHT_READABLE, dev_server.release()));
         ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "lib", fuchsia_io_NodeInfoTag_directory,
                                              0));
         ASSERT_NO_FAILURES(FidlOpenErrorValidator(dev_client,
@@ -108,19 +108,19 @@ TEST(FidlTestCase, Basic) {
     fuchsia_io_NodeInfo info = {};
     {
         zx::channel client, server;
-        ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-        ASSERT_EQ(fdio_service_connect("/dev/class", server.release()), ZX_OK);
+        ASSERT_OK(zx::channel::create(0, &client, &server));
+        ASSERT_OK(fdio_service_connect("/dev/class", server.release()));
         memset(&info, 0, sizeof(info));
-        ASSERT_EQ(fuchsia_io_FileDescribe(client.get(), &info), ZX_OK);
+        ASSERT_OK(fuchsia_io_FileDescribe(client.get(), &info));
         ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_directory);
     }
 
     {
         zx::channel client, server;
-        ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-        ASSERT_EQ(fdio_service_connect("/dev/zero", server.release()), ZX_OK);
+        ASSERT_OK(zx::channel::create(0, &client, &server));
+        ASSERT_OK(fdio_service_connect("/dev/zero", server.release()));
         memset(&info, 0, sizeof(info));
-        ASSERT_EQ(fuchsia_io_FileDescribe(client.get(), &info), ZX_OK);
+        ASSERT_OK(fuchsia_io_FileDescribe(client.get(), &info));
         ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_device);
         ASSERT_NE(info.device.event, ZX_HANDLE_INVALID);
         zx_handle_close(info.device.event);
@@ -159,10 +159,10 @@ void ReadEvent(watch_buffer_t* wb, const zx::channel& c, const char** name,
                 uint8_t* event) {
     if (wb->ptr == nullptr) {
         zx_signals_t observed;
-        ASSERT_EQ(c.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed), ZX_OK);
+        ASSERT_OK(c.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
         ASSERT_EQ(observed & ZX_CHANNEL_READABLE, ZX_CHANNEL_READABLE);
         uint32_t actual;
-        ASSERT_EQ(c.read(0, wb->buf, nullptr, sizeof(wb->buf), 0, &actual, nullptr), ZX_OK);
+        ASSERT_OK(c.read(0, wb->buf, nullptr, sizeof(wb->buf), 0, &actual, nullptr));
         wb->size = actual;
         wb->ptr = wb->buf;
     }
@@ -175,14 +175,14 @@ TEST(FidlTestCase, DirectoryWatcherExisting) {
     // Channel pair for directory watch events
     zx::channel watcher, remote_watcher;
 
-    ASSERT_EQ(zx::channel::create(0, &h, &request), ZX_OK);
-    ASSERT_EQ(zx::channel::create(0, &watcher, &remote_watcher), ZX_OK);
-    ASSERT_EQ(fdio_service_connect("/dev/class", request.release()), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &h, &request));
+    ASSERT_OK(zx::channel::create(0, &watcher, &remote_watcher));
+    ASSERT_OK(fdio_service_connect("/dev/class", request.release()));
 
     zx_status_t status;
     ASSERT_EQ(fuchsia_io_DirectoryWatch(h.get(), fuchsia_io_WATCH_MASK_ALL, 0,
                                         remote_watcher.release(), &status), ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
 
     watch_buffer_t wb = {};
     // We should see nothing but EXISTING events until we see an IDLE event
@@ -205,9 +205,9 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
     // Channel pair for directory watch events
     zx::channel watcher, remote_watcher;
 
-    ASSERT_EQ(zx::channel::create(0, &h, &request), ZX_OK);
-    ASSERT_EQ(zx::channel::create(0, &watcher, &remote_watcher), ZX_OK);
-    ASSERT_EQ(fdio_service_connect("/dev/class", request.release()), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &h, &request));
+    ASSERT_OK(zx::channel::create(0, &watcher, &remote_watcher));
+    ASSERT_OK(fdio_service_connect("/dev/class", request.release()));
 
     // Close our half of the watcher before devmgr gets its half.
     watcher.reset();
@@ -215,14 +215,14 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
     zx_status_t status;
     ASSERT_EQ(fuchsia_io_DirectoryWatch(h.get(), fuchsia_io_WATCH_MASK_ALL, 0,
                                         remote_watcher.release(), &status), ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
     // If we're here and usermode didn't crash, we didn't hit the bug.
 
     // Create a new watcher, and see if it's functional at all
-    ASSERT_EQ(zx::channel::create(0, &watcher, &remote_watcher), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &watcher, &remote_watcher));
     ASSERT_EQ(fuchsia_io_DirectoryWatch(h.get(), fuchsia_io_WATCH_MASK_ALL, 0,
                                         remote_watcher.release(), &status), ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
 
     watch_buffer_t wb = {};
     const char* name = nullptr;

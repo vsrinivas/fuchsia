@@ -24,7 +24,7 @@ namespace mock_i2c {
 //
 // SomeDriver dut(i2c.GetProto());
 //
-// EXPECT_EQ(dut.SomeMethod(), ZX_OK);
+// EXPECT_OK(dut.SomeMethod());
 // EXPECT_TRUE(i2c.VerifyAndClear());
 
 class MockI2c : ddk::I2cProtocol<MockI2c> {

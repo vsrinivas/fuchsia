@@ -55,10 +55,10 @@ void CompressionHelper(CompressionAlgorithm algorithm, const char* input, size_t
     while (offset != size) {
         const void* data = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(input) + offset);
         const size_t incremental_size = std::min(step, size - offset);
-        ASSERT_EQ(ZX_OK, compressor->Update(data, incremental_size));
+        ASSERT_OK(compressor->Update(data, incremental_size));
         offset += incremental_size;
     }
-    ASSERT_EQ(ZX_OK, compressor->End());
+    ASSERT_OK(compressor->End());
     EXPECT_GT(compressor->Size(), 0);
 
     *out = std::move(compressor);
@@ -72,10 +72,10 @@ void DecompressionHelper(CompressionAlgorithm algorithm,
     size_t src_size = compressed_size;
     switch (algorithm) {
     case CompressionAlgorithm::LZ4:
-        ASSERT_EQ(ZX_OK, LZ4Decompress(output.get(), &target_size, compressed, &src_size));
+        ASSERT_OK(LZ4Decompress(output.get(), &target_size, compressed, &src_size));
         break;
     case CompressionAlgorithm::ZSTD:
-        ASSERT_EQ(ZX_OK, ZSTDDecompress(output.get(), &target_size, compressed, &src_size));
+        ASSERT_OK(ZSTDDecompress(output.get(), &target_size, compressed, &src_size));
         break;
     default:
         ASSERT_TRUE(false, "Bad algorithm");
@@ -179,9 +179,9 @@ void RunUpdateNoDataTest(CompressionAlgorithm algorithm) {
     memset(input.get(), 'a', input_size);
 
     // Test that using "Update(data, 0)" acts a no-op, rather than corrupting the buffer.
-    ASSERT_EQ(ZX_OK, compressor->Update(input.get(), 0));
-    ASSERT_EQ(ZX_OK, compressor->Update(input.get(), input_size));
-    ASSERT_EQ(ZX_OK, compressor->End());
+    ASSERT_OK(compressor->Update(input.get(), 0));
+    ASSERT_OK(compressor->Update(input.get(), input_size));
+    ASSERT_OK(compressor->End());
 
     // Ensure that even with the addition of a zero-length buffer, we still decompress
     // to the expected output.

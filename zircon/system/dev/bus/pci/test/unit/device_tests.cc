@@ -27,7 +27,7 @@ protected:
     PciDeviceTests()
         : upstream_(UpstreamNode::Type::ROOT, 0) {}
     void SetUp() {
-        ASSERT_EQ(ZX_OK, FakePciroot::Create(0, 1, &pciroot_));
+        ASSERT_OK(FakePciroot::Create(0, 1, &pciroot_));
         client_ = std::make_unique<ddk::PcirootProtocolClient>(pciroot_->proto());
     }
     void TearDown() {

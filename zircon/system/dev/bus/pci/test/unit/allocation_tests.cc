@@ -22,15 +22,15 @@ FakePciroot* RetrieveFakeFromClient(const ddk::PcirootProtocolClient& client) {
 // PciRootAllocation and PciRegionAllocation dtors.
 TEST(PciAllocationTest, BalancedAllocation) {
     std::unique_ptr<FakePciroot> pciroot;
-    ASSERT_EQ(ZX_OK, FakePciroot::Create(0, 0, &pciroot));
+    ASSERT_OK(FakePciroot::Create(0, 0, &pciroot));
     ddk::PcirootProtocolClient client(pciroot->proto());
     FakePciroot* fake_impl = RetrieveFakeFromClient(client);
     PciRootAllocator root_alloc(client, PCI_ADDRESS_SPACE_MMIO, false);
     {
         std::unique_ptr<PciAllocation> alloc1, alloc2;
-        EXPECT_EQ(ZX_OK, root_alloc.PciAllocator::AllocateWindow(ZX_PAGE_SIZE, &alloc1));
+        EXPECT_OK(root_alloc.PciAllocator::AllocateWindow(ZX_PAGE_SIZE, &alloc1));
         EXPECT_EQ(1, fake_impl->allocation_cnt());
-        EXPECT_EQ(ZX_OK, root_alloc.PciAllocator::AllocateWindow(ZX_PAGE_SIZE, &alloc2));
+        EXPECT_OK(root_alloc.PciAllocator::AllocateWindow(ZX_PAGE_SIZE, &alloc2));
         EXPECT_EQ(2, fake_impl->allocation_cnt());
     }
 
@@ -41,14 +41,14 @@ TEST(PciAllocationTest, BalancedAllocation) {
 // CreateVMObject is called
 TEST(PciAllocationTest, VmoCreationFailure) {
     std::unique_ptr<FakePciroot> pciroot;
-    ASSERT_EQ(ZX_OK, FakePciroot::Create(0, 0, &pciroot));
+    ASSERT_OK(FakePciroot::Create(0, 0, &pciroot));
     ddk::PcirootProtocolClient client(pciroot->proto());
 
     zx::vmo vmo;
     PciRootAllocator root(client, PCI_ADDRESS_SPACE_MMIO, false);
     PciAllocator* root_ptr = &root;
     std::unique_ptr<PciAllocation> alloc;
-    EXPECT_EQ(ZX_OK, root_ptr->AllocateWindow(ZX_PAGE_SIZE, &alloc));
+    EXPECT_OK(root_ptr->AllocateWindow(ZX_PAGE_SIZE, &alloc));
     EXPECT_NE(ZX_OK, alloc->CreateVmObject(&vmo));
 }
 

@@ -86,9 +86,9 @@ TEST_F(MtdInterfaceTest, ReadWriteEraseTest) {
   uint32_t block = page5 & ~(mtd_->BlockSize() - 1);
 
   // Erase the block containing page 5 then verify page 5 is empty.
-  ASSERT_EQ(ZX_OK, mtd_->EraseBlock(block));
-  ASSERT_EQ(ZX_OK, mtd_->ReadPage(page5, out_data.data(), &bytes_read));
-  ASSERT_EQ(ZX_OK, mtd_->ReadOob(page5, out_oob.data()));
+  ASSERT_OK(mtd_->EraseBlock(block));
+  ASSERT_OK(mtd_->ReadPage(page5, out_data.data(), &bytes_read));
+  ASSERT_OK(mtd_->ReadOob(page5, out_oob.data()));
   ASSERT_EQ(mtd_->PageSize(), bytes_read);
 
   for (uint32_t i = 0; i < mtd_->PageSize(); i++) {
@@ -104,9 +104,9 @@ TEST_F(MtdInterfaceTest, ReadWriteEraseTest) {
   SetOob(0x23, mtd_->OobSize());
 
   // Write one page 20 then read.
-  ASSERT_EQ(ZX_OK, mtd_->WritePage(page20, data_.data(), oob_.data()));
-  ASSERT_EQ(ZX_OK, mtd_->ReadPage(page20, out_data.data(), &bytes_read));
-  ASSERT_EQ(ZX_OK, mtd_->ReadOob(page20, out_oob.data()));
+  ASSERT_OK(mtd_->WritePage(page20, data_.data(), oob_.data()));
+  ASSERT_OK(mtd_->ReadPage(page20, out_data.data(), &bytes_read));
+  ASSERT_OK(mtd_->ReadOob(page20, out_oob.data()));
   ASSERT_EQ(mtd_->PageSize(), bytes_read);
 
   for (uint32_t i = 0; i < mtd_->PageSize(); i++) {
@@ -122,9 +122,9 @@ TEST_F(MtdInterfaceTest, ReadWriteEraseTest) {
   SetOob(0x67, mtd_->OobSize());
 
   // Write different data to page 5 then read and verify.
-  ASSERT_EQ(ZX_OK, mtd_->WritePage(page5, data_.data(), oob_.data()));
-  ASSERT_EQ(ZX_OK, mtd_->ReadPage(page5, out_data.data(), &bytes_read));
-  ASSERT_EQ(ZX_OK, mtd_->ReadOob(page5, out_oob.data()));
+  ASSERT_OK(mtd_->WritePage(page5, data_.data(), oob_.data()));
+  ASSERT_OK(mtd_->ReadPage(page5, out_data.data(), &bytes_read));
+  ASSERT_OK(mtd_->ReadOob(page5, out_oob.data()));
   ASSERT_EQ(mtd_->PageSize(), bytes_read);
 
   for (uint32_t i = 0; i < mtd_->PageSize(); i++) {
@@ -136,8 +136,8 @@ TEST_F(MtdInterfaceTest, ReadWriteEraseTest) {
   }
 
   // Read the page 20 again. Verify it hasn't changed.
-  ASSERT_EQ(ZX_OK, mtd_->ReadPage(page20, out_data.data(), &bytes_read));
-  ASSERT_EQ(ZX_OK, mtd_->ReadOob(page20, out_oob.data()));
+  ASSERT_OK(mtd_->ReadPage(page20, out_data.data(), &bytes_read));
+  ASSERT_OK(mtd_->ReadOob(page20, out_oob.data()));
   ASSERT_EQ(mtd_->PageSize(), bytes_read);
 
   // Set data/oob with same bytes expected for page 20.
@@ -153,9 +153,9 @@ TEST_F(MtdInterfaceTest, ReadWriteEraseTest) {
   }
 
   // Erase the block containing page 5 then verify page 5 is empty.
-  ASSERT_EQ(ZX_OK, mtd_->EraseBlock(block));
-  ASSERT_EQ(ZX_OK, mtd_->ReadPage(page5, out_data.data(), &bytes_read));
-  ASSERT_EQ(ZX_OK, mtd_->ReadOob(page5, out_oob.data()));
+  ASSERT_OK(mtd_->EraseBlock(block));
+  ASSERT_OK(mtd_->ReadPage(page5, out_data.data(), &bytes_read));
+  ASSERT_OK(mtd_->ReadOob(page5, out_oob.data()));
   ASSERT_EQ(mtd_->PageSize(), bytes_read);
 
   for (uint32_t i = 0; i < mtd_->PageSize(); i++) {
@@ -186,11 +186,11 @@ TEST_F(MtdInterfaceTest, BadBlockTest) {
 
 #ifndef ASTRO
   // nandsim with badblocks=5 should only mark pages in block 5 as bad.
-  ASSERT_EQ(ZX_OK, mtd_->IsBadBlock(5 * mtd_->BlockSize(), &is_bad_block));
+  ASSERT_OK(mtd_->IsBadBlock(5 * mtd_->BlockSize(), &is_bad_block));
   EXPECT_TRUE(is_bad_block);
 #endif
 
-  ASSERT_EQ(ZX_OK, mtd_->IsBadBlock(0, &is_bad_block));
+  ASSERT_OK(mtd_->IsBadBlock(0, &is_bad_block));
   EXPECT_FALSE(is_bad_block);
 }
 

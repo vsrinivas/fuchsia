@@ -106,7 +106,7 @@ TEST(PowerTest, EnablePowerDomain) {
     uint32_t test_index = 0;
     MtkRegulator& domain = power_test.GetPowerDomain(test_index);
     EnableDomainHelper(pmic_regs, domain);
-    ASSERT_EQ(power_test.PowerImplEnablePowerDomain(test_index), ZX_OK);
+    ASSERT_OK(power_test.PowerImplEnablePowerDomain(test_index));
     ASSERT_EQ(domain.enabled(), true);
     pmic_regs.VerifyAll();
 }
@@ -131,13 +131,13 @@ TEST(PowerTest, DisablePowerDomain) {
 
     // Enable power domain
     EnableDomainHelper(pmic_regs, domain);
-    ASSERT_EQ(power_test.PowerImplEnablePowerDomain(test_index), ZX_OK);
+    ASSERT_OK(power_test.PowerImplEnablePowerDomain(test_index));
     pmic_regs.VerifyAll();
 
     // Test disabling the above enabled power domain succeeds
     ReadPmicRegHelper(pmic_regs, domain.enable_register(), 0);
     WritePmicRegHelper(pmic_regs, domain.enable_register(), 0);
-    ASSERT_EQ(power_test.PowerImplDisablePowerDomain(test_index), ZX_OK);
+    ASSERT_OK(power_test.PowerImplDisablePowerDomain(test_index));
     pmic_regs.VerifyAll();
     ASSERT_EQ(domain.enabled(), false);
 }
@@ -153,12 +153,12 @@ TEST(PowerTest, GetSupportedVoltageRange) {
     uint32_t min_voltage = 0, max_voltage = 0;
 
     // Test Buck Regulator
-    ASSERT_EQ(power_test.PowerImplGetSupportedVoltageRange(0, &min_voltage, &max_voltage), ZX_OK);
+    ASSERT_OK(power_test.PowerImplGetSupportedVoltageRange(0, &min_voltage, &max_voltage));
     ASSERT_EQ(min_voltage, 700000);
     ASSERT_EQ(max_voltage, 1493750);
 
     // Test Ldo Regulator
-    ASSERT_EQ(power_test.PowerImplGetSupportedVoltageRange(4, &min_voltage, &max_voltage), ZX_OK);
+    ASSERT_OK(power_test.PowerImplGetSupportedVoltageRange(4, &min_voltage, &max_voltage));
     ASSERT_EQ(min_voltage, 1800000);
     ASSERT_EQ(max_voltage, 2200000);
 
@@ -200,12 +200,12 @@ TEST(PowerTest, RequestVoltage) {
         ((expected_selector << buck_domain.voltage_sel_shift()) & buck_domain.voltage_sel_mask());
     ReadPmicRegHelper(pmic_regs, buck_domain.voltage_sel_reg(), 0);
     WritePmicRegHelper(pmic_regs, buck_domain.voltage_sel_reg(), expected_write_value);
-    ASSERT_EQ(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage), ZX_OK);
+    ASSERT_OK(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage));
     ASSERT_EQ(buck_domain.cur_voltage(), out_voltage);
     ASSERT_EQ(out_voltage, expected_out_voltage);
 
     // With a voltage that is already set
-    ASSERT_EQ(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage), ZX_OK);
+    ASSERT_OK(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage));
 
     // LDO Regulator tests
     test_index = 4;
@@ -224,12 +224,12 @@ TEST(PowerTest, RequestVoltage) {
         ((expected_selector << ldo_domain.voltage_sel_shift()) & ldo_domain.voltage_sel_mask());
     ReadPmicRegHelper(pmic_regs, ldo_domain.voltage_sel_reg(), 0);
     WritePmicRegHelper(pmic_regs, ldo_domain.voltage_sel_reg(), expected_write_value);
-    ASSERT_EQ(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage), ZX_OK);
+    ASSERT_OK(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage));
     ASSERT_EQ(ldo_domain.cur_voltage(), out_voltage);
     ASSERT_EQ(out_voltage, expected_out_voltage);
 
     // With a voltage that is already set
-    ASSERT_EQ(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage), ZX_OK);
+    ASSERT_OK(power_test.PowerImplRequestVoltage(test_index, test_voltage, &out_voltage));
 }
 
 } // namespace power

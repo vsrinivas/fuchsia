@@ -202,9 +202,9 @@ TEST(JournalTest, DestroyJournalWithoutTeardown) {
     });
 
     fbl::unique_ptr<Journal> journal_;
-    ASSERT_EQ(ZX_OK, Journal::Create(&transaction_manager, 16, 0, &journal_));
-    ASSERT_EQ(ZX_OK, journal_->Replay());
-    ASSERT_EQ(ZX_OK, journal_->InitWriteback());
+    ASSERT_OK(Journal::Create(&transaction_manager, 16, 0, &journal_));
+    ASSERT_OK(journal_->Replay());
+    ASSERT_OK(journal_->InitWriteback());
     journal_.reset();
 }
 

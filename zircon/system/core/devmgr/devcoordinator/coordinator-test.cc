@@ -40,13 +40,13 @@ constexpr char kLogTestCaseName[] = "log test case";
 void CreateBootArgs(const char* config, size_t size, devmgr::BootArgs* boot_args) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(size, 0, &vmo);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   status = vmo.write(config, 0, size);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   status = devmgr::BootArgs::Create(std::move(vmo), size, boot_args);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 }
 
 devmgr::CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher,
@@ -68,20 +68,20 @@ TEST(CoordinatorTestCase, InitializeCoreDevices) {
   devmgr::Coordinator coordinator(DefaultConfig(nullptr, nullptr));
 
   zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 }
 
 TEST(CoordinatorTestCase, DumpState) {
   devmgr::Coordinator coordinator(DefaultConfig(nullptr, nullptr));
 
   zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   constexpr int32_t kBufSize = 256;
   char buf[kBufSize + 1] = {0};
 
   zx::vmo vmo;
-  ASSERT_EQ(ZX_OK, zx::vmo::create(kBufSize, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(kBufSize, 0, &vmo));
   devmgr::VmoWriter writer(std::move(vmo));
 
   coordinator.DumpState(&writer);
@@ -89,7 +89,7 @@ TEST(CoordinatorTestCase, DumpState) {
   ASSERT_EQ(writer.written(), writer.available());
   ASSERT_LT(writer.written(), kBufSize);
   ASSERT_GT(writer.written(), 0);
-  ASSERT_EQ(ZX_OK, writer.vmo().read(buf, 0, writer.written()));
+  ASSERT_OK(writer.vmo().read(buf, 0, writer.written()));
 
   ASSERT_NE(nullptr, strstr(buf, "[root]"));
 }
@@ -109,7 +109,7 @@ TEST(CoordinatorTestCase, BindDrivers) {
   devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
   coordinator.set_running(true);
 
   devmgr::Driver* driver;
@@ -129,7 +129,7 @@ TEST(CoordinatorTestCase, BindDriversForBuiltins) {
   devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   // AttemptBind function that asserts it has only been called once
   class CallOnce {
@@ -224,7 +224,7 @@ TEST(CoordinatorTestCase, BindDriversForBuiltins) {
 
 void InitializeCoordinator(devmgr::Coordinator* coordinator) {
   zx_status_t status = coordinator->InitializeCoreDevices(kSystemDriverPath);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   // Load the component driver
   devmgr::load_driver(devmgr::kComponentDriverPath,
@@ -238,7 +238,7 @@ void InitializeCoordinator(devmgr::Coordinator* coordinator) {
   devmgr::devfs_init(coordinator->root_device(), coordinator->dispatcher());
   status = devmgr::devfs_publish(coordinator->root_device(), coordinator->test_device());
   status = devmgr::devfs_publish(coordinator->root_device(), coordinator->sys_device());
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
   coordinator->set_running(true);
 }
 
@@ -292,13 +292,13 @@ TEST(CoordinatorTestCase, BindDevices) {
   // Add the device.
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
   fbl::RefPtr<devmgr::Device> device;
   status = coordinator.AddDevice(coordinator.test_device(), std::move(local),
                                  nullptr /* props_data */, 0 /* props_count */, "mock-device",
                                  ZX_PROTOCOL_TEST, nullptr /* driver_path */, nullptr /* args */,
                                  false /* invisible */, zx::channel() /* client_remote */, &device);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
 
   // Add the driver.
@@ -313,7 +313,7 @@ TEST(CoordinatorTestCase, BindDevices) {
   host.AddRef();  // refcount starts at zero, so bump it up to keep us from being cleaned up
   dev->set_host(&host);
   status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   // Check the BindDriver request.
   ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(remote, kDriverPath));
@@ -460,13 +460,13 @@ TEST(CoordinatorTestCase, TestOutput) {
   // Add the device.
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
   fbl::RefPtr<devmgr::Device> device;
   status = coordinator.AddDevice(coordinator.test_device(), std::move(local),
                                  nullptr /* props_data */, 0 /* props_count */, "mock-device",
                                  ZX_PROTOCOL_TEST, nullptr /* driver_path */, nullptr /* args */,
                                  false /* invisible */, zx::channel() /* client_remote */, &device);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
 
   fbl::String driver_name;
@@ -486,7 +486,7 @@ TEST(CoordinatorTestCase, TestOutput) {
   host.AddRef();  // refcount starts at zero, so bump it up to keep us from being cleaned up
   dev->set_host(&host);
   status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
 
   // Check the BindDriver request.
   zx::channel test_device, test_coordinator;
@@ -774,12 +774,12 @@ class MultipleDeviceTestCase : public zxtest::Test {
     {
       zx::channel local;
       zx_status_t status = zx::channel::create(0, &local, &devhost_remote_);
-      ASSERT_EQ(ZX_OK, status);
+      ASSERT_OK(status);
       devhost_.set_hrpc(local.release());
     }
 
     // Set up the sys device proxy, inside of the devhost
-    ASSERT_EQ(coordinator_.PrepareProxy(coordinator_.sys_device(), &devhost_), ZX_OK);
+    ASSERT_OK(coordinator_.PrepareProxy(coordinator_.sys_device(), &devhost_));
     loop_.RunUntilIdle();
     ASSERT_NO_FATAL_FAILURES(
         CheckCreateDeviceReceived(devhost_remote_, kSystemDriverPath, &sys_proxy_remote_));
@@ -789,12 +789,12 @@ class MultipleDeviceTestCase : public zxtest::Test {
     {
       zx::channel local;
       zx_status_t status = zx::channel::create(0, &local, &platform_bus_.remote);
-      ASSERT_EQ(ZX_OK, status);
+      ASSERT_OK(status);
       status = coordinator_.AddDevice(
           coordinator_.sys_device()->proxy(), std::move(local), nullptr /* props_data */,
           0 /* props_count */, "platform-bus", 0, nullptr /* driver_path */, nullptr /* args */,
           false /* invisible */, zx::channel() /* client_remote */, &platform_bus_.device);
-      ASSERT_EQ(ZX_OK, status);
+      ASSERT_OK(status);
       loop_.RunUntilIdle();
     }
   }
@@ -844,13 +844,13 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent
 
   zx::channel local;
   zx_status_t status = zx::channel::create(0, &local, &state.remote);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
   status = coordinator_.AddDevice(
       parent, std::move(local), nullptr /* props_data */, 0 /* props_count */, name, protocol_id,
       driver.data() /* driver_path */, nullptr /* args */, false /* invisible */,
       zx::channel() /* client_remote */, &state.device);
   state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
   loop_.RunUntilIdle();
 
   devices_.push_back(std::move(state));
@@ -1103,7 +1103,7 @@ TEST_F(UnbindTestCase, AddDuringParentUnbind) {
   fbl::RefPtr<devmgr::Device> child;
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_OK(status);
   status = coordinator_.AddDevice(
       parent_device->device, std::move(local), nullptr /* props_data */, 0 /* props_count */,
       "child", 0 /* protocol_id */, nullptr /* driver_path */, nullptr /* args */,

@@ -22,7 +22,7 @@ TEST(FdioTestCase, DeviceClone) {
 
     zx_handle_t handle = ZX_HANDLE_INVALID;
     zx_status_t status = fdio_fd_clone(fd.get(), &handle);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
     ASSERT_NE(handle, ZX_HANDLE_INVALID);
     zx_handle_close(handle);
 }
@@ -32,7 +32,7 @@ TEST(FdioTestCase, DeviceTransfer) {
 
     zx_handle_t handle = ZX_HANDLE_INVALID;
     zx_status_t status = fdio_fd_transfer(fd.release(), &handle);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(status);
     ASSERT_NE(handle, ZX_HANDLE_INVALID);
     zx_handle_close(handle);
 }

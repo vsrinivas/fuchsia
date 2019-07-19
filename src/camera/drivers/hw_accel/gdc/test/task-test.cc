@@ -174,7 +174,7 @@ TEST_F(TaskTest, InputBufferTest) {
   // Expecting to get error when requesting for invalid index.
   zx_paddr_t addr;
   for (uint32_t i = 0; i < kNumberOfBuffers; i++) {
-    EXPECT_EQ(ZX_OK, task->GetInputBufferPhysAddr(0, &addr));
+    EXPECT_OK(task->GetInputBufferPhysAddr(0, &addr));
   }
 
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, task->GetInputBufferPhysAddr(kNumberOfBuffers, &addr));

@@ -100,17 +100,17 @@ TEST(BlobCacheTest, AddLookupEvict) {
     BlobCache cache;
     Digest digest = GenerateDigest(0);
     fbl::RefPtr<TestNode> node = fbl::AdoptRef(new TestNode(digest, &cache));
-    ASSERT_EQ(ZX_OK, cache.Add(node));
+    ASSERT_OK(cache.Add(node));
     ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, cache.Add(node));
 
     // Observe that we can access the node inside the cache.
     fbl::RefPtr<CacheNode> found_node;
-    ASSERT_EQ(ZX_OK, cache.Lookup(digest, nullptr));
-    ASSERT_EQ(ZX_OK, cache.Lookup(digest, &found_node));
+    ASSERT_OK(cache.Lookup(digest, nullptr));
+    ASSERT_OK(cache.Lookup(digest, &found_node));
     ASSERT_EQ(found_node.get(), node.get());
 
     // Observe that evicting the node removes it from the cache.
-    ASSERT_EQ(ZX_OK, cache.Evict(node));
+    ASSERT_OK(cache.Evict(node));
     ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
 }
 
@@ -123,8 +123,8 @@ TEST(BlobCacheTest, StopCaching) {
     // The node is also deleted if we stop caching it, instead of just evicting.
     {
         fbl::RefPtr<TestNode> node = fbl::AdoptRef(new TestNode(digest, &cache));
-        ASSERT_EQ(ZX_OK, cache.Add(node));
-        ASSERT_EQ(ZX_OK, cache.Lookup(digest, nullptr));
+        ASSERT_OK(cache.Add(node));
+        ASSERT_OK(cache.Lookup(digest, nullptr));
         node->SetCache(false);
     }
     ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
@@ -139,9 +139,9 @@ TEST(BlobCacheTest, EvictNoCache) {
     // The node is also deleted if we stop caching it, instead of just evicting.
     {
         fbl::RefPtr<TestNode> node = fbl::AdoptRef(new TestNode(digest, &cache));
-        ASSERT_EQ(ZX_OK, cache.Add(node));
-        ASSERT_EQ(ZX_OK, cache.Lookup(digest, nullptr));
-        ASSERT_EQ(ZX_OK, cache.Evict(node));
+        ASSERT_OK(cache.Add(node));
+        ASSERT_OK(cache.Lookup(digest, nullptr));
+        ASSERT_OK(cache.Evict(node));
     }
     ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
 }
@@ -156,9 +156,9 @@ TEST(BlobCacheTest, EvictWhileCaching) {
     // evicted.
     {
         fbl::RefPtr<TestNode> node = fbl::AdoptRef(new TestNode(digest, &cache));
-        ASSERT_EQ(ZX_OK, cache.Add(node));
-        ASSERT_EQ(ZX_OK, cache.Lookup(digest, nullptr));
-        ASSERT_EQ(ZX_OK, cache.Evict(node));
+        ASSERT_OK(cache.Add(node));
+        ASSERT_OK(cache.Lookup(digest, nullptr));
+        ASSERT_OK(cache.Evict(node));
         node->SetCache(true);
     }
     ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
@@ -184,8 +184,8 @@ TEST(BlobCacheTest, CacheAfterRecycle) {
     {
         fbl::RefPtr<TestNode> node = fbl::AdoptRef(new TestNode(digest, &cache));
         node_ptr = node.get();
-        ASSERT_EQ(ZX_OK, cache.Add(node));
-        ASSERT_EQ(ZX_OK, cache.Lookup(digest, nullptr));
+        ASSERT_OK(cache.Add(node));
+        ASSERT_OK(cache.Lookup(digest, nullptr));
 
         // Observe the node is in the set of open nodes.
         ASSERT_NO_FAILURES(CheckExistsAloneInOpenCache(&cache, node_ptr));
@@ -197,24 +197,24 @@ TEST(BlobCacheTest, CacheAfterRecycle) {
 
     // Observe that although the node in in the "closed set", it still exists in the cache,
     // and can be re-acquired.
-    ASSERT_EQ(ZX_OK, cache.Lookup(digest, nullptr));
+    ASSERT_OK(cache.Lookup(digest, nullptr));
 
     // Letting the node go out of scope puts it back in the cache.
     {
         fbl::RefPtr<CacheNode> node;
-        ASSERT_EQ(ZX_OK, cache.Lookup(digest, &node));
+        ASSERT_OK(cache.Lookup(digest, &node));
         ASSERT_EQ(node_ptr, node.get());
         ASSERT_NO_FAILURES(CheckExistsAloneInOpenCache(&cache, node_ptr));
     }
-    ASSERT_EQ(ZX_OK, cache.Lookup(digest, nullptr));
+    ASSERT_OK(cache.Lookup(digest, nullptr));
 
     // However, if we stop caching the node, it will be deleted when all references
     // go out of scope.
     {
         fbl::RefPtr<CacheNode> cache_node;
-        ASSERT_EQ(ZX_OK, cache.Lookup(digest, &cache_node));
+        ASSERT_OK(cache.Lookup(digest, &cache_node));
         auto vnode = fbl::RefPtr<TestNode>::Downcast(std::move(cache_node));
-        ASSERT_EQ(ZX_OK, cache.Evict(vnode));
+        ASSERT_OK(cache.Evict(vnode));
     }
     ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
 }
@@ -225,9 +225,9 @@ TEST(BlobCacheTest, ResetClosed) {
     Digest digest = GenerateDigest(0);
     {
         fbl::RefPtr<TestNode> node = fbl::AdoptRef(new TestNode(digest, &cache));
-        ASSERT_EQ(ZX_OK, cache.Add(node));
+        ASSERT_OK(cache.Add(node));
     }
-    ASSERT_EQ(ZX_OK, cache.Lookup(digest, nullptr));
+    ASSERT_OK(cache.Lookup(digest, nullptr));
 
     // After resetting, the node should no longer exist.
     cache.Reset();
@@ -240,7 +240,7 @@ TEST(BlobCacheTest, ResetOpen) {
     // Create a node which exists in the open cache.
     Digest digest = GenerateDigest(0);
     fbl::RefPtr<TestNode> node = fbl::AdoptRef(new TestNode(digest, &cache));
-    ASSERT_EQ(ZX_OK, cache.Add(node));
+    ASSERT_OK(cache.Add(node));
 
     // After resetting, the node should no longer exist.
     cache.Reset();
@@ -258,8 +258,8 @@ TEST(BlobCacheTest, Destructor) {
 
         Digest closed_digest = GenerateDigest(1);
         auto closed_node = fbl::AdoptRef(new TestNode(closed_digest, &cache));
-        ASSERT_EQ(ZX_OK, cache.Add(open_node));
-        ASSERT_EQ(ZX_OK, cache.Add(closed_node));
+        ASSERT_OK(cache.Add(open_node));
+        ASSERT_OK(cache.Add(closed_node));
     }
     ASSERT_TRUE(open_node->UsingMemory());
 }
@@ -271,18 +271,18 @@ TEST(BlobCacheTest, ForAllOpenNodes) {
     fbl::RefPtr<TestNode> open_nodes[10];
     for (size_t i = 0; i < fbl::count_of(open_nodes); i++) {
         open_nodes[i] = fbl::AdoptRef(new TestNode(GenerateDigest(i), &cache));
-        ASSERT_EQ(ZX_OK, cache.Add(open_nodes[i]));
+        ASSERT_OK(cache.Add(open_nodes[i]));
     }
 
     // For fun, add some nodes to the cache which will become non-open:
     // One which runs out of strong references, and another which is evicted.
     {
         fbl::RefPtr<TestNode> node = fbl::AdoptRef(new TestNode(GenerateDigest(0xDEAD), &cache));
-        ASSERT_EQ(ZX_OK, cache.Add(node));
+        ASSERT_OK(cache.Add(node));
     }
     fbl::RefPtr<TestNode> node = fbl::AdoptRef(new TestNode(GenerateDigest(0xBEEF), &cache));
-    ASSERT_EQ(ZX_OK, cache.Add(node));
-    ASSERT_EQ(ZX_OK, cache.Evict(node));
+    ASSERT_OK(cache.Add(node));
+    ASSERT_OK(cache.Evict(node));
 
     // Double check that the nodes which should be open are open, and that the nodes
     // which aren't open aren't visible.
@@ -310,12 +310,12 @@ TEST(BlobCacheTest, CachePolicyEvictImmediately) {
     {
         fbl::RefPtr<TestNode> node = fbl::AdoptRef(new TestNode(digest, &cache));
         node->SetHighMemory();
-        ASSERT_EQ(ZX_OK, cache.Add(node));
+        ASSERT_OK(cache.Add(node));
         ASSERT_TRUE(node->UsingMemory());
     }
 
     fbl::RefPtr<CacheNode> cache_node;
-    ASSERT_EQ(ZX_OK, cache.Lookup(digest, &cache_node));
+    ASSERT_OK(cache.Lookup(digest, &cache_node));
     auto node = fbl::RefPtr<TestNode>::Downcast(std::move(cache_node));
     ASSERT_FALSE(node->UsingMemory());
 }
@@ -328,12 +328,12 @@ TEST(BlobCacheTest, CachePolicyNeverEvict) {
     {
         fbl::RefPtr<TestNode> node = fbl::AdoptRef(new TestNode(digest, &cache));
         node->SetHighMemory();
-        ASSERT_EQ(ZX_OK, cache.Add(node));
+        ASSERT_OK(cache.Add(node));
         ASSERT_TRUE(node->UsingMemory());
     }
 
     fbl::RefPtr<CacheNode> cache_node;
-    ASSERT_EQ(ZX_OK, cache.Lookup(digest, &cache_node));
+    ASSERT_OK(cache.Lookup(digest, &cache_node));
     auto node = fbl::RefPtr<TestNode>::Downcast(std::move(cache_node));
     ASSERT_TRUE(node->UsingMemory());
 }

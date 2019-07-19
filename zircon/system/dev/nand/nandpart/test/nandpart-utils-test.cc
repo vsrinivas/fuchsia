@@ -63,7 +63,7 @@ TEST(NandPartUtilsTest, SanitizeSinglePartitionMapTest) {
     auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
     *pmap = MakePartitionMap(1);
     pmap->partitions[0] = MakePartition(0, 9);
-    ASSERT_EQ(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
+    ASSERT_OK(SanitizePartitionMap(pmap, kNandInfo));
     ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 4));
 }
 
@@ -76,7 +76,7 @@ TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapTest) {
     pmap->partitions[1] = MakePartition(4, 7);
     pmap->partitions[2] = MakePartition(8, 9);
 
-    ASSERT_EQ(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
+    ASSERT_OK(SanitizePartitionMap(pmap, kNandInfo));
     ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 1));
     ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 1, 2, 3));
     ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 2, 4, 4));
@@ -90,7 +90,7 @@ TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapOutOfOrderTest) {
     pmap->partitions[0] = MakePartition(4, 9);
     pmap->partitions[1] = MakePartition(0, 3);
 
-    ASSERT_EQ(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
+    ASSERT_OK(SanitizePartitionMap(pmap, kNandInfo));
     ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 1));
     ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 1, 2, 4));
 }

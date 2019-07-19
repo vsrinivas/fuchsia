@@ -33,7 +33,7 @@ TEST(NodePopulatorTest, Null) {
 
     fbl::Vector<ReservedExtent> extents;
     fbl::Vector<ReservedNode> nodes;
-    ASSERT_EQ(ZX_OK, allocator->ReserveNodes(1, &nodes));
+    ASSERT_OK(allocator->ReserveNodes(1, &nodes));
     const uint32_t node_index = nodes[0].index();
     NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
 
@@ -47,7 +47,7 @@ TEST(NodePopulatorTest, Null) {
         return NodePopulator::IterationCommand::Stop;
     };
 
-    ASSERT_EQ(ZX_OK, populator.Walk(on_node, on_extent));
+    ASSERT_OK(populator.Walk(on_node, on_extent));
     ASSERT_EQ(1, nodes_visited);
 }
 
@@ -58,11 +58,11 @@ TEST(NodePopulatorTest, WalkOne) {
     ASSERT_NO_FAILURES(InitializeAllocator(1, 1, &space_manager, &allocator));
 
     fbl::Vector<ReservedNode> nodes;
-    ASSERT_EQ(ZX_OK, allocator->ReserveNodes(1, &nodes));
+    ASSERT_OK(allocator->ReserveNodes(1, &nodes));
     const uint32_t node_index = nodes[0].index();
 
     fbl::Vector<ReservedExtent> extents;
-    ASSERT_EQ(ZX_OK, allocator->ReserveBlocks(1, &extents));
+    ASSERT_OK(allocator->ReserveBlocks(1, &extents));
     ASSERT_EQ(1, extents.size());
     const Extent allocated_extent = extents[0].extent();
 
@@ -89,7 +89,7 @@ TEST(NodePopulatorTest, WalkOne) {
     ASSERT_EQ(0, inode->blob_size);
     ASSERT_EQ(0, inode->extent_count);
 
-    ASSERT_EQ(ZX_OK, populator.Walk(on_node, on_extent));
+    ASSERT_OK(populator.Walk(on_node, on_extent));
     ASSERT_EQ(1, nodes_visited);
     ASSERT_EQ(1, extents_visited);
 
@@ -112,10 +112,10 @@ TEST(NodePopulatorTest, WalkAllInlineExtents) {
     ASSERT_NO_FAILURES(ForceFragmentation(allocator.get(), kBlockCount));
 
     fbl::Vector<ReservedNode> nodes;
-    ASSERT_EQ(ZX_OK, allocator->ReserveNodes(1, &nodes));
+    ASSERT_OK(allocator->ReserveNodes(1, &nodes));
 
     fbl::Vector<ReservedExtent> extents;
-    ASSERT_EQ(ZX_OK, allocator->ReserveBlocks(kInlineMaxExtents, &extents));
+    ASSERT_OK(allocator->ReserveBlocks(kInlineMaxExtents, &extents));
     ASSERT_EQ(kInlineMaxExtents, extents.size());
 
     fbl::Vector<Extent> allocated_extents;
@@ -145,7 +145,7 @@ TEST(NodePopulatorTest, WalkAllInlineExtents) {
     ASSERT_EQ(0, inode->blob_size);
     ASSERT_EQ(0, inode->extent_count);
 
-    ASSERT_EQ(ZX_OK, populator.Walk(on_node, on_extent));
+    ASSERT_OK(populator.Walk(on_node, on_extent));
     ASSERT_EQ(1, nodes_visited);
     ASSERT_EQ(kInlineMaxExtents, extents_visited);
 
@@ -172,10 +172,10 @@ TEST(NodePopulatorTest, WalkManyNodes) {
     constexpr size_t kExpectedExtents = kInlineMaxExtents + 1;
 
     fbl::Vector<ReservedNode> nodes;
-    ASSERT_EQ(ZX_OK, allocator->ReserveNodes(kNodeCount, &nodes));
+    ASSERT_OK(allocator->ReserveNodes(kNodeCount, &nodes));
 
     fbl::Vector<ReservedExtent> extents;
-    ASSERT_EQ(ZX_OK, allocator->ReserveBlocks(kExpectedExtents, &extents));
+    ASSERT_OK(allocator->ReserveBlocks(kExpectedExtents, &extents));
     ASSERT_EQ(kExpectedExtents, extents.size());
 
     fbl::Vector<Extent> allocated_extents;
@@ -205,7 +205,7 @@ TEST(NodePopulatorTest, WalkManyNodes) {
     ASSERT_EQ(0, inode->blob_size);
     ASSERT_EQ(0, inode->extent_count);
 
-    ASSERT_EQ(ZX_OK, populator.Walk(on_node, on_extent));
+    ASSERT_OK(populator.Walk(on_node, on_extent));
     ASSERT_EQ(kNodeCount, nodes_visited);
     ASSERT_EQ(kExpectedExtents, extents_visited);
 
@@ -245,8 +245,8 @@ TEST(NodePopulatorTest, WalkManyContainers) {
     // Allocate the initial nodes and blocks.
     fbl::Vector<ReservedNode> nodes;
     fbl::Vector<ReservedExtent> extents;
-    ASSERT_EQ(ZX_OK, allocator->ReserveNodes(kNodeCount, &nodes));
-    ASSERT_EQ(ZX_OK, allocator->ReserveBlocks(kExpectedExtents, &extents));
+    ASSERT_OK(allocator->ReserveNodes(kNodeCount, &nodes));
+    ASSERT_OK(allocator->ReserveBlocks(kExpectedExtents, &extents));
     ASSERT_EQ(kExpectedExtents, extents.size());
 
     // Keep a copy of the nodes and blocks, since we are passing both to the
@@ -277,7 +277,7 @@ TEST(NodePopulatorTest, WalkManyContainers) {
     };
 
     NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
-    ASSERT_EQ(ZX_OK, populator.Walk(on_node, on_extent));
+    ASSERT_OK(populator.Walk(on_node, on_extent));
 
     ASSERT_EQ(kNodeCount, nodes_visited);
     ASSERT_EQ(kExpectedExtents, extents_visited);
@@ -330,8 +330,8 @@ TEST(NodePopulatorTest, WalkExtraNodes) {
     // Allocate the initial nodes and blocks.
     fbl::Vector<ReservedNode> nodes;
     fbl::Vector<ReservedExtent> extents;
-    ASSERT_EQ(ZX_OK, allocator->ReserveNodes(kAllocatedNodes, &nodes));
-    ASSERT_EQ(ZX_OK, allocator->ReserveBlocks(kAllocatedExtents, &extents));
+    ASSERT_OK(allocator->ReserveNodes(kAllocatedNodes, &nodes));
+    ASSERT_OK(allocator->ReserveBlocks(kAllocatedExtents, &extents));
     ASSERT_EQ(kAllocatedExtents, extents.size());
 
     // Keep a copy of the nodes and blocks, since we are passing both to the
@@ -362,7 +362,7 @@ TEST(NodePopulatorTest, WalkExtraNodes) {
     };
 
     NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
-    ASSERT_EQ(ZX_OK, populator.Walk(on_node, on_extent));
+    ASSERT_OK(populator.Walk(on_node, on_extent));
 
     ASSERT_EQ(kUsedNodes, nodes_visited);
     ASSERT_EQ(kUsedExtents, extents_visited);
@@ -403,8 +403,8 @@ TEST(NodePopulatorTest, WalkExtraExtents) {
     // Allocate the initial nodes and blocks.
     fbl::Vector<ReservedNode> nodes;
     fbl::Vector<ReservedExtent> extents;
-    ASSERT_EQ(ZX_OK, allocator->ReserveNodes(kAllocatedNodes, &nodes));
-    ASSERT_EQ(ZX_OK, allocator->ReserveBlocks(kAllocatedExtents, &extents));
+    ASSERT_OK(allocator->ReserveNodes(kAllocatedNodes, &nodes));
+    ASSERT_OK(allocator->ReserveBlocks(kAllocatedExtents, &extents));
     ASSERT_EQ(kAllocatedExtents, extents.size());
 
     // Keep a copy of the nodes and blocks, since we are passing both to the
@@ -438,7 +438,7 @@ TEST(NodePopulatorTest, WalkExtraExtents) {
     };
 
     NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
-    ASSERT_EQ(ZX_OK, populator.Walk(on_node, on_extent));
+    ASSERT_OK(populator.Walk(on_node, on_extent));
 
     ASSERT_EQ(kUsedNodes, nodes_visited);
     ASSERT_EQ(kUsedExtents, extents_visited);

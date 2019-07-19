@@ -182,15 +182,15 @@ TEST(SpiDevice, SpiTest) {
 
         ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kTransmit;
         zx_status_t status = spi_transmit(channel, txbuf, sizeof txbuf);
-        EXPECT_EQ(status, ZX_OK, "");
+        EXPECT_OK(status, "");
 
         ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kReceive;
         status = spi_receive(channel, rxbuf, sizeof rxbuf);
-        EXPECT_EQ(status, ZX_OK, "");
+        EXPECT_OK(status, "");
 
         ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kExchange;
         status = spi_exchange(channel, txbuf, rxbuf, sizeof txbuf);
-        EXPECT_EQ(status, ZX_OK, "");
+        EXPECT_OK(status, "");
     }
 
     // clean it up

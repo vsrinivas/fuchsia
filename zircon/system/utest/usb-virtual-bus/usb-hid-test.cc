@@ -69,14 +69,14 @@ TEST_F(UsbHidTest, SetAndGetReport) {
   zx_status_t status = fuchsia_hardware_input_DeviceSetReport(
       input_fdio_caller_.borrow_channel(), fuchsia_hardware_input_ReportType_INPUT, 0, buf,
       sizeof(buf), &out_stat);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(out_stat, ZX_OK);
+  ASSERT_OK(status);
+  ASSERT_OK(out_stat);
 
   status = fuchsia_hardware_input_DeviceGetReport(input_fdio_caller_.borrow_channel(),
                                                   fuchsia_hardware_input_ReportType_INPUT, 0,
                                                   &out_stat, buf, sizeof(buf), &out_report_count);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(out_stat, ZX_OK);
+  ASSERT_OK(status);
+  ASSERT_OK(out_stat);
 
   ASSERT_EQ(out_report_count, sizeof(hid_boot_mouse_report_t));
   ASSERT_EQ(0xab, buf[0]);
