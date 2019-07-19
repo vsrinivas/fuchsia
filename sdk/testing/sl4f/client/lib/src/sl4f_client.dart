@@ -48,8 +48,13 @@ class Sl4f {
   /// Constructs an SL4F client from the `FUCHSIA_IPV4_ADDR` and
   /// `FUCHSIA_SSH_KEY` environment variables.
   factory Sl4f.fromEnvironment() {
-    final target = Platform.environment['FUCHSIA_IPV4_ADDR'];
-    return Sl4f(target, Ssh(target, Platform.environment['FUCHSIA_SSH_KEY']));
+    final address = Platform.environment['FUCHSIA_IPV4_ADDR'];
+    String host = address;
+    // This same code exists in the dart/sdk/lib/_http/http_impl.dart.
+    if (host.contains(':')) {
+      host = '[$host]';
+    }
+    return Sl4f(host, Ssh(address, Platform.environment['FUCHSIA_SSH_KEY']));
   }
 
   /// Closes the underlying HTTP client.
