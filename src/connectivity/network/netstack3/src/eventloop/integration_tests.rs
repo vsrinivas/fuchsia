@@ -841,3 +841,19 @@ async fn test_remote_routes() {
         .squash_result()
         .expect("Add forwarding entry succeeds");
 }
+
+async fn test_main_loop() {
+    let (event_sender, evt_rcv) = futures::channel::mpsc::unbounded();
+    let mut event_loop = EventLoop::new_with_channels(event_sender.clone(), evt_rcv);
+    fasync::spawn_local(
+        event_loop.run().unwrap_or_else(|e| panic!("Event loop failed with error {:?}", e)),
+    );
+    let (stack, rs) =
+        fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_stack::StackMarker>().unwrap();
+    let events = event_sender.clone().sink_map_err(|e| panic!("event sender error: {}", e));
+    fasync::spawn_local(
+        rs.map_ok(Event::FidlStackEvent).map_err(|_| ()).forward(events).map(|_| ()),
+    );
+
+    assert_eq!(await!(stack.list_interfaces()).unwrap().len(), 0);
+}

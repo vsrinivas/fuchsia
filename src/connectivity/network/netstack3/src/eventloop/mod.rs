@@ -367,7 +367,7 @@ impl EventLoop {
         let mut buf = [0; 2048];
         loop {
             let evt = await!(self.event_recv.next());
-            self.handle_event(&mut buf, evt);
+            await!(self.handle_event(&mut buf, evt))?;
         }
         Ok(())
     }
