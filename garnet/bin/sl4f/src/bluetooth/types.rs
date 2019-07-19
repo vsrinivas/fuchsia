@@ -54,6 +54,7 @@ pub enum BluetoothMethod {
     GattcWriteLongDescriptorById,
     GattServerCloseServer,
     GattServerPublishServer,
+    ProfileServerAddService,
     ProfileServerCleanup,
     ProfileServerInit,
 }
@@ -99,6 +100,7 @@ impl BluetoothMethod {
             "GattcWriteLongDescriptorById" => BluetoothMethod::GattcWriteLongDescriptorById,
             "GattServerCloseServer" => BluetoothMethod::GattServerCloseServer,
             "GattServerPublishServer" => BluetoothMethod::GattServerPublishServer,
+            "ProfileServerAddService" => BluetoothMethod::ProfileServerAddService,
             "ProfileServerCleanup" => BluetoothMethod::ProfileServerCleanup,
             "ProfileServerInit" => BluetoothMethod::ProfileServerInit,
             _ => BluetoothMethod::BleUndefined,

@@ -395,12 +395,16 @@ pub async fn gatt_server_method_to_fidl(
 
 pub async fn profile_server_method_to_fidl(
     method_name: String,
-    _args: Value,
+    args: Value,
     facade: Arc<ProfileServerFacade>,
 ) -> Result<Value, Error> {
     match BluetoothMethod::from_str(&method_name) {
         BluetoothMethod::ProfileServerInit => {
             let result = await!(facade.init_profile_server_proxy())?;
+            Ok(to_value(result)?)
+        }
+        BluetoothMethod::ProfileServerAddService => {
+            let result = await!(facade.add_service(args))?;
             Ok(to_value(result)?)
         }
         BluetoothMethod::ProfileServerCleanup => {
