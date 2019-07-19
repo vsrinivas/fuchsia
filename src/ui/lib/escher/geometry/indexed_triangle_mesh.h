@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "src/ui/lib/escher/geometry/bounding_box.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/shape/mesh_spec.h"
 
@@ -29,6 +30,7 @@ struct IndexedTriangleMesh {
   using IndexType = MeshSpec::IndexType;
   using EdgeType = std::pair<IndexType, IndexType>;
 
+  BoundingBox bounding_box;
   std::vector<IndexType> indices;
   std::vector<PositionType> positions;
   std::vector<AttributeType1> attributes1;

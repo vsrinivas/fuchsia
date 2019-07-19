@@ -40,12 +40,24 @@ class BoundingBox {
   float height() const { return max_.y - min_.y; }
   float depth() const { return max_.z - min_.z; }
 
+  vec3 extent() const { return vec3(width(), height(), depth()); }
+
   // Return true if the other box is completely contained by this one.
   bool Contains(const BoundingBox& box) const {
     // We don't need to check if this box is empty, because the way we define
     // an empty box guarantees that the subsequent tests can't pass.
     return glm::all(glm::lessThanEqual(min_, box.min_)) &&
            glm::all(glm::greaterThanEqual(max_, box.max_)) && !box.is_empty();
+  }
+
+  bool Contains(const vec4& point) const {
+    if (point.x < min_.x || point.x > max_.x)
+      return false;
+    if (point.y < min_.y || point.y > max_.y)
+      return false;
+    if (point.z < min_.z || point.z > max_.z)
+      return false;
+    return true;
   }
 
   bool is_empty() const { return *this == BoundingBox(); }

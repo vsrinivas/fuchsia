@@ -5,6 +5,7 @@
 #include "src/ui/lib/escher/geometry/indexed_triangle_mesh_clip.h"
 
 #include "gtest/gtest.h"
+#include "src/ui/lib/escher/geometry/tessellation.h"
 
 namespace {
 
@@ -64,31 +65,6 @@ TEST(IndexedTriangleMeshClip, OneTriangle2d) {
       EXPECT_TRUE(false);
     }
   }
-}
-
-// Helper function that returns a standard mesh used for testing.  It looks like
-// like this in the standard Vulkan coordinate system (positive y down).
-//     (-1,-1) _______ (1,-1)
-//           /\      /\                        3    4
-//         /   \   /   \         indices:
-//       /______\/______\                   0    1    2
-//  (-2,1)    (0,1)     (2,1)
-IndexedTriangleMesh2d<vec2> GetStandardTestMesh2d() {
-  return IndexedTriangleMesh2d<vec2>{
-      .positions = {vec2(-2, 1), vec2(0, 1), vec2(2, 1), vec2(-1, -1), vec2(1, -1)},
-      .attributes1 = {vec2(0, 1), vec2(0.5f, 1), vec2(1, 1), vec2(0, 0), vec2(1, 0)},
-      .indices = {0, 1, 3, 3, 1, 4, 4, 1, 2}};
-}
-IndexedTriangleMesh3d<vec2> GetStandardTestMesh3d() {
-  auto mesh2d = GetStandardTestMesh2d();
-
-  IndexedTriangleMesh3d<vec2> mesh3d;
-  mesh3d.indices = mesh2d.indices;
-  mesh3d.attributes1 = mesh2d.attributes1;
-  for (const vec2& pos : mesh2d.positions) {
-    mesh3d.positions.push_back(vec3(pos, 11));
-  }
-  return mesh3d;
 }
 
 // Helper function that returns a list of planes that tightly bounds the

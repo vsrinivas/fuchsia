@@ -75,6 +75,10 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int sub
 // non-uniform manner in the (x,y,z) directions with its transformation matrix.
 IndexedTriangleMesh3d<vec2> NewCubeIndexedTriangleMesh(const MeshSpec& spec);
 
+// The following functions are used for convenience during unit testing.
+IndexedTriangleMesh2d<vec2> GetStandardTestMesh2d();
+IndexedTriangleMesh3d<vec2> GetStandardTestMesh3d();
+
 }  // namespace escher
 
 #endif  // SRC_UI_LIB_ESCHER_GEOMETRY_TESSELLATION_H_

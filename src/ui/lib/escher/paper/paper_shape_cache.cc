@@ -190,7 +190,6 @@ PaperShapeCacheEntry ProcessTriangleMesh3d(IndexedTriangleMesh3d<vec2> mesh,
       .num_shadow_volume_indices = 0,
   };
 }
-
 }  // namespace
 
 PaperShapeCache::PaperShapeCache(EscherWeakPtr escher, const PaperRendererConfig& config)
