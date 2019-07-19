@@ -45,6 +45,7 @@ dart_test("sl4f_client_tests") {
     "modular_test.dart",
     "performance_test.dart",
     "scenic_test.dart",
+    "sl4f_client_test.dart",
     "storage_test.dart",
     "webdriver_test.dart",
   ]
@@ -54,6 +55,7 @@ dart_test("sl4f_client_tests") {
     "//third_party/dart-pkg/pub/glob",
     "//third_party/dart-pkg/pub/image",
     "//third_party/dart-pkg/pub/mockito",
+    "//third_party/dart-pkg/pub/quiver",
     "//third_party/dart-pkg/pub/test",
   ]
 }
