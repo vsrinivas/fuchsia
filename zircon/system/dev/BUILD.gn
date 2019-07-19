@@ -40,6 +40,7 @@ group("dev") {
     "tee",
 
     # test/ allows drivers to be used by IsolateDevmgr
+    "$zx/system/utest/platform-bus:test",
     "test/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test",
     "test/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-child",
     "test/fidl-llcpp-driver",
