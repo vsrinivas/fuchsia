@@ -1,4 +1,10 @@
 disabled_for_asan = [
   # OV-5
   "/pkgfs/packages/overnet_tests/0/test/overnet_unittests",
+  # MA-669
+  "/pkgfs/packages/magma_nonhardware_tests/0/test/magma_unit_tests",
+  # MTWN-391
+  "/pkgfs/packages/audio_device_tests/0/test/audio_device_tests",
+  # MF-490
+  "/pkgfs/packages/modular_integration_tests/0/test/login_override_test",
 ]
