@@ -43,11 +43,12 @@ class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu:
     msd_notification_t notification;
   };
 
-  ZirconPlatformConnection(std::unique_ptr<Delegate> delegate, zx::channel server_endpoint,
-                           zx::channel client_endpoint, zx::channel server_notification_endpoint,
+  ZirconPlatformConnection(std::unique_ptr<Delegate> delegate, msd_client_id_t client_id,
+                           zx::channel server_endpoint, zx::channel client_endpoint,
+                           zx::channel server_notification_endpoint,
                            zx::channel client_notification_endpoint,
                            std::shared_ptr<magma::PlatformEvent> shutdown_event)
-      : magma::PlatformConnection(shutdown_event),
+      : magma::PlatformConnection(shutdown_event, client_id),
         delegate_(std::move(delegate)),
         client_endpoint_(std::move(client_endpoint)),
         server_notification_endpoint_(std::move(server_notification_endpoint)),
@@ -292,7 +293,7 @@ class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu:
 };
 
 std::shared_ptr<PlatformConnection> PlatformConnection::Create(
-    std::unique_ptr<PlatformConnection::Delegate> delegate) {
+    std::unique_ptr<PlatformConnection::Delegate> delegate, msd_client_id_t client_id) {
   if (!delegate)
     return DRETP(nullptr, "attempting to create PlatformConnection with null delegate");
 
@@ -313,7 +314,7 @@ std::shared_ptr<PlatformConnection> PlatformConnection::Create(
     return DRETP(nullptr, "Failed to create shutdown event");
 
   auto connection = std::make_shared<ZirconPlatformConnection>(
-      std::move(delegate), std::move(server_endpoint), std::move(client_endpoint),
+      std::move(delegate), client_id, std::move(server_endpoint), std::move(client_endpoint),
       std::move(server_notification_endpoint), std::move(client_notification_endpoint),
       std::shared_ptr<magma::PlatformEvent>(std::move(shutdown_event)));
 

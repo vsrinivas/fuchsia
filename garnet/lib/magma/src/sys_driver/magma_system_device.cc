@@ -23,8 +23,10 @@ std::shared_ptr<magma::PlatformConnection> MagmaSystemDevice::Open(
   if (!msd_connection)
     return DRETP(nullptr, "msd_device_open failed");
 
-  return magma::PlatformConnection::Create(std::make_unique<MagmaSystemConnection>(
-      std::move(device), MsdConnectionUniquePtr(msd_connection)));
+  return magma::PlatformConnection::Create(
+      std::make_unique<MagmaSystemConnection>(std::move(device),
+                                              MsdConnectionUniquePtr(msd_connection)),
+      client_id);
 }
 
 void MagmaSystemDevice::StartConnectionThread(

@@ -49,12 +49,14 @@ class PlatformConnection {
                                                    uint64_t* semaphore_ids) = 0;
   };
 
-  PlatformConnection(std::shared_ptr<magma::PlatformEvent> shutdown_event)
-      : shutdown_event_(std::move(shutdown_event)) {}
+  PlatformConnection(std::shared_ptr<magma::PlatformEvent> shutdown_event,
+                     msd_client_id_t client_id)
+      : client_id_(client_id), shutdown_event_(std::move(shutdown_event)) {}
 
   virtual ~PlatformConnection() {}
 
-  static std::shared_ptr<PlatformConnection> Create(std::unique_ptr<Delegate> Delegate);
+  static std::shared_ptr<PlatformConnection> Create(std::unique_ptr<Delegate> Delegate,
+                                                    msd_client_id_t client_id);
   virtual uint32_t GetClientEndpoint() = 0;
   // This handle is used to asynchronously return information to the client.
   virtual uint32_t GetClientNotificationEndpoint() = 0;
@@ -66,7 +68,8 @@ class PlatformConnection {
   std::shared_ptr<magma::PlatformEvent> ShutdownEvent() { return shutdown_event_; }
 
   static void RunLoop(std::shared_ptr<magma::PlatformConnection> connection) {
-    magma::PlatformThreadHelper::SetCurrentThreadName("ConnectionThread");
+    magma::PlatformThreadHelper::SetCurrentThreadName("ConnectionThread " +
+                                                      std::to_string(connection->client_id_));
     while (connection->HandleRequest())
       ;
     // the runloop terminates when the remote closes, or an error is experienced
@@ -74,6 +77,7 @@ class PlatformConnection {
   }
 
  private:
+  msd_client_id_t client_id_;
   std::shared_ptr<magma::PlatformEvent> shutdown_event_;
 };
 

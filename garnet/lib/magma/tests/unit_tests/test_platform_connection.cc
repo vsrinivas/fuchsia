@@ -191,8 +191,7 @@ class TestPlatformConnection {
 
  private:
   static void IpcThreadFunc(std::shared_ptr<magma::PlatformConnection> connection) {
-    while (connection->HandleRequest())
-      ;
+    magma::PlatformConnection::RunLoop(connection);
   }
 
   std::unique_ptr<magma::PlatformConnectionClient> client_connection_;
@@ -334,6 +333,9 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
     TestPlatformConnection::test_complete =
         immediate_commands_bytes_executed_ == kImmediateCommandSize * kImmediateCommandCount;
 
+    // Also check thread name
+    EXPECT_EQ("ConnectionThread 1", magma::PlatformThreadHelper::GetCurrentThreadName());
+
     return MAGMA_STATUS_OK;
   }
 
@@ -349,7 +351,7 @@ std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create() {
   got_null_notification = false;
   auto delegate = std::make_unique<TestDelegate>();
 
-  auto connection = magma::PlatformConnection::Create(std::move(delegate));
+  auto connection = magma::PlatformConnection::Create(std::move(delegate), 1u);
   if (!connection)
     return DRETP(nullptr, "failed to create PlatformConnection");
   auto client_connection = magma::PlatformConnectionClient::Create(
