@@ -11,9 +11,6 @@ rustc_library("fidl") {
   with_unit_tests = true
   edition = "2018"
   deps = [
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
@@ -22,6 +19,13 @@ rustc_library("fidl") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:slab",
   ]
+  if (is_fuchsia) {
+    deps += [
+      "//garnet/public/rust/fuchsia-async",
+      "//garnet/public/rust/fuchsia-syslog",
+      "//garnet/public/rust/fuchsia-zircon",
+    ]
+  }
 }
 
 # not actually used-- just to ensure successful compilation

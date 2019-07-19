@@ -6,9 +6,11 @@
 
 use {
     failure::Fail,
-    fuchsia_zircon as zx,
     std::{io, result},
 };
+
+#[cfg(target_os = "fuchsia")]
+use fuchsia_zircon as zx;
 
 /// A specialized `Result` type for FIDL operations.
 pub type Result<T> = result::Result<T, Error>;
@@ -103,6 +105,7 @@ pub enum Error {
     InvalidResponseTxid,
 
     /// A FIDL server encountered an IO error writing a response to a channel.
+    #[cfg(target_os = "fuchsia")]
     #[fail(
         display = "A server encountered an IO error writing a FIDL response to a channel: {}",
         _0
@@ -110,6 +113,7 @@ pub enum Error {
     ServerResponseWrite(#[cause] zx::Status),
 
     /// A FIDL server encountered an IO error reading incoming requests from a channel.
+    #[cfg(target_os = "fuchsia")]
     #[fail(
         display = "A FIDL server encountered an IO error reading incoming FIDL requests from a channel: {}",
         _0
@@ -117,6 +121,7 @@ pub enum Error {
     ServerRequestRead(#[cause] zx::Status),
 
     /// A FIDL client encountered an IO error reading a response from a channel.
+    #[cfg(target_os = "fuchsia")]
     #[fail(
         display = "A FIDL client encountered an IO error reading a response from a channel: {}",
         _0
@@ -124,6 +129,7 @@ pub enum Error {
     ClientRead(#[cause] zx::Status),
 
     /// A FIDL client encountered an IO error writing a request to a channel.
+    #[cfg(target_os = "fuchsia")]
     #[fail(
         display = "A FIDL client encountered an IO error writing a request into a channel: {}",
         _0
@@ -131,6 +137,7 @@ pub enum Error {
     ClientWrite(#[cause] zx::Status),
 
     /// There was an error creating a channel to be used for a FIDL client-server pair.
+    #[cfg(target_os = "fuchsia")]
     #[fail(
         display = "There was an error creating a channel to be used for a FIDL client-server pair: {}",
         _0
@@ -142,6 +149,7 @@ pub enum Error {
     AsyncChannel(#[cause] io::Error),
 
     /// There was a miscellaneous io::Error during a test.
+    #[cfg(target_os = "fuchsia")]
     #[cfg(test)]
     #[fail(display = "Test zx::Status: {}", _0)]
     TestIo(#[cause] zx::Status),

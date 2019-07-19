@@ -9,6 +9,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 rustc_library("fuchsia-zircon") {
+  assert(is_fuchsia)
   version = "0.3.3"
   edition = "2018"
   deps = [

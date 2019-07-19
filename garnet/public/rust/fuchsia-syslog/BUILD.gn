@@ -7,6 +7,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 rustc_library("fuchsia-syslog") {
+  assert(is_fuchsia)
   name = "fuchsia_syslog"
   version = "0.1.0"
   edition = "2018"
