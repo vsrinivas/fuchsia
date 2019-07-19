@@ -230,9 +230,14 @@ pub(crate) mod options {
         Mtu: MTU = 5,
     }
 
+    /// Prefix information that is advertised by a router in Router Advertisements.
+    ///
+    /// See [RFC 4861 section 4.6.2].
+    ///
+    /// [RFC 4861 section 4.6.2]: https://tools.ietf.org/html/rfc4861#section-4.6.2
     #[derive(Debug, FromBytes, AsBytes, Unaligned, PartialEq, Eq, Clone)]
     #[repr(C)]
-    pub(crate) struct PrefixInformation {
+    pub struct PrefixInformation {
         prefix_length: u8,
         flags_la: u8,
         valid_lifetime: U32,

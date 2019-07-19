@@ -20,7 +20,8 @@
 
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
-use std::num::NonZeroU8;
+use std::num::{NonZeroU16, NonZeroU32, NonZeroU8};
+use std::ops::RangeInclusive;
 use std::time::Duration;
 
 use log::{debug, error, trace};
@@ -34,13 +35,35 @@ use zerocopy::ByteSlice;
 use crate::device::ethernet::EthernetNdpDevice;
 use crate::device::{DeviceId, DeviceLayerTimerId, DeviceProtocol, Tentative};
 use crate::ip::{IpDeviceIdContext, IpProto};
-use crate::wire::icmp::ndp::options::NdpOption;
+use crate::wire::icmp::ndp::options::{NdpOption, PrefixInformation};
 use crate::wire::icmp::ndp::{
     self, NeighborAdvertisement, NeighborSolicitation, Options, RouterSolicitation,
 };
 use crate::wire::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode, Icmpv6Packet};
 use crate::wire::ipv6::Ipv6PacketBuilder;
 use crate::{Context, EventDispatcher, StackState, TimerId, TimerIdInner};
+
+//
+// Default Router configurations
+//
+// See [`NdpRouterConfigurations`] for more details.
+//
+
+// Note that AdvSendAdvertisements MUST be FALSE by default so that a node will not accidentally
+// start acting as a default router. Nodes must be explicitly configured by system management to
+// send Router Advertisements.
+const SHOULD_SEND_ADVERTISEMENTS_DEFAULT: bool = false;
+const ROUTER_ADVERTISEMENTS_INTERVAL_DEFAULT: RangeInclusive<u16> = 200..=600;
+const ADVERTISED_MANAGED_FLAG_DEFAULT: bool = false;
+const ADVERTISED_OTHER_CONFIG_FLAG: bool = false;
+const ADVERTISED_LINK_MTU: Option<NonZeroU32> = None;
+const ADVERTISED_REACHABLE_TIME: u32 = 0;
+const ADVERTISED_RETRANSMIT_TIMER: u32 = 0;
+const ADVERTISED_CURRENT_HOP_LIMIT: u8 = 64;
+// This call to `new_unchecked` is okay becase 1800 is non-zero, so we will not be violating
+// `NonZeroU16`'s contract.
+const ADVERTISED_DEFAULT_LIFETIME: Option<NonZeroU16> =
+    unsafe { Some(NonZeroU16::new_unchecked(1800)) };
 
 /// The number of NS messages to be sent to perform DAD
 /// [RFC 4862 section 5.1]
@@ -349,6 +372,11 @@ pub struct NdpConfigurations {
     ///
     /// Default: [`MAX_RTR_SOLICITATIONS`].
     max_router_solicitations: Option<NonZeroU8>,
+
+    /// Interface specific router configurations used by NDP.
+    ///
+    /// See [`NdpRouterConfigurations`] for more details.
+    router_configurations: NdpRouterConfigurations,
 }
 
 impl Default for NdpConfigurations {
@@ -356,16 +384,27 @@ impl Default for NdpConfigurations {
         Self {
             dup_addr_detect_transmits: NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS),
             max_router_solicitations: NonZeroU8::new(MAX_RTR_SOLICITATIONS),
+            router_configurations: NdpRouterConfigurations::default(),
         }
     }
 }
 
 impl NdpConfigurations {
+    /// Get the value for NDP's DUP_ADDR_DETECT_TRANSMITS parameter.
+    pub fn get_dup_addr_detect_transmits(&self) -> Option<NonZeroU8> {
+        self.dup_addr_detect_transmits
+    }
+
     /// Set the value for NDP's DUP_ADDR_DETECT_TRANSMITS parameter.
     ///
-    /// A value of `None` means DAD wil not be performed on the interface.
-    pub(crate) fn set_dup_addr_detect_transmits(&mut self, v: Option<NonZeroU8>) {
+    /// A value of `None` means DAD will not be performed on the interface.
+    pub fn set_dup_addr_detect_transmits(&mut self, v: Option<NonZeroU8>) {
         self.dup_addr_detect_transmits = v;
+    }
+
+    /// Get the value for NDP's MAX_RTR_SOLICITATIONS parameter.
+    pub fn get_max_router_solicitations(&self) -> Option<NonZeroU8> {
+        self.max_router_solicitations
     }
 
     /// Set the value for NDP's MAX_RTR_SOLICITATIONS parameter.
@@ -373,7 +412,7 @@ impl NdpConfigurations {
     /// A value of `None` means no router solicitations will be sent.
     /// `MAX_RTR_SOLICITATIONS` is the maximum possible value; values
     /// will be saturated at `MAX_RTR_SOLICITATIONS`.
-    pub(crate) fn set_max_router_solicitations(&mut self, mut v: Option<NonZeroU8>) {
+    pub fn set_max_router_solicitations(&mut self, mut v: Option<NonZeroU8>) {
         if let Some(inner) = v {
             if inner.get() > MAX_RTR_SOLICITATIONS {
                 v = NonZeroU8::new(MAX_RTR_SOLICITATIONS);
@@ -382,8 +421,384 @@ impl NdpConfigurations {
 
         self.max_router_solicitations = v;
     }
+
+    /// Get the router configurations used by NDP.
+    pub fn get_router_configurations(&self) -> &NdpRouterConfigurations {
+        &self.router_configurations
+    }
+
+    /// Set the router configurations used by NDP.
+    ///
+    /// Note, unless the device is operating as a router (both netstack and the device has
+    /// forwarding enabled (See [`crate::device::can_forward`]), these values will not be
+    /// used. However, if a device or netstack configuration update occurs and the device
+    /// ends up operating as a router, these values will be used for Router Advertisements.
+    pub fn set_router_configurations(&mut self, v: NdpRouterConfigurations) {
+        self.router_configurations = v;
+    }
 }
 
+/// Interface specific router configurations used by NDP.
+///
+/// See [RFC 4861 section 6.2] for more information.
+///
+/// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+#[derive(Debug, Clone)]
+pub struct NdpRouterConfigurations {
+    /// A flag indicating whether or not the router sends periodic Router Advertisements and
+    /// responds to Router Solicitations.
+    ///
+    /// Default: false.
+    ///
+    /// Note that AdvSendAdvertisements MUST be FALSE by default so that a node will not
+    /// accidentally start acting as a default router. Nodes must be explicitly configured
+    /// by system management to send Router Advertisements.
+    ///
+    /// See AdvSendAdvertisements in RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    should_send_advertisements: bool,
+
+    /// The range of time allowed between sending unsolicited multicast Router Advertisements from
+    /// the interface, in seconds.
+    ///
+    /// Maximum time MUST be no less than 4 seconds and no greater than 1800 seconds. Minimum time
+    /// MUST be no less than 3 seconds and no greater than 0.75 * maximum time.
+    ///
+    /// Default: [200, 600].
+    ///
+    /// See MaxRtrAdvInterval and MinRtrAdvInterval in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    router_advertisements_interval: RangeInclusive<u16>,
+
+    /// The value to be placed in the "Managed address configuration" flag field in the Router
+    /// Advertisement.
+    ///
+    /// Default: false.
+    ///
+    /// See AdvManagedFlag in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    advertised_managed_flag: bool,
+
+    /// The value to be placed in the "Other configuration" flag field in the Router Advertisement.
+    ///
+    /// Default: false.
+    ///
+    /// See AdvOtherConfigFlag in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    advertised_other_config_flag: bool,
+
+    /// The value to be placed in the MTU options sent by the router. A value of `None` indicates
+    /// that no MTU options are sent.
+    ///
+    /// Default: None.
+    ///
+    /// See AdvLinkMTU in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    advertised_link_mtu: Option<NonZeroU32>,
+
+    /// The value to be placed in the Reachable Time field in the Router Advertisement messages sent
+    /// by the router, in milliseconds. A value of 0 means unspecified (by this router).
+    ///
+    /// The value MUST be no greater than 3600000 milliseconds (1 hour).
+    ///
+    /// Default: 0.
+    ///
+    /// See AdvReachableTime in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    advertised_reachable_time: u32,
+
+    /// The value to be placed in the Retrans Timer field in the Router Advertisement messages sent
+    /// by the router. The value 0 means unspecified (by this router).
+    ///
+    /// Default: 0.
+    ///
+    /// See AdvRetransTimer in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    advertised_retransmit_timer: u32,
+
+    /// The default value to be placed in the Cur Hop Limit field in the Router Advertisement
+    /// messages sent by the router. The value should be set to the current diameter of the
+    /// Internet.  The value zero means unspecified (by this router).
+    ///
+    /// Default: [`HOP_LIMIT_DEFAULT`].
+    ///
+    /// See AdvCurHopLimit in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    advertised_current_hop_limit: u8,
+
+    /// The value to be placed in the Router Lifetime field of Router Advertisements sent from the
+    /// interface, in seconds. MUST be either zero or between MaxRtrAdvInterval and 9000 seconds.
+    /// A value of zero indicates that the router is not to be used as a default router.
+    ///
+    /// Default: 1800.
+    ///
+    /// See AdvDefaultLifetime in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    advertised_default_lifetime: Option<NonZeroU16>,
+
+    /// A list of prefixes to be placed in Prefix Information options in Router Advertisement
+    /// messages sent from the interface.
+    ///
+    /// Note, the link-local prefix SHOULD NOT be included in the list of advertised prefixes.
+    ///
+    /// See AdvPrefixList in in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    advertised_prefix_list: Vec<PrefixInformation>,
+}
+
+impl Default for NdpRouterConfigurations {
+    fn default() -> Self {
+        Self {
+            should_send_advertisements: SHOULD_SEND_ADVERTISEMENTS_DEFAULT,
+            router_advertisements_interval: ROUTER_ADVERTISEMENTS_INTERVAL_DEFAULT,
+            advertised_managed_flag: ADVERTISED_MANAGED_FLAG_DEFAULT,
+            advertised_other_config_flag: ADVERTISED_OTHER_CONFIG_FLAG,
+            advertised_link_mtu: ADVERTISED_LINK_MTU,
+            advertised_reachable_time: ADVERTISED_REACHABLE_TIME,
+            advertised_retransmit_timer: ADVERTISED_RETRANSMIT_TIMER,
+            advertised_current_hop_limit: ADVERTISED_CURRENT_HOP_LIMIT,
+            advertised_default_lifetime: ADVERTISED_DEFAULT_LIFETIME,
+            advertised_prefix_list: Vec::new(),
+        }
+    }
+}
+
+impl NdpRouterConfigurations {
+    /// Get enable/disable status of sending periodic Router Advertisements and responding to Router
+    /// Solicitations.
+    pub fn get_should_send_advertisements(&self) -> bool {
+        self.should_send_advertisements
+    }
+
+    /// Enable/disable sending periodic Router Advertisements and responding to Router
+    /// Solicitations.
+    ///
+    /// See AdvSendAdvertisements in RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    pub fn set_should_send_advertisements(&mut self, v: bool) {
+        self.should_send_advertisements = v;
+    }
+
+    /// Get the range of time allowed between sending unsolicited multicast Router Advertisements
+    /// from the interface, in seconds.
+    pub fn get_router_advertisements_interval(&self) -> RangeInclusive<u16> {
+        self.router_advertisements_interval.clone()
+    }
+
+    /// Set the range of time allowed between sending unsolicited multicast Router Advertisements
+    /// from the interface, in seconds.
+    ///
+    /// Maximum time MUST be no less than 4 seconds and no greater than 1800 seconds. Minimum time
+    /// MUST be no less than 3 seconds and no greater than 0.75 * maximum time.
+    ///
+    /// If AdvDefaultLifetime is currently less than the new maximum time between sending
+    /// unsolicited Router Advertisements, AdvDefaultLifetime will be updated to the new maximum
+    /// time value.
+    ///
+    /// See MaxRtrAdvInterval and MinRtrAdvInterval in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    pub fn set_router_advertisements_interval(&mut self, v: RangeInclusive<u16>) {
+        let start = *v.start();
+        let end = *v.end();
+        let start_upper_bound = (end * 3) / 4;
+
+        if end < 4 {
+            trace!("set_router_advertisements_interval: maximum time of {:?}s is less than 4s, ignoring", end);
+            return;
+        } else if end > 1800 {
+            trace!("set_router_advertisements_interval: maximum time of {:?}s is greater than 1800s, ignoring", end);
+            return;
+        } else if start < 3 {
+            trace!("set_router_advertisements_interval: minimum time of {:?}s is less than 3s, ignoring", start);
+            return;
+        } else if start > start_upper_bound {
+            trace!("set_router_advertisements_interval: minimum time of {:?}s is greater than 0.75 * maximum time of {:?}s ( = {:?}s, ignoring", start, end, start_upper_bound);
+            return;
+        }
+
+        if let Some(v) = self.advertised_default_lifetime {
+            if v.get() < end {
+                trace!("set_router_advertisements_interval: router_advertiements_interval of {:?} is less than new maximum router advertisements interval, setting to new max of {:?}", v.get(), end);
+                self.advertised_default_lifetime = NonZeroU16::new(end);
+            }
+        }
+
+        self.router_advertisements_interval = v;
+    }
+
+    /// Get the value to be placed in the "Managed address configuration" flag field in the Router
+    /// Advertisement.
+    pub fn get_advertised_managed_flag(&self) -> bool {
+        self.advertised_managed_flag
+    }
+
+    /// Set the value to be placed in the "Managed address configuration" flag field in the Router
+    /// Advertisement.
+    ///
+    /// See AdvManagedFlag in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    pub fn set_advertised_managed_flag(&mut self, v: bool) {
+        self.advertised_managed_flag = v;
+    }
+
+    /// Get the value to be placed in the "Other configuration" flag field in the Router
+    /// Advertisement.
+    pub fn get_advertised_other_config_flag(&self) -> bool {
+        self.advertised_other_config_flag
+    }
+
+    /// Set the value to be placed in the "Other configuration" flag field in the Router
+    /// Advertisement.
+    ///
+    /// See AdvOtherConfigFlag in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    pub fn set_advertised_other_config_flag(&mut self, v: bool) {
+        self.advertised_other_config_flag = v;
+    }
+
+    /// Get the value to be placed in the MTU options sent by the router. A value of `None`
+    /// indicates that no MTU options are sent.
+    pub fn get_advertised_link_mtu(&self) -> Option<NonZeroU32> {
+        self.advertised_link_mtu
+    }
+
+    /// Set the value to be placed in the MTU options sent by the router. A value of `None`
+    /// indicates that no MTU options are sent.
+    ///
+    /// See AdvLinkMTU in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    pub fn set_advertised_link_mtu(&mut self, v: Option<NonZeroU32>) {
+        self.advertised_link_mtu = v;
+    }
+
+    /// Get the value to be placed in the Reachable Time field in the Router Advertisement messages
+    /// sent by the router, in milliseconds. A value of 0 means unspecified (by this router).
+    pub fn get_advertised_reachable_time(&self) -> u32 {
+        self.advertised_reachable_time
+    }
+
+    /// Set the value to be placed in the Reachable Time field in the Router Advertisement messages
+    /// sent by the router, in milliseconds. A value of 0 means unspecified (by this router).
+    ///
+    /// The value MUST be no greater than 3600000 milliseconds (1 hour).
+    ///
+    /// See AdvReachableTime in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    pub fn set_advertised_reachable_time(&mut self, v: u32) {
+        if v > 3600000 {
+            trace!("set_advertised_reachable_time: value of {:?} greater than 3600000ms (1hr), ignoring", v);
+            return;
+        }
+
+        self.advertised_reachable_time = v;
+    }
+
+    /// Get the value to be placed in the Retrans Timer field in the Router Advertisement messages
+    /// sent by the router. The value 0 means unspecified (by this router).
+    pub fn get_advertised_retransmit_timer(&self) -> u32 {
+        self.advertised_retransmit_timer
+    }
+
+    /// Set the value to be placed in the Retrans Timer field in the Router Advertisement messages
+    /// sent by the router. The value 0 means unspecified (by this router).
+    ///
+    /// See AdvRetransTimer in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    pub fn set_advertised_retransmit_timer(&mut self, v: u32) {
+        self.advertised_retransmit_timer = v;
+    }
+
+    /// Get the default value to be placed in the Cur Hop Limit field in the Router Advertisement
+    /// messages sent by the router. The value should be set to the current diameter of the
+    /// Internet.  The value zero means unspecified (by this router).
+    pub fn get_advertised_current_hop_limit(&self) -> u8 {
+        self.advertised_current_hop_limit
+    }
+
+    /// Set the default value to be placed in the Cur Hop Limit field in the Router Advertisement
+    /// messages sent by the router. The value should be set to the current diameter of the
+    /// Internet.  The value zero means unspecified (by this router).
+    ///
+    /// See AdvCurHopLimit in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    pub fn set_advertised_current_hop_limit(&mut self, v: u8) {
+        self.advertised_current_hop_limit = v;
+    }
+
+    /// Get the value to be placed in the Router Lifetime field of Router Advertisements sent from
+    /// the interface, in seconds. MUST be either zero or between MaxRtrAdvInterval and 9000
+    /// seconds. A value of zero indicates that the router is not to be used as a default router.
+    pub fn get_advertised_default_lifetime(&self) -> Option<NonZeroU16> {
+        self.advertised_default_lifetime
+    }
+
+    /// Set the value to be placed in the Router Lifetime field of Router Advertisements sent from
+    /// the interface, in seconds. MUST be either zero or between MaxRtrAdvInterval and 9000
+    /// seconds. A value of zero indicates that the router is not to be used as a default router.
+    ///
+    /// See AdvDefaultLifetime in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    pub fn set_advertised_default_lifetime(&mut self, v: Option<NonZeroU16>) {
+        if let Some(v) = v {
+            let v = v.get();
+
+            let lower_bound = *self.router_advertisements_interval.end();
+
+            if v < lower_bound {
+                trace!("set_advertised_default_lifetime: value of {:?} less than MaxRtrAdvInterval of {:?}, ignoring", v, lower_bound);
+                return;
+            } else if v > 9000 {
+                trace!(
+                    "set_advertised_default_lifetime: value of {:?} less than 9000s, ignoring",
+                    v
+                );
+                return;
+            }
+        }
+
+        self.advertised_default_lifetime = v;
+    }
+
+    /// Get the list of prefixes to be placed in Prefix Information options in Router Advertisement
+    /// messages sent from the interface.
+    pub fn get_advertised_prefix_list(&self) -> &Vec<PrefixInformation> {
+        &self.advertised_prefix_list
+    }
+
+    /// Set the list of prefixes to be placed in Prefix Information options in Router Advertisement
+    /// messages sent from the interface.
+    ///
+    /// Note, the link-local prefix SHOULD NOT be included in the list of advertised prefixes.
+    ///
+    /// See AdvPrefixList in in [RFC 4861 section 6.2] for more information.
+    ///
+    /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
+    pub fn set_advertised_prefix_list(&mut self, v: Vec<PrefixInformation>) {
+        // TODO(ghanan): Check for duplicates.
+        self.advertised_prefix_list = v;
+    }
+}
+
+/// The state associated with an instance of the Neighbor Discovery Protocol
 /// (NDP).
 ///
 /// Each device will contain an `NdpState` object to keep track of discovery
@@ -1978,32 +2393,399 @@ mod tests {
             .into_inner()
     }
 
+    fn check_router_config(
+        c: &NdpRouterConfigurations,
+        should_send: bool,
+        interval: RangeInclusive<u16>,
+        managed: bool,
+        other_config: bool,
+        mtu: Option<NonZeroU32>,
+        reachable_time: u32,
+        retransmit_timer: u32,
+        hop_limit: u8,
+        default_lifetime: Option<NonZeroU16>,
+        prefix_list: &Vec<PrefixInformation>,
+    ) {
+        assert_eq!(c.get_should_send_advertisements(), should_send);
+        assert_eq!(c.get_router_advertisements_interval(), interval);
+        assert_eq!(c.get_advertised_managed_flag(), managed);
+        assert_eq!(c.get_advertised_other_config_flag(), other_config);
+        assert_eq!(c.get_advertised_link_mtu(), mtu);
+        assert_eq!(c.get_advertised_reachable_time(), reachable_time);
+        assert_eq!(c.get_advertised_retransmit_timer(), retransmit_timer);
+        assert_eq!(c.get_advertised_current_hop_limit(), hop_limit);
+        assert_eq!(c.get_advertised_default_lifetime(), default_lifetime);
+        assert_eq!(c.get_advertised_prefix_list(), prefix_list);
+    }
+
     #[test]
     fn test_ndp_configurations() {
-        let mut configs = NdpConfigurations::default();
-        assert_eq!(configs.dup_addr_detect_transmits, NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS));
-        assert_eq!(configs.max_router_solicitations, NonZeroU8::new(MAX_RTR_SOLICITATIONS));
+        let prefix = Vec::new();
+        let def_life = NonZeroU16::new(1800);
 
-        configs.set_dup_addr_detect_transmits(None);
-        assert_eq!(configs.dup_addr_detect_transmits, None);
-        assert_eq!(configs.max_router_solicitations, NonZeroU8::new(MAX_RTR_SOLICITATIONS));
+        let mut c = NdpConfigurations::default();
+        assert_eq!(c.get_dup_addr_detect_transmits(), NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS));
+        assert_eq!(c.get_max_router_solicitations(), NonZeroU8::new(MAX_RTR_SOLICITATIONS));
 
-        configs.set_dup_addr_detect_transmits(NonZeroU8::new(100));
-        assert_eq!(configs.dup_addr_detect_transmits, NonZeroU8::new(100));
-        assert_eq!(configs.max_router_solicitations, NonZeroU8::new(MAX_RTR_SOLICITATIONS));
+        c.set_dup_addr_detect_transmits(None);
+        assert_eq!(c.get_dup_addr_detect_transmits(), None);
+        assert_eq!(c.get_max_router_solicitations(), NonZeroU8::new(MAX_RTR_SOLICITATIONS));
+        check_router_config(
+            c.get_router_configurations(),
+            false,
+            200..=600,
+            false,
+            false,
+            None,
+            0,
+            0,
+            64,
+            def_life,
+            &prefix,
+        );
 
-        configs.set_max_router_solicitations(None);
-        assert_eq!(configs.dup_addr_detect_transmits, NonZeroU8::new(100));
-        assert_eq!(configs.max_router_solicitations, None);
+        c.set_dup_addr_detect_transmits(NonZeroU8::new(100));
+        assert_eq!(c.get_dup_addr_detect_transmits(), NonZeroU8::new(100));
+        assert_eq!(c.get_max_router_solicitations(), NonZeroU8::new(MAX_RTR_SOLICITATIONS));
+        check_router_config(
+            c.get_router_configurations(),
+            false,
+            200..=600,
+            false,
+            false,
+            None,
+            0,
+            0,
+            64,
+            def_life,
+            &prefix,
+        );
 
-        configs.set_max_router_solicitations(NonZeroU8::new(2));
-        assert_eq!(configs.dup_addr_detect_transmits, NonZeroU8::new(100));
-        assert_eq!(configs.max_router_solicitations, NonZeroU8::new(2));
+        c.set_max_router_solicitations(None);
+        assert_eq!(c.get_dup_addr_detect_transmits(), NonZeroU8::new(100));
+        assert_eq!(c.get_max_router_solicitations(), None);
+        check_router_config(
+            c.get_router_configurations(),
+            false,
+            200..=600,
+            false,
+            false,
+            None,
+            0,
+            0,
+            64,
+            def_life,
+            &prefix,
+        );
+
+        c.set_max_router_solicitations(NonZeroU8::new(2));
+        assert_eq!(c.get_dup_addr_detect_transmits(), NonZeroU8::new(100));
+        assert_eq!(c.get_max_router_solicitations(), NonZeroU8::new(2));
+        check_router_config(
+            c.get_router_configurations(),
+            false,
+            200..=600,
+            false,
+            false,
+            None,
+            0,
+            0,
+            64,
+            def_life,
+            &prefix,
+        );
 
         // Max Router Solicitations gets saturated at `MAX_RTR_SOLICITATIONS`.
-        configs.set_max_router_solicitations(NonZeroU8::new(5));
-        assert_eq!(configs.dup_addr_detect_transmits, NonZeroU8::new(100));
-        assert_eq!(configs.max_router_solicitations, NonZeroU8::new(MAX_RTR_SOLICITATIONS));
+        c.set_max_router_solicitations(NonZeroU8::new(5));
+        assert_eq!(c.get_dup_addr_detect_transmits(), NonZeroU8::new(100));
+        assert_eq!(c.get_max_router_solicitations(), NonZeroU8::new(MAX_RTR_SOLICITATIONS));
+        check_router_config(
+            c.get_router_configurations(),
+            false,
+            200..=600,
+            false,
+            false,
+            None,
+            0,
+            0,
+            64,
+            def_life,
+            &prefix,
+        );
+
+        let mut rc = NdpRouterConfigurations::default();
+        rc.set_should_send_advertisements(true);
+        rc.set_router_advertisements_interval(3..=4);
+        rc.set_advertised_reachable_time(3600000);
+        c.set_router_configurations(rc);
+        assert_eq!(c.get_dup_addr_detect_transmits(), NonZeroU8::new(100));
+        assert_eq!(c.get_max_router_solicitations(), NonZeroU8::new(MAX_RTR_SOLICITATIONS));
+        check_router_config(
+            c.get_router_configurations(),
+            true,
+            3..=4,
+            false,
+            false,
+            None,
+            3600000,
+            0,
+            64,
+            def_life,
+            &prefix,
+        );
+    }
+
+    #[test]
+    fn test_ndp_router_configurations() {
+        let prefix = Vec::new();
+        let def_life = NonZeroU16::new(1800);
+
+        let mut c = NdpRouterConfigurations::default();
+        check_router_config(&c, false, 200..=600, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        c.set_should_send_advertisements(true);
+        check_router_config(&c, true, 200..=600, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        c.set_should_send_advertisements(false);
+        check_router_config(&c, false, 200..=600, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        c.set_router_advertisements_interval(3..=4);
+        check_router_config(&c, false, 3..=4, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        c.set_router_advertisements_interval(300..=500);
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        // Max cannot be less than 4.
+        c.set_router_advertisements_interval(3..=3);
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        // Max cannot be greater than 1800
+        c.set_router_advertisements_interval(3..=2000);
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        // Min cannot be less than 3.
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 64, def_life, &prefix);
+        c.set_router_advertisements_interval(2..=500);
+
+        // Min cannot be greater than 0.75 * max
+        c.set_router_advertisements_interval(301..=400);
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        // Min cannot be less than max
+        c.set_router_advertisements_interval(300..=200);
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        c.set_advertised_managed_flag(true);
+        check_router_config(&c, false, 300..=500, true, false, None, 0, 0, 64, def_life, &prefix);
+
+        c.set_advertised_managed_flag(false);
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        c.set_advertised_other_config_flag(true);
+        check_router_config(&c, false, 300..=500, false, true, None, 0, 0, 64, def_life, &prefix);
+
+        c.set_advertised_other_config_flag(false);
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        c.set_advertised_link_mtu(NonZeroU32::new(1500));
+        check_router_config(
+            &c,
+            false,
+            300..=500,
+            false,
+            false,
+            NonZeroU32::new(1500),
+            0,
+            0,
+            64,
+            def_life,
+            &prefix,
+        );
+
+        c.set_advertised_link_mtu(None);
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        c.set_advertised_reachable_time(500);
+        check_router_config(
+            &c,
+            false,
+            300..=500,
+            false,
+            false,
+            None,
+            500,
+            0,
+            64,
+            def_life,
+            &prefix,
+        );
+
+        c.set_advertised_reachable_time(3600000);
+        check_router_config(
+            &c,
+            false,
+            300..=500,
+            false,
+            false,
+            None,
+            3600000,
+            0,
+            64,
+            def_life,
+            &prefix,
+        );
+
+        // cannot be greater than 3600000
+        c.set_advertised_reachable_time(3600001);
+        check_router_config(
+            &c,
+            false,
+            300..=500,
+            false,
+            false,
+            None,
+            3600000,
+            0,
+            64,
+            def_life,
+            &prefix,
+        );
+
+        c.set_advertised_reachable_time(0);
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        c.set_advertised_retransmit_timer(500);
+        check_router_config(
+            &c,
+            false,
+            300..=500,
+            false,
+            false,
+            None,
+            0,
+            500,
+            64,
+            def_life,
+            &prefix,
+        );
+
+        c.set_advertised_retransmit_timer(0);
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        c.set_advertised_current_hop_limit(50);
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 50, def_life, &prefix);
+
+        c.set_advertised_current_hop_limit(0);
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 0, def_life, &prefix);
+
+        c.set_advertised_current_hop_limit(64);
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 64, def_life, &prefix);
+
+        c.set_advertised_default_lifetime(None);
+        check_router_config(&c, false, 300..=500, false, false, None, 0, 0, 64, None, &prefix);
+
+        c.set_advertised_default_lifetime(NonZeroU16::new(600));
+        check_router_config(
+            &c,
+            false,
+            300..=500,
+            false,
+            false,
+            None,
+            0,
+            0,
+            64,
+            NonZeroU16::new(600),
+            &prefix,
+        );
+
+        // cannot be less than max router advertisement interval
+        c.set_advertised_default_lifetime(NonZeroU16::new(499));
+        check_router_config(
+            &c,
+            false,
+            300..=500,
+            false,
+            false,
+            None,
+            0,
+            0,
+            64,
+            NonZeroU16::new(600),
+            &prefix,
+        );
+
+        // cannot be greater than 9000
+        c.set_advertised_default_lifetime(NonZeroU16::new(9001));
+        check_router_config(
+            &c,
+            false,
+            300..=500,
+            false,
+            false,
+            None,
+            0,
+            0,
+            64,
+            NonZeroU16::new(600),
+            &prefix,
+        );
+
+        // updating router advertisement interval should update default lifetime to max if the new
+        // max is greater than the lifetime.
+        c.set_router_advertisements_interval(300..=800);
+        check_router_config(
+            &c,
+            false,
+            300..=800,
+            false,
+            false,
+            None,
+            0,
+            0,
+            64,
+            NonZeroU16::new(800),
+            &prefix,
+        );
+
+        let prefix = vec![PrefixInformation::new(
+            64,
+            true,
+            false,
+            500,
+            400,
+            Ipv6Addr::new([51, 52, 53, 54, 55, 56, 57, 58, 0, 0, 0, 0, 0, 0, 0, 0]),
+        )];
+        c.set_advertised_prefix_list(prefix.clone());
+        check_router_config(
+            &c,
+            false,
+            300..=800,
+            false,
+            false,
+            None,
+            0,
+            0,
+            64,
+            NonZeroU16::new(800),
+            &prefix,
+        );
+
+        let prefix = Vec::new();
+        c.set_advertised_prefix_list(prefix.clone());
+        check_router_config(
+            &c,
+            false,
+            300..=800,
+            false,
+            false,
+            None,
+            0,
+            0,
+            64,
+            NonZeroU16::new(800),
+            &prefix,
+        );
     }
 
     #[test]
