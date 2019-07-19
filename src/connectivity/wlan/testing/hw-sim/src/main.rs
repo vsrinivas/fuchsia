@@ -21,6 +21,8 @@ mod ap;
 mod config;
 
 #[cfg(test)]
+mod eth_helper;
+#[cfg(test)]
 mod minstrel;
 #[cfg(test)]
 mod test_utils;
@@ -252,17 +254,14 @@ async fn beacon_sender(state: Arc<Mutex<State>>, proxy: wlantap::WlantapPhyProxy
 mod simulation_tests {
     use {
         super::*,
-        crate::{ap, minstrel},
+        crate::{ap, eth_helper::create_eth_client, minstrel},
         failure::ensure,
         fidl_fuchsia_wlan_device_service as wlanstack_dev_svc,
         fidl_fuchsia_wlan_service as fidl_wlan_service, fuchsia_component as app,
-        fuchsia_zircon as zx, fuchsia_zircon_sys,
+        fuchsia_zircon_sys,
         futures::channel::mpsc,
         pin_utils::pin_mut,
-        std::{
-            fs::{self, File},
-            panic,
-        },
+        std::panic,
         wlan_common::{big_endian::BigEndianU16, buffer_reader::BufferReader, data_writer},
     };
 
@@ -577,43 +576,6 @@ mod simulation_tests {
             }
             _ => {}
         }
-    }
-
-    pub async fn create_eth_client(
-        mac: &[u8; 6],
-    ) -> Result<Option<ethernet::Client>, failure::Error> {
-        const ETH_PATH: &str = "/dev/class/ethernet";
-        let files = fs::read_dir(ETH_PATH)?;
-        for file in files {
-            let vmo = zx::Vmo::create(256 * ethernet::DEFAULT_BUFFER_SIZE as u64)?;
-
-            let path = file?.path();
-            let dev = File::open(path)?;
-            if let Ok(client) = await!(ethernet::Client::from_file(
-                dev,
-                vmo,
-                ethernet::DEFAULT_BUFFER_SIZE,
-                "wlan-hw-sim"
-            )) {
-                if let Ok(info) = await!(client.info()) {
-                    if &info.mac.octets == mac {
-                        println!("ethernet client created: {:?}", client);
-                        await!(client.start()).expect("error starting ethernet device");
-                        // must call get_status() after start() to clear
-                        // zx::Signals::USER_0 otherwise there will be a stream
-                        // of infinite StatusChanged events that blocks
-                        // fasync::Interval
-                        println!(
-                            "info: {:?} status: {:?}",
-                            await!(client.info()).expect("calling client.info()"),
-                            await!(client.get_status()).expect("getting client status()")
-                        );
-                        return Ok(Some(client));
-                    }
-                }
-            }
-        }
-        Ok(None)
     }
 
     const BSS_ETHNET: [u8; 6] = [0x65, 0x74, 0x68, 0x6e, 0x65, 0x74];

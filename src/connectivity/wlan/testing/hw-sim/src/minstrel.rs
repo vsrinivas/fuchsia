@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{simulation_tests::*, *},
+    crate::{eth_helper::create_eth_client, simulation_tests::*, *},
     fidl_fuchsia_wlan_service as fidl_wlan_service, fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async as fasync, fuchsia_component as app,
     futures::{channel::mpsc, poll},
