@@ -116,13 +116,6 @@ group("installblob") {
   ]
 }
 
-group("feedback_agent") {
-  testonly = true
-  public_deps = [
-    "//src/developer/feedback_agent",
-  ]
-}
-
 group("auth") {
   testonly = true
   public_deps = [
@@ -214,7 +207,6 @@ group("all") {
     "//garnet/packages/prod:cmdutils",
     "//garnet/packages/prod:cobalt_client",
     "//garnet/packages/prod:cpuperf",
-    "//garnet/packages/prod:crashpad_agent",
     "//garnet/packages/prod:debug_agent",
     "//garnet/packages/prod:debugserver",
     "//garnet/packages/prod:device_settings",
@@ -222,14 +214,12 @@ group("all") {
     "//garnet/packages/prod:drivers",
     "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:far",
-    "//garnet/packages/prod:feedback_agent",
     "//garnet/packages/prod:fonts",
     "//garnet/packages/prod:fortune",
     "//garnet/packages/prod:guest_runner",
     "//garnet/packages/prod:insntrace",
     "//garnet/packages/prod:installblob",
     "//garnet/packages/prod:iquery",
-    "//garnet/packages/prod:kernel_crash_checker",
     "//garnet/packages/prod:log_listener",
     "//garnet/packages/prod:logger",
     "//garnet/packages/prod:magma-arm-mali",
@@ -531,13 +521,6 @@ group("odu") {
   ]
 }
 
-group("kernel_crash_checker") {
-  testonly = true
-  public_deps = [
-    "//src/developer/kernel_crash_checker",
-  ]
-}
-
 group("cobalt_client") {
   testonly = true
   public_deps = [
@@ -583,13 +566,6 @@ group("bluetooth_profiles") {
     "//garnet/packages/prod:bluetooth_a2dp",
     "//garnet/packages/prod:bluetooth_avrcp",
     "//garnet/packages/prod:bluetooth_hid",
-  ]
-}
-
-group("crashpad_agent") {
-  testonly = true
-  public_deps = [
-    "//src/developer/crashpad_agent",
   ]
 }
 

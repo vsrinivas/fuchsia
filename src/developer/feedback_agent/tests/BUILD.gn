@@ -1,9 +1,24 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":feedback_agent_tests",
+
+    # Packages for the components that we are injecting in the integration test.
+    "//garnet/bin/logger",
+    "//garnet/bin/sysmem_connector",
+    "//garnet/bin/system-update-checker",
+    "//garnet/bin/ui:scenic",
+    "//garnet/bin/vulkan_loader",
+    "//src/developer/feedback_agent",
+  ]
+}
 
 test_package("feedback_agent_tests") {
   deprecated_shell = "//build"

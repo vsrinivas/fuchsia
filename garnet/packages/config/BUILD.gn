@@ -35,14 +35,7 @@ group("openssh_keys") {
   ]
 }
 
-group("kernel_crash_checker") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/config:services",
-    "//src/developer/kernel_crash_checker:config",
-  ]
-}
-
+# TODO(DX-1775): move out of garnet, updating all call sites.
 group("crashpad_upload_to_prod_server") {
   testonly = true
   public_deps = [

@@ -209,16 +209,6 @@ group("iquery_golden_test") {
   ]
 }
 
-group("feedback_agent") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:feedback_agent",
-    "//garnet/packages/prod:scenic",
-    "//garnet/packages/prod:vulkan",
-    "//src/developer/feedback_agent/tests:feedback_agent_tests",
-  ]
-}
-
 group("elflib") {
   testonly = true
   public_deps = [
@@ -351,7 +341,6 @@ group("all") {
     ":containers_cpp",
     ":cpuperf",
     ":cpuperf_provider",
-    ":crashpad",
     ":debug_agent",
     ":debugserver",
     ":device_settings",
@@ -360,7 +349,6 @@ group("all") {
     ":elflib",
     ":escher",
     ":examples",
-    ":feedback_agent",
     ":fidl",
     ":fidl_compatibility_test",
     ":fidl_compatibility_test_bin",
@@ -932,16 +920,6 @@ group("timezone") {
   testonly = true
   public_deps = [
     "//garnet/bin/timezone/test:timezone_tests",
-  ]
-}
-
-group("crashpad") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:crashpad_agent",
-    "//garnet/packages/prod:feedback_agent",
-    "//src/developer/crashpad_agent/tests:crashpad_agent_tests",
-    "//third_party/crashpad:crashpad_test",
   ]
 }
 
