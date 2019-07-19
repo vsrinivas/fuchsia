@@ -5,7 +5,22 @@
 #include "include/librtc.h"
 
 #include <ddk/driver.h>
-#include <zircon/syscalls.h>
+#include <ddk/debug.h>
+
+enum months {
+    JANUARY=1, // 31 days
+    FEBRUARY,  // 28 or 29
+    MARCH,     // 31
+    APRIL,     // 30
+    MAY,       // 31
+    JUNE,      // 30
+    JULY,      // 31
+    AUGUST,    // 31
+    SEPTEMBER, // 30
+    OCTOBER,   // 31
+    NOVEMBER,  // 30
+    DECEMBER   // 31
+};
 
 // Leading 0 allows using the 1-indexed month values from rtc.
 static const uint64_t days_in_month[] = {
@@ -28,6 +43,7 @@ static const uint64_t days_in_month[] = {
 static const uint64_t local_epoch = 946684800;
 static const uint16_t local_epoch_year = 2000;
 static const uint16_t default_year = 2019;
+static const uint16_t max_year = 2099;
 
 static bool is_leap_year(uint16_t year) {
     return ((year % 4) == 0 && (year % 100) != 0) || ((year % 400) == 0);
@@ -41,10 +57,10 @@ uint64_t seconds_since_epoch(const fuchsia_hardware_rtc_Time* rtc) {
     }
 
     // Next add all the prior complete months this year.
-    for (size_t month = 1; month < rtc->month; month++) {
+    for (size_t month = JANUARY; month < rtc->month; month++) {
         days_since_local_epoch += days_in_month[month];
     }
-    if (rtc->month > 2 && is_leap_year(rtc->year)) {
+    if (rtc->month > FEBRUARY && is_leap_year(rtc->year)) {
         days_since_local_epoch++;
     }
 
@@ -83,7 +99,7 @@ void seconds_to_rtc(uint64_t seconds, fuchsia_hardware_rtc_Time* rtc) {
 
     for (rtc->month = 1;; rtc->month++) {
         uint32_t days_per_month = days_in_month[rtc->month];
-        if ((rtc->month == 2) && is_leap_year(rtc->year)) {
+        if ((rtc->month == FEBRUARY) && is_leap_year(rtc->year)) {
             days_per_month++;
         }
 
@@ -106,14 +122,35 @@ uint8_t from_bcd(uint8_t bcd) {
     return ((bcd >> 4) * 10) + (bcd & 0xf);
 }
 
+// TODO: eventually swap rtc_is_invalid() for the positive version.
+static bool rtc_is_valid(const fuchsia_hardware_rtc_Time* rtc) {
+    if (rtc->year < local_epoch_year || rtc->year > max_year) return false;
+    if (rtc->month < JANUARY || rtc->month > DECEMBER) return false;
+    if (rtc->day == 0) return false;
+    switch (rtc->month) {
+        case JANUARY:
+        case MARCH:
+        case MAY:
+        case JULY:
+        case AUGUST:
+        case OCTOBER:
+        case DECEMBER:
+            if (rtc->day > 31) return false;
+            break;
+        case FEBRUARY:
+            if (rtc->day > (is_leap_year(rtc->year) ? 29 : 28)) return false;
+            break;
+        default:
+            if (rtc->day > 30) return false;
+            break;
+    }
+    if (rtc->hours > 23 || rtc->minutes > 59 || rtc->seconds > 59) return false;
+
+    return true;
+}
+
 bool rtc_is_invalid(const fuchsia_hardware_rtc_Time* rtc) {
-    return rtc->seconds > 59 ||
-        rtc->minutes > 59 ||
-        rtc->hours > 23 ||
-        rtc->day > 31 ||
-        rtc->month > 12 ||
-        rtc->year < local_epoch_year ||
-        rtc->year > 2099;
+    return !rtc_is_valid(rtc);
 }
 
 // Validate that the RTC is set to a valid time, and to a relatively
@@ -124,15 +161,23 @@ void sanitize_rtc(void* ctx, fuchsia_hardware_rtc_Time* rtc,
     // January 1, 2019 00:00:00
     static const fuchsia_hardware_rtc_Time default_rtc = {
         .day = 1,
-        .month = 1,
+        .month = JANUARY,
         .year = default_year,
         .seconds = 0,
         .minutes = 0,
         .hours = 0,
     };
-    rtc_get(ctx, rtc);
+    zx_status_t result = rtc_get(ctx, rtc);
+    if (result != ZX_OK) {
+        driver_printf(DDK_LOG_ERROR, "sanitize_rtc: could not get RTC value (%d)", result);
+        return;
+    };
     if (rtc_is_invalid(rtc) || rtc->year < default_year) {
-        rtc_set(ctx, &default_rtc);
+        result = rtc_set(ctx, &default_rtc);
+        if (result != ZX_OK) {
+            driver_printf(DDK_LOG_ERROR, "sanitize_rtc: could not set RTC value (%d)", result);
+            return;
+        }
         *rtc = default_rtc;
     }
 }
