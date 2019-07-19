@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_MT8167_TDM_OUTPUT_CODEC_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_MT8167_TDM_OUTPUT_CODEC_H_
 
 #include <ddk/debug.h>
 #include <ddktl/protocol/codec.h>
@@ -19,24 +20,26 @@ static constexpr uint8_t wanted_bits_per_sample = 32;
 static constexpr uint8_t wanted_bits_per_channel = 32;
 
 struct Codec {
-    static constexpr uint32_t kCodecTimeoutSecs = 1;
+  static constexpr uint32_t kCodecTimeoutSecs = 1;
 
-    struct AsyncOut {
-        sync_completion_t completion;
-        zx_status_t status;
-    };
+  struct AsyncOut {
+    sync_completion_t completion;
+    zx_status_t status;
+  };
 
-    zx_status_t Reset();
-    zx_status_t SetNotBridged();
-    void CheckAndSetUnb();
-    zx_status_t CheckExpectedDaiFormat();
-    zx_status_t SetDaiFormat(dai_format_t format);
-    zx_status_t GetGainFormat(gain_format_t* format);
-    zx_status_t GetGainState(gain_state_t* state);
-    zx_status_t SetGainState(gain_state_t* state);
+  zx_status_t Reset();
+  zx_status_t SetNotBridged();
+  void CheckAndSetUnb();
+  zx_status_t CheckExpectedDaiFormat();
+  zx_status_t SetDaiFormat(dai_format_t format);
+  zx_status_t GetGainFormat(gain_format_t* format);
+  zx_status_t GetGainState(gain_state_t* state);
+  zx_status_t SetGainState(gain_state_t* state);
 
-    ddk::CodecProtocolClient proto_client_;
+  ddk::CodecProtocolClient proto_client_;
 };
 
-} // namespace mt8167
-} // namespace audio
+}  // namespace mt8167
+}  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_MT8167_TDM_OUTPUT_CODEC_H_

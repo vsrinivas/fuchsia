@@ -109,35 +109,35 @@ constexpr pbus_bti_t display_btis[] = {
 };
 constexpr pbus_irq_t display_irqs[] = {
     {
-        .irq  = MT8167_IRQ_DISP_OVL0,
+        .irq = MT8167_IRQ_DISP_OVL0,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
 
 static pbus_dev_t display_dev = []() {
-    pbus_dev_t dev = {};
-    dev.name = "display";
-    dev.vid = PDEV_VID_MEDIATEK;
-    dev.did = PDEV_DID_MEDIATEK_DISPLAY;
-    dev.mmio_list = display_mmios;
-    dev.mmio_count = countof(display_mmios);
-    dev.bti_list = display_btis;
-    dev.bti_count = countof(display_btis);
-    dev.irq_list = display_irqs;
-    dev.irq_count = countof(display_irqs);
-    return dev;
+  pbus_dev_t dev = {};
+  dev.name = "display";
+  dev.vid = PDEV_VID_MEDIATEK;
+  dev.did = PDEV_DID_MEDIATEK_DISPLAY;
+  dev.mmio_list = display_mmios;
+  dev.mmio_count = countof(display_mmios);
+  dev.bti_list = display_btis;
+  dev.bti_count = countof(display_btis);
+  dev.irq_list = display_irqs;
+  dev.irq_count = countof(display_irqs);
+  return dev;
 }();
 
 static pbus_dev_t dsi_dev = []() {
-    pbus_dev_t dev = {};
-    dev.name = "dw-dsi";
-    dev.vid = PDEV_VID_MEDIATEK;
-    dev.did = PDEV_DID_MEDIATEK_DSI;
-    dev.metadata_list = display_metadata;
-    dev.metadata_count = countof(display_metadata);
-    dev.mmio_list = dsi_mmios;
-    dev.mmio_count = countof(dsi_mmios);
-    return dev;
+  pbus_dev_t dev = {};
+  dev.name = "dw-dsi";
+  dev.vid = PDEV_VID_MEDIATEK;
+  dev.did = PDEV_DID_MEDIATEK_DSI;
+  dev.metadata_list = display_metadata;
+  dev.metadata_count = countof(display_metadata);
+  dev.mmio_list = dsi_mmios;
+  dev.mmio_count = countof(dsi_mmios);
+  return dev;
 }();
 
 // Composite binding rules for display driver.
@@ -155,115 +155,115 @@ static const zx_bind_inst_t power_match[] = {
 constexpr zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
-constexpr zx_bind_inst_t dsi_impl_match[]  = {
+constexpr zx_bind_inst_t dsi_impl_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_DSI_IMPL),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_MEDIATEK_8167S_REF),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_DISPLAY),
 };
 static const device_component_part_t lcd_gpio_component[] = {
-    { countof(root_match), root_match },
-    { countof(lcd_gpio_match), lcd_gpio_match },
+    {countof(root_match), root_match},
+    {countof(lcd_gpio_match), lcd_gpio_match},
 };
 constexpr device_component_part_t sysmem_component[] = {
-    { countof(root_match), root_match },
-    { countof(sysmem_match), sysmem_match },
+    {countof(root_match), root_match},
+    {countof(sysmem_match), sysmem_match},
 };
 constexpr device_component_part_t dsi_impl_component[] = {
-    { countof(root_match), root_match },
-    { countof(dsi_impl_match), dsi_impl_match },
+    {countof(root_match), root_match},
+    {countof(dsi_impl_match), dsi_impl_match},
 };
 constexpr device_component_part_t power_component[] = {
-    { countof(root_match), root_match },
-    { countof(power_match), power_match },
+    {countof(root_match), root_match},
+    {countof(power_match), power_match},
 };
 constexpr device_component_t components[] = {
-    { countof(lcd_gpio_component), lcd_gpio_component },
-    { countof(sysmem_component), sysmem_component },
-    { countof(dsi_impl_component), dsi_impl_component },
-    { countof(power_component), power_component },
+    {countof(lcd_gpio_component), lcd_gpio_component},
+    {countof(sysmem_component), sysmem_component},
+    {countof(dsi_impl_component), dsi_impl_component},
+    {countof(power_component), power_component},
 };
 
-} // namespace
+}  // namespace
 
 // TODO(payamm): Remove PMIC access once PMIC driver is ready
 class WACS2_CMD : public hwreg::RegisterBase<WACS2_CMD, uint32_t> {
-public:
-    static auto Get() { return hwreg::RegisterAddr<WACS2_CMD>(0x00A0); }
+ public:
+  static auto Get() { return hwreg::RegisterAddr<WACS2_CMD>(0x00A0); }
 
-    DEF_BIT(31, WACS2_WRITE);
-    DEF_FIELD(30, 16, WACS2_ADR);
-    DEF_FIELD(15, 0, WACS2_WDATA);
+  DEF_BIT(31, WACS2_WRITE);
+  DEF_FIELD(30, 16, WACS2_ADR);
+  DEF_FIELD(15, 0, WACS2_WDATA);
 };
 
 class WACS2_RDATA : public hwreg::RegisterBase<WACS2_RDATA, uint32_t> {
-public:
-    static constexpr uint32_t kStateIdle = 0;
+ public:
+  static constexpr uint32_t kStateIdle = 0;
 
-    static auto Get() { return hwreg::RegisterAddr<WACS2_RDATA>(0x00A4); }
+  static auto Get() { return hwreg::RegisterAddr<WACS2_RDATA>(0x00A4); }
 
-    DEF_FIELD(18, 16, status);
+  DEF_FIELD(18, 16, status);
 };
 
 zx_status_t Mt8167::DisplayInit() {
-    if (board_info_.pid != PDEV_PID_CLEO && board_info_.pid != PDEV_PID_MEDIATEK_8167S_REF) {
-        zxlogf(ERROR, "Unsupported product\n");
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+  if (board_info_.pid != PDEV_PID_CLEO && board_info_.pid != PDEV_PID_MEDIATEK_8167S_REF) {
+    zxlogf(ERROR, "Unsupported product\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
-        // Enable Backlight on reference board only. Cleo has blacklight through I2C
-        gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO55_DISP_PWM, MT8167_GPIO_GPIO_FN);
-        gpio_impl_config_out(&gpio_impl_, MT8167_GPIO55_DISP_PWM, 1);
-    }
+  if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+    // Enable Backlight on reference board only. Cleo has blacklight through I2C
+    gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO55_DISP_PWM, MT8167_GPIO_GPIO_FN);
+    gpio_impl_config_out(&gpio_impl_, MT8167_GPIO55_DISP_PWM, 1);
+  }
 
-    // TODO(payamm): Cannot use POWER_PROTOCOL since it does not support voltage selection yet
-    // Enable LCD voltage rails
-    uint32_t kVpg2VoSel = 0;
-    if (board_info_.vid == PDEV_VID_MEDIATEK && board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
-        kVpg2VoSel = 0x60; // 3 << 5
-    } else if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
-        kVpg2VoSel = 0xA0; // 5 << 5
-    } else {
-        // make sure proper LCD voltage rail is set for any new PID
-        ZX_DEBUG_ASSERT(false);
-    }
-    constexpr uint32_t kDigLdoCon29 = 0x0532;
+  // TODO(payamm): Cannot use POWER_PROTOCOL since it does not support voltage selection yet
+  // Enable LCD voltage rails
+  uint32_t kVpg2VoSel = 0;
+  if (board_info_.vid == PDEV_VID_MEDIATEK && board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+    kVpg2VoSel = 0x60;  // 3 << 5
+  } else if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
+    kVpg2VoSel = 0xA0;  // 5 << 5
+  } else {
+    // make sure proper LCD voltage rail is set for any new PID
+    ZX_DEBUG_ASSERT(false);
+  }
+  constexpr uint32_t kDigLdoCon29 = 0x0532;
 
-    // Please do not use get_root_resource() in new code. See ZX-1467.
-    zx::unowned_resource root_resource(get_root_resource());
-    std::optional<ddk::MmioBuffer> pmic_mmio;
-    auto status = ddk::MmioBuffer::Create(MT8167_PMIC_WRAP_BASE, MT8167_PMIC_WRAP_SIZE,
-                                          *root_resource, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                          &pmic_mmio);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: PMIC MmioBuffer::Create failed %d\n", __FUNCTION__, status);
-        return status;
-    }
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  zx::unowned_resource root_resource(get_root_resource());
+  std::optional<ddk::MmioBuffer> pmic_mmio;
+  auto status =
+      ddk::MmioBuffer::Create(MT8167_PMIC_WRAP_BASE, MT8167_PMIC_WRAP_SIZE, *root_resource,
+                              ZX_CACHE_POLICY_UNCACHED_DEVICE, &pmic_mmio);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: PMIC MmioBuffer::Create failed %d\n", __FUNCTION__, status);
+    return status;
+  }
 
-    // Wait for the PMIC to be IDLE.
-    while (WACS2_RDATA::Get().ReadFrom(&(*pmic_mmio)).status() != WACS2_RDATA::kStateIdle) {
-    }
+  // Wait for the PMIC to be IDLE.
+  while (WACS2_RDATA::Get().ReadFrom(&(*pmic_mmio)).status() != WACS2_RDATA::kStateIdle) {
+  }
 
-    auto pmic = WACS2_CMD::Get().ReadFrom(&(*pmic_mmio));
-    // From the documentation "Wrapper access: Address[15:1]" hence the >> 1.
-    pmic.set_WACS2_WRITE(1).set_WACS2_ADR(kDigLdoCon29 >> 1).set_WACS2_WDATA(kVpg2VoSel);
-    pmic.WriteTo(&(*pmic_mmio));
+  auto pmic = WACS2_CMD::Get().ReadFrom(&(*pmic_mmio));
+  // From the documentation "Wrapper access: Address[15:1]" hence the >> 1.
+  pmic.set_WACS2_WRITE(1).set_WACS2_ADR(kDigLdoCon29 >> 1).set_WACS2_WDATA(kVpg2VoSel);
+  pmic.WriteTo(&(*pmic_mmio));
 
-    status = pbus_.DeviceAdd(&dsi_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
-        return status;
-    }
+  status = pbus_.DeviceAdd(&dsi_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
+    return status;
+  }
 
-    // Load display driver in same devhost as DSI driver.
-    status = pbus_.CompositeDeviceAdd(&display_dev, components, fbl::count_of(components), 3);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);
-        return status;
-    }
+  // Load display driver in same devhost as DSI driver.
+  status = pbus_.CompositeDeviceAdd(&display_dev, components, fbl::count_of(components), 3);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);
+    return status;
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
-} // namespace board_mt8167
+}  // namespace board_mt8167

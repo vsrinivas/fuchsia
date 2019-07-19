@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_I2C_MT8167_I2C_MT8167_I2C_H_
+#define ZIRCON_SYSTEM_DEV_I2C_MT8167_I2C_MT8167_I2C_H_
 
 #include <threads.h>
 
@@ -26,54 +27,54 @@ namespace mt8167_i2c {
 class Mt8167I2c;
 using DeviceType = ddk::Device<Mt8167I2c, ddk::Unbindable>;
 
-class Mt8167I2c : public DeviceType,
-                  public ddk::I2cImplProtocol<Mt8167I2c, ddk::base_protocol> {
-public:
-    explicit Mt8167I2c(zx_device_t* parent)
-        : DeviceType(parent) {}
-    virtual ~Mt8167I2c() = default;
-    zx_status_t Bind();
-    zx_status_t Init();
-    static zx_status_t Create(void* ctx, zx_device_t* parent);
+class Mt8167I2c : public DeviceType, public ddk::I2cImplProtocol<Mt8167I2c, ddk::base_protocol> {
+ public:
+  explicit Mt8167I2c(zx_device_t* parent) : DeviceType(parent) {}
+  virtual ~Mt8167I2c() = default;
+  zx_status_t Bind();
+  zx_status_t Init();
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-    // Methods required by the ddk mixins.
-    void DdkUnbind();
-    void DdkRelease();
-    uint32_t I2cImplGetBusCount();
-    zx_status_t I2cImplGetMaxTransferSize(uint32_t bus_id, size_t* out_size);
-    zx_status_t I2cImplSetBitrate(uint32_t bus_id, uint32_t bitrate);
-    virtual zx_status_t I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* ops, size_t count);
+  // Methods required by the ddk mixins.
+  void DdkUnbind();
+  void DdkRelease();
+  uint32_t I2cImplGetBusCount();
+  zx_status_t I2cImplGetMaxTransferSize(uint32_t bus_id, size_t* out_size);
+  zx_status_t I2cImplSetBitrate(uint32_t bus_id, uint32_t bitrate);
+  virtual zx_status_t I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* ops, size_t count);
 
-    // Visible for testing.
-    zx_status_t DoDummyTransactions();
+  // Visible for testing.
+  zx_status_t DoDummyTransactions();
 
-protected:
-    virtual zx_status_t GetI2cGpios(fbl::Array<ddk::GpioProtocolClient>* gpios);
-    virtual void Reset(uint32_t id);
+ protected:
+  virtual zx_status_t GetI2cGpios(fbl::Array<ddk::GpioProtocolClient>* gpios);
+  virtual void Reset(uint32_t id);
 
-    uint32_t bus_count_;
+  uint32_t bus_count_;
 
-private:
-    static constexpr uint32_t kMaxComponents = 7; // 1 pdev + 6 GPIOs for 3 I2C busses.
+ private:
+  static constexpr uint32_t kMaxComponents = 7;  // 1 pdev + 6 GPIOs for 3 I2C busses.
 
-    struct Key {
-        ddk::MmioBuffer mmio;
-        zx::interrupt irq;
-        zx::event event;
-    };
+  struct Key {
+    ddk::MmioBuffer mmio;
+    zx::interrupt irq;
+    zx::event event;
+  };
 
-    void ClockEnable(uint32_t id, bool enable);
-    int IrqThread();
-    int TestThread();
-    zx_status_t Transact(bool is_read, uint32_t id, uint8_t addr, void* buf, size_t len, bool stop);
-    void DataMove(bool is_read, uint32_t id, void* buf, size_t len);
-    void ShutDown();
+  void ClockEnable(uint32_t id, bool enable);
+  int IrqThread();
+  int TestThread();
+  zx_status_t Transact(bool is_read, uint32_t id, uint8_t addr, void* buf, size_t len, bool stop);
+  void DataMove(bool is_read, uint32_t id, void* buf, size_t len);
+  void ShutDown();
 
-    std::optional<XoRegs> xo_regs_;
-    fbl::Vector<Key> keys_;
-    zx::port irq_port_;
-    thrd_t irq_thread_;
-    bool bind_finished_ = false;
+  std::optional<XoRegs> xo_regs_;
+  fbl::Vector<Key> keys_;
+  zx::port irq_port_;
+  thrd_t irq_thread_;
+  bool bind_finished_ = false;
 };
 
-} // namespace mt8167_i2c
+}  // namespace mt8167_i2c
+
+#endif  // ZIRCON_SYSTEM_DEV_I2C_MT8167_I2C_MT8167_I2C_H_
