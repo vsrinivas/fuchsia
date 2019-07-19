@@ -37,7 +37,7 @@ class Dump {
       : _dumpDirectory = _notEmptyString(dumpDirectory)
             ? dumpDirectory
             : Platform.environment[_dumpDirectoryEnvVar] {
-    if (_hasDumpDirectory) {
+    if (hasDumpDirectory) {
       // See explanation above. Relative path would be ambiguous.
       if (!_dumpDirectory.startsWith('/')) {
         throw ArgumentError.value(_dumpDirectory, 'Must be absolute path');
@@ -69,7 +69,7 @@ class Dump {
   ///
   /// Returns null if dump directory is invalid.
   File createFile(String name, String suffix) {
-    if (!_hasDumpDirectory) {
+    if (!hasDumpDirectory) {
       return null;
     }
 
@@ -79,7 +79,7 @@ class Dump {
     return File([_dumpDirectory, filename].join('/'));
   }
 
-  bool get _hasDumpDirectory => _notEmptyString(_dumpDirectory);
+  bool get hasDumpDirectory => _notEmptyString(_dumpDirectory);
 
   static bool _notEmptyString(final String value) =>
       value != null && value.isNotEmpty;

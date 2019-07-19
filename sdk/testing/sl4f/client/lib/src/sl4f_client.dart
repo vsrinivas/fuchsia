@@ -27,6 +27,12 @@ const _diagnosticTimeout = Duration(minutes: 2);
 
 /// Handles the SL4F server and communication with it.
 class Sl4f {
+  static const diagnostics = [
+    'top -n 1',
+    'kstats -c -m -n 1',
+    'iquery --report',
+    'ps -T'
+  ];
   static const _sl4fComponentUrl =
       'fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx';
   static const _sl4fComponentName = 'sl4f.cmx';
@@ -183,28 +189,22 @@ class Sl4f {
   /// Dumps files with useful device diagnostics.
   Future<void> dumpDiagnostics(String dumpName, {Dump dump}) async {
     final dumper = dump ?? Dump();
-    await _dumpDiagnostic('top -n 1', '$dumpName-diagnostic-top', dumper);
-    await _dumpDiagnostic(
-        'kstats -c -m -n 1', '$dumpName-diagnostic-kstats', dumper);
-    await _dumpDiagnostic(
-        'iquery --report', '$dumpName-diagnostic-iquery', dumper);
-    await _dumpDiagnostic('ps -T', '$dumpName-diagnostic-ps', dumper);
+    if (dumper.hasDumpDirectory) {
+      await Future.wait(diagnostics.map((command) => _dumpDiagnostic(command,
+          '$dumpName-diagnostic-${command.split(' ').first}', dumper)));
+    }
   }
 
   Future<void> _dumpDiagnostic(String cmd, String dumpName, Dump dump) async {
     final proc = await ssh.start(cmd);
-
     unawaited(proc.stdin.close());
 
     final sink = dump.openForWrite(dumpName, 'txt');
-    Future<dynamic> dumpFuture;
-    if (sink != null) {
-      dumpFuture = Future(() async {
-        await sink.addStream(proc.stdout);
-        await sink.flush();
-        await sink.close();
-      });
-    }
+    final dumpFuture = Future(() async {
+      await sink.addStream(proc.stdout);
+      await sink.flush();
+      await sink.close();
+    });
 
     final exitCode =
         await proc.exitCode.timeout(_diagnosticTimeout, onTimeout: () {
@@ -219,7 +219,7 @@ class Sl4f {
         ..warning(await systemEncoding.decodeStream(proc.stderr));
     }
 
-    await dumpFuture; // (maybe null)
+    await dumpFuture;
   }
 
   /// Sends an empty http request to the server to verify if it's listening on
