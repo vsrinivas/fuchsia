@@ -134,7 +134,7 @@ class Performance {
       {String appName, String converterPath}) async {
     _log.info('Processing trace: ${trace.path} using $processorPath.');
     final outputFileName =
-        '${trace.parent.absolute.path}/$testName-benchmark.json';
+        '${trace.parent.absolute.path}/$testName-benchmark.fuchsiaperf.json';
     final List<String> args = [
       '-test_suite_name=$testName',
       if (appName != null) '-flutter_app_name=$appName',
@@ -203,9 +203,9 @@ class Performance {
     }
 
     final resultsPath = result.absolute.path;
-    assert(resultsPath.endsWith('.json'));
-    final outputFileName =
-        resultsPath.replaceFirst(RegExp(r'\.json$'), '.catapult_json');
+    assert(resultsPath.endsWith('.fuchsiaperf.json'));
+    final outputFileName = resultsPath.replaceFirst(
+        RegExp(r'\.fuchsiaperf\.json$'), '.catapult_json');
 
     final List<String> args = [
       '--input',

@@ -117,7 +117,7 @@ void main(List<String> args) {
     var capturedArgs = verifyMockRunProcessObserver.captured.single;
     expect(capturedArgs[0], '-test_suite_name=test1');
     expect(capturedArgs[1], '-flutter_app_name=test-app');
-    expect(capturedArgs[2], endsWith('test1-benchmark.json'));
+    expect(capturedArgs[2], endsWith('test1-benchmark.fuchsiaperf.json'));
     expect(capturedArgs[3], endsWith('sample-trace.json'));
 
     // Test trace processing without an [appName] set.
@@ -129,7 +129,7 @@ void main(List<String> args) {
       ..called(1);
     capturedArgs = verifyMockRunProcessObserver.captured.single;
     expect(capturedArgs[0], '-test_suite_name=test1');
-    expect(capturedArgs[1], endsWith('test1-benchmark.json'));
+    expect(capturedArgs[1], endsWith('test1-benchmark.fuchsiaperf.json'));
     expect(capturedArgs[2], endsWith('sample-trace.json'));
   });
 
@@ -140,14 +140,15 @@ void main(List<String> args) {
 
     // With no buildbucket id env variable, it should do a local run.
     File convertedFile = await performance.convertResults(
-        '/bin/catapult_converter', File('test1-benchmark.json'), {});
+        '/bin/catapult_converter',
+        File('test1-benchmark.fuchsiaperf.json'), {});
     expect(convertedFile.path, endsWith('test1-benchmark.catapult_json'));
     var verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
         argThat(endsWith('catapult_converter')), captureAny))
       ..called(1);
     var capturedArgs = verifyMockRunProcessObserver.captured.single;
     expect(capturedArgs[0], '--input');
-    expect(capturedArgs[1], endsWith('test1-benchmark.json'));
+    expect(capturedArgs[1], endsWith('test1-benchmark.fuchsiaperf.json'));
     expect(capturedArgs[2], '--output');
     expect(capturedArgs[3], endsWith('test1-benchmark.catapult_json'));
     expect(capturedArgs[4], '--execution-timestamp-ms');
@@ -170,15 +171,15 @@ void main(List<String> args) {
       'INPUT_COMMIT_REF': 'refs/heads/master'
     };
 
-    convertedFile = await performance.convertResults(
-        '/bin/catapult_converter', File('test2-benchmark.json'), environment);
+    convertedFile = await performance.convertResults('/bin/catapult_converter',
+        File('test2-benchmark.fuchsiaperf.json'), environment);
     expect(convertedFile.path, endsWith('test2-benchmark.catapult_json'));
     verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
         argThat(endsWith('catapult_converter')), captureAny))
       ..called(1);
     capturedArgs = verifyMockRunProcessObserver.captured.single;
     expect(capturedArgs[0], '--input');
-    expect(capturedArgs[1], endsWith('test2-benchmark.json'));
+    expect(capturedArgs[1], endsWith('test2-benchmark.fuchsiaperf.json'));
     expect(capturedArgs[2], '--output');
     expect(capturedArgs[3], endsWith('test2-benchmark.catapult_json'));
     expect(capturedArgs[4], '--execution-timestamp-ms');
@@ -192,15 +193,15 @@ void main(List<String> args) {
 
     // If head is not on master, then it should be appended to master name.
     environment['INPUT_COMMIT_REF'] = 'refs/heads/releases/rc1';
-    convertedFile = await performance.convertResults(
-        '/bin/catapult_converter', File('test3-benchmark.json'), environment);
+    convertedFile = await performance.convertResults('/bin/catapult_converter',
+        File('test3-benchmark.fuchsiaperf.json'), environment);
     expect(convertedFile.path, endsWith('test3-benchmark.catapult_json'));
     verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
         argThat(endsWith('catapult_converter')), captureAny))
       ..called(1);
     capturedArgs = verifyMockRunProcessObserver.captured.single;
     expect(capturedArgs[0], '--input');
-    expect(capturedArgs[1], endsWith('test3-benchmark.json'));
+    expect(capturedArgs[1], endsWith('test3-benchmark.fuchsiaperf.json'));
     expect(capturedArgs[2], '--output');
     expect(capturedArgs[3], endsWith('test3-benchmark.catapult_json'));
     expect(capturedArgs[4], '--execution-timestamp-ms');
