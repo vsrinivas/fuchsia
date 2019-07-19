@@ -91,14 +91,16 @@ void ArmIspDeviceTester::TestWriteRegister(
 // DDKMessage Helper Functions.
 zx_status_t ArmIspDeviceTester::RunTests(fidl_txn_t* txn) {
   fuchsia_camera_test_TestReport report = {1, 0, 0};
-  fbl::AutoLock guard(&isp_lock_);
-  if (!isp_) {
-    return ZX_ERR_BAD_STATE;
-  }
-  if (isp_->RunTests() == ZX_OK) {
-    report.success_count++;
-  } else {
-    report.failure_count++;
+  {
+    fbl::AutoLock guard(&isp_lock_);
+    if (!isp_) {
+      return ZX_ERR_BAD_STATE;
+    }
+    if (isp_->RunTests() == ZX_OK) {
+      report.success_count++;
+    } else {
+      report.failure_count++;
+    }
   }
   TestWriteRegister(report);
   return fuchsia_camera_test_IspTesterRunTests_reply(txn, ZX_OK, &report);
