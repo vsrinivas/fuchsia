@@ -495,11 +495,5 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out) {
     }
   }
 
-#if MSD_INTEL_ENABLE_MAPPING_CACHE
-  dump_out.append("mapping cache: ENABLED\n");
-#else
-  dump_out.append("mapping cache: DISABLED\n");
-#endif
-
   dump_out.append("---- device dump end ----");
 }

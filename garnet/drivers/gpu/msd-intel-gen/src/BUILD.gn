@@ -4,10 +4,6 @@
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-declare_args() {
-  msd_intel_enable_mapping_cache = !is_debug
-}
-
 source_set("src") {
   public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
 
@@ -77,9 +73,4 @@ source_set("src") {
   public_deps = [
     "//zircon/public/banjo/ddk.protocol.intelgpucore",
   ]
-
-  defines = []
-  if (msd_intel_enable_mapping_cache) {
-    defines += [ "MSD_INTEL_ENABLE_MAPPING_CACHE" ]
-  }
 }
