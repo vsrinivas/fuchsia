@@ -6,6 +6,9 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_FAIR_SCHEDULER_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_FAIR_SCHEDULER_H_
 
+#include <platform.h>
+#include <stdint.h>
+
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <ffl/fixed.h>
@@ -13,8 +16,6 @@
 #include <kernel/sched.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
-#include <platform.h>
-#include <stdint.h>
 #include <zircon/types.h>
 
 // Guard the definition of this class because TaskTraits directly refers to
@@ -124,7 +125,7 @@ class FairScheduler {
       TA_REQ(thread_lock);
 
   // Common logic for reschedule API.
-  void RescheduleCommon(SchedTime now) TA_REQ(thread_lock);
+  void RescheduleCommon(SchedTime now, void* outer_trace = nullptr) TA_REQ(thread_lock);
 
   // Evaluates the schedule and returns the thread that should execute,
   // updating the runqueue as necessary.
