@@ -4,14 +4,14 @@
 
 library fuchsia.modular;
 
-// An interface that provides clients with the ability to store and
-// retrieve text.
+/// An interface that provides clients with the ability to store and
+/// retrieve text.
 [Discoverable]
 protocol Clipboard {
-    // Pushes `text` onto the clipboard.
+    /// Pushes `text` onto the clipboard.
     Push(string text);
 
-    // Peeks at the current topmost item on the clipboard and returns
-    // it, or null if no such item exists.
+    /// Peeks at the current topmost item on the clipboard and returns
+    /// it, or null if no such item exists.
     Peek() -> (string? text);
 };

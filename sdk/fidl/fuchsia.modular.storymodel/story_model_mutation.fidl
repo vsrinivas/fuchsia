@@ -6,17 +6,17 @@ library fuchsia.modular.storymodel;
 
 using fuchsia.modular;
 
-// The `StoryModelMutation` union represents the set of all possible low-level mutations to data
-// for a single story. A vector of mutations represent mutations that are to be applied to the
-// model in a single transaction.
-//
-// This structured is used internally in `sessionmgr` and is not exposed to any clients outside
-// that process. Clients will typically construct these indirectly using convenience methods on the
-// `StoryMutator` class.
+/// The `StoryModelMutation` union represents the set of all possible low-level mutations to data
+/// for a single story. A vector of mutations represent mutations that are to be applied to the
+/// model in a single transaction.
+///
+/// This structured is used internally in `sessionmgr` and is not exposed to any clients outside
+/// that process. Clients will typically construct these indirectly using convenience methods on the
+/// `StoryMutator` class.
 union StoryModelMutation {
-  // Sets the value of `StoryModel.visibility_state`.
+  /// Sets the value of `StoryModel.visibility_state`.
   fuchsia.modular.StoryVisibilityState set_visibility_state;
 
-  // Sets the value of `StoryModel.runtime_state`.
+  /// Sets the value of `StoryModel.runtime_state`.
   fuchsia.modular.StoryState set_runtime_state;
 };

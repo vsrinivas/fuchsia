@@ -6,26 +6,26 @@ library fuchsia.modular;
 
 [Discoverable]
 protocol ContextDebug {
-    // The watch will stay active until the `listener` handle is closed.
+    /// The watch will stay active until the `listener` handle is closed.
     Watch(ContextDebugListener listener);
 
-    // Waits until Context Engine has reached a steady state such that no further
-    // activity will occur unless acted upon from the outside.
+    /// Waits until Context Engine has reached a steady state such that no further
+    /// activity will occur unless acted upon from the outside.
     WaitUntilIdle() -> ();
 };
 
 protocol ContextDebugListener {
-    // Called any time a value is added, updated or removed. Each element in
-    // `values` represents a single add, update or remove operation.  Values are
-    // guaranteed to appear before their children in the case that a parent and
-    // its child are included in the same update.
+    /// Called any time a value is added, updated or removed. Each element in
+    /// `values` represents a single add, update or remove operation.  Values are
+    /// guaranteed to appear before their children in the case that a parent and
+    /// its child are included in the same update.
     OnValuesChanged(vector<ContextDebugValue> values);
 
     OnSubscriptionsChanged(vector<ContextDebugSubscription> subscription);
 };
 
-// Represents a single update to a value. If `value` is omitted, the value with
-// `id` was deleted.
+/// Represents a single update to a value. If `value` is omitted, the value with
+/// `id` was deleted.
 struct ContextDebugValue {
     vector<string> parent_ids;
     string id;
@@ -35,8 +35,8 @@ struct ContextDebugValue {
 struct ContextDebugSubscription {
     string id;
 
-    // These are null when describing a subscription that was removed, although
-    // it's safe to condition only on `query`.
+    /// These are null when describing a subscription that was removed, although
+    /// it's safe to condition only on `query`.
     SubscriptionDebugInfo? debug_info;
     ContextQuery? query;
 };

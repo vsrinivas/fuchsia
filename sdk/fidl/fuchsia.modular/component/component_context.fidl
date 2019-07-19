@@ -7,62 +7,62 @@ library fuchsia.modular;
 using fuchsia.ledger;
 using fuchsia.sys;
 
-// Provided to all component instances in their respective initialization
-// information by the framework. For example, a Module gets it from its
-// ModuleContext and an Agent gets it from its AgentContext.
+/// Provided to all component instances in their respective initialization
+/// information by the framework. For example, a Module gets it from its
+/// ModuleContext and an Agent gets it from its AgentContext.
 [Discoverable]
 protocol ComponentContext {
-    // Gets the Ledger associated with this component. This ledger instance is
-    // unique to this component (nb. not the component instance) under this user.
+    /// Gets the Ledger associated with this component. This ledger instance is
+    /// unique to this component (nb. not the component instance) under this user.
     GetLedger(request<fuchsia.ledger.Ledger> request);
 
-    // Used to start an agent in the user scope if it isn't already running, and
-    // connect to it.
+    /// Used to start an agent in the user scope if it isn't already running, and
+    /// connect to it.
     ConnectToAgent(string url,
                    request<fuchsia.sys.ServiceProvider> incoming_services,
                    request<AgentController> controller);
 
-    // Connects to an agent that provides the given `request.service_name`, and
-    // then connects the given `request.channel` to that service.
-    // `request.agent_controller` must be kept alive until the service is no
-    // longer required.
-    //
-    // If an error is encountered, the `request.channel` will be closed with
-    // a status code, such as:
-    //   * ZX_ERR_NOT_FOUND -- if a `request.handler` agent URL is not
-    //     specified, and an agent for the `request.service_name` is not found
-    //   * ZX_ERR_PEER_CLOSED -- if `request.service_name` is not available from
-    //     the agent (either specified or discovered)
+    /// Connects to an agent that provides the given `request.service_name`, and
+    /// then connects the given `request.channel` to that service.
+    /// `request.agent_controller` must be kept alive until the service is no
+    /// longer required.
+    ///
+    /// If an error is encountered, the `request.channel` will be closed with
+    /// a status code, such as:
+    ///   * ZX_ERR_NOT_FOUND -- if a `request.handler` agent URL is not
+    ///     specified, and an agent for the `request.service_name` is not found
+    ///   * ZX_ERR_PEER_CLOSED -- if `request.service_name` is not available from
+    ///     the agent (either specified or discovered)
     [Transitional]
     ConnectToAgentService(AgentServiceRequest request);
 
-    // Used to create or delete a message queue or retrieve an existing queue
-    // identified by `name`. `name` is local to the calling component instance.
+    /// Used to create or delete a message queue or retrieve an existing queue
+    /// identified by `name`. `name` is local to the calling component instance.
     ObtainMessageQueue(string name, request<MessageQueue> queue);
     DeleteMessageQueue(string name);
 
-    // Gets a MessageSender service that can be used to send a message to a queue
-    // identified by `queue_token`. Token for a MessageQueue is obtained from its
-    // GetToken() method. The token is unique within the scope of the user, i.e.
-    // it can be used by other component instances than the one that created the
-    // message queue.
+    /// Gets a MessageSender service that can be used to send a message to a queue
+    /// identified by `queue_token`. Token for a MessageQueue is obtained from its
+    /// GetToken() method. The token is unique within the scope of the user, i.e.
+    /// it can be used by other component instances than the one that created the
+    /// message queue.
     GetMessageSender(string queue_token, request<MessageSender> sender);
 
-    // Gets the EntityResolver service, which can be used to resolve an entity
-    // reference to an Entity interface.
+    /// Gets the EntityResolver service, which can be used to resolve an entity
+    /// reference to an Entity interface.
     GetEntityResolver(request<EntityResolver> request);
 
-    // Creates a new entity from `type_to_data` such that duplicate types are
-    // overriden by subsequent entries.
-    //
-    // This is a useful way to represent small immutable entities without having
-    // to provide the entity using an Agent. The types and data together must be
-    // within 16KB in size.
+    /// Creates a new entity from `type_to_data` such that duplicate types are
+    /// overriden by subsequent entries.
+    ///
+    /// This is a useful way to represent small immutable entities without having
+    /// to provide the entity using an Agent. The types and data together must be
+    /// within 16KB in size.
     CreateEntityWithData(vector<TypeToDataEntry> type_to_data)
         -> (string? entity_reference);
 
-    // Gets the package name of this component.
-    //
+    /// Gets the package name of this component.
+    ///
     // TODO(vardhan): MI4-939. This information should likely be exposed by a
     // lower level (component-level, or application level). This information is
     // most meant for a component to identify itself automatically when publishing
@@ -70,24 +70,24 @@ protocol ComponentContext {
     GetPackageName() -> (string package_name);
 };
 
-// Used by ComponentContext.ConnectToAgentService
+/// Used by ComponentContext.ConnectToAgentService
 table AgentServiceRequest {
-    // The name of the requested service.
+    /// The name of the requested service.
     1: string service_name;
 
-    // The channel that will be used to communicate with the requested service.
+    /// The channel that will be used to communicate with the requested service.
     2: handle<channel> channel;
 
-    // The component URL of the Agent that is to provide the specified service.
-    // If no handler is specified, the framework will perform resolution to
-    // find an appropriate handler.
+    /// The component URL of the Agent that is to provide the specified service.
+    /// If no handler is specified, the framework will perform resolution to
+    /// find an appropriate handler.
     3: fuchsia.sys.component_url handler;
 
-    // The AgentController that keeps the agent alive.
+    /// The AgentController that keeps the agent alive.
     4: request<AgentController> agent_controller;
 };
 
-// Used by ComponentContext.CreateEntityWithData().
+/// Used by ComponentContext.CreateEntityWithData().
 struct TypeToDataEntry {
     string type;
     string data;

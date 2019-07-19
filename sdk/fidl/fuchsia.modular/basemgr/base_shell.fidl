@@ -7,41 +7,41 @@ library fuchsia.modular;
 using fuchsia.auth;
 using fuchsia.ui.policy;
 
-// This interface is implemented by a base shell. Dependencies are passed to it
-// in Initialize() on startup. The base shell is also expected to implement
-// Lifecycle in order to receive a Terminate() call on teardown.
-//
-// In one component instance there can only be one BaseShell service instance.
-// The ViewOwner request is sent to the separate ViewProvider service. This way,
-// the base shell may be implemented as a flutter component.
-//
-// Teardown may be initiated by the base shell calling
-// BaseShellContext.Shutdown(), or by the system shutting down.
+/// This interface is implemented by a base shell. Dependencies are passed to it
+/// in Initialize() on startup. The base shell is also expected to implement
+/// Lifecycle in order to receive a Terminate() call on teardown.
+///
+/// In one component instance there can only be one BaseShell service instance.
+/// The ViewOwner request is sent to the separate ViewProvider service. This way,
+/// the base shell may be implemented as a flutter component.
+///
+/// Teardown may be initiated by the base shell calling
+/// BaseShellContext.Shutdown(), or by the system shutting down.
 [Discoverable]
 protocol BaseShell {
     Initialize(BaseShellContext base_shell_context,
                BaseShellParams base_shell_params);
 
-    // This method may be invoked by the basemgr to request an
-    // AuthenticationUIContext. `request` will then be used to request the base
-    // shell to show login screen during a UserProvider.AddUser() or if a token
-    // needs to be refreshed.
+    /// This method may be invoked by the basemgr to request an
+    /// AuthenticationUIContext. `request` will then be used to request the base
+    /// shell to show login screen during a UserProvider.AddUser() or if a token
+    /// needs to be refreshed.
     GetAuthenticationUIContext(request<fuchsia.auth.AuthenticationUIContext> request);
 };
 
-// This interface allows the `BaseShell` to request capabilities from the
-// `Basemgr` in a way that is more explicit about the services that are
-// offered than a generic `ServiceProvider`.
+/// This interface allows the `BaseShell` to request capabilities from the
+/// `Basemgr` in a way that is more explicit about the services that are
+/// offered than a generic `ServiceProvider`.
 protocol BaseShellContext {
-    // Acquires the user provider service, which is used to add/remove/list and
-    // authenticate users.
+    /// Acquires the user provider service, which is used to add/remove/list and
+    /// authenticate users.
     GetUserProvider(request<UserProvider> request);
 
-    // Acquires the presentation service, which is assumed to already be
-    // connected to the presenter.
+    /// Acquires the presentation service, which is assumed to already be
+    /// connected to the presenter.
     GetPresentation(request<fuchsia.ui.policy.Presentation> presentation);
 
-    // This requests the shutdown of the basemgr.
+    /// This requests the shutdown of the basemgr.
     Shutdown();
 };
 

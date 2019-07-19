@@ -4,13 +4,13 @@
 
 library fuchsia.modular;
 
-// An interface implemented by applications that wish to terminate gracefully.
+/// An interface implemented by applications that wish to terminate gracefully.
 [Discoverable]
 protocol Lifecycle {
-    // The client of this application has requested that this application
-    // terminate gracefully.
-    //
-    // If the application does not terminate itself in a timely manner, the client
-    // may forcibly terminate the application.
+    /// The client of this application has requested that this application
+    /// terminate gracefully.
+    ///
+    /// If the application does not terminate itself in a timely manner, the client
+    /// may forcibly terminate the application.
     Terminate();
 };

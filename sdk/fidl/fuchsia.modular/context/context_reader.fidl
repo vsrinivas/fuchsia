@@ -4,31 +4,31 @@
 
 library fuchsia.modular;
 
-// Exposes access to Context values, each of which are explicitly named by a
-// 'topic'. Each topic has a known/pre-defined value representation.
-//
-// This interface is meant to be used in the scope of a single Fuchsia
-// component.
+/// Exposes access to Context values, each of which are explicitly named by a
+/// 'topic'. Each topic has a known/pre-defined value representation.
+///
+/// This interface is meant to be used in the scope of a single Fuchsia
+/// component.
 [Discoverable]
 protocol ContextReader {
-    // When any conditions that would cause the resulting set of context values
-    // selected by `query` to change, a ContextUpdate is sent to `listener`.
-    //
-    // The current state of values selected by `query` are sent to `listener`
-    // immediately.
-    //
-    // The subscription will continue to stay active as long as the `listener`
-    // handle is not closed.
+    /// When any conditions that would cause the resulting set of context values
+    /// selected by `query` to change, a ContextUpdate is sent to `listener`.
+    ///
+    /// The current state of values selected by `query` are sent to `listener`
+    /// immediately.
+    ///
+    /// The subscription will continue to stay active as long as the `listener`
+    /// handle is not closed.
     Subscribe(ContextQuery query, ContextListener listener);
 
-    // Returns the current context state matching `query`.
+    /// Returns the current context state matching `query`.
     Get(ContextQuery query) -> (ContextUpdate update);
 };
 
 struct ContextQuery {
-    // A map of ContextSelector structs. The keys are specified by the client.
-    // Each key gets a corresponding entry in `ContextUpdate.values` when it is
-    // generated in response to this query.
+    /// A map of ContextSelector structs. The keys are specified by the client.
+    /// Each key gets a corresponding entry in `ContextUpdate.values` when it is
+    /// generated in response to this query.
     vector<ContextQueryEntry> selector;
 };
 
@@ -38,29 +38,29 @@ struct ContextQueryEntry {
 };
 
 struct ContextSelector {
-    // A partial metadata struct. Any metadata value given in `meta` restricts
-    // the set of values in the eventual ContextUpdate to include only those
-    // whose metadata match values given.
-    //
-    // A null `meta` will match any value of the given `type`. Use this sparingly
-    // as a full update could become quite large.
+    /// A partial metadata struct. Any metadata value given in `meta` restricts
+    /// the set of values in the eventual ContextUpdate to include only those
+    /// whose metadata match values given.
+    ///
+    /// A null `meta` will match any value of the given `type`. Use this sparingly
+    /// as a full update could become quite large.
     // TODO(thatguy): Find users of this and eliminate them if it becomes a
     // scaling problem.
-    //
-    // For example, to select all context values in a given story, one would
-    // specify:
-    //    meta.value["story"]["id"] = "..."
+    ///
+    /// For example, to select all context values in a given story, one would
+    /// specify:
+    ///    meta.value["story"]["id"] = "..."
     ContextMetadata? meta;
 
-    // A string specifying the type of context object to return.
+    /// A string specifying the type of context object to return.
     ContextValueType type;
 };
 
 protocol ContextListener {
-    // Receives a full snapshot of context state every time context is updated
-    // in such a way that results in a changed set of values for the ContextQuery
-    // used in the subscription for this listener.
-    //
+    /// Receives a full snapshot of context state every time context is updated
+    /// in such a way that results in a changed set of values for the ContextQuery
+    /// used in the subscription for this listener.
+    ///
     // TODO(thatguy): A broad ContextQuery will result in a large
     // `ContextUpdate`, which may exceed the FIDL max message size. In this case
     // updates would not be propagated. If this becomes an issue, allowing
@@ -70,8 +70,8 @@ protocol ContextListener {
 };
 
 struct ContextUpdate {
-    // A list of ContextValue for each key in `ContextQuery.selector`. An empty
-    // list means no values matched the given ContextSelector.
+    /// A list of ContextValue for each key in `ContextQuery.selector`. An empty
+    /// list means no values matched the given ContextSelector.
     vector<ContextUpdateEntry> values;
 };
 

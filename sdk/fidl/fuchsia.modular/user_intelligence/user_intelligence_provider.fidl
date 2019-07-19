@@ -8,29 +8,29 @@ using fuchsia.speech;
 using fuchsia.sys;
 
 protocol UserIntelligenceProvider {
-    // Creates an `IntelligenceServices` scoped to a specific Component,
-    // identified by `scope`.
-    //
-    // NOTE: Eventually `component_id` will become more complex, specifying
-    // information needed to evaluate access-control policies for downstream
-    // services.
-    //
-    // ANOTHER NOTE: `IntelligenceServices` is a short-term "big bucket" in which
-    // to put any and all services that are to be exposed to Agents and Modules.
-    // Once our understanding of the needs of Agents/Modules is clearer, we
-    // should break the bucket apart.
+    /// Creates an `IntelligenceServices` scoped to a specific Component,
+    /// identified by `scope`.
+    ///
+    /// NOTE: Eventually `component_id` will become more complex, specifying
+    /// information needed to evaluate access-control policies for downstream
+    /// services.
+    ///
+    /// ANOTHER NOTE: `IntelligenceServices` is a short-term "big bucket" in which
+    /// to put any and all services that are to be exposed to Agents and Modules.
+    /// Once our understanding of the needs of Agents/Modules is clearer, we
+    /// should break the bucket apart.
     GetComponentIntelligenceServices(ComponentScope scope,
                                      request<IntelligenceServices> services);
 
     GetSpeechToText(request<fuchsia.speech.SpeechToText> speech_to_text);
 
-    // The `ComponentContext` is used to create agents and use message queues.
+    /// The `ComponentContext` is used to create agents and use message queues.
     StartAgents(ComponentContext user_intelligence_context,
                 vector<string> session_agents,
                 vector<string> startup_agents);
 
-    // A standard set of services provided to all agents at startup,
-    // along with services particuarly for this agent.
+    /// A standard set of services provided to all agents at startup,
+    /// along with services particuarly for this agent.
     GetServicesForAgent(string agent_url)
         -> (fuchsia.sys.ServiceList service_list);
 };

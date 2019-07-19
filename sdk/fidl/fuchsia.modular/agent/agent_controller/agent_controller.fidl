@@ -4,10 +4,10 @@
 
 library fuchsia.modular;
 
-// This interface is used by the caller of ComponentContext::ConnectToAgent() to
-// tell the framework that it is still interested in keeping this Agent running.
-//
-// The system counts AgentController connections and terminates this Agent if
-// the count goes to zero.
+/// This interface is used by the caller of ComponentContext::ConnectToAgent() to
+/// tell the framework that it is still interested in keeping this Agent running.
+///
+/// The system counts AgentController connections and terminates this Agent if
+/// the count goes to zero.
 protocol AgentController {
 };

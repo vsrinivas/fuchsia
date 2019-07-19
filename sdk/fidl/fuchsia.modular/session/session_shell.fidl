@@ -9,56 +9,56 @@ using fuchsia.speech;
 using fuchsia.ui.policy;
 using fuchsia.ui.views;
 
-// This interface is implemented by a session shell and is used by the
-// sessionmgr to hand to the session shell views of stories, or to notify that
-// the view of a story is about to be closed.
+/// This interface is implemented by a session shell and is used by the
+/// sessionmgr to hand to the session shell views of stories, or to notify that
+/// the view of a story is about to be closed.
 [Discoverable]
 protocol SessionShell {
-    // Displays the given story view. The story this view belongs to is
-    // identified by `view_id.story_id`.
-    // DEPRECATED.  For transitional purposes only.
+    /// Displays the given story view. The story this view belongs to is
+    /// identified by `view_id.story_id`.
+    /// DEPRECATED.  For transitional purposes only.
     [Transitional]
     AttachView(ViewIdentifier view_id, fuchsia.ui.views.ViewHolderToken view_holder_token);
     [Transitional]
     AttachView2(ViewIdentifier view_id, fuchsia.ui.views.ViewHolderToken view_holder_token);
 
-    // Instructs the session shell to detach the view identified by `view_id`
-    // that was previously provided by AttachView() from the UI of the session
-    // shell. The view will be closed soon after DetachView() returns, or when a
-    // timeout is reached.
-    //
-    // It is customary for the session shell to display a placeholder before a
-    // view is attached for a given view identifier, or after it was detached.
-    //
-    // If the story identified by `view_id.story_id` is about to be deleted, the
-    // Shell will observe a call to StoryProviderWatcher.OnDelete() sometime
-    // after DetachView() returns.
-    //
-    // If the session for which this session shell is responsible for is being
-    // terminated, or the session shell is stopped because it's replaced by
-    // another session shell, DetachView() will *not* be called at all, and the
-    // shell will rather observe a call to Lifecycle.Terminate().
+    /// Instructs the session shell to detach the view identified by `view_id`
+    /// that was previously provided by AttachView() from the UI of the session
+    /// shell. The view will be closed soon after DetachView() returns, or when a
+    /// timeout is reached.
+    ///
+    /// It is customary for the session shell to display a placeholder before a
+    /// view is attached for a given view identifier, or after it was detached.
+    ///
+    /// If the story identified by `view_id.story_id` is about to be deleted, the
+    /// Shell will observe a call to StoryProviderWatcher.OnDelete() sometime
+    /// after DetachView() returns.
+    ///
+    /// If the session for which this session shell is responsible for is being
+    /// terminated, or the session shell is stopped because it's replaced by
+    /// another session shell, DetachView() will *not* be called at all, and the
+    /// shell will rather observe a call to Lifecycle.Terminate().
     DetachView(ViewIdentifier view_id) -> ();
 };
 
-// Identifies a view provided to a session shell. The values of the `story_id`
-// field match those used in the `StoryProvider` interface, allowing
-// identification of the same story across interfaces.
-//
+/// Identifies a view provided to a session shell. The values of the `story_id`
+/// field match those used in the `StoryProvider` interface, allowing
+/// identification of the same story across interfaces.
+///
 
-// This is a struct rather than a naked string to allow for future evolution of
-// the identifier without changing the `SessionShell` API itself.
+/// This is a struct rather than a naked string to allow for future evolution of
+/// the identifier without changing the `SessionShell` API itself.
 struct ViewIdentifier {
     string story_id;
 };
 
-// This interface allows a `SessionShell` to request capabilities from its
-// creator in a way that is more explicit about the services that are
-// offered than a generic `ServiceProvider`.
+/// This interface allows a `SessionShell` to request capabilities from its
+/// creator in a way that is more explicit about the services that are
+/// offered than a generic `ServiceProvider`.
 [Discoverable]
 protocol SessionShellContext {
-    // The account associated with the currently logged-in user. It's NULL if
-    // logged into GUEST mode.
+    /// The account associated with the currently logged-in user. It's NULL if
+    /// logged into GUEST mode.
     GetAccount() -> (fuchsia.modular.auth.Account? account);
     GetComponentContext(request<ComponentContext> request);
     GetDeviceName() -> (string device_name);
@@ -70,26 +70,26 @@ protocol SessionShellContext {
     GetStoryProvider(request<StoryProvider> request);
     GetVisibleStoriesController(request<VisibleStoriesController> request);
 
-    // Requests logout of the user. This causes the basemgr to tear down the
-    // `Sessionmgr` instance of the user.
+    /// Requests logout of the user. This causes the basemgr to tear down the
+    /// `Sessionmgr` instance of the user.
     Logout();
 };
 
-// Session shell provides this service to the framework which may plumb it to
-// different subscribers, such as story shell and intelligence provider.
-//
+/// Session shell provides this service to the framework which may plumb it to
+/// different subscribers, such as story shell and intelligence provider.
+///
 
-// EXPERIMENTAL Service that allows consumers of a given story to get a
-// connection to a Presentation, and visual state services provided by the user
-// shell. This allows story shell implementations to coordinate event and focus
-// handling. An analog mechanism exists between BaseShell and SessionShell.
+/// EXPERIMENTAL Service that allows consumers of a given story to get a
+/// connection to a Presentation, and visual state services provided by the user
+/// shell. This allows story shell implementations to coordinate event and focus
+/// handling. An analog mechanism exists between BaseShell and SessionShell.
 [Discoverable] // Created by session shell components.
 protocol SessionShellPresentationProvider {
-    // When a StoryShell calls StoryShellContext.GetPresentation(), this request
-    // arrives here.
+    /// When a StoryShell calls StoryShellContext.GetPresentation(), this request
+    /// arrives here.
     GetPresentation(string story_id, request<fuchsia.ui.policy.Presentation> request);
 
-    // When a StoryShell calls StoryShellContext.WatchVisualState(), this request
-    // arrives here.
+    /// When a StoryShell calls StoryShellContext.WatchVisualState(), this request
+    /// arrives here.
     WatchVisualState(string story_id, StoryVisualStateWatcher watcher);
 };

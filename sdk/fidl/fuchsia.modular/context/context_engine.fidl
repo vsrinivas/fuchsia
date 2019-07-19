@@ -4,8 +4,8 @@
 
 library fuchsia.modular;
 
-// Top-level service provider interface that vends services to read and write
-// context data.
+/// Top-level service provider interface that vends services to read and write
+/// context data.
 [Discoverable]
 protocol ContextEngine {
     GetReader(ComponentScope client_info, request<ContextReader> request);

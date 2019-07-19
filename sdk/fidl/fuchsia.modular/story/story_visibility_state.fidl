@@ -4,19 +4,19 @@
 
 library fuchsia.modular;
 
-// Visibility state of a Story within the session shell.
-// This state describes how a story should be displayed within the session shell,
-// regardless of whether the story is in focus or not. Focus state and
-// visibility state are orthogonal concepts.
-// E.g A story can be out-of-focus and be in IMMERSIVE state at the same time
-// if a user was playing a video, exits, then re-enters the story. The
-// expectation in this scenario is that the story is in IMMERSIVE state upon
-// re-enter.
-//
-// All state transitions are possible.
+/// Visibility state of a Story within the session shell.
+/// This state describes how a story should be displayed within the session shell,
+/// regardless of whether the story is in focus or not. Focus state and
+/// visibility state are orthogonal concepts.
+/// E.g A story can be out-of-focus and be in IMMERSIVE state at the same time
+/// if a user was playing a video, exits, then re-enters the story. The
+/// expectation in this scenario is that the story is in IMMERSIVE state upon
+/// re-enter.
+///
+/// All state transitions are possible.
 enum StoryVisibilityState {
-    // Default state for a story.
+    /// Default state for a story.
     DEFAULT = 1;
-    // Full-screen user experience, e.g. playing a video.
+    /// Full-screen user experience, e.g. playing a video.
     IMMERSIVE = 2;
 };

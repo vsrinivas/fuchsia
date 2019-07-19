@@ -4,8 +4,8 @@
 
 library fuchsia.modular;
 
-// Used to pass around configuration references to apps such as user
-// shell, base shell, story shell.
+/// Used to pass around configuration references to apps such as user
+/// shell, base shell, story shell.
 struct AppConfig {
     string url;
     vector<string>? args;

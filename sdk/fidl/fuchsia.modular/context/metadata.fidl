@@ -4,15 +4,15 @@
 
 library fuchsia.modular;
 
-// This struct serves two purposes. It is:
-//
-// 1) Used to expose metadata along with each context node when interfacing
-// with clients either publishing, or retieving, context values.
-//
-// 2) Used while getting or querying for context values from a ContextReader to
-// restrict the set of values returned by partially specifying a
-// ContextMetadata struct.
-//
+/// This struct serves two purposes. It is:
+///
+/// 1) Used to expose metadata along with each context node when interfacing
+/// with clients either publishing, or retieving, context values.
+///
+/// 2) Used while getting or querying for context values from a ContextReader to
+/// restrict the set of values returned by partially specifying a
+/// ContextMetadata struct.
+///
 // TODO(thatguy): Consider splitting these two purposes into their own structs
 // if the dual-responsibility becomes difficult to manage.
 struct ContextMetadata {
@@ -43,22 +43,22 @@ struct EntityMetadata {
 };
 
 struct LinkMetadata {
-    // These fields are identical to those in modular.LinkPath. Can't use
-    // modular.LinkPath directly because depending on lib/modular/fidl:link_path
-    // causes issues with Dart bindings (they try to import the file from the
-    // wrong package name), and depending on lib/modular/fidl causes a dependency
-    // cycle (lib/context -> lib/module -> lib/user_intelligence -> lib/context).
-    //
+    /// These fields are identical to those in modular.LinkPath. Can't use
+    /// modular.LinkPath directly because depending on lib/modular/fidl:link_path
+    /// causes issues with Dart bindings (they try to import the file from the
+    /// wrong package name), and depending on lib/modular/fidl causes a dependency
+    /// cycle (lib/context -> lib/module -> lib/user_intelligence -> lib/context).
+    ///
     // TODO(thatguy): Once we have FIDL2 (which will apparently fix the Dart
     // bindings problem), use LinkPath.
     vector<string>? module_path;
     string? name;
 };
 
-// bool type cannot be made optional (in StoryMetadata above), so we cannot
-// differentiate between an unspecified value and false. So we have to create a
-// struct with an enum in it to represent the boolean states, so that we can
-// allow it to be null.
+/// bool type cannot be made optional (in StoryMetadata above), so we cannot
+/// differentiate between an unspecified value and false. So we have to create a
+/// struct with an enum in it to represent the boolean states, so that we can
+/// allow it to be null.
 struct FocusedState {
     FocusedStateState state;
 };

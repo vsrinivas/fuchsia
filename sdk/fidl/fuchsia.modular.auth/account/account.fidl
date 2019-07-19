@@ -4,52 +4,52 @@
 
 library fuchsia.modular.auth;
 
-// Stores attributes related to an account that is exposed to base shell.
-// A list of existing account(s) can be obtained via
-// UserProvider.PreviousUsers() and a new account can be added via
-// UserProvider.AddAccount().
+/// Stores attributes related to an account that is exposed to base shell.
+/// A list of existing account(s) can be obtained via
+/// UserProvider.PreviousUsers() and a new account can be added via
+/// UserProvider.AddAccount().
 struct Account {
-    // A randomly generated identifier that is used to identify this
-    // account on this device. This is meant to be used by base shell when it
-    // wants to login as a user who has previously logged in.
+    /// A randomly generated identifier that is used to identify this
+    /// account on this device. This is meant to be used by base shell when it
+    /// wants to login as a user who has previously logged in.
     string id;
 
-    // The identity provider that was used to authenticate the user on this
-    // device.
+    /// The identity provider that was used to authenticate the user on this
+    /// device.
     IdentityProvider identity_provider;
 
-    // Unique identifier configured for the given user at the Identity provider.
-    // Profile id is fetched from user profile attributes as configured by the
-    // user at the given identity provider.
+    /// Unique identifier configured for the given user at the Identity provider.
+    /// Profile id is fetched from user profile attributes as configured by the
+    /// user at the given identity provider.
     string profile_id;
 
-    // The name that is displayed on the base shell while logging in. Display
-    // name is fetched from user profile attributes as configured by the user at
-    // the given identity provider.
+    /// The name that is displayed on the base shell while logging in. Display
+    /// name is fetched from user profile attributes as configured by the user at
+    /// the given identity provider.
     string display_name;
 
-    // User's profile url that is used by the base shell while logging in.
-    // Profile url is fetched from user profile attributes as configured by the
-    // user at the given identity provider.
+    /// User's profile url that is used by the base shell while logging in.
+    /// Profile url is fetched from user profile attributes as configured by the
+    /// user at the given identity provider.
     string url;
 
-    // User's profile image url that is used by the base shell while logging in.
-    // Profile image url is fetched from user profile attributes as configured by
-    // the user at the given identity provider.
+    /// User's profile image url that is used by the base shell while logging in.
+    /// Profile image url is fetched from user profile attributes as configured by
+    /// the user at the given identity provider.
     string image_url;
 };
 
-// The currently supported identity providers. An identity provider provides
-// identifiers for users to interact with the system and may provide information
-// about the user that is known to the provider.
+/// The currently supported identity providers. An identity provider provides
+/// identifiers for users to interact with the system and may provide information
+/// about the user that is known to the provider.
 enum IdentityProvider {
-    // An identity provider that's used for development and testing. If this
-    // identity provider is chosen, the Framework will continue as if it has
-    // identified the user. Note that the users that use this id provider would
-    // not get cloud ledger access (unless done via a side channel).
+    /// An identity provider that's used for development and testing. If this
+    /// identity provider is chosen, the Framework will continue as if it has
+    /// identified the user. Note that the users that use this id provider would
+    /// not get cloud ledger access (unless done via a side channel).
     DEV = 0;
 
-    // Uses Google as the identity provider. Doing this requires a working network
-    // connection and a web view.
+    /// Uses Google as the identity provider. Doing this requires a working network
+    /// connection and a web view.
     GOOGLE = 1;
 };

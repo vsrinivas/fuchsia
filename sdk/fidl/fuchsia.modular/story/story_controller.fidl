@@ -6,83 +6,83 @@ library fuchsia.modular;
 
 using fuchsia.ui.views;
 
-// Used by the clients of StoryProvider (SessionShell) to interact with a single
-// story. Created by StoryProvider.
-//
-// If `StoryController` is closed, the `StoryState` associated with this story
-// does not change.
+/// Used by the clients of StoryProvider (SessionShell) to interact with a single
+/// story. Created by StoryProvider.
+///
+/// If `StoryController` is closed, the `StoryState` associated with this story
+/// does not change.
 protocol StoryController {
-    // Gets information associated with the story.
+    /// Gets information associated with the story.
     GetInfo() -> (StoryInfo info, StoryState state);
 
-    // Requests to run the story controlled by this `StoryController` instance.
-    // When the story starts, if not yet running, the view of the newly started
-    // story shell will be passed in a call to SessionShell.AttachView().
+    /// Requests to run the story controlled by this `StoryController` instance.
+    /// When the story starts, if not yet running, the view of the newly started
+    /// story shell will be passed in a call to SessionShell.AttachView().
     RequestStart();
 
-    // Requests to stop the story controlled by this `StoryController`. If Start()
-    // requests are pending when this request is issued, the request is queued
-    // until the Start() requests complete. Before stopping the story, a snapshot
-    // of the story will be taken and saved. Returns when the story is stopped.
+    /// Requests to stop the story controlled by this `StoryController`. If Start()
+    /// requests are pending when this request is issued, the request is queued
+    /// until the Start() requests complete. Before stopping the story, a snapshot
+    /// of the story will be taken and saved. Returns when the story is stopped.
     Stop() -> ();
 
-    // Creates a new view with the given `view_owner` request to display
-    // snapshots. Takes a snapshot for the story controlled by this
-    // `StoryController` and then loads the snapshot to the created view such that
-    // it is rendered. The callback will be invoked once the view has been created
-    // and the snapshot has been loaded.
+    /// Creates a new view with the given `view_owner` request to display
+    /// snapshots. Takes a snapshot for the story controlled by this
+    /// `StoryController` and then loads the snapshot to the created view such that
+    /// it is rendered. The callback will be invoked once the view has been created
+    /// and the snapshot has been loaded.
     TakeAndLoadSnapshot(fuchsia.ui.views.ViewToken view_token) -> ();
 
-    // Registers a watcher for changes of the story state.
-    //
-    // Note that stories can stop themselves at any time and it is advisable
-    // for the holder of a StoryController to provide a watcher.
+    /// Registers a watcher for changes of the story state.
+    ///
+    /// Note that stories can stop themselves at any time and it is advisable
+    /// for the holder of a StoryController to provide a watcher.
     Watch(StoryWatcher watcher);
 
-    // DEPRECATED
+    /// DEPRECATED
     GetActiveModules() -> (vector<ModuleData> module_data);
 
-    // DEPRECATED
+    /// DEPRECATED
     GetModules() -> (vector<ModuleData> module_data);
 
-    // DEPRECATED
-    // (metadata about, and requesting changes to runtime state).
+    /// DEPRECATED
+    /// (metadata about, and requesting changes to runtime state).
     GetModuleController(vector<string> module_path, request<ModuleController> request);
 
-    // DEPRECATED
+    /// DEPRECATED
     GetLink(LinkPath link_path, request<Link> link);
 };
 
-// Implemented by the client calling StoryController.Watch().
+/// Implemented by the client calling StoryController.Watch().
 protocol StoryWatcher {
-    // Called with the current state right after registration, and subsequently
-    // when the state changes.
+    /// Called with the current state right after registration, and subsequently
+    /// when the state changes.
     OnStateChange(StoryState new_state);
 
-    // DEPRECATED
+    /// DEPRECATED
     OnModuleAdded(ModuleData module_data);
 
-    // DEPRECATED
+    /// DEPRECATED
     OnModuleFocused(vector<string> module_path);
 };
 
-// Implemented by the client calling StoryController.GetActiveLinks().
-//
-// DEPRECATED: StoryController is only to be used for Story concepts
-// (metadata about, and requesting changes to runtime state).
+/// Implemented by the client calling StoryController.GetActiveLinks().
+///
+/// DEPRECATED: StoryController is only to be used for Story concepts
+/// (metadata about, and requesting changes to runtime state).
 protocol StoryLinksWatcher {
-    // Called when a link becomes active in the story, i.e. when it is loaded into
-    // memory and connected with modules and watchers. After this notification,
-    // the Link can be obtained with GetLink() and further notifications can be
-    // obtained from watchers on the Link and connection error handlers on the
-    // LinkWatcher.
-    //
-    // Note that the Link remains active until there are no connections to it
-    // left. Hence in order to obtain a notification when the Link becomes
-    // inactive, a client must give up the Link connection after registering a
-    // LinkWatcher, and listen for the LinkWatcher connection to go down.
-    //
-    // This is EXPERIMENTAL. We certainly can make this simpler once we know it is
-    // what we need.
+    /// Called when a link becomes active in the story, i.e. when it is loaded into
+    /// memory and connected with modules and watchers. After this notification,
+    /// the Link can be obtained with GetLink() and further notifications can be
+    /// obtained from watchers on the Link and connection error handlers on the
+    /// LinkWatcher.
+    ///
+    /// Note that the Link remains active until there are no connections to it
+    /// left. Hence in order to obtain a notification when the Link becomes
+    /// inactive, a client must give up the Link connection after registering a
+    /// LinkWatcher, and listen for the LinkWatcher connection to go down.
+    ///
+    /// This is EXPERIMENTAL. We certainly can make this simpler once we know it is
+    /// what we need.
     OnNewLink(LinkPath link_path);
 };

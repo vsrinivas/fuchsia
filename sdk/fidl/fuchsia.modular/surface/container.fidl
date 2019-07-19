@@ -6,45 +6,45 @@
 
 library fuchsia.modular;
 
-// Specification of the layout of multiple surfaces in a module container. The
-// surfaces are referenced by name in ContainerRelationEntry.
+/// Specification of the layout of multiple surfaces in a module container. The
+/// surfaces are referenced by name in ContainerRelationEntry.
 struct ContainerLayout {
     vector<LayoutEntry> surfaces;
 };
 
-// Specification of the postion of one surface within a container layout,
-// specified by a rectangle.
+/// Specification of the postion of one surface within a container layout,
+/// specified by a rectangle.
 struct LayoutEntry {
-    // Surface name, referenced by container relation entry.
+    /// Surface name, referenced by container relation entry.
     string node_name;
 
-    // Layout, as rectangle in Dart conventions(left, top, width, height), as a
-    // proportion of the size of the container
+    /// Layout, as rectangle in Dart conventions(left, top, width, height), as a
+    /// proportion of the size of the container
     array<float32>:4 rectangle;
 };
 
-// Specifies the surface relationship between modules started together in module
-// container.
-//
+/// Specifies the surface relationship between modules started together in module
+/// container.
+///
 // TODO(djmurphy): this allows arbitrary graphs including cyclical ones, which
 // makes no sense. We could consider a nested data structure that makes cycles
 // impossible to specify.
 struct ContainerRelationEntry {
-    // Surface name, referenced by layout.
+    /// Surface name, referenced by layout.
     string node_name;
 
-    // Surface name of the layout parent. This could be the container itself,
-    // rather than a module in it.
+    /// Surface name of the layout parent. This could be the container itself,
+    /// rather than a module in it.
     string parent_node_name;
 
-    // This surface relation between the surface identified by node_name and by
-    // parent_node_name.
-    //
-    // It is possible to specify a surface relationship of a module in a container
-    // to the container itself, as opposed to another module in the container.
-    // This expresses for example that a module can be dismissed individually, as
-    // opposed to dismissing the module dismisses the container as a whole.
-    //
+    /// This surface relation between the surface identified by node_name and by
+    /// parent_node_name.
+    ///
+    /// It is possible to specify a surface relationship of a module in a container
+    /// to the container itself, as opposed to another module in the container.
+    /// This expresses for example that a module can be dismissed individually, as
+    /// opposed to dismissing the module dismisses the container as a whole.
+    ///
     // TODO(djmurphy,mesch): The case above is not really a surface relationship,
     // because the container is not a surface as such. We could adjust the name
     // accordingly, or use a different type here. Depends on whether all surface
@@ -53,14 +53,14 @@ struct ContainerRelationEntry {
     SurfaceRelation relationship;
 };
 
-// Specifies one module to start inside a container. The module is specified by
-// a intent as usual. The node_name of the surface is referenced by container
-// layout and by container relation entry.
+/// Specifies one module to start inside a container. The module is specified by
+/// a intent as usual. The node_name of the surface is referenced by container
+/// layout and by container relation entry.
 struct ContainerNode {
-    // Name by which this module is references in layout and surface relationship
-    // specifications (cf. above).
+    /// Name by which this module is references in layout and surface relationship
+    /// specifications (cf. above).
     string node_name;
 
-    // The intent to resolve to a module.
+    /// The intent to resolve to a module.
     Intent intent;
 };

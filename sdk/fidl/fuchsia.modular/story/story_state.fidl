@@ -4,22 +4,22 @@
 
 library fuchsia.modular;
 
-// State of a Story. A story is either running, stopping, or stopped, separately
-// on every device of the user. If it's running, it can also be focused, but
-// that's tracked in a separate service, cf. FocusProvider in focus.fidl.
-//
-// Possible state transitions are:
-//
-//   STOPPED  -> RUNNING
-//   RUNNING  -> STOPPING
-//   STOPPING -> STOPPED
+/// State of a Story. A story is either running, stopping, or stopped, separately
+/// on every device of the user. If it's running, it can also be focused, but
+/// that's tracked in a separate service, cf. FocusProvider in focus.fidl.
+///
+/// Possible state transitions are:
+///
+///   STOPPED  -> RUNNING
+///   RUNNING  -> STOPPING
+///   STOPPING -> STOPPED
 enum StoryState {
-    // Story was started using StoryController.Start().
+    /// Story was started using StoryController.Start().
     RUNNING = 1;
-    // Story is in the middle of stopping after StoryController.Stop() was
-    // called.
+    /// Story is in the middle of stopping after StoryController.Stop() was
+    /// called.
     STOPPING = 2;
-    // Story was not yet run, or Story was stopped after StoryController.Stop()
-    // was called.
+    /// Story was not yet run, or Story was stopped after StoryController.Stop()
+    /// was called.
     STOPPED = 3;
 };

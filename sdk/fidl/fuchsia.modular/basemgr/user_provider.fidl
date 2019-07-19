@@ -6,54 +6,54 @@ library fuchsia.modular;
 
 using fuchsia.modular.auth;
 
-// Given by the `Basemgr` to the `BaseShell` at Initialize() so the
-// `BaseShell` can get information about the users of this device from the
-// `Basemgr`, and act on the provided information (including extending the
-// user database).
+/// Given by the `Basemgr` to the `BaseShell` at Initialize() so the
+/// `BaseShell` can get information about the users of this device from the
+/// `Basemgr`, and act on the provided information (including extending the
+/// user database).
 protocol UserProvider {
-    // Adds information of a user that can be used to authenticate her/him to this
-    // device. Once successfully added, the user can login to the same device via
-    // Login().
-    //
-    // `identity_provider` is the identity provider to use for identification.
-    //
-    // `device_name` is what the user wants to name the device. If null or empty
-    // the device's current hostname will be used.
-    //
-    // `account` is NULL if there was an error during identification and
-    // `error_code` is set.
+    /// Adds information of a user that can be used to authenticate her/him to this
+    /// device. Once successfully added, the user can login to the same device via
+    /// Login().
+    ///
+    /// `identity_provider` is the identity provider to use for identification.
+    ///
+    /// `device_name` is what the user wants to name the device. If null or empty
+    /// the device's current hostname will be used.
+    ///
+    /// `account` is NULL if there was an error during identification and
+    /// `error_code` is set.
     AddUser(fuchsia.modular.auth.IdentityProvider identity_provider)
         -> (fuchsia.modular.auth.Account? account, string? error_code);
 
-    // Removes information of a user from the local user database.
-    //
-    // `account_id` is received from either AddUser() or PreviousUsers().
+    /// Removes information of a user from the local user database.
+    ///
+    /// `account_id` is received from either AddUser() or PreviousUsers().
     RemoveUser(string account_id) -> (string? error_code);
 
-    // Uses the credentials provided in AddUser() to start a user session. This
-    // would mean syncing with the user's ledger instance and displaying a user
-    // shell with all of the user's stories.
+    /// Uses the credentials provided in AddUser() to start a user session. This
+    /// would mean syncing with the user's ledger instance and displaying a user
+    /// shell with all of the user's stories.
     // TODO(alhaad): In the future, we want to protect Login() with a password,
     // Android lock pattern, etc.
     Login(UserLoginParams user_login_params);
-    // DEPRECATED: For transitional purposes only.
+    /// DEPRECATED: For transitional purposes only.
     [Transitional]
     Login2(UserLoginParams2 user_login_params);
 
-    // List of all users who have authenticated to this device in the past.
+    /// List of all users who have authenticated to this device in the past.
     PreviousUsers() -> (vector<fuchsia.modular.auth.Account> accounts);
 };
 
-// Used to specify arguments to log into a user session.
+/// Used to specify arguments to log into a user session.
 struct UserLoginParams {
-    // `account_id` is received from either AddUser() or PreviousUsers(). It
-    // can be NULL which means logging-in using incognito mode.
+    /// `account_id` is received from either AddUser() or PreviousUsers(). It
+    /// can be NULL which means logging-in using incognito mode.
     string? account_id;
 };
 
-// DEPRECATED, for backwards compatibility only
+/// DEPRECATED, for backwards compatibility only
 struct UserLoginParams2 {
-    // `account_id` is received from either AddUser() or PreviousUsers(). It
-    // can be NULL which means logging-in in an incognito mode.
+    /// `account_id` is received from either AddUser() or PreviousUsers(). It
+    /// can be NULL which means logging-in in an incognito mode.
     string? account_id;
 };

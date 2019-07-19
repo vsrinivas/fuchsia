@@ -4,12 +4,12 @@
 
 library fuchsia.modular;
 
-// A container for component-scoped services. This contains any and all
-// services needed by any sort of Module/Agent.
+/// A container for component-scoped services. This contains any and all
+/// services needed by any sort of Module/Agent.
 [Discoverable]
 protocol IntelligenceServices {
-    // These are just here for illustrative purposes, and are not a complete
-    // list.
+    /// These are just here for illustrative purposes, and are not a complete
+    /// list.
     GetContextReader(request<ContextReader> context_reader);
     GetContextWriter(request<ContextWriter> context_writer);
 };

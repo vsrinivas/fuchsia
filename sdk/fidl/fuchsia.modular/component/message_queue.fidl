@@ -6,59 +6,59 @@ library fuchsia.modular;
 
 using fuchsia.mem;
 
-// A message queue is a named, locally persistent FIFO data structure. Message
-// queues are created, read from, and deleted by component instances through
-// their ComponentContext service.
-//
-// A message queue is created by a component instance from its component context
-// in order to receive messages in it.
-//
-// A sender token that identifies the queue can be obtained from the message
-// queue connection and passed to other components. This enables the other
-// component to send messages to the queue. A sender token does not allow a
-// component to read messages from a queue.
-//
-// The name of a queue is local to the component instance, i.e. it can only be
-// used by the component instance that created the queue to access it. The name
-// can specifically be used to obtain a MessageReader connection for the message
-// queue.
-//
-// The existence of message queues and their tokens is synchronized across
-// devices, allowing components with instances on multiple devices to route
-// messages within each device. For example, modules can use sender tokens on
-// different devices and see those messages delivered to the agent instance on
-// the same device. However, individual messages are local to a device.
+/// A message queue is a named, locally persistent FIFO data structure. Message
+/// queues are created, read from, and deleted by component instances through
+/// their ComponentContext service.
+///
+/// A message queue is created by a component instance from its component context
+/// in order to receive messages in it.
+///
+/// A sender token that identifies the queue can be obtained from the message
+/// queue connection and passed to other components. This enables the other
+/// component to send messages to the queue. A sender token does not allow a
+/// component to read messages from a queue.
+///
+/// The name of a queue is local to the component instance, i.e. it can only be
+/// used by the component instance that created the queue to access it. The name
+/// can specifically be used to obtain a MessageReader connection for the message
+/// queue.
+///
+/// The existence of message queues and their tokens is synchronized across
+/// devices, allowing components with instances on multiple devices to route
+/// messages within each device. For example, modules can use sender tokens on
+/// different devices and see those messages delivered to the agent instance on
+/// the same device. However, individual messages are local to a device.
 protocol MessageQueue {
-    // Gets a sender token associated with this queue. It can be used by other
-    // components to send messages to this queue.
+    /// Gets a sender token associated with this queue. It can be used by other
+    /// components to send messages to this queue.
     GetToken() -> (string queue_token);
 
-    // Registers a receiver for this MessageQueue. MessageReader.OnReceive() is
-    // called when there is an unread message. There can be at most one receiver
-    // registered for a message queue at any time. Registering a new receiver
-    // replaces the previous one.
+    /// Registers a receiver for this MessageQueue. MessageReader.OnReceive() is
+    /// called when there is an unread message. There can be at most one receiver
+    /// registered for a message queue at any time. Registering a new receiver
+    /// replaces the previous one.
     RegisterReceiver(MessageReader receiver);
 };
 
-// Used to send a message to a message queue. The MessageSender connection is
-// obtained from ComponentContext.GetMessageSender() using a queue token of the
-// MessageQueue. The queue token is obtained by the component that created the
-// message queue and is then passed to the other component through services
-// specific to either component.
+/// Used to send a message to a message queue. The MessageSender connection is
+/// obtained from ComponentContext.GetMessageSender() using a queue token of the
+/// MessageQueue. The queue token is obtained by the component that created the
+/// message queue and is then passed to the other component through services
+/// specific to either component.
 protocol MessageSender {
     Send(fuchsia.mem.Buffer message);
 };
 
-// A component instance may implement and register a MessageReader interface
-// using MessageQueue.RegisterReceiver(). When there are new unread messages,
-// they are sent to MessageReader.OnReceive(). TODO(vardhan): There is a
-// conflict with C++ fidl bindings for 'MessageReceiver'. After that is fixed,
-// rename this interface to MessageReceiver.
+/// A component instance may implement and register a MessageReader interface
+/// using MessageQueue.RegisterReceiver(). When there are new unread messages,
+/// they are sent to MessageReader.OnReceive(). TODO(vardhan): There is a
+/// conflict with C++ fidl bindings for 'MessageReceiver'. After that is fixed,
+/// rename this interface to MessageReceiver.
 protocol MessageReader {
-    // Called when there is a new message to be received. Once an OnReceive()
-    // responds back, the message is acknowledged as having been received and the
-    // next one is sent when available. If a client's OnReceive() does not respond
-    // before the MessageReader interface is closed, then a future MessageReader
-    // for this message queue will receive the unacknowledged message again.
+    /// Called when there is a new message to be received. Once an OnReceive()
+    /// responds back, the message is acknowledged as having been received and the
+    /// next one is sent when available. If a client's OnReceive() does not respond
+    /// before the MessageReader interface is closed, then a future MessageReader
+    /// for this message queue will receive the unacknowledged message again.
     OnReceive(fuchsia.mem.Buffer message) -> ();
 };
