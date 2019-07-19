@@ -317,6 +317,7 @@ zx_status_t ArmIspDevice::InitIsp() {
   zx_status_t status = IspContextInit();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: IspContextInit failed %d\n", __func__, status);
+    return status;
   }
 
   // Copy current context to ISP
@@ -480,7 +481,11 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
 
   // TODO(braval): This is here only for testing purposes for initial bring up
   // phase
-  isp_device->InitIsp();
+  status = isp_device->InitIsp();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to Initialize ISP\n", __func__);
+    return status;
+  }
   // isp_device->StartStreaming();
 
   zx_device_prop_t props[] = {
