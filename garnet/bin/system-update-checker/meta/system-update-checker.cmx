@@ -11,8 +11,10 @@
             "ctl"
         ],
         "services": [
+            "fuchsia.cobalt.SystemDataUpdater",
             "fuchsia.logger.LogSink",
             "fuchsia.pkg.PackageResolver",
+            "fuchsia.pkg.rewrite.Engine",
             "fuchsia.sys.Launcher"
         ],
         "system": [

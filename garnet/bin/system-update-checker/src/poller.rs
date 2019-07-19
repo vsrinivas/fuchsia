@@ -4,18 +4,21 @@
 
 use crate::apply::Initiator;
 use crate::config::Config;
-use crate::manager_manager::{ManagerManager, StateChangeCallback, UpdateApplier, UpdateChecker};
+use crate::update_manager::{
+    StateChangeCallback, TargetChannelUpdater, UpdateApplier, UpdateChecker, UpdateManager,
+};
 use fidl_fuchsia_update::CheckStartedResult;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_info;
 use futures::prelude::*;
 use std::sync::Arc;
 
-pub fn run_periodic_update_check<C, A, S>(
-    manager: Arc<ManagerManager<C, A, S>>,
+pub fn run_periodic_update_check<T, C, A, S>(
+    manager: Arc<UpdateManager<T, C, A, S>>,
     config: &Config,
 ) -> impl Future<Output = ()>
 where
+    T: TargetChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
     S: StateChangeCallback,
@@ -46,9 +49,9 @@ where
 mod tests {
     use super::*;
     use crate::config::ConfigBuilder;
-    use crate::manager_manager::tests::{
-        FakeUpdateChecker, StateChangeCollector, UnreachableStateChangeCallback,
-        UnreachableUpdateApplier,
+    use crate::update_manager::tests::{
+        FakeTargetChannelUpdater, FakeUpdateChecker, StateChangeCollector,
+        UnreachableStateChangeCallback, UnreachableUpdateApplier,
     };
     use fidl_fuchsia_update::ManagerState;
     use fuchsia_async::DurationExt;
@@ -60,8 +63,12 @@ mod tests {
         let mut executor = fasync::Executor::new_with_fake_time().unwrap();
 
         let checker = FakeUpdateChecker::new_up_to_date();
-        let manager: ManagerManager<_, _, UnreachableStateChangeCallback> =
-            ManagerManager::from_checker_and_applier(checker.clone(), UnreachableUpdateApplier);
+        let manager: UpdateManager<_, _, _, UnreachableStateChangeCallback> =
+            UpdateManager::from_checker_and_applier(
+                FakeTargetChannelUpdater::new(),
+                checker.clone(),
+                UnreachableUpdateApplier,
+            );
 
         let mut cron = run_periodic_update_check(Arc::new(manager), &Config::default()).boxed();
 
@@ -76,8 +83,11 @@ mod tests {
 
         let checker = FakeUpdateChecker::new_up_to_date();
         let callback = StateChangeCollector::new();
-        let manager =
-            ManagerManager::from_checker_and_applier(checker.clone(), UnreachableUpdateApplier);
+        let manager = UpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
+            checker.clone(),
+            UnreachableUpdateApplier,
+        );
         manager.add_permanent_callback(callback.clone());
 
         let period = 10.minutes();
@@ -121,8 +131,11 @@ mod tests {
 
         let checker = FakeUpdateChecker::new_up_to_date();
         let callback = StateChangeCollector::new();
-        let manager =
-            ManagerManager::from_checker_and_applier(checker.clone(), UnreachableUpdateApplier);
+        let manager = UpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
+            checker.clone(),
+            UnreachableUpdateApplier,
+        );
         let manager = Arc::new(manager);
         manager.add_permanent_callback(callback.clone());
 

@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 use crate::apply::Initiator;
-use crate::manager_manager::{
-    ManagerManager, RealUpdateApplier, RealUpdateChecker, State, StateChangeCallback,
-    UpdateApplier, UpdateChecker,
+use crate::channel::TargetChannelManager;
+use crate::connect::ServiceConnector;
+use crate::update_manager::{
+    RealUpdateApplier, RealUpdateChecker, State, StateChangeCallback, TargetChannelUpdater,
+    UpdateApplier, UpdateChecker, UpdateManager,
 };
 use failure::{bail, Error, ResultExt};
 use fidl::endpoints::ServerEnd;
@@ -16,34 +18,49 @@ use fidl_fuchsia_update::{
 use futures::prelude::*;
 use std::sync::Arc;
 
-pub type RealManagerService = ManagerService<RealUpdateChecker, RealUpdateApplier>;
+pub type RealTargetChannelUpdater = TargetChannelManager<ServiceConnector>;
+pub type RealUpdateService =
+    UpdateService<RealTargetChannelUpdater, RealUpdateChecker, RealUpdateApplier>;
 pub type RealStateChangeCallback = MonitorControlHandle;
-pub type RealManagerManager =
-    ManagerManager<RealUpdateChecker, RealUpdateApplier, RealStateChangeCallback>;
+pub type RealUpdateManager = UpdateManager<
+    RealTargetChannelUpdater,
+    RealUpdateChecker,
+    RealUpdateApplier,
+    RealStateChangeCallback,
+>;
 
-#[derive(Clone)]
-pub struct ManagerService<C, A>
+pub struct UpdateService<T, C, A>
 where
+    T: TargetChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
 {
-    manager_manager: Arc<ManagerManager<C, A, RealStateChangeCallback>>,
+    update_manager: Arc<UpdateManager<T, C, A, RealStateChangeCallback>>,
 }
 
-impl<C, A> ManagerService<C, A>
+impl<T, C, A> Clone for UpdateService<T, C, A>
 where
+    T: TargetChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
 {
-    pub fn new_manager_and_service() -> (Arc<RealManagerManager>, RealManagerService) {
-        let manager_manager = Arc::new(ManagerManager::from_checker_and_applier(
-            RealUpdateChecker,
-            RealUpdateApplier,
-        ));
-        let manager_service = RealManagerService { manager_manager: Arc::clone(&manager_manager) };
-        (manager_manager, manager_service)
+    fn clone(&self) -> Self {
+        Self { update_manager: Arc::clone(&self.update_manager) }
     }
+}
 
+impl RealUpdateService {
+    pub fn new(update_manager: Arc<RealUpdateManager>) -> Self {
+        Self { update_manager }
+    }
+}
+
+impl<T, C, A> UpdateService<T, C, A>
+where
+    T: TargetChannelUpdater,
+    C: UpdateChecker,
+    A: UpdateApplier,
+{
     pub async fn handle_request_stream(
         &self,
         mut request_stream: ManagerRequestStream,
@@ -82,13 +99,13 @@ where
             None
         };
         responder
-            .send(self.manager_manager.try_start_update(initiator, monitor_control_handle))
+            .send(self.update_manager.try_start_update(initiator, monitor_control_handle))
             .context("error sending CheckNow response")?;
         Ok(())
     }
 
     fn handle_get_state(&self, responder: ManagerGetStateResponder) -> Result<(), Error> {
-        match self.manager_manager.get_state() {
+        match self.update_manager.get_state() {
             State { manager_state, version_available } => {
                 responder
                     .send(fidl_fuchsia_update::State {
@@ -109,7 +126,7 @@ where
         let (_stream, handle) =
             // Drop stream b/c Monitor protocol has no client methods
             monitor.into_stream_and_control_handle().context("split AddMonitor ServerEnd")?;
-        self.manager_manager.add_permanent_callback(handle);
+        self.update_manager.add_permanent_callback(handle);
         Ok(())
     }
 }
@@ -126,8 +143,8 @@ fn extract_initiator(options: &fidl_fuchsia_update::Options) -> Result<Initiator
 }
 
 impl StateChangeCallback for MonitorControlHandle {
-    fn on_state_change(&self, new_state: State) -> Result<(), Error> {
-        match new_state {
+    fn on_state_change(&self, new_state: &State) -> Result<(), Error> {
+        match new_state.clone() {
             State { manager_state, version_available } => {
                 self.send_on_state(fidl_fuchsia_update::State {
                     state: Some(manager_state),
@@ -143,8 +160,8 @@ impl StateChangeCallback for MonitorControlHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::manager_manager::tests::{
-        BlockingUpdateChecker, FakeUpdateApplier, FakeUpdateChecker,
+    use crate::update_manager::tests::{
+        BlockingUpdateChecker, FakeTargetChannelUpdater, FakeUpdateApplier, FakeUpdateChecker,
     };
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_update::ManagerState;
@@ -166,29 +183,32 @@ mod tests {
         fidl_fuchsia_update::Options { initiator: Some(fidl_fuchsia_update::Initiator::User) }
     }
 
-    fn spawn_manager_service<C, A>(
+    fn spawn_update_service<T, C, A>(
+        channel_updater: T,
         update_checker: C,
         update_applier: A,
-    ) -> (ManagerProxy, ManagerService<C, A>)
+    ) -> (ManagerProxy, UpdateService<T, C, A>)
     where
+        T: TargetChannelUpdater,
         C: UpdateChecker,
         A: UpdateApplier,
     {
-        let manager_service = ManagerService::<C, A> {
-            manager_manager: Arc::new(
-                ManagerManager::<C, A, RealStateChangeCallback>::from_checker_and_applier(
+        let update_service = UpdateService::<T, C, A> {
+            update_manager: Arc::new(
+                UpdateManager::<T, C, A, RealStateChangeCallback>::from_checker_and_applier(
+                    channel_updater,
                     update_checker,
                     update_applier,
                 ),
             ),
         };
-        let manager_service_clone = manager_service.clone();
+        let update_service_clone = update_service.clone();
         let (proxy, stream) =
             create_proxy_and_stream::<ManagerMarker>().expect("create_proxy_and_stream");
         fasync::spawn(
-            async move { await!(manager_service.handle_request_stream(stream).map(|_| ())) },
+            async move { await!(update_service.handle_request_stream(stream).map(|_| ())) },
         );
-        (proxy, manager_service_clone)
+        (proxy, update_service_clone)
     }
 
     async fn collect_all_on_state_events(monitor: MonitorProxy) -> Vec<fidl_fuchsia_update::State> {
@@ -211,7 +231,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_check_now_monitor_sees_on_state_events() {
-        let proxy = spawn_manager_service(
+        let proxy = spawn_update_service(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
         )
@@ -234,7 +255,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_add_monitor_sees_on_state_events() {
-        let proxy = spawn_manager_service(
+        let proxy = spawn_update_service(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
         )
@@ -259,7 +281,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_state() {
-        let proxy = spawn_manager_service(
+        let proxy = spawn_update_service(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
         )
@@ -273,7 +296,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_multiple_clients_see_on_state_events() {
-        let (proxy0, service) = spawn_manager_service(
+        let (proxy0, service) = spawn_update_service(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
         );
@@ -318,8 +342,11 @@ mod tests {
     async fn test_update_attempt_persists_across_client_disconnect_reconnect() {
         let (blocking_update_checker, unblocker) = BlockingUpdateChecker::new_checker_and_sender();
         let fake_update_applier = FakeUpdateApplier::new_error();
-        let (proxy0, service) =
-            spawn_manager_service(blocking_update_checker, fake_update_applier.clone());
+        let (proxy0, service) = spawn_update_service(
+            FakeTargetChannelUpdater::new(),
+            blocking_update_checker,
+            fake_update_applier.clone(),
+        );
 
         let (monitor0, monitor_server_end0) =
             fidl::endpoints::create_proxy().expect("create_proxy");

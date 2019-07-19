@@ -3,29 +3,50 @@
 // found in the LICENSE file.
 
 use crate::apply::{apply_system_update, Initiator};
+use crate::channel::TargetChannelManager;
 use crate::check::{check_for_system_update, SystemUpdateStatus};
+use crate::connect::ServiceConnect;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_update::{CheckStartedResult, ManagerState};
 use fuchsia_async as fasync;
 use fuchsia_merkle::Hash;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::future::BoxFuture;
+use futures::lock::Mutex as AsyncMutex;
 use futures::prelude::*;
 use parking_lot::Mutex;
 use std::sync::Arc;
 
 pub trait StateChangeCallback: Clone + Send + Sync + 'static {
-    fn on_state_change(&self, new_state: State) -> Result<(), Error>;
+    fn on_state_change(&self, new_state: &State) -> Result<(), Error>;
 }
 
-#[derive(Clone)]
-pub struct ManagerManager<C, A, S>
+/// Manages the lifecycle of an update attempt and notifies interested clients.
+//
+// # Lock Order
+//
+// `updater` is locked for the duration of an update attempt, and an update attempt will
+// periodically lock `monitor` to send status updates. Before an async task or thread can lock
+// `updater`, it must release any locks on `monitor`.
+//
+pub struct UpdateManager<T, C, A, S>
 where
+    T: TargetChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
     S: StateChangeCallback,
 {
-    state: Arc<Mutex<ManagerManagerState<S>>>,
+    monitor: Arc<Mutex<UpdateMonitor<S>>>,
+    updater: Arc<AsyncMutex<SystemInterface<T, C, A>>>,
+}
+
+struct SystemInterface<T, C, A>
+where
+    T: TargetChannelUpdater,
+    C: UpdateChecker,
+    A: UpdateApplier,
+{
+    channel_updater: T,
     update_checker: C,
     update_applier: A,
 }
@@ -42,18 +63,43 @@ impl Default for State {
     }
 }
 
-impl<C, A, S> ManagerManager<C, A, S>
+impl<T, S> UpdateManager<T, RealUpdateChecker, RealUpdateApplier, S>
 where
+    T: TargetChannelUpdater,
+    S: StateChangeCallback,
+{
+    pub fn new(channel_updater: T) -> Self {
+        Self {
+            monitor: Arc::new(Mutex::new(UpdateMonitor::new())),
+            updater: Arc::new(AsyncMutex::new(SystemInterface::new(
+                channel_updater,
+                RealUpdateChecker,
+                RealUpdateApplier,
+            ))),
+        }
+    }
+}
+
+impl<T, C, A, S> UpdateManager<T, C, A, S>
+where
+    T: TargetChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
     S: StateChangeCallback,
-    Self: Clone,
 {
-    pub fn from_checker_and_applier(update_checker: C, update_applier: A) -> Self {
+    #[cfg(test)]
+    pub fn from_checker_and_applier(
+        channel_updater: T,
+        update_checker: C,
+        update_applier: A,
+    ) -> Self {
         Self {
-            state: Arc::new(Mutex::new(ManagerManagerState::new())),
-            update_checker,
-            update_applier,
+            monitor: Arc::new(Mutex::new(UpdateMonitor::new())),
+            updater: Arc::new(AsyncMutex::new(SystemInterface::new(
+                channel_updater,
+                update_checker,
+                update_applier,
+            ))),
         }
     }
 
@@ -63,15 +109,21 @@ where
         initiator: Initiator,
         callback: Option<S>,
     ) -> CheckStartedResult {
-        let mut state = self.state.lock();
-        callback.map(|cb| state.add_temporary_callback(cb));
-        match state.manager_state {
+        let mut monitor = self.monitor.lock();
+        callback.map(|cb| monitor.add_temporary_callback(cb));
+        match monitor.state.manager_state {
             ManagerState::Idle => {
-                state.advance_manager_state(ManagerState::CheckingForUpdates);
-                let manager_manager = (*self).clone();
+                monitor.advance_manager_state(ManagerState::CheckingForUpdates);
+                let updater = Arc::clone(&self.updater);
+                let monitor = Arc::clone(&self.monitor);
+
                 // Spawn so that callers of this method are not blocked
                 fasync::spawn(async move {
-                    await!(manager_manager.do_system_update_check_and_return_to_idle(initiator))
+                    // Lock the updater for the duration of the update attempt. Contention is not
+                    // expected except in the case that a previous update attempt failed, has set
+                    // manager_state back to Idle, but has not yet returned.
+                    let mut updater = await!(updater.lock());
+                    await!(updater.do_system_update_check_and_return_to_idle(monitor, initiator))
                 });
                 CheckStartedResult::Started
             }
@@ -80,33 +132,52 @@ where
     }
 
     pub fn get_state(&self) -> State {
-        let state = self.state.lock();
-        state.state()
+        let monitor = self.monitor.lock();
+        monitor.state.clone()
     }
 
     pub fn add_permanent_callback(&self, callback: S) {
-        self.state.lock().add_permanent_callback(callback);
+        self.monitor.lock().add_permanent_callback(callback);
+    }
+}
+
+impl<T, C, A> SystemInterface<T, C, A>
+where
+    T: TargetChannelUpdater,
+    C: UpdateChecker,
+    A: UpdateApplier,
+{
+    pub fn new(channel_updater: T, update_checker: C, update_applier: A) -> Self {
+        Self { channel_updater, update_checker, update_applier }
     }
 
-    async fn do_system_update_check_and_return_to_idle(&self, initiator: Initiator) {
-        if let Err(e) = await!(self.do_system_update_check(initiator)) {
+    async fn do_system_update_check_and_return_to_idle<S: StateChangeCallback>(
+        &mut self,
+        monitor: Arc<Mutex<UpdateMonitor<S>>>,
+        initiator: Initiator,
+    ) {
+        if let Err(e) = await!(self.do_system_update_check(monitor.clone(), initiator)) {
             fx_log_err!("update attempt failed: {}", e);
-            self.state.lock().advance_manager_state(ManagerState::EncounteredError);
+            monitor.lock().advance_manager_state(ManagerState::EncounteredError);
         }
-        let mut state = self.state.lock();
-        match state.manager_state {
+        let mut monitor = monitor.lock();
+        match monitor.state.manager_state {
             ManagerState::WaitingForReboot => fx_log_err!(
                 "system-update-checker is in the WaitingForReboot state. \
                  This should not have happened, because the sytem-updater should \
                  have rebooted the device before it returned."
             ),
             _ => {
-                state.advance_manager_state(ManagerState::Idle);
+                monitor.advance_manager_state(ManagerState::Idle);
             }
         }
     }
 
-    async fn do_system_update_check(&self, initiator: Initiator) -> Result<(), Error> {
+    async fn do_system_update_check<S: StateChangeCallback>(
+        &mut self,
+        monitor: Arc<Mutex<UpdateMonitor<S>>>,
+        initiator: Initiator,
+    ) -> Result<(), Error> {
         fx_log_info!(
             "starting update check (requested by {})",
             match initiator {
@@ -114,6 +185,9 @@ where
                 Initiator::Manual => "user",
             }
         );
+
+        await!(self.channel_updater.update());
+
         match await!(self.update_checker.check()).context("check_for_system_update failed")? {
             SystemUpdateStatus::UpToDate { system_image } => {
                 fx_log_info!("current system_image merkle: {}", system_image);
@@ -124,9 +198,9 @@ where
                 fx_log_info!("current system_image merkle: {}", current_system_image);
                 fx_log_info!("new system_image available: {}", latest_system_image);
                 {
-                    let mut state = self.state.lock();
-                    state.version_available = Some(latest_system_image.to_string());
-                    state.advance_manager_state(ManagerState::PerformingUpdate);
+                    let mut monitor = monitor.lock();
+                    monitor.state.version_available = Some(latest_system_image.to_string());
+                    monitor.advance_manager_state(ManagerState::PerformingUpdate);
                 }
                 await!(self.update_applier.apply(
                     current_system_image,
@@ -137,79 +211,69 @@ where
                 // On success, system-updater reboots the system before returning, so this code
                 // should never run. The only way to leave WaitingForReboot state is to restart
                 // the component
-                self.state.lock().advance_manager_state(ManagerState::WaitingForReboot);
+                monitor.lock().advance_manager_state(ManagerState::WaitingForReboot);
             }
         }
         Ok(())
     }
 }
 
-struct ManagerManagerState<S>
+struct UpdateMonitor<S>
 where
     S: StateChangeCallback,
 {
     permanent_callbacks: Vec<S>,
     temporary_callbacks: Vec<S>,
-    manager_state: ManagerState,
-    version_available: Option<String>,
+    state: State,
 }
 
-impl<S> ManagerManagerState<S>
+impl<S> UpdateMonitor<S>
 where
     S: StateChangeCallback,
 {
     fn new() -> Self {
-        ManagerManagerState {
+        UpdateMonitor {
             permanent_callbacks: vec![],
             temporary_callbacks: vec![],
-            manager_state: ManagerState::Idle,
-            version_available: None,
+            state: Default::default(),
         }
     }
 
     fn add_temporary_callback(&mut self, callback: S) {
-        if callback.on_state_change(self.state()).is_ok() {
+        if callback.on_state_change(&self.state).is_ok() {
             self.temporary_callbacks.push(callback);
         }
     }
 
     fn add_permanent_callback(&mut self, callback: S) {
-        if callback.on_state_change(self.state()).is_ok() {
+        if callback.on_state_change(&self.state).is_ok() {
             self.permanent_callbacks.push(callback);
         }
     }
 
     fn advance_manager_state(&mut self, next_manager_state: ManagerState) {
-        self.manager_state = next_manager_state;
-        if self.manager_state == ManagerState::Idle {
-            self.version_available = None;
+        self.state.manager_state = next_manager_state;
+        if self.state.manager_state == ManagerState::Idle {
+            self.state.version_available = None;
         }
         self.send_on_state();
-        if self.manager_state == ManagerState::Idle {
+        if self.state.manager_state == ManagerState::Idle {
             self.temporary_callbacks.clear();
         }
     }
 
     fn send_on_state(&mut self) {
-        let state = self.state();
-        self.permanent_callbacks.retain(|cb| cb.on_state_change(state.clone()).is_ok());
-        self.temporary_callbacks.retain(|cb| cb.on_state_change(state.clone()).is_ok());
-    }
-
-    fn state(&self) -> State {
-        State {
-            manager_state: self.manager_state,
-            version_available: self.version_available.clone(),
-        }
+        let state = self.state.clone();
+        self.permanent_callbacks.retain(|cb| cb.on_state_change(&state).is_ok());
+        self.temporary_callbacks.retain(|cb| cb.on_state_change(&state).is_ok());
     }
 }
 
 // For mocking
-pub trait UpdateChecker: Clone + Send + Sync + 'static {
+pub trait UpdateChecker: Send + Sync + 'static {
     fn check(&self) -> BoxFuture<Result<SystemUpdateStatus, crate::errors::Error>>;
 }
 
-#[derive(Clone, Copy)]
 pub struct RealUpdateChecker;
 
 impl UpdateChecker for RealUpdateChecker {
@@ -219,7 +283,20 @@ impl UpdateChecker for RealUpdateChecker {
 }
 
 // For mocking
-pub trait UpdateApplier: Clone + Send + Sync + 'static {
+pub trait TargetChannelUpdater: Send + Sync + 'static {
+    fn update(&mut self) -> BoxFuture<()>;
+}
+
+impl<S: ServiceConnect + 'static> TargetChannelUpdater for TargetChannelManager<S> {
+    fn update(&mut self) -> BoxFuture<()> {
+        TargetChannelManager::update(self)
+            .unwrap_or_else(|e| fx_log_err!("while updating target channel: {}", e))
+            .boxed()
+    }
+}
+
+// For mocking
+pub trait UpdateApplier: Send + Sync + 'static {
     fn apply(
         &self,
         current_system_image: Hash,
@@ -228,7 +305,6 @@ pub trait UpdateApplier: Clone + Send + Sync + 'static {
     ) -> BoxFuture<Result<(), crate::errors::Error>>;
 }
 
-#[derive(Clone, Copy)]
 pub struct RealUpdateApplier;
 
 impl UpdateApplier for RealUpdateApplier {
@@ -291,6 +367,28 @@ pub(crate) mod tests {
     }
 
     #[derive(Clone)]
+    pub struct FakeTargetChannelUpdater {
+        call_count: Arc<AtomicU64>,
+    }
+    impl FakeTargetChannelUpdater {
+        pub fn new() -> Self {
+            Self { call_count: Arc::new(AtomicU64::new(0)) }
+        }
+        pub fn call_count(&self) -> u64 {
+            self.call_count.load(Ordering::SeqCst)
+        }
+    }
+    impl TargetChannelUpdater for FakeTargetChannelUpdater {
+        fn update(&mut self) -> BoxFuture<()> {
+            let call_count = self.call_count.clone();
+            async move {
+                call_count.fetch_add(1, Ordering::SeqCst);
+            }
+                .boxed()
+        }
+    }
+
+    #[derive(Clone)]
     pub struct UnreachableUpdateApplier;
     impl UpdateApplier for UnreachableUpdateApplier {
         fn apply(
@@ -337,7 +435,7 @@ pub(crate) mod tests {
     #[derive(Clone)]
     pub struct UnreachableStateChangeCallback;
     impl StateChangeCallback for UnreachableStateChangeCallback {
-        fn on_state_change(&self, _new_state: State) -> Result<(), Error> {
+        fn on_state_change(&self, _new_state: &State) -> Result<(), Error> {
             unreachable!();
         }
     }
@@ -355,8 +453,8 @@ pub(crate) mod tests {
         }
     }
     impl StateChangeCallback for StateChangeCollector {
-        fn on_state_change(&self, new_state: State) -> Result<(), Error> {
-            self.states.lock().push(new_state);
+        fn on_state_change(&self, new_state: &State) -> Result<(), Error> {
+            self.states.lock().push(new_state.clone());
             Ok(())
         }
     }
@@ -372,20 +470,28 @@ pub(crate) mod tests {
         }
     }
     impl StateChangeCallback for FakeStateChangeCallback {
-        fn on_state_change(&self, new_state: State) -> Result<(), Error> {
+        fn on_state_change(&self, new_state: &State) -> Result<(), Error> {
             self.sender
                 .lock()
-                .try_send(new_state)
+                .try_send(new_state.clone())
                 .expect("FakeStateChangeCallback failed to send state");
             Ok(())
         }
     }
 
-    type FakeManagerManager =
-        ManagerManager<FakeUpdateChecker, FakeUpdateApplier, FakeStateChangeCallback>;
+    type FakeUpdateManager = UpdateManager<
+        FakeTargetChannelUpdater,
+        FakeUpdateChecker,
+        FakeUpdateApplier,
+        FakeStateChangeCallback,
+    >;
 
-    type BlockingManagerManager =
-        ManagerManager<BlockingUpdateChecker, FakeUpdateApplier, FakeStateChangeCallback>;
+    type BlockingManagerManager = UpdateManager<
+        FakeTargetChannelUpdater,
+        BlockingUpdateChecker,
+        FakeUpdateApplier,
+        FakeStateChangeCallback,
+    >;
 
     async fn next_n_states(receiver: &mut Receiver<State>, n: usize) -> Vec<State> {
         let mut v = Vec::with_capacity(n);
@@ -430,7 +536,8 @@ pub(crate) mod tests {
 
     #[test]
     fn test_correct_initial_state() {
-        let manager = FakeManagerManager::from_checker_and_applier(
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
         );
@@ -441,7 +548,8 @@ pub(crate) mod tests {
     #[test]
     fn test_try_start_update_returns_started() {
         let _executor = fasync::Executor::new().expect("create test executor");
-        let manager = FakeManagerManager::from_checker_and_applier(
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
         );
@@ -451,7 +559,8 @@ pub(crate) mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_temporary_callbacks_dropped_after_update_attempt() {
-        let manager = FakeManagerManager::from_checker_and_applier(
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
         );
@@ -477,7 +586,8 @@ pub(crate) mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_try_start_update_callback_when_up_to_date() {
-        let manager = FakeManagerManager::from_checker_and_applier(
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
         );
@@ -497,7 +607,8 @@ pub(crate) mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_try_start_update_callback_when_update_available_and_apply_errors() {
-        let manager = FakeManagerManager::from_checker_and_applier(
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
         );
@@ -519,7 +630,8 @@ pub(crate) mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_try_start_update_callback_when_update_available_and_apply_succeeds() {
-        let manager = FakeManagerManager::from_checker_and_applier(
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_success(),
         );
@@ -540,7 +652,8 @@ pub(crate) mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_permanent_callback_is_called() {
-        let manager = FakeManagerManager::from_checker_and_applier(
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
         );
@@ -563,7 +676,8 @@ pub(crate) mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_permanent_callback_persists_across_attempts() {
-        let manager = FakeManagerManager::from_checker_and_applier(
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
         );
@@ -599,9 +713,26 @@ pub(crate) mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_channel_updater_called() {
+        let channel_updater = FakeTargetChannelUpdater::new();
+        let manager = UpdateManager::from_checker_and_applier(
+            channel_updater.clone(),
+            FakeUpdateChecker::new_up_to_date(),
+            UnreachableUpdateApplier,
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
+
+        manager.try_start_update(Initiator::Manual, Some(callback));
+        await!(receiver.collect::<Vec<State>>());
+
+        assert_eq!(channel_updater.call_count(), 1);
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_update_applier_called_if_update_available() {
         let update_applier = FakeUpdateApplier::new_error();
-        let manager = FakeManagerManager::from_checker_and_applier(
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             update_applier.clone(),
         );
@@ -616,7 +747,8 @@ pub(crate) mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_update_applier_not_called_if_up_to_date() {
         let update_applier = FakeUpdateApplier::new_error();
-        let manager = FakeManagerManager::from_checker_and_applier(
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_up_to_date(),
             update_applier.clone(),
         );
@@ -630,7 +762,8 @@ pub(crate) mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_return_to_initial_state_on_update_check_error() {
-        let manager = FakeManagerManager::from_checker_and_applier(
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_error(),
             FakeUpdateApplier::new_error(),
         );
@@ -644,7 +777,8 @@ pub(crate) mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_return_to_initial_state_on_update_apply_error() {
-        let manager = FakeManagerManager::from_checker_and_applier(
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
         );
@@ -685,6 +819,7 @@ pub(crate) mod tests {
     async fn test_get_state_in_checking_for_updates() {
         let (blocking_update_checker, _sender) = BlockingUpdateChecker::new_checker_and_sender();
         let manager = BlockingManagerManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
             blocking_update_checker,
             FakeUpdateApplier::new_error(),
         );
@@ -699,6 +834,7 @@ pub(crate) mod tests {
         let (blocking_update_checker, sender) = BlockingUpdateChecker::new_checker_and_sender();
         let update_applier = FakeUpdateApplier::new_error();
         let manager = BlockingManagerManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
             blocking_update_checker,
             update_applier.clone(),
         );
