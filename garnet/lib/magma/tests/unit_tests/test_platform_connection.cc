@@ -90,6 +90,11 @@ class TestPlatformConnection {
   }
 
   void TestExecuteCommandBufferWithResources() {
+    ASSERT_EQ(TestPlatformConnection::test_command_buffer.num_resources,
+              TestPlatformConnection::test_resources.size());
+    ASSERT_EQ(TestPlatformConnection::test_command_buffer.wait_semaphore_count +
+                  TestPlatformConnection::test_command_buffer.signal_semaphore_count,
+              TestPlatformConnection::test_semaphores.size());
     client_connection_->ExecuteCommandBufferWithResources(
         test_context_id, &test_command_buffer, test_resources.data(), test_semaphores.data());
     EXPECT_EQ(client_connection_->GetError(), 0);
@@ -212,7 +217,7 @@ std::vector<uint64_t> TestPlatformConnection::test_semaphores = {{1000, 1001, 10
 magma_system_command_buffer TestPlatformConnection::test_command_buffer = {
     .num_resources = 2,
     .wait_semaphore_count = 2,
-    .signal_semaphore_count = 3,
+    .signal_semaphore_count = 1,
 };
 
 class TestDelegate : public magma::PlatformConnection::Delegate {
