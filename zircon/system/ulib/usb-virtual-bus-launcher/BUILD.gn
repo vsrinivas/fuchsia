@@ -27,7 +27,6 @@ library("usb-virtual-bus-launcher") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async",
     "$zx/system/ulib/fzl",
-    "$zx/system/ulib/launchpad",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
