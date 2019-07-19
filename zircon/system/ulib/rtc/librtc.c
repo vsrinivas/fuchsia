@@ -27,7 +27,7 @@ static const uint64_t days_in_month[] = {
 // Start with seconds from the Unix epoch to 2000/1/1T00:00:00.
 static const uint64_t local_epoch = 946684800;
 static const uint16_t local_epoch_year = 2000;
-static const uint16_t default_year = 2018;
+static const uint16_t default_year = 2019;
 
 static bool is_leap_year(uint16_t year) {
     return ((year % 4) == 0 && (year % 100) != 0) || ((year % 400) == 0);
