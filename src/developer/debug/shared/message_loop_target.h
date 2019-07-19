@@ -179,7 +179,6 @@ struct MessageLoopTarget::WatchInfo {
 
   // This makes easier the lookup of the associated ExceptionHandler with this watch id.
   const async_wait_t* signal_handler_key = nullptr;
-  const async_exception_t* exception_handler_key = nullptr;
   const async_wait_t* exception_channel_handler_key = nullptr;
 };
 
