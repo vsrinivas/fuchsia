@@ -7,7 +7,7 @@
 use {
     crate::eventloop::Event,
     failure::Error,
-    fidl_fuchsia_net::SocketProviderRequestStream,
+    fidl_fuchsia_posix_socket::ProviderRequestStream,
     fidl_fuchsia_net_stack::StackRequestStream,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -24,7 +24,7 @@ impl FidlWorker {
             .add_fidl_service(|rs: StackRequestStream| {
                 rs.map_ok(Event::FidlStackEvent).left_stream()
             })
-            .add_fidl_service(|rs: SocketProviderRequestStream| {
+            .add_fidl_service(|rs: ProviderRequestStream| {
                 rs.map_ok(Event::FidlSocketProviderEvent).right_stream()
             });
         fs.take_and_serve_directory_handle()?;

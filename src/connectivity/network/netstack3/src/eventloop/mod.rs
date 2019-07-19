@@ -23,7 +23,7 @@
 //! # FIDL Worker
 //!
 //! The FIDL part of the event loop implements the fuchsia.net.stack.Stack and
-//! fuchsia.net.SocketProvider interfaces. The type of the event loop message for a FIDL call is
+//! fuchsia.posix.socket.Provider interfaces. The type of the event loop message for a FIDL call is
 //! simply the generated FIDL type. When the event loop starts up, we use `fuchsia_component` to
 //! start a FIDL server that simply sends all of the events it receives to the event loop
 //! (via the sender end of the mpsc queue).
@@ -91,7 +91,7 @@ use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus, MacAddress};
 use fidl_fuchsia_net as fidl_net;
-use fidl_fuchsia_net::SocketProviderRequest;
+use fidl_fuchsia_posix_socket::ProviderRequest;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_net_stack::{
     AdministrativeStatus, ForwardingEntry, InterfaceAddress, InterfaceInfo, InterfaceProperties,
@@ -227,8 +227,8 @@ impl EthernetWorker {
 pub enum Event {
     /// A request from the fuchsia.net.stack.Stack FIDL interface.
     FidlStackEvent(StackRequest),
-    /// A request from the fuchsia.net.SocketProvider FIDL interface.
-    FidlSocketProviderEvent(SocketProviderRequest),
+    /// A request from the fuchsia.posix.socket.Provider FIDL interface.
+    FidlSocketProviderEvent(ProviderRequest),
     /// An event from an ethernet interface. Either a status change or a frame.
     EthEvent((BindingId, eth::Event)),
     /// An indication that an ethernet device is ready to be used.
@@ -365,12 +365,8 @@ impl EventLoop {
         Ok(())
     }
 
-    async fn handle_fidl_socket_provider_request(&mut self, req: SocketProviderRequest) {
-        match req {
-            SocketProviderRequest::GetAddrInfo { node, service, hints, responder } => {
-                // TODO(wesleyac)
-            }
-        }
+    async fn handle_fidl_socket_provider_request(&mut self, req: ProviderRequest) {
+        // TODO(wesleyac)
     }
 
     async fn handle_fidl_stack_request(&mut self, req: StackRequest) {
