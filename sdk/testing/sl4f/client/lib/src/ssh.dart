@@ -86,8 +86,4 @@ class Ssh {
 
     return result;
   }
-
-  @Deprecated('Use `run` instead.')
-  Future<bool> call(String cmd, {String stdin}) async =>
-      (await run(cmd, stdin: stdin)).exitCode == 0;
 }

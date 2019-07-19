@@ -145,12 +145,6 @@ class Sl4f {
     }
   }
 
-  /// Starts an ssh [Process], sending [cmd] to the target using ssh.
-  @Deprecated('Use `ssh.start` instead.')
-  Future<Process> sshProcess(String cmd,
-          {ProcessStartMode mode = ProcessStartMode.normal}) =>
-      ssh.start(cmd, mode: mode);
-
   /// Obtains the root inspect object for a component whose path includes
   /// [componentName].
   Future<dynamic> inspectComponentRoot(String componentName) async {
