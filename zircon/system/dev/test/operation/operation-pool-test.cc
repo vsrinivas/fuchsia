@@ -4,7 +4,7 @@
 
 #include <lib/operation/operation.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -67,14 +67,11 @@ using OperationPool = operation::OperationPool<Operation, TestOpTraits, void>;
 
 constexpr size_t kParentOpSize = sizeof(TestOp);
 
-bool TrivialLifetimeTest() {
-    BEGIN_TEST;
+TEST(OperationPoolTest, TrivialLifetime) {
     OperationPool pool;
-    END_TEST;
 }
 
-bool SingleOperationTest() {
-    BEGIN_TEST;
+TEST(OperationPoolTest, SingleOperation) {
     std::optional<Operation> operation = Operation::Alloc(kParentOpSize);
     ASSERT_TRUE(operation.has_value());
 
@@ -83,11 +80,9 @@ bool SingleOperationTest() {
     pool.push(*std::move(operation));
     EXPECT_TRUE(pool.pop() != std::nullopt);
     EXPECT_TRUE(pool.pop() == std::nullopt);
-    END_TEST;
 }
 
-bool MultipleOperationTest() {
-    BEGIN_TEST;
+TEST(OperationPoolTest, MultipleOperation) {
     OperationPool pool;
 
     for (size_t i = 0; i < 10; i++) {
@@ -100,11 +95,9 @@ bool MultipleOperationTest() {
         EXPECT_TRUE(pool.pop() != std::nullopt);
     }
     EXPECT_TRUE(pool.pop() == std::nullopt);
-    END_TEST;
 }
 
-bool ReleaseTest() {
-    BEGIN_TEST;
+TEST(OperationPoolTest, Release) {
     OperationPool pool;
 
     for (size_t i = 0; i < 10; i++) {
@@ -115,14 +108,6 @@ bool ReleaseTest() {
 
     pool.Release();
     EXPECT_TRUE(pool.pop() == std::nullopt);
-    END_TEST;
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(OperationPoolTests)
-RUN_TEST_SMALL(TrivialLifetimeTest)
-RUN_TEST_SMALL(SingleOperationTest)
-RUN_TEST_SMALL(MultipleOperationTest)
-RUN_TEST_SMALL(ReleaseTest)
-END_TEST_CASE(OperationPoolTests)

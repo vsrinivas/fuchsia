@@ -6,7 +6,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -67,16 +67,12 @@ struct UnownedOperation : public operation::UnownedOperation<UnownedOperation, T
 
 constexpr size_t kParentOpSize = sizeof(TestOp);
 
-bool AllocTest() {
-    BEGIN_TEST;
+TEST(OperationTest, Alloc) {
     std::optional<Operation> op = Operation::Alloc(kParentOpSize);
     EXPECT_TRUE(op.has_value());
-    END_TEST;
 }
 
-bool PrivateStorageTest() {
-    BEGIN_TEST;
-
+TEST(OperationTest, PrivateStorage) {
     struct Private : public operation::Operation<Private, TestOpTraits, uint32_t> {
           using BaseClass = operation::Operation<Private, TestOpTraits, uint32_t>;
           using BaseClass::BaseClass;
@@ -86,12 +82,9 @@ bool PrivateStorageTest() {
     ASSERT_TRUE(operation.has_value());
     *operation->private_storage() = 1001;
     ASSERT_EQ(*operation->private_storage(), 1001);
-    END_TEST;
 }
 
-bool MultipleSectionTest() {
-    BEGIN_TEST;
-
+TEST(OperationTest, MultipleSection) {
     constexpr size_t kBaseOpSize = sizeof(TestOp);
     constexpr size_t kFirstLayerOpSize = Operation::OperationSize(kBaseOpSize);
     constexpr size_t kSecondLayerOpSize =
@@ -103,12 +96,9 @@ bool MultipleSectionTest() {
     UnownedOperation operation2(operation->take(), nullptr, nullptr, kFirstLayerOpSize);
     UnownedOperation operation3(operation2.take(), nullptr, nullptr, kBaseOpSize);
     operation = Operation(operation3.take(), kSecondLayerOpSize);
-
-    END_TEST;
 }
 
-bool CallbackTest() {
-    BEGIN_TEST;
+TEST(OperationTest, Callback) {
     constexpr size_t kBaseOpSize = sizeof(TestOp);
     constexpr size_t kFirstLayerOpSize = Operation::OperationSize(kBaseOpSize);
 
@@ -125,12 +115,9 @@ bool CallbackTest() {
     UnownedOperation operation2(operation->take(), &cb, &called, kBaseOpSize);
     operation2.Complete(ZX_OK);
     EXPECT_TRUE(called);
-
-    END_TEST;
 }
 
-bool AutoCallbackTest() {
-    BEGIN_TEST;
+TEST(OperationTest, AutoCallback) {
     constexpr size_t kBaseOpSize = sizeof(TestOp);
     constexpr size_t kFirstLayerOpSize = Operation::OperationSize(kBaseOpSize);
 
@@ -149,16 +136,6 @@ bool AutoCallbackTest() {
         UnownedOperation operation2(operation->take(), &cb, &called, kBaseOpSize);
     }
     EXPECT_TRUE(called);
-
-    END_TEST;
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(OperationTests)
-RUN_TEST_SMALL(AllocTest)
-RUN_TEST_SMALL(PrivateStorageTest)
-RUN_TEST_SMALL(MultipleSectionTest)
-RUN_TEST_SMALL(CallbackTest)
-RUN_TEST_SMALL(AutoCallbackTest)
-END_TEST_CASE(OperationTests)

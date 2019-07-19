@@ -4,7 +4,7 @@
 
 #include <lib/operation/operation.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -68,15 +68,12 @@ using UnownedOperationList = operation::UnownedOperationList<UnownedOperation, T
 
 constexpr size_t kParentOpSize = sizeof(TestOp);
 
-bool TrivialLifetimeTest() {
-    BEGIN_TEST;
+TEST(OperationListTest, TrivialLifetime) {
     OperationList list;
     UnownedOperationList unowned_list;
-    END_TEST;
 }
 
-bool MoveTest() {
-    BEGIN_TEST;
+TEST(OperationListTest, Move) {
     OperationList list;
 
     std::optional<Operation> opt_operation = Operation::Alloc(kParentOpSize);
@@ -88,11 +85,9 @@ bool MoveTest() {
     OperationList list2(std::move(list));
     EXPECT_EQ(list2.size(), 1u);
     EXPECT_EQ(list.size(), 0u);
-    END_TEST;
 }
 
-bool SingleOperationTest() {
-    BEGIN_TEST;
+TEST(OperationListTest, SingleOperation) {
     std::optional<Operation> opt_operation = Operation::Alloc(kParentOpSize);
     ASSERT_TRUE(opt_operation.has_value());
     Operation operation = *std::move(opt_operation);
@@ -119,12 +114,9 @@ bool SingleOperationTest() {
 
     idx = list.find(&operation);
     EXPECT_FALSE(idx.has_value());
-    END_TEST;
 }
 
-bool MultipleOperationTest() {
-    BEGIN_TEST;
-
+TEST(OperationListTest, MultipleOperation) {
     OperationList list;
     // This is for verifying prev / next pointer values when iterating the list.
     TestOp* ops[10];
@@ -182,11 +174,9 @@ bool MultipleOperationTest() {
     }
     EXPECT_EQ(list.size(), 0u);
     EXPECT_FALSE(list.begin().has_value());
-    END_TEST;
 }
 
-bool ReleaseTest() {
-    BEGIN_TEST;
+TEST(OperationListTest, Release) {
     OperationList list;
     TestOp* ops[10];
 
@@ -208,13 +198,9 @@ bool ReleaseTest() {
         // Force the destructor to run.
         __UNUSED auto op = Operation(ops[i], kParentOpSize);
     }
-
-    END_TEST;
 }
 
-bool MultipleLayerTest() {
-    BEGIN_TEST;
-
+TEST(OperationListTest, MultipleLayer) {
     using FirstLayerOp = UnownedOperation;
     using SecondLayerOp = Operation;
 
@@ -257,13 +243,9 @@ bool MultipleLayerTest() {
     }
     EXPECT_EQ(first_layer_list.size(), 0u);
     EXPECT_EQ(second_layer_list.size(), 0u);
-
-    END_TEST;
 }
 
-bool MultipleLayerWithStorageTest() {
-    BEGIN_TEST;
-
+TEST(OperationListTest, MultipleLayerWithStorage) {
     struct FirstLayerOp : public operation::UnownedOperation<FirstLayerOp, TestOpTraits,
                                                              CallbackTraits, char> {
 
@@ -341,13 +323,9 @@ bool MultipleLayerWithStorageTest() {
         // Force the destructor to run.
         __UNUSED auto op = Operation(ops[i], kParentOpSize);
     }
-
-    END_TEST;
 }
 
-bool MultipleLayerWithCallbackTest() {
-    BEGIN_TEST;
-
+TEST(OperationListTest, MultipleLayerWithCallback) {
     struct FirstLayerOp : public operation::UnownedOperation<FirstLayerOp, TestOpTraits,
                                                              CallbackTraits, char> {
         using BaseClass = operation::UnownedOperation<FirstLayerOp, TestOpTraits,
@@ -410,18 +388,6 @@ bool MultipleLayerWithCallbackTest() {
         // Force the destructor to run.
         __UNUSED auto op = SecondLayerOp(ops[i], kFirstLayerOpSize);
     }
-    END_TEST;
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(OperationListTests)
-RUN_TEST_SMALL(TrivialLifetimeTest)
-RUN_TEST_SMALL(MoveTest)
-RUN_TEST_SMALL(SingleOperationTest)
-RUN_TEST_SMALL(MultipleOperationTest)
-RUN_TEST_SMALL(ReleaseTest)
-RUN_TEST_SMALL(MultipleLayerTest)
-RUN_TEST_SMALL(MultipleLayerWithStorageTest)
-RUN_TEST_SMALL(MultipleLayerWithCallbackTest)
-END_TEST_CASE(OperationListTests)

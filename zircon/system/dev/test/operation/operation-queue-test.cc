@@ -4,7 +4,7 @@
 
 #include <lib/operation/operation.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -68,15 +68,12 @@ using UnownedOperationQueue = operation::UnownedOperationQueue<UnownedOperation,
 
 constexpr size_t kParentOpSize = sizeof(TestOp);
 
-bool TrivialLifetimeTest() {
-    BEGIN_TEST;
+TEST(OperationQueueTest, TrivialLifetime) {
     OperationQueue queue;
     UnownedOperationQueue unowned_queue;
-    END_TEST;
 }
 
-bool SingleOperationTest() {
-    BEGIN_TEST;
+TEST(OperationQueueTest, SingleOperation) {
     std::optional<Operation> operation = Operation::Alloc(kParentOpSize);
     ASSERT_TRUE(operation.has_value());
 
@@ -85,11 +82,9 @@ bool SingleOperationTest() {
     queue.push(*std::move(operation));
     EXPECT_TRUE(queue.pop() != std::nullopt);
     EXPECT_TRUE(queue.pop() == std::nullopt);
-    END_TEST;
 }
 
-bool MultipleOperationTest() {
-    BEGIN_TEST;
+TEST(OperationQueueTest, MultipleOperation) {
     OperationQueue queue;
 
     for (size_t i = 0; i < 10; i++) {
@@ -102,11 +97,9 @@ bool MultipleOperationTest() {
         EXPECT_TRUE(queue.pop() != std::nullopt);
     }
     EXPECT_TRUE(queue.pop() == std::nullopt);
-    END_TEST;
 }
 
-bool EraseTest() {
-    BEGIN_TEST;
+TEST(OperationQueueTest, Erase) {
     OperationQueue queue;
     TestOpTraits::OperationType* target_ptr = nullptr;
     for (size_t i = 0; i < 10; i++) {
@@ -129,11 +122,9 @@ bool EraseTest() {
         }
     }
     EXPECT_TRUE(queue.pop() == std::nullopt);
-    END_TEST;
 }
 
-bool ReleaseTest() {
-    BEGIN_TEST;
+TEST(OperationQueueTest, Release) {
     OperationQueue queue;
 
     for (size_t i = 0; i < 10; i++) {
@@ -144,12 +135,9 @@ bool ReleaseTest() {
 
     queue.Release();
     EXPECT_TRUE(queue.pop() == std::nullopt);
-    END_TEST;
 }
 
-bool MultipleLayerTest() {
-    BEGIN_TEST;
-
+TEST(OperationQueueTest, MultipleLayer) {
     using FirstLayerOp = UnownedOperation;
     using SecondLayerOp = Operation;
 
@@ -179,13 +167,9 @@ bool MultipleLayerTest() {
         ++count;
     }
     EXPECT_EQ(count, 10);
-
-    END_TEST;
 }
 
-bool MultipleLayerWithStorageTest() {
-    BEGIN_TEST;
-
+TEST(OperationQueueTest, MultipleLayerWithStorage) {
     struct FirstLayerOp : public operation::UnownedOperation<FirstLayerOp, TestOpTraits,
                                                              CallbackTraits, char> {
 
@@ -230,13 +214,9 @@ bool MultipleLayerWithStorageTest() {
         ++count;
     }
     EXPECT_EQ(count, 10);
-
-    END_TEST;
 }
 
-bool MultipleLayerWithCallbackTest() {
-    BEGIN_TEST;
-
+TEST(OperationQueueTest, MultipleLayerWithCallback) {
     struct FirstLayerOp : public operation::UnownedOperation<FirstLayerOp, TestOpTraits,
                                                              CallbackTraits, char> {
         using BaseClass = operation::UnownedOperation<FirstLayerOp, TestOpTraits,
@@ -281,19 +261,6 @@ bool MultipleLayerWithCallbackTest() {
         ++count;
     }
     EXPECT_EQ(count, 10);
-
-    END_TEST;
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(OperationQueueTests)
-RUN_TEST_SMALL(TrivialLifetimeTest)
-RUN_TEST_SMALL(SingleOperationTest)
-RUN_TEST_SMALL(MultipleOperationTest)
-RUN_TEST_SMALL(ReleaseTest)
-RUN_TEST_SMALL(EraseTest)
-RUN_TEST_SMALL(MultipleLayerTest)
-RUN_TEST_SMALL(MultipleLayerWithStorageTest)
-RUN_TEST_SMALL(MultipleLayerWithCallbackTest)
-END_TEST_CASE(OperationQueueTests)
