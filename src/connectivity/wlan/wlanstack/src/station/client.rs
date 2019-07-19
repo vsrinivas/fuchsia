@@ -230,17 +230,7 @@ fn handle_info_event(
                 connection_times.scan_started_time = None;
             }
         }
-        InfoEvent::ScanDiscoveryFinished {
-            bss_count,
-            ess_count,
-            num_bss_by_standard,
-            num_bss_by_channel,
-        } => {
-            telemetry::report_neighbor_networks_count(cobalt_sender, bss_count, ess_count);
-            telemetry::report_standards(cobalt_sender, num_bss_by_standard);
-            telemetry::report_channels(cobalt_sender, num_bss_by_channel);
-        }
-        InfoEvent::AssociationStarted { att_id } => {
+        InfoEvent::JoinStarted { att_id } => {
             connection_times.att_id = att_id;
             connection_times.assoc_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
         }
@@ -278,6 +268,17 @@ fn handle_info_event(
                     connection_times.rsna_started_time = None;
                 }
             }
+        }
+        InfoEvent::DiscoveryScanStats(_scan_stats, discovery_stats) => {
+            if let Some(s) = discovery_stats {
+                telemetry::report_neighbor_networks_count(cobalt_sender, s.bss_count, s.ess_count);
+                telemetry::report_standards(cobalt_sender, s.num_bss_by_standard);
+                telemetry::report_channels(cobalt_sender, s.num_bss_by_channel);
+            }
+            // TODO(WLAN-1162) - Log health metrics
+        }
+        InfoEvent::ConnectStats(..) => {
+            // TODO(WLAN-1162) - Log health metrics
         }
     }
 }

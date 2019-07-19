@@ -31,6 +31,7 @@ rustc_library("wlan-sme") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:nom",
     "//third_party/rust_crates:parking_lot",
     "//zircon/public/fidl/fuchsia-inspect:fuchsia-inspect-rustc",

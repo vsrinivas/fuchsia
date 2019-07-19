@@ -4,6 +4,7 @@
 
 mod bss;
 mod event;
+mod info;
 mod inspect;
 mod rsn;
 mod scan;
@@ -19,7 +20,6 @@ use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_inspect_contrib::{inspect_insert, inspect_log, log::InspectListClosure};
 use futures::channel::{mpsc, oneshot};
 use log::error;
-use std::collections::HashMap;
 use std::sync::Arc;
 use wep_deprecated;
 use wlan_common::format::MacFmt;
@@ -28,10 +28,10 @@ use wlan_inspect::wrappers::InspectWlanChan;
 
 use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
 
-use self::bss::{get_channel_map, get_standard_map};
 use self::event::Event;
+use self::info::InfoReporter;
 use self::rsn::get_rsna;
-use self::scan::{DiscoveryScan, JoinScan, ScanResult, ScanScheduler};
+use self::scan::{DiscoveryScan, JoinScan, ScanScheduler};
 use self::state::{ConnectCommand, Protection, State};
 
 use crate::clone_utils::clone_bss_desc;
@@ -40,6 +40,7 @@ use crate::sink::{InfoSink, MlmeSink};
 use crate::timer::{self, TimedEvent};
 
 pub use self::bss::{BssInfo, ClientConfig, EssInfo};
+pub use self::info::{InfoEvent, ScanResult};
 
 // This is necessary to trick the private-in-public checker.
 // A private module is not allowed to include private types in its interface,
@@ -48,18 +49,18 @@ pub use self::bss::{BssInfo, ClientConfig, EssInfo};
 mod internal {
     use std::sync::Arc;
 
-    use crate::client::{event::Event, inspect, ConnectionAttemptId};
-    use crate::sink::{InfoSink, MlmeSink};
+    use crate::client::{event::Event, info::InfoReporter, inspect, ConnectionAttemptId};
+    use crate::sink::MlmeSink;
     use crate::timer::Timer;
     use crate::DeviceInfo;
 
     pub struct Context {
         pub device_info: Arc<DeviceInfo>,
         pub mlme_sink: MlmeSink,
-        pub info_sink: InfoSink,
         pub(crate) timer: Timer<Event>,
         pub att_id: ConnectionAttemptId,
         pub(crate) inspect: Arc<inspect::SmeTree>,
+        pub(crate) info: InfoReporter,
     }
 }
 
@@ -108,38 +109,6 @@ pub enum ConnectFailure {
 
 pub type EssDiscoveryResult = Result<Vec<EssInfo>, fidl_mlme::ScanResultCodes>;
 
-#[derive(Debug, PartialEq)]
-pub enum InfoEvent {
-    ConnectStarted,
-    ConnectFinished {
-        result: ConnectResult,
-    },
-    MlmeScanStart {
-        txn_id: ScanTxnId,
-    },
-    MlmeScanEnd {
-        txn_id: ScanTxnId,
-    },
-    ScanDiscoveryFinished {
-        bss_count: usize,
-        ess_count: usize,
-        num_bss_by_standard: HashMap<Standard, usize>,
-        num_bss_by_channel: HashMap<u8, usize>,
-    },
-    AssociationStarted {
-        att_id: ConnectionAttemptId,
-    },
-    AssociationSuccess {
-        att_id: ConnectionAttemptId,
-    },
-    RsnaStarted {
-        att_id: ConnectionAttemptId,
-    },
-    RsnaEstablished {
-        att_id: ConnectionAttemptId,
-    },
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Status {
     pub connected_to: Option<BssInfo>,
@@ -174,11 +143,11 @@ impl ClientSme {
                 scan_sched: ScanScheduler::new(Arc::clone(&device_info)),
                 context: Context {
                     mlme_sink: MlmeSink::new(mlme_sink),
-                    info_sink: InfoSink::new(info_sink),
                     device_info,
                     timer,
                     att_id: 0,
                     inspect,
+                    info: InfoReporter::new(InfoSink::new(info_sink)),
                 },
             },
             mlme_stream,
@@ -193,7 +162,7 @@ impl ClientSme {
     ) -> oneshot::Receiver<ConnectResult> {
         let (responder, receiver) = Responder::new();
         // Cancel any ongoing connect attempt
-        self.state = self.state.take().map(|state| state.cancel_ongoing_connect(&self.context));
+        self.state = self.state.take().map(|state| state.cancel_ongoing_connect(&mut self.context));
 
         let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(JoinScan {
             ssid: req.ssid,
@@ -206,10 +175,14 @@ impl ClientSme {
         });
         // If the new scan replaced an existing pending JoinScan, notify the existing transaction
         if let Some(token) = canceled_token {
-            report_connect_finished(Some(token.responder), &self.context, ConnectResult::Canceled);
+            report_connect_finished(
+                Some(token.responder),
+                &mut self.context,
+                ConnectResult::Canceled,
+            );
         }
 
-        self.context.info_sink.send(InfoEvent::ConnectStarted);
+        self.context.info.report_connect_started();
         self.send_scan_request(req);
         receiver
     }
@@ -245,7 +218,9 @@ impl ClientSme {
 
     fn send_scan_request(&mut self, req: Option<ScanRequest>) {
         if let Some(req) = req {
-            self.context.info_sink.send(InfoEvent::MlmeScanStart { txn_id: req.txn_id });
+            let is_join_scan = self.scan_sched.is_scanning_to_join();
+            let is_connected = self.status().connected_to.is_some();
+            self.context.info.report_scan_started(req.clone(), is_join_scan, is_connected);
             self.context.mlme_sink.send(MlmeRequest::Scan(req));
         }
     }
@@ -255,22 +230,27 @@ impl super::Station for ClientSme {
     type Event = Event;
 
     fn on_mlme_event(&mut self, event: MlmeEvent) {
-        self.state = self.state.take().map(|state| match event {
+        match event {
             MlmeEvent::OnScanResult { result } => {
                 self.scan_sched.on_mlme_scan_result(result);
-                state
             }
             MlmeEvent::OnScanEnd { end } => {
-                self.context.info_sink.send(InfoEvent::MlmeScanEnd { txn_id: end.txn_id });
+                let txn_id = end.txn_id;
                 let (result, request) = self.scan_sched.on_mlme_scan_end(end);
+                // Finalize stats for previous scan first before sending scan request for the next
+                // one, which would also start stats collection for new scan scan.
+                self.context.info.report_scan_ended(txn_id, &result, &self.cfg);
                 self.send_scan_request(request);
                 match result {
-                    ScanResult::None => state,
-                    ScanResult::JoinScanFinished { token, result: Ok(bss_list) } => {
+                    scan::ScanResult::None => (),
+                    scan::ScanResult::JoinScanFinished { token, result: Ok(bss_list) } => {
                         let mut inspect_msg: Option<String> = None;
-                        let new_state = match self.cfg.get_best_bss(&bss_list) {
+                        match self.cfg.get_best_bss(&bss_list) {
                             // BSS found and compatible.
                             Some(best_bss) if self.cfg.is_bss_compatible(best_bss) => {
+                                self.context
+                                    .info
+                                    .report_network_selected(clone_bss_desc(&best_bss));
                                 match get_protection(
                                     &self.context.device_info,
                                     &token.credential,
@@ -284,7 +264,10 @@ impl super::Station for ClientSme {
                                             protection,
                                             radio_cfg: token.radio_cfg,
                                         };
-                                        state.connect(cmd, &mut self.context)
+                                        self.state = self
+                                            .state
+                                            .take()
+                                            .map(|state| state.connect(cmd, &mut self.context));
                                     }
                                     Err(err) => {
                                         inspect_msg.replace(format!("cannot join: {}", err));
@@ -296,10 +279,9 @@ impl super::Station for ClientSme {
                                         );
                                         report_connect_finished(
                                             Some(token.responder),
-                                            &self.context,
+                                            &mut self.context,
                                             ConnectResult::Failed(ConnectFailure::SelectNetwork),
                                         );
-                                        state
                                     }
                                 }
                             }
@@ -310,10 +292,9 @@ impl super::Station for ClientSme {
                                 error!("incompatible BSS: {:?}", &incompatible_bss);
                                 report_connect_finished(
                                     Some(token.responder),
-                                    &self.context,
+                                    &mut self.context,
                                     ConnectResult::Failed(ConnectFailure::NoMatchingBssFound),
                                 );
-                                state
                             }
                             // No matching BSS found
                             None => {
@@ -321,57 +302,36 @@ impl super::Station for ClientSme {
                                 error!("no matching BSS found");
                                 report_connect_finished(
                                     Some(token.responder),
-                                    &self.context,
+                                    &mut self.context,
                                     ConnectResult::Failed(ConnectFailure::NoMatchingBssFound),
                                 );
-                                state
                             }
                         };
 
                         inspect_log_join_scan(&mut self.context, &bss_list, inspect_msg);
-                        new_state
                     }
-                    ScanResult::JoinScanFinished { token, result: Err(e) } => {
+                    scan::ScanResult::JoinScanFinished { token, result: Err(e) } => {
                         inspect_log!(
                             self.context.inspect.join_scan_events.lock(),
                             scan_failure: format!("{:?}", e),
                         );
                         error!("cannot join network because scan failed: {:?}", e);
                         let result = ConnectResult::Failed(ConnectFailure::ScanFailure(e));
-                        report_connect_finished(Some(token.responder), &self.context, result);
-                        state
+                        report_connect_finished(Some(token.responder), &mut self.context, result);
                     }
-                    ScanResult::DiscoveryFinished { tokens, result } => {
-                        let result = match result {
-                            Ok(bss_list) => {
-                                let bss_count = bss_list.len();
-
-                                let ess_list = self.cfg.group_networks(&bss_list);
-                                let ess_count = ess_list.len();
-
-                                let num_bss_by_standard = get_standard_map(&bss_list);
-                                let num_bss_by_channel = get_channel_map(&bss_list);
-
-                                self.context.info_sink.send(InfoEvent::ScanDiscoveryFinished {
-                                    bss_count,
-                                    ess_count,
-                                    num_bss_by_standard,
-                                    num_bss_by_channel,
-                                });
-
-                                Ok(ess_list)
-                            }
-                            Err(e) => Err(e),
-                        };
+                    scan::ScanResult::DiscoveryFinished { tokens, result } => {
+                        let result = result.map(|bss_list| self.cfg.group_networks(&bss_list));
                         for responder in tokens {
                             responder.respond(result.clone());
                         }
-                        state
                     }
                 }
             }
-            other => state.on_mlme_event(other, &mut self.context),
-        });
+            other => {
+                self.state =
+                    self.state.take().map(|state| state.on_mlme_event(other, &mut self.context));
+            }
+        };
     }
 
     fn on_timeout(&mut self, timed_event: TimedEvent<Event>) {
@@ -405,13 +365,13 @@ fn inspect_log_join_scan(
 
 fn report_connect_finished(
     responder: Option<Responder<ConnectResult>>,
-    context: &Context,
+    context: &mut Context,
     result: ConnectResult,
 ) {
     if let Some(responder) = responder {
         responder.respond(result.clone());
+        context.info.report_connect_finished(result);
     }
-    context.info_sink.send(InfoEvent::ConnectFinished { result });
 }
 
 pub fn get_protection(
@@ -441,12 +401,14 @@ mod tests {
     use crate::Config as SmeConfig;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use fuchsia_inspect as finspect;
+    use maplit::hashmap;
     use std::error::Error;
     use wlan_common::{assert_variant, RadioConfig};
 
+    use super::info::DiscoveryStats;
     use super::test_utils::{
-        expect_info_event, fake_protected_bss_description, fake_unprotected_bss_description,
-        fake_wep_bss_description,
+        create_assoc_conf, create_auth_conf, create_join_conf, expect_info_event,
+        fake_protected_bss_description, fake_unprotected_bss_description, fake_wep_bss_description,
     };
 
     use crate::test_utils;
@@ -812,21 +774,6 @@ mod tests {
     }
 
     #[test]
-    fn connecting_generates_info_events() {
-        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
-
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-        expect_info_event(&mut info_stream, InfoEvent::ConnectStarted);
-        expect_info_event(&mut info_stream, InfoEvent::MlmeScanStart { txn_id: 1 });
-
-        report_fake_scan_result(&mut sme, fake_unprotected_bss_description(b"foo".to_vec()));
-
-        expect_info_event(&mut info_stream, InfoEvent::MlmeScanEnd { txn_id: 1 });
-        expect_info_event(&mut info_stream, InfoEvent::AssociationStarted { att_id: 1 });
-    }
-
-    #[test]
     fn new_connect_attempt_cancels_pending_connect() {
         let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
 
@@ -847,6 +794,170 @@ mod tests {
 
         // Verify that second connection attempt is canceled as new connect request comes in
         assert_connect_result(&mut connect_fut2, ConnectResult::Canceled);
+    }
+
+    #[test]
+    fn test_info_event_complete_connect() {
+        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        expect_info_event(&mut info_stream, InfoEvent::ConnectStarted);
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanStart { txn_id: 1 });
+
+        let bss_desc = fake_unprotected_bss_description(b"foo".to_vec());
+        let bssid = bss_desc.bssid;
+        report_fake_scan_result(&mut sme, bss_desc);
+
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanEnd { txn_id: 1 });
+        expect_info_event(&mut info_stream, InfoEvent::JoinStarted { att_id: 1 });
+
+        sme.on_mlme_event(create_join_conf(fidl_mlme::JoinResultCodes::Success));
+        sme.on_mlme_event(create_auth_conf(bssid, fidl_mlme::AuthenticateResultCodes::Success));
+        sme.on_mlme_event(create_assoc_conf(fidl_mlme::AssociateResultCodes::Success));
+
+        expect_info_event(&mut info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
+        expect_info_event(
+            &mut info_stream,
+            InfoEvent::ConnectFinished { result: ConnectResult::Success },
+        );
+        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
+            let scan_stats = stats.join_scan_stats().expect("expect join scan stats");
+            assert!(!scan_stats.scan_start_while_connected);
+            assert!(scan_stats.scan_time().into_nanos() > 0);
+            assert_eq!(scan_stats.result, ScanResult::Success);
+            assert!(stats.auth_time().is_some());
+            assert!(stats.assoc_time().is_some());
+            assert!(stats.rsna_time().is_none());
+            assert!(stats.connect_time().into_nanos() > 0);
+            assert_eq!(stats.result, ConnectResult::Success);
+            assert!(stats.selected_network.is_some());
+        });
+    }
+
+    #[test]
+    fn test_info_event_failed_connect() {
+        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        expect_info_event(&mut info_stream, InfoEvent::ConnectStarted);
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanStart { txn_id: 1 });
+
+        let bss_desc = fake_unprotected_bss_description(b"foo".to_vec());
+        let bssid = bss_desc.bssid;
+        report_fake_scan_result(&mut sme, bss_desc);
+
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanEnd { txn_id: 1 });
+        expect_info_event(&mut info_stream, InfoEvent::JoinStarted { att_id: 1 });
+
+        sme.on_mlme_event(create_join_conf(fidl_mlme::JoinResultCodes::Success));
+        let auth_failure = fidl_mlme::AuthenticateResultCodes::Refused;
+        sme.on_mlme_event(create_auth_conf(bssid, auth_failure));
+
+        let result = ConnectResult::Failed(ConnectFailure::AuthenticationFailure(auth_failure));
+        expect_info_event(&mut info_stream, InfoEvent::ConnectFinished { result: result.clone() });
+        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
+            assert_eq!(stats.join_scan_stats().expect("no scan stats").result, ScanResult::Success);
+            assert!(stats.auth_time().is_some());
+            // no association time since requests already fails at auth step
+            assert!(stats.assoc_time().is_none());
+            assert!(stats.rsna_time().is_none());
+            assert!(stats.connect_time().into_nanos() > 0);
+            assert_eq!(stats.result, result);
+            assert!(stats.selected_network.is_some());
+        });
+    }
+
+    #[test]
+    fn test_info_event_connect_canceled_during_scan() {
+        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        expect_info_event(&mut info_stream, InfoEvent::ConnectStarted);
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanStart { txn_id: 1 });
+
+        // Send another connect request, which should cancel first one
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        expect_info_event(
+            &mut info_stream,
+            InfoEvent::ConnectFinished { result: ConnectResult::Canceled },
+        );
+        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
+            assert!(stats.scan_start_stats.is_some());
+            // Connect attempt cancels before scan is finished. Since we send stats right away,
+            // end stats is blank and a complete scan stats cannot be constructed.
+            assert!(stats.scan_end_stats.is_none());
+            assert!(stats.join_scan_stats().is_none());
+
+            assert!(stats.connect_time().into_nanos() > 0);
+            assert_eq!(stats.result, ConnectResult::Canceled);
+            assert!(stats.selected_network.is_none());
+        });
+        // New connect attempt reports starting right away (though it won't progress until old
+        // scan finishes)
+        expect_info_event(&mut info_stream, InfoEvent::ConnectStarted);
+
+        // Old scan finishes. However, no join scan stats is sent
+        report_fake_scan_result(&mut sme, fake_unprotected_bss_description(b"foo".to_vec()));
+
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanEnd { txn_id: 1 });
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanStart { txn_id: 2 });
+    }
+
+    #[test]
+    fn test_info_event_connect_canceled_post_scan() {
+        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        expect_info_event(&mut info_stream, InfoEvent::ConnectStarted);
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanStart { txn_id: 1 });
+
+        report_fake_scan_result(&mut sme, fake_unprotected_bss_description(b"foo".to_vec()));
+
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanEnd { txn_id: 1 });
+        expect_info_event(&mut info_stream, InfoEvent::JoinStarted { att_id: 1 });
+
+        // Send another connect request, which should cancel first one
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        expect_info_event(
+            &mut info_stream,
+            InfoEvent::ConnectFinished { result: ConnectResult::Canceled },
+        );
+        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
+            assert_eq!(stats.join_scan_stats().expect("no scan stats").result, ScanResult::Success);
+            assert!(stats.connect_time().into_nanos() > 0);
+            assert_eq!(stats.result, ConnectResult::Canceled);
+            assert!(stats.selected_network.is_some());
+        });
+    }
+
+    #[test]
+    fn test_info_event_discovery_scan() {
+        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
+
+        let _recv = sme.on_scan_command(fidl_common::ScanType::Active);
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanStart { txn_id: 1 });
+
+        report_fake_scan_result(&mut sme, fake_unprotected_bss_description(b"foo".to_vec()));
+
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanEnd { txn_id: 1 });
+        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::DiscoveryScanStats(scan_stats, discovery_stats))) => {
+            assert!(!scan_stats.scan_start_while_connected);
+            assert!(scan_stats.scan_time().into_nanos() > 0);
+            assert_eq!(scan_stats.scan_type, fidl_mlme::ScanTypes::Active);
+            assert_eq!(scan_stats.result, ScanResult::Success);
+            assert_eq!(discovery_stats, Some(DiscoveryStats {
+                bss_count: 1,
+                ess_count: 1,
+                num_bss_by_channel: hashmap! { 1 => 1 },
+                num_bss_by_standard: hashmap! { Standard::G => 1 },
+            }));
+        });
     }
 
     fn assert_connect_result(

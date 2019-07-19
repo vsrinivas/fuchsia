@@ -208,6 +208,13 @@ impl<D, J> ScanScheduler<D, J> {
         }
     }
 
+    pub fn is_scanning_to_join(&self) -> bool {
+        match self.current {
+            ScanState::ScanningToJoin { .. } | ScanState::StaleJoinScan { .. } => true,
+            _ => false,
+        }
+    }
+
     fn matching_mlme_txn_id(&self, incoming_txn_id: u64) -> bool {
         match &self.current {
             ScanState::NotScanning => false,
