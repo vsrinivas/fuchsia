@@ -4,15 +4,15 @@
 
 library fuchsia.ui.input;
 
-// Common mouse buttons report constants
+/// Common mouse buttons report constants
 const uint32 kMouseButtonPrimary = 1;
 const uint32 kMouseButtonSecondary = 2;
 const uint32 kMouseButtonTertiary = 4;
 
-// Common stylus buttons report constants
+/// Common stylus buttons report constants
 const uint32 kStylusBarrel = 1;
 
-// Used as mask bits (2^N) against ButtonDescriptor.buttons.
+/// Used as mask bits (2^N) against ButtonDescriptor.buttons.
 const uint32 kVolumeUp = 1;
 const uint32 kVolumeDown = 2;
 const uint32 kMicMute = 4;

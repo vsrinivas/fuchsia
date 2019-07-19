@@ -4,17 +4,17 @@
 
 library fuchsia.ui.input;
 
-// Service to receive input events.
-//
-// Input devices can describe their capabilities using `DeviceDescriptor`
-// and register themselves with the `InputDeviceRegistry`.
+/// Service to receive input events.
+///
+/// Input devices can describe their capabilities using `DeviceDescriptor`
+/// and register themselves with the `InputDeviceRegistry`.
 [Discoverable]
 protocol InputDeviceRegistry {
-    // Register a device with the capabilities described by `DeviceDescriptor`
+    /// Register a device with the capabilities described by `DeviceDescriptor`
     RegisterDevice(DeviceDescriptor descriptor, request<InputDevice> input_device);
 };
 
 protocol InputDevice {
-    // Dispatch an `InputReport` from the device `token`
+    /// Dispatch an `InputReport` from the device `token`
     DispatchReport(InputReport report);
 };

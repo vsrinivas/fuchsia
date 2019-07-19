@@ -4,7 +4,7 @@
 
 library fuchsia.ui.input;
 
-// Keyboard modifiers
+/// Keyboard modifiers
 const uint32 kModifierNone = 0;
 const uint32 kModifierCapsLock = 1;
 const uint32 kModifierLeftShift = 2;
@@ -20,13 +20,13 @@ const uint32 kModifierLeftSuper = 128;
 const uint32 kModifierRightSuper = 256;
 const uint32 kModifierSuper = 384; // (kModifierLeftSuper | kModifierRightSuper);
 
-// Mouse buttons
+/// Mouse buttons
 const uint32 kMousePrimaryButton = 1;
 const uint32 kMouseSecondaryButton = 2;
 const uint32 kMouseTertiaryButton = 4;
 
-// Stylus buttons
+/// Stylus buttons
 const uint32 kStylusPrimaryButton = 1;
 const uint32 kStylusSecondaryButton = 2;
 
-// end-no-format
+/// end-no-format

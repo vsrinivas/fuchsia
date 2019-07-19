@@ -5,15 +5,15 @@
 library fuchsia.ui.input;
 
 union Command {
-    // Commands for conveying input events to a `Session`.
-    // Structs defined in input_events.fidl.
+    /// Commands for conveying input events to a `Session`.
+    /// Structs defined in input_events.fidl.
     SendKeyboardInputCmd send_keyboard_input;
     SendPointerInputCmd send_pointer_input;
 
-    // Command to enable/disable delivery of hard keyboard events.
+    /// Command to enable/disable delivery of hard keyboard events.
     SetHardKeyboardDeliveryCmd set_hard_keyboard_delivery;
 
-    // Command to enable/disable parallel delivery of input events.
+    /// Command to enable/disable parallel delivery of input events.
     SetParallelDispatchCmd set_parallel_dispatch;
 };
 
@@ -27,21 +27,21 @@ struct SendPointerInputCmd {
     PointerEvent pointer_event; // Defined in input_events.fidl
 };
 
-// Typically, clients should receive text inputs from an IME.
-//
-// For cases where no IME mediation is desired (such as a game application),
-// this command requests Scenic to deliver hard keyboard events to the client.
-//
-// By default, Scenic will *not* deliver hard keyboard events to a client.
+/// Typically, clients should receive text inputs from an IME.
+///
+/// For cases where no IME mediation is desired (such as a game application),
+/// this command requests Scenic to deliver hard keyboard events to the client.
+///
+/// By default, Scenic will *not* deliver hard keyboard events to a client.
 struct SetHardKeyboardDeliveryCmd {
     bool delivery_request;
 };
 
-// Typically, clients that participate in the hit test should receive input
-// events in parallel. This behavior is required for gesture disambiguation.
-//
-// This command, typically set by the root presenter, allows disabling parallel
-// dispatch; it is part of the input v2 transition work.
+/// Typically, clients that participate in the hit test should receive input
+/// events in parallel. This behavior is required for gesture disambiguation.
+///
+/// This command, typically set by the root presenter, allows disabling parallel
+/// dispatch; it is part of the input v2 transition work.
 // TODO(SCN-1047): Remove after gesture disambiguation is implemented.
 struct SetParallelDispatchCmd {
     bool parallel_dispatch;
