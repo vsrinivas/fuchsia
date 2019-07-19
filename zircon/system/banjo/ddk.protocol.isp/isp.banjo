@@ -15,22 +15,22 @@ enum StreamType : uint8 {
 };
 
 [Layout = "ddk-callback"]
-protocol InputStreamCallback {
+protocol OutputStreamCallback {
     // This is called by the ISP driver, everytime a frame is ready to be
     // consumed.
     FrameReady(uint32 buffer_id);
 };
 
 [Layout = "ddk-protocol"]
-protocol InputStream {
+protocol OutputStream {
     // Starts the streaming of frames.
-    Start();
+    Start() -> (zx.status s);
 
     // Stops the streaming of frames.
-    Stop();
+    Stop() -> (zx.status s);
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
-    ReleaseFrame(uint32 buffer_id);
+    ReleaseFrame(uint32 buffer_id) -> (zx.status s);
 };
 
 [Layout = "ddk-protocol"]
@@ -43,7 +43,7 @@ protocol Isp {
     //            writing to a buffer.
     // @Returns: |status| : indicates if the stream was created.
     // @Returns: |st| : Protocol over which the flow of frames is controlled.
-    CreateInputStream(zircon.device.sysmem.BufferCollectionInfo buffer_collection,
+    CreateOutputStream(zircon.device.sysmem.BufferCollectionInfo buffer_collection,
                       zircon.device.camera.FrameRate rate, StreamType type,
-                      InputStreamCallback stream) -> (zx.status s, InputStream st);
+                      OutputStreamCallback stream) -> (zx.status s, OutputStream st);
 };
