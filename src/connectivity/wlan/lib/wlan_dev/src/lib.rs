@@ -9,7 +9,7 @@
 
 use failure;
 use fidl_fuchsia_wlan_device as wlan;
-use fuchsia_async as fasync;
+use fidl_fuchsia_wlan_mlme as mlme;
 use fuchsia_zircon as zx;
 
 use std::fmt;
@@ -43,9 +43,8 @@ pub fn connect_wlan_phy(dev: &Device) -> Result<wlan::PhyProxy, failure::Error> 
 }
 
 /// Connects to a `Device` that represents a wlan iface.
-pub fn connect_wlan_iface(dev: &Device) -> Result<fasync::Channel, zx::Status> {
-    let chan = sys::connect_wlaniface_device(&dev.node)?;
-    Ok(fasync::Channel::from_channel(chan)?)
+pub fn connect_wlan_iface(dev: &Device) -> Result<mlme::MlmeProxy, failure::Error> {
+    sys::connect_wlaniface_device(&dev.node)
 }
 
 impl fmt::Debug for Device {

@@ -4,10 +4,12 @@
 
 #include "device.h"
 
+#include <net/ethernet.h>
+
 #include <ddk/device.h>
 #include <ddk/hw/wlan/wlaninfo.h>
+#include <fuchsia/wlan/mlme/c/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <net/ethernet.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/ioctl.h>
 #include <zircon/status.h>
@@ -36,10 +38,8 @@ static zx_protocol_device_t wlanif_device_ops = {
     .version = DEVICE_OPS_VERSION,
     .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
-    .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                size_t out_len, size_t* out_actual) -> zx_status_t {
-      return DEV(ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
-    },
+    .message = [](void* ctx, fidl_msg_t* msg,
+                  fidl_txn_t* txn) { return DEV(ctx)->Message(msg, txn); },
 };
 
 static zx_protocol_device_t eth_device_ops = {
@@ -214,36 +214,6 @@ zx_status_t Device::Bind() {
 }
 #undef VERIFY_PROTO_OP
 
-zx_status_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                          size_t out_len, size_t* out_actual) {
-  debugfn();
-  switch (op) {
-    case IOCTL_WLAN_GET_CHANNEL: {
-      if (out_buf == nullptr || out_len < sizeof(zx_handle_t)) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      std::lock_guard<std::mutex> lock(lock_);
-      if (binding_.is_bound()) {
-        return ZX_ERR_ALREADY_BOUND;
-      }
-      fidl::InterfaceHandle<wlan_mlme::MLME> ifc_handle;
-      ifc_handle = binding_.NewBinding(loop_.dispatcher());
-      if (!ifc_handle.is_valid()) {
-        errorf("wlanif: unable to create new channel\n");
-        return ZX_ERR_NO_RESOURCES;
-      }
-      zx::channel out_ch = ifc_handle.TakeChannel();
-      zx_handle_t* out_handle = static_cast<zx_handle_t*>(out_buf);
-      *out_handle = out_ch.release();
-      *out_actual = sizeof(zx_handle_t);
-      return ZX_OK;
-    }
-    default:
-      errorf("ioctl unknown: %0x\n", op);
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-}
-
 void Device::StopMessageLoop(zx_device_t* dev) {
   // Stop accepting new FIDL requests.
   std::lock_guard<std::mutex> lock(lock_);
@@ -284,6 +254,25 @@ void Device::Unbind() {
 void Device::Release() {
   debugfn();
   delete this;
+}
+
+zx_status_t Device::Message(fidl_msg_t* msg, fidl_txn_t* txn) {
+  auto connect = [](void* ctx, zx_handle_t request) {
+    return static_cast<Device*>(ctx)->Connect(zx::channel(request));
+  };
+  static const fuchsia_wlan_mlme_Connector_ops_t ops = {
+      .Connect = connect,
+  };
+  return fuchsia_wlan_mlme_Connector_dispatch(this, txn, msg, &ops);
+}
+
+zx_status_t Device::Connect(zx::channel request) {
+  debugfn();
+  std::lock_guard<std::mutex> lock(lock_);
+  if (binding_.is_bound()) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+  return binding_.Bind(std::move(request), loop_.dispatcher());
 }
 
 void Device::StartScan(wlan_mlme::ScanRequest req) {

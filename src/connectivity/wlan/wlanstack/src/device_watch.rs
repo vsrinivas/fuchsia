@@ -81,7 +81,7 @@ fn new_phy(path: &PathBuf) -> Result<NewPhyDevice, failure::Error> {
 fn new_iface(path: &PathBuf) -> Result<NewIfaceDevice, failure::Error> {
     let id = id_from_path(path)?;
     let device = wlan_dev::Device::new(path)?;
-    let proxy = fidl_mlme::MlmeProxy::new(wlan_dev::connect_wlan_iface(&device)?);
+    let proxy = wlan_dev::connect_wlan_iface(&device)?;
     Ok(NewIfaceDevice { id, proxy, device })
 }
 

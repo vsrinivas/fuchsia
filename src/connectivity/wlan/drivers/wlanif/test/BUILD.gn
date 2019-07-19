@@ -89,10 +89,6 @@ unittest_package("wlanif_unittest") {
 
   tests = [
     {
-      name = "wlanif_convert_unittest"
-      environments = basic_envs
-    },
-    {
       name = "wlanif_device_unittest"
       environments = basic_envs
     },

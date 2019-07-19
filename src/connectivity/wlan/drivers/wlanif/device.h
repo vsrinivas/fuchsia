@@ -5,13 +5,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_DEVICE_H_
 
+#include <mutex>
+
 #include <ddk/driver.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
 #include <wlan/protocol/if-impl.h>
-
-#include <mutex>
 
 namespace wlanif {
 
@@ -23,10 +23,9 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   zx_status_t Bind();
 
   // WLANIF zx_protocol_device_t
-  zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len,
-                    size_t* out_actual);
   void Unbind();
   void Release();
+  zx_status_t Message(fidl_msg_t* msg, fidl_txn_t* txn);
 
   // ETHERNET_IMPL zx_protocol_device_t
   void EthUnbind();
@@ -92,6 +91,8 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   // wlanif_impl_ifc (wlanif-impl -> ethernet_ifc_t)
   void EthRecv(void* data, size_t length, uint32_t flags);
   void EthCompleteTx(ethernet_netbuf_t* netbuf, zx_status_t status);
+
+  zx_status_t Connect(zx::channel request);
 
  private:
   // Stops the message loop from accepting incoming FIDL requests and removes the given device.

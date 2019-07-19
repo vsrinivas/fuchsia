@@ -4,6 +4,14 @@
 
 #include "device.h"
 
+#include <cinttypes>
+#include <cstdarg>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <limits>
+#include <utility>
+
 #include <ddk/device.h>
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <lib/zx/thread.h>
@@ -27,14 +35,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-#include <cinttypes>
-#include <cstdarg>
-#include <cstdint>
-#include <cstdio>
-#include <cstring>
-#include <limits>
-#include <utility>
-
 #include "probe_sequence.h"
 
 namespace wlan {
@@ -57,10 +57,8 @@ static zx_protocol_device_t wlan_device_ops = {
     .version = DEVICE_OPS_VERSION,
     .unbind = [](void* ctx) { DEV(ctx)->WlanUnbind(); },
     .release = [](void* ctx) { DEV(ctx)->WlanRelease(); },
-    .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                size_t out_len, size_t* out_actual) -> zx_status_t {
-      return DEV(ctx)->WlanIoctl(op, in_buf, in_len, out_buf, out_len, out_actual);
-    },
+    .message = [](void* ctx, fidl_msg_t* msg,
+                  fidl_txn_t* txn) { return DEV(ctx)->WlanMessage(msg, txn); },
 };
 
 static zx_protocol_device_t eth_device_ops = {
@@ -231,6 +229,28 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
   return status;
 }
 
+zx_status_t Device::WlanMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  auto connect = [](void* ctx, zx_handle_t request) {
+    return static_cast<Device*>(ctx)->Connect(zx::channel(request));
+  };
+  static const fuchsia_wlan_mlme_Connector_ops_t ops = {
+      .Connect = connect,
+  };
+  return fuchsia_wlan_mlme_Connector_dispatch(this, txn, msg, &ops);
+}
+
+zx_status_t Device::Connect(zx::channel request) {
+  debugfn();
+  std::lock_guard<std::mutex> lock(lock_);
+  channel_ = std::move(request);
+  auto status = RegisterChannelWaitLocked();
+  if (status != ZX_OK) {
+    errorf("could not wait on channel: %s\n", zx_status_get_string(status));
+    channel_.reset();
+  }
+  return ZX_OK;
+}
+
 zx_status_t Device::AddWlanDevice() {
   device_add_args_t args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
@@ -319,28 +339,6 @@ void Device::WlanUnbind() {
 void Device::WlanRelease() {
   debugfn();
   DestroySelf();
-}
-
-zx_status_t Device::WlanIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                              size_t out_len, size_t* out_actual) {
-  debugfn();
-  if (op != IOCTL_WLAN_GET_CHANNEL) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (out_buf == nullptr || out_actual == nullptr || out_len < sizeof(zx_handle_t)) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-
-  zx::channel out;
-  zx_status_t status = GetChannel(&out);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  zx_handle_t* outh = static_cast<zx_handle_t*>(out_buf);
-  *outh = out.release();
-  *out_actual = sizeof(zx_handle_t);
-  return ZX_OK;
 }
 
 // ddk ethernet_impl_protocol_ops methods
@@ -888,38 +886,6 @@ zx_status_t Device::QueueDevicePortPacket(DevicePacket id, uint32_t status) {
     return ZX_ERR_BAD_STATE;
   }
   return port_.queue(&pkt);
-}
-
-zx_status_t Device::GetChannel(zx::channel* out) {
-  ZX_DEBUG_ASSERT(out != nullptr);
-
-  std::lock_guard<std::mutex> lock(lock_);
-  if (dead_) {
-    return ZX_ERR_PEER_CLOSED;
-  }
-  if (!port_.is_valid()) {
-    return ZX_ERR_BAD_STATE;
-  }
-  if (channel_.is_valid()) {
-    return ZX_ERR_ALREADY_BOUND;
-  }
-
-  zx_status_t status = zx::channel::create(0, &channel_, out);
-  if (status != ZX_OK) {
-    errorf("could not create channel: %d\n", status);
-    return status;
-  }
-
-  status = RegisterChannelWaitLocked();
-  if (status != ZX_OK) {
-    errorf("could not wait on channel: %d\n", status);
-    out->reset();
-    channel_.reset();
-    return status;
-  }
-
-  infof("channel opened\n");
-  return ZX_OK;
 }
 
 zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {

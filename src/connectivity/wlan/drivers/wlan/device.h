@@ -5,6 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_
 
+#include <mutex>
+#include <thread>
+#include <tuple>
+#include <unordered_set>
+
 #include <ddk/driver.h>
 #include <ddktl/protocol/ethernet.h>
 #include <fbl/intrusive_double_list.h>
@@ -21,11 +26,6 @@
 #include <wlan/mlme/timer.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/compiler.h>
-
-#include <mutex>
-#include <thread>
-#include <tuple>
-#include <unordered_set>
 
 #include "minstrel.h"
 #include "proxy_helpers.h"
@@ -44,8 +44,7 @@ class Device : public DeviceInterface {
   // ddk device methods
   void WlanUnbind();
   void WlanRelease();
-  zx_status_t WlanIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                        size_t out_len, size_t* out_actual);
+  zx_status_t WlanMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void EthUnbind();
   void EthRelease();
 
@@ -116,6 +115,8 @@ class Device : public DeviceInterface {
     return packet;
   }
 
+  // Establishes a connection with this interface's SME on the given channel.
+  zx_status_t Connect(zx::channel request);
   zx_status_t QueuePacket(fbl::unique_ptr<Packet> packet) __TA_EXCLUDES(packet_queue_lock_);
 
   // Waits the main loop to finish and frees itself afterwards.
@@ -130,8 +131,6 @@ class Device : public DeviceInterface {
   // data or user data is too large and needs to be enqueued into packet_queue_
   // separately.
   zx_status_t QueueDevicePortPacket(DevicePacket id, uint32_t status = 0);
-
-  zx_status_t GetChannel(zx::channel* out) __TA_EXCLUDES(lock_);
 
   void SetStatusLocked(uint32_t status);
   bool ShouldEnableMinstrel();

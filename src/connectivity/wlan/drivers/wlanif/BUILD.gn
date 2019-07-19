@@ -20,6 +20,9 @@ all_src = [
 all_deps = [
   "//garnet/lib/wlan/fidl",
   "//garnet/lib/wlan/protocol",
+  "//sdk/fidl/fuchsia.wlan.mlme",
+  "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_c_server",
+  "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_c_client",
   "//src/connectivity/wlan/lib/common/cpp:common",
   "//zircon/public/banjo/ddk.hw.wlan.wlaninfo",
   "//zircon/public/lib/async-cpp",
