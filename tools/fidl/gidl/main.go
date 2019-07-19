@@ -16,6 +16,7 @@ import (
 	fidlir "fidl/compiler/backend/types"
 	gidlcpp "gidl/cpp"
 	gidlgolang "gidl/golang"
+	gidldart "gidl/dart"
 	gidlir "gidl/ir"
 	gidlparser "gidl/parser"
 )
@@ -107,6 +108,11 @@ func main() {
 		}
 	case "cpp":
 		err := gidlcpp.Generate(buf, gidl, fidl)
+		if err != nil {
+			panic(err)
+		}
+	case "dart":
+		err := gidldart.Generate(buf, gidl, fidl)
 		if err != nil {
 			panic(err)
 		}
