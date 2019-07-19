@@ -1455,15 +1455,20 @@ static bool vmo_lookup_clone_test() {
   ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
 
-  fbl::RefPtr<VmObject> clone;
-  status = vmo->CreateCowClone(Resizability::NonResizable, CloneType::Unidirectional, 0, alloc_size,
-                               false, &clone);
-  ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
-  ASSERT_TRUE(clone, "vmobject creation\n");
+  vmo->set_user_id(ZX_KOID_KERNEL);
 
   // Commit the whole original VMO and the first and last page of the clone.
   status = vmo->CommitRange(0, alloc_size);
   ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
+
+  fbl::RefPtr<VmObject> clone;
+  status = vmo->CreateClone(Resizability::NonResizable, CloneType::CopyOnWrite, 0, alloc_size,
+                            false, &clone);
+  ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
+  ASSERT_TRUE(clone, "vmobject creation\n");
+
+  clone->set_user_id(ZX_KOID_KERNEL);
+
   status = clone->CommitRange(0, PAGE_SIZE);
   ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
   status = clone->CommitRange(alloc_size - PAGE_SIZE, PAGE_SIZE);

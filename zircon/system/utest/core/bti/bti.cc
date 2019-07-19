@@ -145,7 +145,7 @@ bool bti_clone_test() {
 
     zx::vmo vmo, clone;
     ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
-    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, ZX_PAGE_SIZE, &clone), ZX_OK);
+    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &clone), ZX_OK);
 
     zx_paddr_t paddrs;
     ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, clone, 0, ZX_PAGE_SIZE, &paddrs, 1, &pmt), ZX_OK);
