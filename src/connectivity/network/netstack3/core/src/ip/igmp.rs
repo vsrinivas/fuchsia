@@ -137,7 +137,7 @@ pub(crate) enum IgmpError {
 
 pub(crate) type IgmpResult<T> = Result<T, IgmpError>;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub(crate) enum IgmpTimerId {
     /// The timer used to switch a host from Delay Member state to Idle Member state
     ReportDelay { device: DeviceId, group_addr: MulticastAddr<Ipv4Addr> },

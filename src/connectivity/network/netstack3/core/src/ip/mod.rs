@@ -139,7 +139,7 @@ struct IpLayerStateInner<I: Ip, D: EventDispatcher> {
 pub trait IpLayerEventDispatcher: IcmpEventDispatcher {}
 
 /// The identifier for timer events in the IP layer.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub(crate) enum IpLayerTimerId {
     /// A timer event for reassembly timeouts.
     ReassemblyTimeout(FragmentCacheKeyEither),

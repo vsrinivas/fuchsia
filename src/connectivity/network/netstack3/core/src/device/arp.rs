@@ -70,7 +70,7 @@ impl ArpHardwareType {
 /// The identifier for timer events in the ARP layer.
 ///
 /// This is used to retry sending ARP requests and to expire existing ARP table entries.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) enum ArpTimerId<P: PType> {
     RequestRetry { device_id: usize, ip_addr: P },
     EntryExpiration { device_id: usize, ip_addr: P },

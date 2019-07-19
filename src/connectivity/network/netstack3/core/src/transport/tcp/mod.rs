@@ -36,7 +36,7 @@ struct TcpStateInner<I: Ip> {
 }
 
 /// The identifier for timer events in the TCP layer.
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub(crate) struct TcpTimerId {
     // TODO
 }

@@ -80,7 +80,7 @@ impl<D: EventDispatcher> Default for TransportLayerState<D> {
 }
 
 /// The identifier for timer events in the transport layer.
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub(crate) enum TransportLayerTimerId {
     /// A timer event in the TCP layer
     Tcp(tcp::TcpTimerId),

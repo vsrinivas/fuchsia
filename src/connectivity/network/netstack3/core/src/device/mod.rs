@@ -21,7 +21,7 @@ use crate::device::ethernet::EthernetDeviceState;
 use crate::{BufferDispatcher, Context, EventDispatcher};
 
 /// An ID identifying a device.
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct DeviceId {
     id: usize,
     protocol: DeviceProtocol,
@@ -65,7 +65,7 @@ impl IdMapCollectionKey for DeviceId {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
 enum DeviceProtocol {
     Ethernet,
 }
@@ -142,7 +142,7 @@ impl Default for DeviceLayerState {
 }
 
 /// The identifier for timer events in the device layer.
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub(crate) enum DeviceLayerTimerId {
     /// A timer event in the ARP layer with a protocol type of IPv4
     ArpIpv4(arp::ArpTimerId<Ipv4Addr>),

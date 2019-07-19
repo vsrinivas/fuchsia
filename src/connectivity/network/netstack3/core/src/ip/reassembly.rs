@@ -211,7 +211,7 @@ impl<A: IpAddress> FragmentCacheKey<A> {
 /// Either IP type for a `FragmentCacheKey`.
 ///
 /// Used for reassembly timeout timer ids.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub(crate) enum FragmentCacheKeyEither {
     V4(FragmentCacheKey<Ipv4Addr>),
     V6(FragmentCacheKey<Ipv6Addr>),

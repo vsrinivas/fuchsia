@@ -75,6 +75,7 @@
 
 #[cfg(test)]
 mod integration_tests;
+mod timers;
 mod util;
 
 use ethernet as eth;
@@ -234,7 +235,13 @@ pub enum Event {
     /// An indication that an ethernet device is ready to be used.
     EthSetupEvent(EthernetDeviceReady),
     /// A timer firing.
-    TimerEvent(TimerId),
+    TimerEvent(timers::TimerEvent<TimerId>),
+}
+
+impl From<timers::TimerEvent<TimerId>> for Event {
+    fn from(e: timers::TimerEvent<TimerId>) -> Self {
+        Event::TimerEvent(e)
+    }
 }
 
 /// The event loop.
@@ -260,7 +267,7 @@ impl EventLoop {
                 StackState::default(),
                 EventLoopInner {
                     devices: Devices::default(),
-                    timers: vec![],
+                    timers: timers::TimerDispatcher::new(event_send.clone()),
                     event_send: event_send.clone(),
                     #[cfg(test)]
                     test_events: None,
@@ -328,13 +335,13 @@ impl EventLoop {
                 }
             }
             Some(Event::TimerEvent(id)) => {
-                // cancel_timeout() should be called before handle_timeout().
-                // Suppose handle_timeout() is called first and it reinstalls
-                // the timer event, the timer event will be erroneously cancelled by the
-                // cancel_timeout() before it's being triggered.
-                // TODO(NET-2138): Create a unit test for the processing logic.
-                self.ctx.dispatcher_mut().cancel_timeout(id);
-                handle_timeout(&mut self.ctx, id);
+                // By reaching into the TimerDispatcher to commit the timer, we
+                // guarantee that the timer hasn't been cancelled while it was
+                // in the EventLoop's event stream. commit_timer will only
+                // return Some if the timer is still valid.
+                if let Some(id) = self.ctx.dispatcher_mut().timers.commit_timer(id) {
+                    handle_timeout(&mut self.ctx, id);
+                }
             }
             None => bail!("Stream of events ended unexpectedly"),
         }
@@ -622,7 +629,7 @@ struct TimerInfo {
 
 struct EventLoopInner {
     devices: Devices,
-    timers: Vec<TimerInfo>,
+    timers: timers::TimerDispatcher<TimerId, Event>,
     event_send: mpsc::UnboundedSender<Event>,
     #[cfg(test)]
     test_events: Option<mpsc::UnboundedSender<TestEvent>>,
@@ -656,7 +663,7 @@ impl ConversionContext for EventLoopInner {
 }
 
 /// A thin wrapper around `zx::Time` that implements `core::Instant`.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug)]
 struct ZxTime(zx::Time);
 
 impl netstack3_core::Instant for ZxTime {
@@ -689,55 +696,11 @@ impl EventDispatcher for EventLoopInner {
     }
 
     fn schedule_timeout_instant(&mut self, time: ZxTime, id: TimerId) -> Option<ZxTime> {
-        let old_timer = self.cancel_timeout(id);
-
-        let mut timer_send = self.event_send.clone();
-        let timeout = async move {
-            await!(fasync::Timer::new(fasync::Time::from_zx(time.0)));
-            timer_send.send(Event::TimerEvent(id));
-            // The timer's cancel function is called by the receiver, so that
-            // this async block does not need to have a reference to the
-            // eventloop.
-        };
-
-        let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        self.timers.push(TimerInfo { time: time.0, id, abort_handle });
-
-        let timeout = Abortable::new(timeout, abort_registration);
-        let timeout = timeout.unwrap_or_else(|_| ());
-
-        fasync::spawn_local(timeout);
-        old_timer
+        self.timers.schedule_timer(id, time)
     }
 
-    // TODO(wesleyac): Fix race
-    //
-    // There is a potential race in the following condition:
-    //
-    // 1. Timer is set
-    // 2. Ethernet event gets enqueued
-    // 3. Timer future fires (enqueueing timer message - timer has _not_ been cancelled yet)
-    // 4. Ethernet event gets handled. This attempts to reschedule the timer into the future.
-    // 5. Timer message gets handled - event is triggered as if it happened at a time in the
-    //    future!
-    //
-    // The fix to this should be to have the event loop drain the queue without yielding, thus
-    // ensuring that the timer future cannot fire until the main queue is empty.
-    // See `GroupAvailable` in `src/connectivity/wlan/wlanstack/src/future_util.rs`
-    // for an example of how to do this.
     fn cancel_timeout(&mut self, id: TimerId) -> Option<ZxTime> {
-        let index =
-            self.timers.iter().enumerate().find_map(
-                |x| {
-                    if x.1.id == id {
-                        Some(x.0)
-                    } else {
-                        None
-                    }
-                },
-            )?;
-        self.timers[index].abort_handle.abort();
-        Some(ZxTime(self.timers.remove(index).time))
+        self.timers.cancel_timer(&id)
     }
 }
 
