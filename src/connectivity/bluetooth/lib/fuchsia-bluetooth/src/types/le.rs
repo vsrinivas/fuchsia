@@ -63,31 +63,6 @@ impl From<fidl::RemoteDevice> for RemoteDevice {
     }
 }
 
-impl From<fidl::AdvertisingData> for AdvertisingData {
-    fn from(src: fidl::AdvertisingData) -> AdvertisingData {
-        AdvertisingData {
-            name: src.name,
-            tx_power_level: src.tx_power_level.map(|v| v.value),
-            appearance: src.appearance.map(|v| v.value),
-            service_uuids: src.service_uuids.unwrap_or(vec![]),
-            service_data: src
-                .service_data
-                .unwrap_or(vec![])
-                .into_iter()
-                .map(|data| data.into())
-                .collect(),
-            manufacturer_specific_data: src
-                .manufacturer_specific_data
-                .unwrap_or(vec![])
-                .into_iter()
-                .map(|data| data.into())
-                .collect(),
-            solicited_service_uuids: src.solicited_service_uuids.unwrap_or(vec![]),
-            uris: src.uris.unwrap_or(vec![]),
-        }
-    }
-}
-
 impl From<fidl::AdvertisingDataDeprecated> for AdvertisingData {
     fn from(src: fidl::AdvertisingDataDeprecated) -> AdvertisingData {
         AdvertisingData {

@@ -6,8 +6,113 @@ library fuchsia.bluetooth.le;
 
 using fuchsia.bluetooth;
 
+enum PeripheralError {
+    /// The operation or parameters requested are not supported on the current hardware.
+    NOT_SUPPORTED = 1;
+
+    /// The provided advertising data exceeds the maximum allowed length when encoded.
+    ADVERTISING_DATA_TOO_LONG = 2;
+
+    /// The provided scan response data exceeds the maximum allowed length when encoded.
+    SCAN_RESPONSE_DATA_TOO_LONG = 3;
+
+    /// The requested parameters are invalid.
+    INVALID_PARAMETERS = 4;
+
+    /// Advertising could not be initiated due to a hardware or system error.
+    FAILED = 6;
+};
+
+/// A client can indicate the transmission rate of advertising packets by specifying a mode. The
+/// mode provides a hint to the system when configuring the controller with advertising interval and
+/// window parameters.
+///
+/// The mode affects how quickly a scanner or central is able to discover the peripheral; however it
+/// can have an adverse effect on power consumption. While the system will try to honor a client's
+/// request, it is not guaranteed to do so.
+enum AdvertisingModeHint : uint8 {
+    /// Advertise with a very short interval and window for fast discovery at the cost of higher
+    /// power consumption. This corresponds to a 30-60ms interval on the 1M PHYs and 90-180ms on the
+    /// coded PHY.
+    VERY_FAST = 1;
+
+    /// Advertise with a short interval and window that uses less power than VERY_FAST.
+    /// This corresponds to a 100-150ms interval on the 1M PHYs and 300-450ms on the coded PHY.
+    FAST = 2;
+
+    /// Advertise with a moderate interval and window. This corresponds to 1-1.2s on the 1M PHYs and 3s
+    /// on the coded PHY.
+    SLOW = 3;
+};
+
+/// Represents the parameters for configuring advertisements.
+table AdvertisingParameters {
+    /// The fields that will be encoded in the data section of advertising packets.
+    ///
+    /// This field is required.
+    1: AdvertisingData data;
+
+    /// The fields that are to be sent in a scan response packet. Clients may use this to send
+    /// additional data that does not fit inside an advertising packet on platforms that do not
+    /// support the advertising data length extensions.
+    ///
+    /// If present advertisements will be configured to be scannable.
+    2: AdvertisingData scan_response;
+
+    /// The desired advertising frequency. See [`fuchsia.bluetooth.le/AdvertisingModeHint`].
+    /// Defaults to [`fuchsia.bluetooth.le/AdvertisingModeHint.SLOW`] if not present.
+    3: AdvertisingModeHint mode_hint;
+
+    /// If present and true then the controller will broadcast connectable advertisements which
+    /// allows remote LE centrals to initiate a connection to the Peripheral. If false or otherwise
+    /// not present then the advertisements will be non-connectable.
+    4: bool connectable;
+};
+
+/// Capability that is valid for the duration of advertising. The caller can close the handle to
+/// stop advertising. If the system internally stops advertising for any reason, the handle will be
+/// closed to communicate this to the client.
+protocol AdvertisingHandle {};
+
 [Discoverable]
 protocol Peripheral {
+    /// Start advertising as a LE peripheral. An empty response is sent to indicate when advertising
+    /// has successfully initiated. If advertising cannot be initiated, then the response will
+    /// contain a [`fuchsia.bluetooth.le/PeripheralError`].
+    ///
+    /// This method can get called any number of times and successive calls can be made to
+    /// reconfigure the advertising parameters. However only the most recent
+    /// [`fuchsia.bluetooth.le/AdvertisingHandle`] will remain valid.
+    ///
+    /// An instance of [`fuchsia.bluetooth.le/Peripheral`] can only have one active advertisement at
+    /// a time. Clients must obtain multiple Peripheral instances for multiple simultaneous
+    /// advertisements.
+    ///
+    /// If the client closes its end of the [`fuchsia.bluetooth.le/AdvertisingHandle`] channel,
+    /// advertising will be stopped. If the handle is closed before the request is fulfilled,
+    /// advertising will be briefly enabled before it is terminated.
+    ///
+    /// + request `parameters` Parameters used while configuring the advertising instance.
+    /// + request `handle` Handle that remains valid for the duration of this advertising session.
+    /// * error Returns a [`fuchsia.bluetooth.le/PeripheralError`] if advertising cannot be
+    ///         initiated. In this case the `handle` will be closed.
+    [Transitional]
+    StartAdvertising(AdvertisingParameters parameters, request<AdvertisingHandle> handle) -> () error PeripheralError;
+
+    /// Event delivered when a remote LE central initiates a connection to this Peripheral when
+    /// connectable advertising is enabled via
+    /// [`fuchsia.bluetooth.le/Peripheral.StartAdvertising`].
+    ///
+    /// The returned [`fuchsia.bluetooth.le/Connection`] handle can be used to interact with the
+    /// peer. It also represents a peripheral's ownership over the connection: the client can drop
+    /// the handle to request a disconnection. Similarly, the handle is closed by the system to
+    /// indicate that the connection to the peer has been lost.
+    ///
+    /// + request `peer` Information about the central that initiated the connection.
+    /// + request `handle` Represents the connection.
+    [Transitional]
+    -> OnPeerConnected(Peer peer, Connection connection);
+
     // TODO(BT-812): All methods and events declared below are deprecated. Remove them once all
     // clients have transitioned to the new API.
 
@@ -38,10 +143,6 @@ protocol Peripheral {
     //     is supported on the current platform and parameters.
     //   - If `anonymous` advertising is requested but the controller cannot support it.
     [Transitional]
-    StartAdvertising(AdvertisingData advertising_data, AdvertisingData? scan_result,
-                     bool connectable, uint32 interval_ms, bool anonymous)
-        -> (fuchsia.bluetooth.Status status, string? advertisement_id);
-    [Transitional]
     StartAdvertisingDeprecated(AdvertisingDataDeprecated advertising_data, AdvertisingDataDeprecated? scan_result,
                                bool connectable, uint32 interval_ms, bool anonymous)
         -> (fuchsia.bluetooth.Status status, string? advertisement_id);
@@ -49,8 +150,6 @@ protocol Peripheral {
     // [[DEPRECATED]]
     //
     // Stop an advertising session that was previously started by this application.
-    [Transitional]
-    StopAdvertising(string advertisement_id) -> (fuchsia.bluetooth.Status status);
     [Transitional]
     StopAdvertisingDeprecated(string advertisement_id) -> (fuchsia.bluetooth.Status status);
 

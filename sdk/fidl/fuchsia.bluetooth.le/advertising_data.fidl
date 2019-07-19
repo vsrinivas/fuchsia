@@ -1,0 +1,49 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.le;
+
+using fuchsia.bluetooth as bt;
+
+/// Entry in the `service_data` field of a [`fuchsia.bluetooth.le/AdvertisingData`].
+struct ServiceData {
+    bt.Uuid uuid;
+    bytes data;
+};
+
+/// Entry in the `manufacturer_data` field of a [`fuchsia.bluetooth.le/AdvertisingData`].
+struct ManufacturerData {
+    uint16 company_id;
+    bytes data;
+};
+
+/// Represents advertising and scan response data that are transmitted by a LE peripheral or
+/// broadcaster.
+table AdvertisingData {
+    /// Long or short name of the device.
+    1: string name;
+
+    /// The appearance of the device.
+    2: bt.Appearance appearance;
+
+    /// The radio transmit power level reported by an advertising peer. This field is disallowed
+    /// when used with the Peripheral API.
+    3: int8 tx_power_level;
+
+    /// Service UUIDs.
+    4: vector<bt.Uuid> service_uuids;
+
+    /// Service data entries.
+    5: vector<ServiceData> service_data;
+
+    /// Manufacturer-specific data entries.
+    6: vector<ManufacturerData> manufacturer_data;
+
+    /// String representing a URI to be advertised, as defined in [IETF STD 66](https://tools.ietf.org/html/std66).
+    /// Each entry should be a UTF-8 string including the scheme. For more information, see:
+    /// - https://www.iana.org/assignments/uri-schemes/uri-schemes.xhtml for allowed schemes;
+    /// - https://www.bluetooth.com/specifications/assigned-numbers/uri-scheme-name-string-mapping
+    ///   for code-points used by the system to compress the scheme to save space in the payload.
+    7: vector<string> uris;
+};

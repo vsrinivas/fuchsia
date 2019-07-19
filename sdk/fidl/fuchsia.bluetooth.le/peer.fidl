@@ -1,0 +1,36 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.le;
+
+using fuchsia.bluetooth as bt;
+
+/// Represents a Bluetooth Low Energy peer that may act in the broadcaster, peripheral, or central
+/// role. The peer's role depends on whether it is obtained from the Central or Peripheral protocol.
+table Peer {
+    /// Uniquely identifies this peer on the current system.
+    ///
+    /// This field is always present.
+    1: bt.PeerId id;
+
+    /// Whether or not this peer is connectable. Non-connectable peers are typically in the LE
+    /// broadcaster role.
+    ///
+    /// This field is always present.
+    2: bool connectable;
+
+    /// The last observed RSSI of this peer.
+    3: int8 rssi;
+
+    /// Advertising and scan response data broadcast by this peer. Present in broadcasters and
+    /// peripherals.
+    4: AdvertisingData advertising_data;
+};
+
+/// Protocol that represents the connection to a peer. This can be used to interact with GATT
+/// services and establish L2CAP channels.
+protocol Connection {
+    // TODO(armansito): Introduce function to obtain gatt.Client handle when transitioning the
+    // Central protocol.
+};

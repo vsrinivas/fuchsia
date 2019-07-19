@@ -299,6 +299,8 @@ fn main() -> Result<(), Error> {
                         anon
                     ))?;
                 }
+                // TODO(BT-812): Implement this event when supported.
+                OnPeerConnected { peer: _, connection: _ } => (),
             };
         }
         Ok(())

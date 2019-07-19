@@ -48,36 +48,6 @@ struct AdvertisingDataDeprecated {
     vector<string>? uris;
 };
 
-// TODO(BT-812, FIDL-483): Temporary copy for a rename, since type-aliasing is not supported.
-// [[DEPRECATED]]
-struct AdvertisingData {
-    // Name of the device.
-    string? name;
-
-    // The radio transmission power level reported in the advertisement.
-    fuchsia.bluetooth.Int8? tx_power_level;
-
-    // The appearance reported in the advertisemet.
-    fuchsia.bluetooth.UInt16? appearance;
-
-    // List of service UUIDs reported in the advertisement.
-    vector<string>? service_uuids;
-
-    // Service data included in the advertisement.
-    vector<ServiceDataEntry>? service_data;
-
-    // Manufacturer specific data entries.
-    vector<ManufacturerSpecificDataEntry>? manufacturer_specific_data;
-
-    // Service UUIDs that were solicited in the advertisement. Peripherals can invite centrals that
-    // expose certain services to connect to them using service solicitation.
-    vector<string>? solicited_service_uuids;
-
-    // URIs included in the advertising packet.
-    // These are full URIs (they are encoded/decoded automatically)
-    vector<string>? uris;
-};
-
 // Represents a remote Bluetooth Low Energy device. A RemoteDevice can represent a central,
 // broadcaster, or peripheral based on the API from which it was received.
 // [[DEPRECATED]]

@@ -8,7 +8,9 @@ fidl("fuchsia.bluetooth.le") {
   sdk_category = "partner"
 
   sources = [
+    "advertising_data.fidl",
     "central.fidl",
+    "peer.fidl",
     "peripheral.fidl",
     "types_deprecated.fidl",
   ]
