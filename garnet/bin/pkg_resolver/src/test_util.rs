@@ -13,7 +13,7 @@ use fidl_fuchsia_io::DirectoryProxy;
 use fidl_fuchsia_pkg::{self, PackageCacheRequest, RepositoryConfig};
 use fidl_fuchsia_pkg_ext::BlobId;
 use fuchsia_async as fasync;
-use fuchsia_zircon::{Channel, Peered, Signals, Status};
+use fuchsia_zircon::Status;
 use futures::stream::TryStreamExt;
 use parking_lot::Mutex;
 use serde::Serialize;
@@ -83,40 +83,12 @@ impl MockAmber {
 
     async fn process_amber_request(&self, req: ControlRequest) {
         match req {
-            ControlRequest::GetUpdateComplete { name, version, responder, .. } => {
-                let c = self.get_update_complete(name, version).unwrap();
-                responder.send(c).expect("failed to send response");
-            }
             ControlRequest::OpenRepository { config, repo, responder } => {
                 self.open_repository(config, repo);
                 responder.send(Status::OK.into_raw()).expect("failed to send response");
             }
             _ => panic!("not implemented: {:?}", req),
         }
-    }
-
-    fn get_update_complete(&self, name: String, version: Option<String>) -> Result<Channel, Error> {
-        let (s, c) = Channel::create()?;
-        let mut handles = vec![];
-        let variant = version.unwrap_or_else(|| "0".to_string());
-        if let Some(package) = self.source.get(name, variant)? {
-            match package.kind {
-                PackageKind::Ok => {
-                    s.write(package.merkle.as_bytes(), &mut handles)?;
-                }
-                PackageKind::Error(_, ref msg) => {
-                    // Package not found, signal error.
-                    s.signal_peer(Signals::NONE, Signals::USER_0)?;
-                    s.write(msg.as_bytes(), &mut handles)?;
-                }
-            }
-        } else {
-            // Package not found, signal error.
-            s.signal_peer(Signals::NONE, Signals::USER_0)?;
-            s.write("merkle not found for package ".as_bytes(), &mut handles)?;
-        }
-
-        Ok(c)
     }
 
     fn open_repository(&self, config: RepositoryConfig, repo: ServerEnd<OpenedRepositoryMarker>) {
@@ -182,11 +154,6 @@ pub(crate) struct MockAmberBuilder {
 impl MockAmberBuilder {
     pub(crate) fn new(pkgfs: Arc<TempDir>) -> Self {
         MockAmberBuilder { pkgfs, packages: vec![], repos: HashMap::new() }
-    }
-
-    pub(crate) fn packages<I: IntoIterator<Item = Package>>(mut self, packages: I) -> Self {
-        self.packages.extend(packages);
-        self
     }
 
     pub(crate) fn repo(mut self, config: RepositoryConfig, packages: Vec<Package>) -> Self {

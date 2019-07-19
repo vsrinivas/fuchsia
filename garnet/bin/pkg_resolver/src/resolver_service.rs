@@ -12,18 +12,13 @@ use {
     fidl_fuchsia_pkg::{
         PackageCacheProxy, PackageResolverRequest, PackageResolverRequestStream, UpdatePolicy,
     },
-    fidl_fuchsia_pkg_ext::BlobId,
-    fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_url::pkg_url::PkgUrl,
-    fuchsia_zircon::{Channel, MessageBuf, Signals, Status},
+    fuchsia_zircon::Status,
     futures::prelude::*,
     parking_lot::RwLock,
     std::sync::Arc,
 };
-
-// The error amber returns if it could not find the merkle for this package.
-const PACKAGE_NOT_FOUND: &str = "merkle not found for package";
 
 pub async fn run_resolver_service<A>(
     rewrites: Arc<RwLock<RewriteManager>>,
@@ -79,7 +74,6 @@ where
         fx_log_err!("failed to parse package url {:?}: {}", pkg_url, err);
         Err(Status::INVALID_ARGS)
     })?;
-    let was_fuchsia_host = url.host() == "fuchsia.com";
     let url = rewrites.read().rewrite(url);
 
     // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
@@ -94,30 +88,7 @@ where
         fx_log_warn!("resolve does not support selectors yet");
     }
 
-    // FIXME(PKG-798): only use the OpenRepository for non-fuchsia.com hosts.
-    let merkle = if !was_fuchsia_host && url.host() != "fuchsia.com" {
-        await!(repo_manager.read().get_package(&url))?
-    } else {
-        let amber = repo_manager.read().connect_to_amber()?;
-
-        // While the fuchsia-pkg:// spec doesn't require a package name, we do.
-        let name = url.name().ok_or_else(|| {
-            fx_log_err!("package url is missing a package name: {}", url);
-            Err(Status::INVALID_ARGS)
-        })?;
-
-        // Ask amber to cache the package.
-        let chan = await!(amber.get_update_complete(&name, url.variant(), url.package_hash()))
-            .map_err(|err| {
-                fx_log_err!("error communicating with amber: {:?}", err);
-                Status::INTERNAL
-            })?;
-
-        await!(wait_for_update_to_complete(chan, &url)).map_err(|err| {
-            fx_log_err!("error when waiting for amber to complete: {:?}", err);
-            err
-        })?
-    };
+    let merkle = await!(repo_manager.read().get_package(&url))?;
 
     fx_log_info!(
         "resolved {} as {} with the selectors {:?} to {}",
@@ -136,96 +107,6 @@ where
     Ok(())
 }
 
-// Checks for the error amber returns if it could resolve a merkle for this
-// package, but it couldn't download the package.
-//
-// Format: "not found in \\d+ active sources"
-fn is_unavailable_msg(msg: &str) -> bool {
-    const UNAVAILABLE_PRE: &str = "not found in ";
-    const UNAVAILABLE_POST: &str = "active sources";
-
-    if !msg.starts_with(UNAVAILABLE_PRE) {
-        return false;
-    }
-    let (_unavailable_pre, tail) = msg.split_at(UNAVAILABLE_PRE.len());
-    let tail_chars = &mut tail.chars();
-    let mut c = tail_chars.next();
-    // require at least one digit
-    if !c.map_or(false, |c| c.is_numeric()) {
-        return false;
-    }
-    loop {
-        c = tail_chars.next();
-        if !c.map_or(false, |c| c.is_numeric()) {
-            // check for space after digit
-            if let Some(' ') = c {
-                break;
-            } else {
-                return false;
-            }
-        }
-    }
-    // take remaining digits
-    let tail = tail_chars.as_str();
-    return tail.starts_with(UNAVAILABLE_POST);
-}
-
-async fn wait_for_update_to_complete(chan: Channel, url: &PkgUrl) -> Result<BlobId, Status> {
-    let mut buf = MessageBuf::new();
-
-    let sigs = await!(fasync::OnSignals::new(
-        &chan,
-        Signals::CHANNEL_PEER_CLOSED | Signals::CHANNEL_READABLE
-    ))?;
-
-    if sigs.contains(Signals::CHANNEL_READABLE) {
-        chan.read(&mut buf)?;
-        let buf = buf.split().0;
-
-        if sigs.contains(Signals::USER_0) {
-            let msg = String::from_utf8_lossy(&buf);
-
-            if msg.starts_with(PACKAGE_NOT_FOUND) {
-                fx_log_info!("package {} was not found: {}", url, msg);
-                return Err(Status::NOT_FOUND);
-            }
-
-            if is_unavailable_msg(&msg) {
-                fx_log_info!("package {} is currently unavailable: {}", url, msg);
-                return Err(Status::UNAVAILABLE);
-            }
-
-            fx_log_err!("error installing package {}: {}", url, msg);
-
-            return Err(Status::INTERNAL);
-        }
-
-        let merkle = match String::from_utf8(buf) {
-            Ok(merkle) => merkle,
-            Err(err) => {
-                let merkle = String::from_utf8_lossy(err.as_bytes());
-                fx_log_err!("{:?} is not a valid UTF-8 encoded merkleroot: {:?}", merkle, err);
-
-                return Err(Status::INTERNAL);
-            }
-        };
-
-        let merkle = match merkle.parse() {
-            Ok(merkle) => merkle,
-            Err(err) => {
-                fx_log_err!("{:?} is not a valid merkleroot: {:?}", merkle, err);
-
-                return Err(Status::INTERNAL);
-            }
-        };
-
-        Ok(merkle)
-    } else {
-        fx_log_err!("response channel closed unexpectedly");
-        Err(Status::INTERNAL)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -235,9 +116,10 @@ mod tests {
         create_dir, MockAmberBuilder, MockAmberConnector, MockPackageCache, Package, PackageKind,
     };
     use fidl::endpoints;
+    use fidl_fuchsia_amber::FetchResultProxy;
     use fidl_fuchsia_io::DirectoryProxy;
     use fidl_fuchsia_pkg::{self, PackageCacheProxy, UpdatePolicy};
-    use fidl_fuchsia_pkg_ext::{RepositoryConfigBuilder, RepositoryConfigs, RepositoryKey};
+    use fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfigBuilder, RepositoryConfigs, RepositoryKey};
     use files_async;
     use fuchsia_url::pkg_url::RepoUrl;
     use fuchsia_url_rewrite::Rule;
@@ -247,6 +129,35 @@ mod tests {
     use std::str;
     use std::sync::Arc;
     use tempfile::TempDir;
+
+    async fn wait_for_update_to_complete(
+        result_proxy: FetchResultProxy,
+        _url: &PkgUrl,
+    ) -> Result<BlobId, Status> {
+        use fidl_fuchsia_amber::FetchResultEvent;
+        match await!(result_proxy.take_event_stream().into_future()) {
+            (Some(Ok(FetchResultEvent::OnSuccess { merkle })), _) => match merkle.parse() {
+                Ok(merkle) => Ok(merkle),
+                Err(err) => {
+                    fx_log_err!("{:?} is not a valid merkleroot: {:?}", merkle, err);
+                    return Err(Status::INTERNAL);
+                }
+            },
+            (Some(Ok(FetchResultEvent::OnError { result, message })), _) => {
+                let status = Status::from_raw(result);
+                fx_log_err!("error fetching package: {}: {}", status, message);
+                return Err(status);
+            }
+            (Some(Err(err)), _) => {
+                fx_log_err!("error communicating with amber: {}", err);
+                return Err(Status::INTERNAL);
+            }
+            (None, _) => {
+                fx_log_err!("amber unexpectedly closed fetch result channel");
+                return Err(Status::INTERNAL);
+            }
+        }
+    }
 
     struct ResolveTest {
         _static_repo_dir: tempfile::TempDir,
@@ -295,7 +206,18 @@ mod tests {
             expected_res: Result<String, Status>,
         ) {
             let amber = self.repo_manager.read().connect_to_amber().unwrap();
-            let chan = await!(amber.get_update_complete(name, variant, merkle))
+            let (repo, repo_server_end) = fidl::endpoints::create_proxy().unwrap();
+            let status = await!(amber.open_repository(
+                RepositoryConfigBuilder::new("fuchsia-pkg://fuchsia.com".parse().unwrap())
+                    .add_root_key(RepositoryKey::Ed25519(vec![1; 32]))
+                    .build()
+                    .into(),
+                repo_server_end,
+            ))
+            .unwrap();
+            Status::ok(status).unwrap();
+            let (result_proxy, result_server_end) = fidl::endpoints::create_proxy().unwrap();
+            repo.get_update_complete(name, variant, merkle, result_server_end)
                 .expect("error communicating with amber");
             let expected_res = expected_res.map(|r| r.parse().expect("could not parse blob"));
 
@@ -308,7 +230,7 @@ mod tests {
                 PkgUrl::new_package("fuchsia.com".to_string(), path, merkle.map(|s| s.to_string()))
                     .unwrap();
 
-            let res = await!(wait_for_update_to_complete(chan, &url));
+            let res = await!(wait_for_update_to_complete(result_proxy, &url));
             assert_eq!(res, expected_res);
         }
 
@@ -358,9 +280,8 @@ mod tests {
             }
         }
 
-        fn source_packages<I: IntoIterator<Item = Package>>(mut self, packages: I) -> Self {
-            self.amber = self.amber.packages(packages);
-            self
+        fn source_packages<I: IntoIterator<Item = Package>>(self, packages: I) -> Self {
+            self.static_repo("fuchsia-pkg://fuchsia.com", packages.into_iter().collect())
         }
 
         fn static_repo(mut self, url: &str, packages: Vec<Package>) -> Self {
@@ -539,22 +460,6 @@ mod tests {
         await!(test.run_resolve("fuchsia-pkg://example.com/bar/stable", Err(Status::NOT_FOUND)));
         await!(test
             .run_resolve("fuchsia-pkg://fuchsia.com/bar/stable", Ok(vec![gen_merkle_file('b')]),));
-    }
-
-    #[test]
-    fn test_is_unavailable_msg() {
-        // Success:
-        assert!(is_unavailable_msg("not found in 1 active sources"), "single digit");
-        assert!(
-            is_unavailable_msg("not found in 12345678901928 active sources"),
-            "multiple digits"
-        );
-
-        // Failure:
-        assert!(!is_unavailable_msg("not found in  active sources"), "no digits");
-        assert!(!is_unavailable_msg("not found in 1"), "no suffix");
-        assert!(!is_unavailable_msg("1 active sources"), "no prefix");
-        assert!(!is_unavailable_msg(""), "empty");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

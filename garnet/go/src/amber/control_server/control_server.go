@@ -7,8 +7,6 @@ package control_server
 import (
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 	"regexp"
 	"sync"
 	"syscall/zx"
@@ -85,59 +83,10 @@ func (c *ControlServer) GetUpdateComplete(name string, ver, mer *string) (zx.Cha
 		return zx.Channel(zx.HandleInvalid), nil
 	}
 
-	if len(name) == 0 {
-		log.Printf("getupdatecomplete: invalid arguments: empty name")
-		ch.Handle().SignalPeer(0, zx.SignalUser0)
-		ch.Write([]byte(zx.ErrInvalidArgs.String()), []zx.Handle{}, 0)
-		ch.Close()
-		return r, nil
-	}
-
-	var (
-		version string
-		merkle  string
-	)
-
-	if ver != nil {
-		version = *ver
-	}
-	if mer != nil {
-		merkle = *mer
-	}
-
-	go func() {
-		defer ch.Close()
-		c.daemon.UpdateIfStale()
-
-		root, length, err := c.daemon.MerkleFor(name, version, merkle)
-		if err != nil {
-			log.Printf("control_server: could not get update for %s: %s", filepath.Join(name, version, merkle), err)
-			ch.Handle().SignalPeer(0, zx.SignalUser0)
-			ch.Write([]byte(err.Error()), []zx.Handle{}, 0)
-			return
-		}
-
-		if _, err := os.Stat(filepath.Join("/pkgfs/versions", root)); err == nil {
-			ch.Write([]byte(root), []zx.Handle{}, 0)
-			return
-		}
-
-		log.Printf("control_server: get update: %s", filepath.Join(name, version, merkle))
-
-		err = c.daemon.GetPkg(root, length)
-		if os.IsExist(err) {
-			log.Printf("control_server: %s already installed", filepath.Join(name, version, root))
-			// signal success to the client
-			err = nil
-		}
-		if err != nil {
-			log.Printf("control_server: error downloading package: %s", err)
-			ch.Handle().SignalPeer(0, zx.SignalUser0)
-			ch.Write([]byte(err.Error()), []zx.Handle{}, 0)
-		} else {
-			ch.Write([]byte(root), []zx.Handle{}, 0)
-		}
-	}()
+	log.Printf("getupdatecomplete: stub")
+	ch.Handle().SignalPeer(0, zx.SignalUser0)
+	ch.Write([]byte(zx.ErrNotSupported.String()), []zx.Handle{}, 0)
+	ch.Close()
 	return r, nil
 }
 
