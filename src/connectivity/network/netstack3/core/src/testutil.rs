@@ -15,7 +15,7 @@ use byteorder::{ByteOrder, NativeEndian};
 use log::debug;
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4Addr, Ipv6Addr, Subnet, SubnetEither};
-use packet::{Buf, ParsablePacket, ParseBuffer, Serializer};
+use packet::{Buf, BufferMut, ParsablePacket, ParseBuffer, Serializer};
 use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
 
@@ -667,7 +667,7 @@ impl DummyEventDispatcher {
         F: Fn(DeviceId) -> DeviceId,
     {
         for (device_id, mut data) in self.frames_sent.drain(..) {
-            crate::receive_frame(other, mapper(device_id), Buf::new(&mut data, ..));
+            crate::receive_frame(other, mapper(device_id), Buf::new(data.to_vec(), ..));
         }
     }
 
@@ -695,8 +695,12 @@ impl IcmpEventDispatcher for DummyEventDispatcher {
 
 impl IpLayerEventDispatcher for DummyEventDispatcher {}
 
-impl DeviceLayerEventDispatcher for DummyEventDispatcher {
-    fn send_frame<S: Serializer>(&mut self, device: DeviceId, frame: S) -> Result<(), S> {
+impl<B: BufferMut> DeviceLayerEventDispatcher<B> for DummyEventDispatcher {
+    fn send_frame<S: Serializer<Buffer = B>>(
+        &mut self,
+        device: DeviceId,
+        frame: S,
+    ) -> Result<(), S> {
         let frame = frame.serialize_vec_outer().map_err(|(_, ser)| ser)?;
         self.frames_sent.push((device, frame.as_ref().to_vec()));
         Ok(())

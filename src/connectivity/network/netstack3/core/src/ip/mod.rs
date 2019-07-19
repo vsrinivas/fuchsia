@@ -24,7 +24,7 @@ use std::mem;
 use log::{debug, trace};
 use net_types::ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
 use net_types::MulticastAddr;
-use packet::{Buf, BufferMut, ParsablePacket, ParseBufferMut, ParseMetadata, Serializer};
+use packet::{Buf, BufferMut, Either, ParsablePacket, ParseMetadata, Serializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::data_structures::IdMap;
@@ -41,7 +41,7 @@ use crate::ip::reassembly::{
 };
 use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
 use crate::wire::ipv4::Ipv4PacketBuilder;
-use crate::{Context, EventDispatcher, TimerId, TimerIdInner};
+use crate::{BufferDispatcher, Context, EventDispatcher, TimerId, TimerIdInner};
 use icmp::{
     send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, should_send_icmpv4_error,
     should_send_icmpv6_error, IcmpEventDispatcher, IcmpStateBuilder,
@@ -188,7 +188,7 @@ pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: IpLay
 /// If an IGMP message is received but it is not coming from a device, i.e.,
 /// `device` given is `None`, `dispatch_receive_ip_packet` will also panic.
 #[specialize_ip_address]
-fn dispatch_receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+fn dispatch_receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress>(
     ctx: &mut Context<D>,
     device: Option<DeviceId>,
     frame_dst: FrameDestination,
@@ -345,8 +345,7 @@ macro_rules! process_fragment {
             FragmentProcessingState::Ready { key, packet_len } => {
                 trace!("receive_ip_packet: fragmented, ready for reassembly");
                 // Allocate a buffer of `packet_len` bytes.
-                let mut bytes = vec![0; packet_len];
-                let mut buffer = Buf::new(bytes.as_mut_slice(), ..);
+                let mut buffer = Buf::new(vec![0; packet_len], ..);
 
                 // Attempt to reassemble the packet.
                 match reassemble_packet::<_, _, _, $ip>($ctx, &key, buffer.buffer_view_mut()) {
@@ -356,7 +355,7 @@ macro_rules! process_fragment {
                         // TODO(joshlf):
                         // - Check for already-expired TTL?
                         let (src_ip, dst_ip, proto, meta) = drop_packet!(packet);
-                        dispatch_receive_ip_packet(
+                        dispatch_receive_ip_packet::<Buf<Vec<u8>>, _, _>(
                             $ctx,
                             Some($device),
                             $frame_dst,
@@ -392,7 +391,7 @@ macro_rules! process_fragment {
 /// `frame_dst` specifies whether this packet was received in a broadcast or
 /// unicast link-layer frame.
 #[specialize_ip]
-pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
+pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
     ctx: &mut Context<D>,
     device: DeviceId,
     frame_dst: FrameDestination,
@@ -541,7 +540,7 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
                 crate::device::send_ip_frame(ctx, dest.device, dest.next_hop, buffer)
             {
                 #[specialize_ip_address]
-                fn send_packet_too_big<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+                fn send_packet_too_big<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress>(
                     ctx: &mut Context<D>,
                     device: DeviceId,
                     frame_dst: FrameDestination,
@@ -637,7 +636,7 @@ pub(crate) fn local_address_for_remote<D: EventDispatcher, A: IpAddress>(
 
 /// Handle an IP parsing error, `err`.
 #[specialize_ip]
-fn handle_parse_error<D: EventDispatcher, I: Ip, B: BufferMut>(
+fn handle_parse_error<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
     ctx: &mut Context<D>,
     device: DeviceId,
     frame_dst: FrameDestination,
@@ -865,7 +864,7 @@ pub(crate) fn is_local_addr<D: EventDispatcher, A: IpAddress>(
 /// callback. It computes the routing information, and invokes the callback with
 /// the computed destination address. The callback returns a
 /// `SerializationRequest`, which is serialized in a new IP packet and sent.
-pub(crate) fn send_ip_packet<D: EventDispatcher, A, S, F>(
+pub(crate) fn send_ip_packet<B: BufferMut, D: BufferDispatcher<B>, A, S, F>(
     ctx: &mut Context<D>,
     dst_ip: A,
     proto: IpProto,
@@ -873,7 +872,7 @@ pub(crate) fn send_ip_packet<D: EventDispatcher, A, S, F>(
 ) -> Result<(), S>
 where
     A: IpAddress,
-    S: Serializer,
+    S: Serializer<Buffer = B>,
     F: FnOnce(A) -> S,
 {
     trace!("send_ip_packet({}, {})", dst_ip, proto);
@@ -902,16 +901,37 @@ where
         // NOTE(joshlf): By doing that, we are also promising that the port will
         // be recognized. That is NOT OK, and the call will panic in that case.
         // TODO(joshlf): Fix this.
-        dispatch_receive_ip_packet(
-            ctx,
-            None,
-            FrameDestination::Unicast,
-            A::Version::LOOPBACK_ADDRESS,
-            dst_ip,
-            proto,
-            buffer.as_buf_mut(),
-            None,
-        );
+
+        // The reason for this match is so that, in each case, we are guaranteed
+        // that the buffer type is a supported buffer type for our event
+        // dispatcher. If we were to just pass the original buffer itself, then
+        // in addition to supporting `B`, the event dispatcher would need to
+        // support `Either<B, Vec<u8>>`, but then `Either<B, Vec<u8>>` would
+        // become `B` from the perspective of `dispatch_receive_ip_packet`, so
+        // it would need to support `Either<Either<B, Vec<u8>>, Vec<u8>>`, and
+        // so on. This match allows us to break that type recursion.
+        match buffer {
+            Either::A(buffer) => dispatch_receive_ip_packet(
+                ctx,
+                None,
+                FrameDestination::Unicast,
+                A::Version::LOOPBACK_ADDRESS,
+                dst_ip,
+                proto,
+                buffer,
+                None,
+            ),
+            Either::B(buffer) => dispatch_receive_ip_packet::<Buf<Vec<u8>>, _, _>(
+                ctx,
+                None,
+                FrameDestination::Unicast,
+                A::Version::LOOPBACK_ADDRESS,
+                dst_ip,
+                proto,
+                buffer,
+                None,
+            ),
+        }
     } else if let Some(dest) = lookup_route(&ctx.state().ip, dst_ip) {
         // TODO(joshlf): Are we sure that a device route can never be set for a
         // device without an IP address? At the least, this is not currently
@@ -947,7 +967,7 @@ where
 /// restriction that the packet must originate from the source address, and must
 /// egress over the interface associated with that source address. If this
 /// restriction cannot be met, a "no route to host" error is returned.
-pub(crate) fn send_ip_packet_from<D: EventDispatcher, A, S>(
+pub(crate) fn send_ip_packet_from<B: BufferMut, D: BufferDispatcher<B>, A, S>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
@@ -956,7 +976,7 @@ pub(crate) fn send_ip_packet_from<D: EventDispatcher, A, S>(
 ) -> Result<(), S>
 where
     A: IpAddress,
-    S: Serializer,
+    S: Serializer<Buffer = B>,
 {
     // TODO(joshlf): Figure out how to compute a route with the restrictions
     // mentioned in the doc comment.
@@ -977,7 +997,7 @@ where
 /// Since `send_ip_packet_from_device` specifies a physical device, it cannot
 /// send to or from a loopback IP address. If either `src_ip` or `dst_ip` are in
 /// the loopback subnet, `send_ip_packet_from_device` will panic.
-pub(crate) fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
+pub(crate) fn send_ip_packet_from_device<B: BufferMut, D: BufferDispatcher<B>, A, S>(
     ctx: &mut Context<D>,
     device: DeviceId,
     src_ip: A,
@@ -989,7 +1009,7 @@ pub(crate) fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
 ) -> Result<(), S>
 where
     A: IpAddress,
-    S: Serializer,
+    S: Serializer<Buffer = B>,
 {
     assert!(!A::Version::LOOPBACK_SUBNET.contains(&src_ip));
     assert!(!A::Version::LOOPBACK_SUBNET.contains(&dst_ip));
@@ -1009,7 +1029,7 @@ where
 /// Send an IGMP packet
 ///
 /// IGMP packet must have a TTL of 1 and have RouterAlert set.
-pub(crate) fn send_igmp_packet<D: EventDispatcher, S>(
+pub(crate) fn send_igmp_packet<B: BufferMut, D: BufferDispatcher<B>, S>(
     ctx: &mut Context<D>,
     device: DeviceId,
     src_ip: Ipv4Addr,
@@ -1017,7 +1037,7 @@ pub(crate) fn send_igmp_packet<D: EventDispatcher, S>(
     body: S,
 ) -> Result<(), S>
 where
-    S: Serializer,
+    S: Serializer<Buffer = B>,
 {
     let mut builder = Ipv4PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Igmp);
     // TODO: IGMP packets need RouterAlert option, we should add this
@@ -1034,7 +1054,7 @@ where
 /// `get_body` returns a `Serializer` with the bytes of the ICMP packet. `ip_mtu`
 /// is an optional MTU size for the final IP packet generated by this ICMP
 /// response.
-fn send_icmp_response<D: EventDispatcher, A, S, F>(
+fn send_icmp_response<B: BufferMut, D: BufferDispatcher<B>, A, S, F>(
     ctx: &mut Context<D>,
     device: DeviceId,
     src_ip: A,
@@ -1045,7 +1065,7 @@ fn send_icmp_response<D: EventDispatcher, A, S, F>(
 ) -> Result<(), S>
 where
     A: IpAddress,
-    S: Serializer,
+    S: Serializer<Buffer = B>,
     F: FnOnce(A) -> S,
 {
     trace!("send_icmp_response({}, {}, {}, {})", device, src_ip, dst_ip, proto);
@@ -1262,7 +1282,8 @@ mod tests {
         builder.mf_flag(m_flag);
         let mut body: Vec<u8> = Vec::new();
         body.extend(fragment_offset * 8..fragment_offset * 8 + 8);
-        let mut buffer = Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap();
+        let mut buffer =
+            Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap().into_inner();
         receive_ip_packet::<_, _, Ipv4>(ctx, device, FrameDestination::Unicast, buffer);
     }
 

@@ -49,10 +49,10 @@ pub use crate::ip::{
 pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::TransportLayerEventDispatcher;
 
-use std::time;
-
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnetEither, Ipv4Addr, Ipv6Addr, SubnetEither};
+use packet::{Buf, BufferMut, EmptyBuf};
+use std::time;
 
 use crate::device::{DeviceLayerState, DeviceLayerTimerId};
 use crate::ip::{IpLayerState, IpLayerTimerId};
@@ -267,6 +267,17 @@ impl Instant for time::Instant {
     }
 }
 
+/// An `EventDispatcher` which supports sending buffers of a given type.
+///
+/// `D: BufferDispatcher<B>` is shorthand for `D: EventDispatcher +
+/// DeviceLayerEventDispatcher<B>`.
+pub trait BufferDispatcher<B: BufferMut>: EventDispatcher + DeviceLayerEventDispatcher<B> {}
+impl<B: BufferMut, D: EventDispatcher + DeviceLayerEventDispatcher<B>> BufferDispatcher<B> for D {}
+
+// TODO(joshlf): Should we add a `for<'a> DeviceLayerEventDispatcher<&'a mut
+// [u8]>` bound? Would anything get more efficient if we were able to stack
+// allocate internally-generated buffers?
+
 /// An object which can dispatch events to a real system.
 ///
 /// An `EventDispatcher` provides access to a real system. It provides the
@@ -275,7 +286,10 @@ impl Instant for time::Instant {
 /// that must be supported in order to support that layer of the stack. The
 /// `EventDispatcher` trait is a sub-trait of all of these traits.
 pub trait EventDispatcher:
-    DeviceLayerEventDispatcher + IpLayerEventDispatcher + TransportLayerEventDispatcher
+    DeviceLayerEventDispatcher<Buf<Vec<u8>>>
+    + DeviceLayerEventDispatcher<EmptyBuf>
+    + IpLayerEventDispatcher
+    + TransportLayerEventDispatcher
 {
     /// The type of an instant in time.
     ///

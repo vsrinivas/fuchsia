@@ -111,7 +111,7 @@ use integration_tests::TestEvent;
 use log::{debug, error, info, trace};
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, AddrSubnetEither, Subnet, SubnetEither};
-use packet::{Buf, Serializer};
+use packet::{Buf, BufferMut, Serializer};
 use std::convert::TryInto;
 use util::{CoreCompatible, FidlCompatible};
 
@@ -802,7 +802,7 @@ impl EventDispatcher for EventLoopInner {
     }
 }
 
-impl DeviceLayerEventDispatcher for EventLoopInner {
+impl<B: BufferMut> DeviceLayerEventDispatcher<B> for EventLoopInner {
     fn send_frame<S: Serializer>(&mut self, device: DeviceId, frame: S) -> Result<(), S> {
         // TODO(wesleyac): Error handling
         let frame = frame.serialize_vec_outer().map_err(|(_, ser)| ser)?;

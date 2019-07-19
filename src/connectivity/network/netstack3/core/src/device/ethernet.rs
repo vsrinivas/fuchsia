@@ -10,7 +10,7 @@ use log::debug;
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{BroadcastAddress, MulticastAddr, MulticastAddress, UnicastAddress};
-use packet::{Buf, BufferMut, Nested, Serializer};
+use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 
 use crate::device::arp::{self, ArpDevice, ArpHardwareType, ArpState};
@@ -18,7 +18,7 @@ use crate::device::{ndp, ndp::NdpState};
 use crate::device::{DeviceId, FrameDestination};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
-use crate::{Context, EventDispatcher, StackState};
+use crate::{BufferDispatcher, Context, EventDispatcher, StackState};
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
 
@@ -75,7 +75,7 @@ pub(crate) struct EthernetDeviceState {
     // pending_frames stores a list of serialized frames indexed by their
     // destination IP addresses. The frames contain an entire EthernetFrame
     // body and the MTU check is performed before queueing them here.
-    pending_frames: HashMap<IpAddr, VecDeque<Vec<u8>>>,
+    pending_frames: HashMap<IpAddr, VecDeque<Buf<Vec<u8>>>>,
 }
 
 impl EthernetDeviceState {
@@ -128,7 +128,11 @@ impl EthernetDeviceState {
     ///
     /// If an older frame had to be dropped because it exceeds the maximum
     /// allowed number of pending frames, it is returned.
-    fn add_pending_frame(&mut self, local_addr: IpAddr, frame: Vec<u8>) -> Option<Vec<u8>> {
+    fn add_pending_frame(
+        &mut self,
+        local_addr: IpAddr,
+        frame: Buf<Vec<u8>>,
+    ) -> Option<Buf<Vec<u8>>> {
         let buff = self.pending_frames.entry(local_addr).or_insert_with(Default::default);
         buff.push_back(frame);
         if buff.len() > ETHERNET_MAX_PENDING_FRAMES {
@@ -139,7 +143,10 @@ impl EthernetDeviceState {
     }
 
     /// Takes all pending frames associated with address `local_addr`.
-    fn take_pending_frames(&mut self, local_addr: IpAddr) -> Option<impl Iterator<Item = Vec<u8>>> {
+    fn take_pending_frames(
+        &mut self,
+        local_addr: IpAddr,
+    ) -> Option<impl Iterator<Item = Buf<Vec<u8>>>> {
         match self.pending_frames.remove(&local_addr) {
             Some(mut buff) => Some(buff.into_iter()),
             None => None,
@@ -170,7 +177,12 @@ impl EthernetIpExt for Ipv6 {
 /// `SerializationRequest`. It computes the routing information and serializes
 /// the request in a new Ethernet frame and sends it.
 #[specialize_ip_address]
-pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
+pub(crate) fn send_ip_frame<
+    B: BufferMut,
+    D: BufferDispatcher<B>,
+    A: IpAddress,
+    S: Serializer<Buffer = B>,
+>(
     ctx: &mut Context<D>,
     device_id: usize,
     local_addr: A,
@@ -209,14 +221,21 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
             .map_err(|ser| ser.into_inner().into_inner()),
         Err(local_addr) => {
             let state = get_device_state_mut(ctx.state_mut(), device_id);
-            let dropped = state.add_pending_frame(
-                local_addr,
-                body.with_mtu(mtu as usize)
-                    .serialize_vec_outer()
-                    .map_err(|ser| ser.1.into_inner())?
-                    .as_ref()
-                    .to_vec(),
-            );
+            // The `serialize_vec_outer` call returns an `Either<B,
+            // Buf<Vec<u8>>`. We could naively call `.as_ref().to_vec()` on it,
+            // but if it were the `Buf<Vec<u8>>` variant, we'd be unnecessarily
+            // allocating a new `Vec` when we already have one. Instead, we
+            // leave the `Buf<Vec<u8>>` variant as it is, and only convert the
+            // `B` variant by calling `map_a`. That gives us an
+            // `Either<Buf<Vec<u8>>, Buf<Vec<u8>>`, which we call `into_inner`
+            // on to get a `Buf<Vec<u8>>`.
+            let frame = body
+                .with_mtu(mtu as usize)
+                .serialize_vec_outer()
+                .map_err(|ser| ser.1.into_inner())?
+                .map_a(|buffer| Buf::new(buffer.as_ref().to_vec(), ..))
+                .into_inner();
+            let dropped = state.add_pending_frame(local_addr, frame);
             if let Some(dropped) = dropped {
                 // TODO(brunodalbo): Is it ok to silently just let this drop? Or
                 //  should the IP layer be notified in any way?
@@ -228,7 +247,7 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
 }
 
 /// Receive an Ethernet frame from the network.
-pub(crate) fn receive_frame<D: EventDispatcher, B: BufferMut>(
+pub(crate) fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
     ctx: &mut Context<D>,
     device_id: usize,
     mut buffer: B,
@@ -430,7 +449,7 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
     type HardwareAddr = Mac;
     const BROADCAST: Mac = Mac::BROADCAST;
 
-    fn send_arp_frame<D: EventDispatcher, S: Serializer>(
+    fn send_arp_frame<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
         ctx: &mut Context<D>,
         device_id: usize,
         dst: Self::HardwareAddr,
@@ -526,7 +545,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
             || state.mac.to_ipv6_link_local() == *address
     }
 
-    fn send_ipv6_frame_to<D: EventDispatcher, S: Serializer>(
+    fn send_ipv6_frame_to<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
         ctx: &mut Context<D>,
         device_id: usize,
         dst: Mac,
@@ -541,7 +560,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
             .map_err(Nested::into_inner)
     }
 
-    fn send_ipv6_frame<D: EventDispatcher, S: Serializer>(
+    fn send_ipv6_frame<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
         ctx: &mut Context<D>,
         device_id: usize,
         next_hop: Ipv6Addr,
@@ -601,8 +620,7 @@ fn mac_resolved<D: EventDispatcher>(
             //  body size.
             let res = ctx.dispatcher_mut().send_frame(
                 device_id,
-                Buf::new(frame, ..)
-                    .encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, ether_type)),
+                frame.encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, ether_type)),
             );
             if let Err(_) = res {
                 // TODO(joshlf): Do we want to handle this differently?
@@ -666,9 +684,9 @@ mod tests {
         let mut state =
             EthernetDeviceState::new(DUMMY_CONFIG_V4.local_mac, crate::ip::IPV6_MIN_MTU);
         let ip = IpAddr::V4(DUMMY_CONFIG_V4.local_ip);
-        state.add_pending_frame(ip, vec![1]);
-        state.add_pending_frame(ip, vec![2]);
-        state.add_pending_frame(ip, vec![3]);
+        state.add_pending_frame(ip, Buf::new(vec![1], ..));
+        state.add_pending_frame(ip, Buf::new(vec![2], ..));
+        state.add_pending_frame(ip, Buf::new(vec![3], ..));
 
         // check that we're accumulating correctly...
         assert_eq!(3, state.take_pending_frames(ip).unwrap().count());
@@ -676,12 +694,12 @@ mod tests {
         assert!(state.take_pending_frames(ip).is_none());
 
         for i in 0..ETHERNET_MAX_PENDING_FRAMES {
-            assert!(state.add_pending_frame(ip, vec![i as u8]).is_none());
+            assert!(state.add_pending_frame(ip, Buf::new(vec![i as u8], ..)).is_none());
         }
         // check that adding more than capacity will drop the older buffers as
         // a proper FIFO queue.
-        assert_eq!(0, state.add_pending_frame(ip, vec![255]).unwrap()[0]);
-        assert_eq!(1, state.add_pending_frame(ip, vec![255]).unwrap()[0]);
-        assert_eq!(2, state.add_pending_frame(ip, vec![255]).unwrap()[0]);
+        assert_eq!(0, state.add_pending_frame(ip, Buf::new(vec![255], ..)).unwrap().as_ref()[0]);
+        assert_eq!(1, state.add_pending_frame(ip, Buf::new(vec![255], ..)).unwrap().as_ref()[0]);
+        assert_eq!(2, state.add_pending_frame(ip, Buf::new(vec![255], ..)).unwrap().as_ref()[0]);
     }
 }

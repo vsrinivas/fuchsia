@@ -7,7 +7,7 @@
 //! This module contains end-to-end and other high-level benchmarks for the
 //! netstack.
 
-use packet::{Buf, InnerPacketBuilder, Serializer};
+use packet::{Buf, BufferMut, InnerPacketBuilder, Serializer};
 use std::time::{Duration, Instant};
 
 use crate::device::ethernet::EtherType;
@@ -36,8 +36,12 @@ impl UdpEventDispatcher for BenchmarkEventDispatcher {
 
 impl TransportLayerEventDispatcher for BenchmarkEventDispatcher {}
 
-impl DeviceLayerEventDispatcher for BenchmarkEventDispatcher {
-    fn send_frame<S: Serializer>(&mut self, device: DeviceId, frame: S) -> Result<(), S> {
+impl<B: BufferMut> DeviceLayerEventDispatcher<B> for BenchmarkEventDispatcher {
+    fn send_frame<S: Serializer<Buffer = B>>(
+        &mut self,
+        device: DeviceId,
+        frame: S,
+    ) -> Result<(), S> {
         black_box(frame.serialize_no_alloc_outer()).map_err(|(_, ser)| ser)?;
         Ok(())
     }

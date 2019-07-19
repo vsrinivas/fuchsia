@@ -28,6 +28,32 @@ pub enum Either<A, B> {
     B(B),
 }
 
+impl<A, B> Either<A, B> {
+    /// Map the `A` variant of an `Either`.
+    ///
+    /// Given an `Either<A, B>` and a function from `A` to `AA`, produce an
+    /// `Either<AA, B>` by applying the function to the `A` variant or passing
+    /// on the `B` variant unmodified.
+    pub fn map_a<AA, F: FnOnce(A) -> AA>(self, f: F) -> Either<AA, B> {
+        match self {
+            Either::A(a) => Either::A(f(a)),
+            Either::B(b) => Either::B(b)
+        }
+    }
+
+    /// Map the `B` variant of an `Either`.
+    ///
+    /// Given an `Either<A, B>` and a function from `B` to `BB`, produce an
+    /// `Either<A, BB>` by applying the function to the `B` variant or passing
+    /// on the `A` variant unmodified.
+    pub fn map_b<BB, F: FnOnce(B) -> BB>(self, f: F) -> Either<A, BB> {
+        match self {
+            Either::A(a) => Either::A(a),
+            Either::B(b) => Either::B(f(b)),
+        }
+    }
+}
+
 impl<A> Either<A, A> {
     /// Return the inner value held by this `Either` when both
     /// possible values `Either::A` and `Either::B` have the

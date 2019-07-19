@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use log::{debug, error};
 use net_types::ip::Ipv4Addr;
-use packet::{BufferMut, InnerPacketBuilder, Serializer};
+use packet::{BufferMut, EmptyBuf, InnerPacketBuilder, Serializer};
 
 use crate::device::ethernet::EthernetArpDevice;
 use crate::device::DeviceLayerTimerId;
@@ -108,7 +108,7 @@ pub(crate) trait ArpDevice<P: PType + Eq + Hash>: Sized {
     /// `send_arp_frame` accepts a device ID, a destination hardware address,
     /// and a `Serializer`. It computes the routing information, serializes the
     /// request in a device layer frame, and sends it.
-    fn send_arp_frame<D: EventDispatcher, S: Serializer>(
+    fn send_arp_frame<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
         ctx: &mut Context<D>,
         device_id: usize,
         dst: Self::HardwareAddr,

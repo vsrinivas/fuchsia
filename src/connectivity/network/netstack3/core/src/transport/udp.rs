@@ -15,7 +15,7 @@ use zerocopy::ByteSlice;
 use crate::ip::IpProto;
 use crate::transport::{ConnAddrMap, ListenerAddrMap};
 use crate::wire::udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs};
-use crate::{Context, EventDispatcher, StackState};
+use crate::{BufferDispatcher, Context, EventDispatcher, StackState};
 
 /// The state associated with the UDP protocol.
 pub(crate) struct UdpState<D: EventDispatcher> {
@@ -196,7 +196,7 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
 /// # Panics
 ///
 /// `send_udp_conn` panics if `conn` is not associated with a connection for this IP version.
-pub(crate) fn send_udp_conn<D: EventDispatcher, I: Ip, B: BufferMut>(
+pub(crate) fn send_udp_conn<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
     ctx: &mut Context<D>,
     conn: &D::UdpConn,
     body: B,
@@ -230,7 +230,7 @@ pub(crate) fn send_udp_conn<D: EventDispatcher, I: Ip, B: BufferMut>(
 ///
 /// `send_udp_listener` panics if `listener` is not associated with a listener
 /// for this IP version.
-pub(crate) fn send_udp_listener<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn send_udp_listener<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress>(
     ctx: &mut Context<D>,
     listener: &D::UdpListener,
     local_addr: A,

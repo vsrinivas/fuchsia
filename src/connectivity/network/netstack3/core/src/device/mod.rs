@@ -18,7 +18,7 @@ use packet::{BufferMut, Serializer};
 
 use crate::data_structures::{IdMap, IdMapCollectionKey};
 use crate::device::ethernet::EthernetDeviceState;
-use crate::{Context, EventDispatcher};
+use crate::{BufferDispatcher, Context, EventDispatcher};
 
 /// An ID identifying a device.
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -160,14 +160,18 @@ pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: Devic
 /// An event dispatcher for the device layer.
 ///
 /// See the `EventDispatcher` trait in the crate root for more details.
-pub trait DeviceLayerEventDispatcher {
+pub trait DeviceLayerEventDispatcher<B: BufferMut> {
     /// Send a frame to a device driver.
     ///
     /// If there was an MTU error while attempting to serialize the frame, the
     /// original serializer is returned in the `Err` variant. All other errors
     /// (for example, errors in allocating a buffer) are silently ignored and
     /// reported as success.
-    fn send_frame<S: Serializer>(&mut self, device: DeviceId, frame: S) -> Result<(), S>;
+    fn send_frame<S: Serializer<Buffer = B>>(
+        &mut self,
+        device: DeviceId,
+        frame: S,
+    ) -> Result<(), S>;
 }
 
 /// Send an IP packet in a device layer frame.
@@ -175,7 +179,7 @@ pub trait DeviceLayerEventDispatcher {
 /// `send_ip_frame` accepts a device ID, a local IP address, and a
 /// `SerializationRequest`. It computes the routing information and serializes
 /// the request in a new device layer frame and sends it.
-pub(crate) fn send_ip_frame<D: EventDispatcher, A, S>(
+pub(crate) fn send_ip_frame<B: BufferMut, D: BufferDispatcher<B>, A, S>(
     ctx: &mut Context<D>,
     device: DeviceId,
     local_addr: A,
@@ -183,7 +187,7 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A, S>(
 ) -> Result<(), S>
 where
     A: IpAddress,
-    S: Serializer,
+    S: Serializer<Buffer = B>,
 {
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::send_ip_frame(ctx, device.id, local_addr, body),
@@ -191,7 +195,7 @@ where
 }
 
 /// Receive a device layer frame from the network.
-pub fn receive_frame<D: EventDispatcher, B: BufferMut>(
+pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
     ctx: &mut Context<D>,
     device: DeviceId,
     buffer: B,

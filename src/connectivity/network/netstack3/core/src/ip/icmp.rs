@@ -27,7 +27,7 @@ use crate::wire::icmp::{
     Icmpv6DestUnreachableCode, Icmpv6MessageType, Icmpv6Packet, Icmpv6PacketTooBig,
     Icmpv6ParameterProblem, Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode, MessageBody,
 };
-use crate::{Context, EventDispatcher, StackState};
+use crate::{BufferDispatcher, Context, EventDispatcher, StackState};
 use zerocopy::ByteSlice;
 
 /// A builder for ICMP state.
@@ -112,7 +112,7 @@ pub trait IcmpEventDispatcher {
 
 /// Receive an ICMP message in an IP packet.
 #[specialize_ip_address]
-pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn receive_icmp_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress>(
     ctx: &mut Context<D>,
     device: Option<DeviceId>,
     src_ip: A,
@@ -298,7 +298,7 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
 /// packet with a single header with a Next Header type of TCP, it `header_len`
 /// would be the length of the single header (40 bytes).
 #[specialize_ip_address]
-pub(crate) fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn send_icmp_protocol_unreachable<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
     frame_dst: FrameDestination,
@@ -369,7 +369,7 @@ pub(crate) fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B
 /// including all IP headers. `ipv4_header_len` is the length of the IPv4
 /// header. It is ignored for IPv6.
 #[specialize_ip_address]
-pub(crate) fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn send_icmp_port_unreachable<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
     frame_dst: FrameDestination,
@@ -422,7 +422,7 @@ pub(crate) fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddress, B: Bu
 /// including all IP headers. `ipv4_header_len` is the length of the IPv4
 /// header. It is ignored for IPv6.
 #[specialize_ip_address]
-pub(crate) fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn send_icmp_net_unreachable<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
     frame_dst: FrameDestination,
@@ -479,7 +479,7 @@ pub(crate) fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: Buf
 /// including all IP headers. `ipv4_header_len` is the length of the IPv4
 /// header. It is ignored for IPv6.
 #[specialize_ip_address]
-pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferMut>(
+pub(crate) fn send_icmp_ttl_expired<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
     frame_dst: FrameDestination,
@@ -559,7 +559,7 @@ pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferM
 /// `send_icmpv6_packet_too_big` sends an ICMPv6 "packet too big" message in
 /// response to receiving an IP packet from `src_ip` to `dst_ip` whose size
 /// exceeds the `mtu` of the next hop interface.
-pub(crate) fn send_icmpv6_packet_too_big<D: EventDispatcher, B: BufferMut>(
+pub(crate) fn send_icmpv6_packet_too_big<B: BufferMut, D: BufferDispatcher<B>>(
     ctx: &mut Context<D>,
     device: DeviceId,
     frame_dst: FrameDestination,
@@ -613,7 +613,7 @@ pub(crate) fn send_icmpv6_packet_too_big<D: EventDispatcher, B: BufferMut>(
     );
 }
 
-pub(crate) fn send_icmpv4_parameter_problem<D: EventDispatcher, B: BufferMut>(
+pub(crate) fn send_icmpv4_parameter_problem<B: BufferMut, D: BufferDispatcher<B>>(
     ctx: &mut Context<D>,
     device: DeviceId,
     src_ip: Ipv4Addr,
@@ -647,7 +647,7 @@ pub(crate) fn send_icmpv4_parameter_problem<D: EventDispatcher, B: BufferMut>(
     );
 }
 
-pub(crate) fn send_icmpv6_parameter_problem<D: EventDispatcher, B: BufferMut>(
+pub(crate) fn send_icmpv6_parameter_problem<B: BufferMut, D: BufferDispatcher<B>>(
     ctx: &mut Context<D>,
     device: DeviceId,
     src_ip: Ipv6Addr,
@@ -679,7 +679,7 @@ pub(crate) fn send_icmpv6_parameter_problem<D: EventDispatcher, B: BufferMut>(
     );
 }
 
-fn send_icmpv4_dest_unreachable<D: EventDispatcher, B: BufferMut>(
+fn send_icmpv4_dest_unreachable<B: BufferMut, D: BufferDispatcher<B>>(
     ctx: &mut Context<D>,
     device: DeviceId,
     src_ip: Ipv4Addr,
@@ -712,7 +712,7 @@ fn send_icmpv4_dest_unreachable<D: EventDispatcher, B: BufferMut>(
     );
 }
 
-fn send_icmpv6_dest_unreachable<D: EventDispatcher, B: BufferMut>(
+fn send_icmpv6_dest_unreachable<B: BufferMut, D: BufferDispatcher<B>>(
     ctx: &mut Context<D>,
     device: DeviceId,
     src_ip: Ipv6Addr,
@@ -905,7 +905,7 @@ fn receive_icmp_echo_reply<D: EventDispatcher, I: Ip, B: ByteSlice>(
 /// `send_icmp_echo_request` panics if `conn` is not associated with a
 /// connection for this IP version.
 #[specialize_ip]
-pub fn send_icmp_echo_request<D: EventDispatcher, I: Ip, B: BufferMut>(
+pub fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
     ctx: &mut Context<D>,
     conn: &D::IcmpConn,
     seq_num: u16,
@@ -1279,7 +1279,7 @@ mod tests {
 
         let echo_body = vec![1, 2, 3, 4];
 
-        send_icmp_echo_request::<_, I, _>(
+        send_icmp_echo_request::<_, _, I>(
             net.context("alice"),
             &conn,
             7,

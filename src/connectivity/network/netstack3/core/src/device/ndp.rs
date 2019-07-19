@@ -24,7 +24,7 @@ use std::time::Duration;
 use log::debug;
 use net_types::ip::{Ipv6, Ipv6Addr};
 use net_types::MulticastAddress;
-use packet::{InnerPacketBuilder, Serializer};
+use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
 use zerocopy::ByteSlice;
 
 use crate::device::ethernet::EthernetNdpDevice;
@@ -109,7 +109,7 @@ pub(crate) trait NdpDevice: Sized {
     /// `send_ipv6_frame_to` accepts a device ID, a destination hardware
     /// address, and a `Serializer`. Implementers are expected simply to form
     /// a link-layer frame and encapsulate the provided IPv6 body.
-    fn send_ipv6_frame_to<D: EventDispatcher, S: Serializer>(
+    fn send_ipv6_frame_to<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
         ctx: &mut Context<D>,
         device_id: usize,
         dst: Self::LinkAddress,
@@ -121,7 +121,7 @@ pub(crate) trait NdpDevice: Sized {
     /// `send_ipv6_frame` accepts a device ID, a next hop IP address, and a
     /// `Serializer`. Implementers must resolve the destination link-layer
     /// address from the provided `next_hop` IPv6 address.
-    fn send_ipv6_frame<D: EventDispatcher, S: Serializer>(
+    fn send_ipv6_frame<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
         ctx: &mut Context<D>,
         device_id: usize,
         next_hop: Ipv6Addr,
