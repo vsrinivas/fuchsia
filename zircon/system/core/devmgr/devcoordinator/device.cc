@@ -434,6 +434,7 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
                                            size_t args_size, zx_handle_t raw_client_remote,
                                            fidl_txn_t* txn);
 static zx_status_t fidl_ScheduleRemove(void* ctx);
+static zx_status_t fidl_ScheduleUnbindChildren(void* ctx);
 static zx_status_t fidl_UnbindDone(void* ctx);
 static zx_status_t fidl_RemoveDevice(void* ctx, fidl_txn_t* txn);
 static zx_status_t fidl_MakeVisible(void* ctx, fidl_txn_t* txn);
@@ -460,6 +461,7 @@ static const fuchsia_device_manager_Coordinator_ops_t fidl_ops = {
     .AddDevice = fidl_AddDevice,
     .AddDeviceInvisible = fidl_AddDeviceInvisible,
     .ScheduleRemove = fidl_ScheduleRemove,
+    .ScheduleUnbindChildren = fidl_ScheduleUnbindChildren,
     .UnbindDone = fidl_UnbindDone,
     .RemoveDevice = fidl_RemoveDevice,
     .MakeVisible = fidl_MakeVisible,
@@ -831,6 +833,16 @@ static zx_status_t fidl_ScheduleRemove(void* ctx) {
   log(DEVLC, "devcoordinator: schedule remove '%s'\n", dev->name().data());
 
   dev->coordinator->ScheduleDevhostRequestedRemove(dev);
+
+  return ZX_OK;
+}
+
+static zx_status_t fidl_ScheduleUnbindChildren(void* ctx) {
+  auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
+
+  log(DEVLC, "devcoordinator: schedule unbind children '%s'\n", dev->name().data());
+
+  dev->coordinator->ScheduleDevhostRequestedUnbindChildren(dev);
 
   return ZX_OK;
 }

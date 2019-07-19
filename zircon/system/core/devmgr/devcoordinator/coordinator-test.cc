@@ -950,8 +950,11 @@ class UnbindTestCase : public MultipleDeviceTestCase {
     size_t index = 0;
     bool unbound = false;
   };
-  // |index_to_remove| is the index into |devices| to call |ScheduleRemove| on.
-  void UnbindTest(DeviceDesc devices[], size_t num_devices, size_t index_to_remove);
+  // |target_device_index| is the index of the device in the |devices| array to
+  // schedule removal of.
+  // If |unbind_children_only| is true, it will skip removal of the target device.
+  void UnbindTest(DeviceDesc devices[], size_t num_devices, size_t target_device_index,
+                  bool unbind_children_only = false);
 };
 
 TEST_F(UnbindTestCase, UnbindLeaf) {
@@ -1007,7 +1010,23 @@ TEST_F(UnbindTestCase, UnbindWithRemoveOp) {
   ASSERT_NO_FATAL_FAILURES(UnbindTest(devices, fbl::count_of(devices), index_to_remove));
 }
 
-void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices, size_t index_to_remove) {
+TEST_F(UnbindTestCase, UnbindChildrenOnly) {
+  DeviceDesc devices[] = {
+    { UINT32_MAX, "root_child1" },  // Unbinding children of this device.
+    { UINT32_MAX, "root_child2" },
+    { 0, "root_child1_1", Action::kUnbind },
+    { 0, "root_child1_2", Action::kUnbind },
+    { 2, "root_child1_1_1", Action::kUnbind },
+    { 1, "root_child2_1" },
+  };
+  // Remove the children of root_child1.
+  size_t target_device_index = 0;
+  ASSERT_NO_FATAL_FAILURES(UnbindTest(devices, fbl::count_of(devices), target_device_index,
+                                      true /* unbind_children_only */));
+}
+
+void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
+                                size_t target_device_index, bool unbind_children_only) {
   size_t num_to_unbind = 0;
   for (size_t i = 0; i < num_devices; i++) {
     auto& desc = devices[i];
@@ -1024,9 +1043,15 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices, size_t
     }
   }
 
-  auto& desc = devices[index_to_remove];
-  ASSERT_NO_FATAL_FAILURES(
-      coordinator_.ScheduleDevhostRequestedRemove(device(desc.index)->device));
+  auto& desc = devices[target_device_index];
+  if (unbind_children_only) {
+    // Skip removal of the target device.
+    ASSERT_NO_FATAL_FAILURES(
+        coordinator_.ScheduleDevhostRequestedUnbindChildren(device(desc.index)->device));
+  } else {
+    ASSERT_NO_FATAL_FAILURES(
+        coordinator_.ScheduleDevhostRequestedRemove(device(desc.index)->device));
+  }
   loop()->RunUntilIdle();
 
   while (num_to_unbind > 0) {
@@ -1051,10 +1076,12 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices, size_t
         desc.unbind_op();
       }
       ASSERT_NO_FATAL_FAILURES(SendUnbindReply(device(desc.index)->remote));
-      // Make sure the parent has already been unbound.
-      if (desc.parent_desc_index != UINT32_MAX && i != index_to_remove) {
+      // Check if the parent is expected to have been unbound already.
+      if (desc.parent_desc_index != UINT32_MAX) {
         auto parent_desc = devices[desc.parent_desc_index];
-        ASSERT_TRUE(parent_desc.unbound);
+        if (parent_desc.want_action != Action::kNone) {
+          ASSERT_TRUE(parent_desc.unbound);
+        }
       }
 
       desc.unbound = true;

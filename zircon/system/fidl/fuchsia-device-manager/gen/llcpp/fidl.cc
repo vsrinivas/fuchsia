@@ -2146,6 +2146,8 @@ extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibl
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_ScheduleRemove_Ordinal = 0x65a3b60600000000lu;
 [[maybe_unused]]
+constexpr uint64_t kCoordinator_ScheduleUnbindChildren_Ordinal = 0x59a4dcaf00000000lu;
+[[maybe_unused]]
 constexpr uint64_t kCoordinator_UnbindDone_Ordinal = 0x4503c92800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_RemoveDevice_Ordinal = 0x1e76778800000000lu;
@@ -2576,6 +2578,67 @@ zx_status_t Coordinator::Call::ScheduleRemove_Deprecated(zx::unowned_channel _cl
   ::fidl::DecodedMessage<ScheduleRemoveRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kCoordinator_ScheduleRemove_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
+}
+
+
+Coordinator::ResultOf::ScheduleUnbindChildren_Impl::ScheduleUnbindChildren_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindChildrenRequest>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, ScheduleUnbindChildrenRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ScheduleUnbindChildrenRequest));
+  ::fidl::DecodedMessage<ScheduleUnbindChildrenRequest> _decoded_request(std::move(_request_bytes));
+  Super::operator=(
+      Coordinator::InPlace::ScheduleUnbindChildren(std::move(_client_end)));
+}
+
+Coordinator::ResultOf::ScheduleUnbindChildren Coordinator::SyncClient::ScheduleUnbindChildren() {
+  return ResultOf::ScheduleUnbindChildren(zx::unowned_channel(this->channel_));
+}
+
+Coordinator::ResultOf::ScheduleUnbindChildren Coordinator::Call::ScheduleUnbindChildren(zx::unowned_channel _client_end) {
+  return ResultOf::ScheduleUnbindChildren(std::move(_client_end));
+}
+
+zx_status_t Coordinator::SyncClient::ScheduleUnbindChildren_Deprecated() {
+  return Coordinator::Call::ScheduleUnbindChildren_Deprecated(zx::unowned_channel(this->channel_));
+}
+
+zx_status_t Coordinator::Call::ScheduleUnbindChildren_Deprecated(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindChildrenRequest>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _request = *reinterpret_cast<ScheduleUnbindChildrenRequest*>(_write_bytes);
+  _request._hdr.ordinal = kCoordinator_ScheduleUnbindChildren_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ScheduleUnbindChildrenRequest));
+  ::fidl::DecodedMessage<ScheduleUnbindChildrenRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+}
+
+::fidl::internal::StatusAndError Coordinator::InPlace::ScheduleUnbindChildren(zx::unowned_channel _client_end) {
+  constexpr uint32_t _write_num_bytes = sizeof(ScheduleUnbindChildrenRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<ScheduleUnbindChildrenRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kCoordinator_ScheduleUnbindChildren_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -4249,6 +4312,17 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
       }
       impl->ScheduleRemove(
         Interface::ScheduleRemoveCompleter::Sync(txn));
+      return true;
+    }
+    case kCoordinator_ScheduleUnbindChildren_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<ScheduleUnbindChildrenRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->ScheduleUnbindChildren(
+        Interface::ScheduleUnbindChildrenCompleter::Sync(txn));
       return true;
     }
     case kCoordinator_UnbindDone_Ordinal:

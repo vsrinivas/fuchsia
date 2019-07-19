@@ -635,6 +635,13 @@ void Coordinator::ScheduleDevhostRequestedRemove(const fbl::RefPtr<Device>& dev)
       UnbindTaskOpts{.do_unbind = false, .post_on_create = true, .devhost_requested = true});
 }
 
+void Coordinator::ScheduleDevhostRequestedUnbindChildren(const fbl::RefPtr<Device>& parent) {
+  for (auto& child : parent->children()) {
+    child.RequestUnbindTask(
+        UnbindTaskOpts{.do_unbind = true, .post_on_create = true, .devhost_requested = true});
+  }
+}
+
 // Remove device from parent
 // forced indicates this is removal due to a channel close
 // or process exit, which means we should remove all other

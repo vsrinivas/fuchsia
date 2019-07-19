@@ -43,7 +43,7 @@ class UnbindTask final : public Task {
 
   // The device being removed or unbound.
   fbl::RefPtr<Device> device_;
-  // If true, |Unbind| will be sent to the devhost, otherwise |RemoveDevice|.
+  // If true, |Unbind| will be sent to the devhost, otherwise |CompleteRemoval|.
   bool do_unbind_;
   // True if this task is for the device that had |ScheduleRemove| called on it by a devhost,
   // false otherwise.

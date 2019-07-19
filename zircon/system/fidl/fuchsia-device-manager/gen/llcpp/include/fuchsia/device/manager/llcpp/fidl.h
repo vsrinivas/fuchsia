@@ -1967,6 +1967,8 @@ class Coordinator final {
 
   using ScheduleRemoveRequest = ::fidl::AnyZeroArgMessage;
 
+  using ScheduleUnbindChildrenRequest = ::fidl::AnyZeroArgMessage;
+
   using UnbindDoneRequest = ::fidl::AnyZeroArgMessage;
 
   struct RemoveDeviceResponse final {
@@ -2255,6 +2257,16 @@ class Coordinator final {
       using Super::status;
       using Super::error;
     };
+    class ScheduleUnbindChildren_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      ScheduleUnbindChildren_Impl(zx::unowned_channel _client_end);
+      ~ScheduleUnbindChildren_Impl() = default;
+      ScheduleUnbindChildren_Impl(ScheduleUnbindChildren_Impl&& other) = default;
+      ScheduleUnbindChildren_Impl& operator=(ScheduleUnbindChildren_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
     class UnbindDone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
@@ -2414,6 +2426,7 @@ class Coordinator final {
     using AddDevice = AddDevice_Impl<AddDeviceResponse>;
     using AddDeviceInvisible = AddDeviceInvisible_Impl<AddDeviceInvisibleResponse>;
     using ScheduleRemove = ScheduleRemove_Impl;
+    using ScheduleUnbindChildren = ScheduleUnbindChildren_Impl;
     using UnbindDone = UnbindDone_Impl;
     using RemoveDevice = RemoveDevice_Impl<RemoveDeviceResponse>;
     using MakeVisible = MakeVisible_Impl<MakeVisibleResponse>;
@@ -2464,6 +2477,16 @@ class Coordinator final {
       ~ScheduleRemove_Impl() = default;
       ScheduleRemove_Impl(ScheduleRemove_Impl&& other) = default;
       ScheduleRemove_Impl& operator=(ScheduleRemove_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+    };
+    class ScheduleUnbindChildren_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      ScheduleUnbindChildren_Impl(zx::unowned_channel _client_end);
+      ~ScheduleUnbindChildren_Impl() = default;
+      ScheduleUnbindChildren_Impl(ScheduleUnbindChildren_Impl&& other) = default;
+      ScheduleUnbindChildren_Impl& operator=(ScheduleUnbindChildren_Impl&& other) = default;
       using Super::status;
       using Super::error;
     };
@@ -2626,6 +2649,7 @@ class Coordinator final {
     using AddDevice = AddDevice_Impl<AddDeviceResponse>;
     using AddDeviceInvisible = AddDeviceInvisible_Impl<AddDeviceInvisibleResponse>;
     using ScheduleRemove = ScheduleRemove_Impl;
+    using ScheduleUnbindChildren = ScheduleUnbindChildren_Impl;
     using UnbindDone = UnbindDone_Impl;
     using RemoveDevice = RemoveDevice_Impl<RemoveDeviceResponse>;
     using MakeVisible = MakeVisible_Impl<MakeVisibleResponse>;
@@ -2722,6 +2746,13 @@ class Coordinator final {
     // Requests the devcoordinator schedule the removal of this device,
     // and the unbinding of its children.
     zx_status_t ScheduleRemove_Deprecated();
+
+    // Requests the devcoordinator schedule the unbinding of this device's children.
+    ResultOf::ScheduleUnbindChildren ScheduleUnbindChildren();
+
+
+    // Requests the devcoordinator schedule the unbinding of this device's children.
+    zx_status_t ScheduleUnbindChildren_Deprecated();
 
     // Sent as the response to |Unbind| or |CompleteRemoval|.
     ResultOf::UnbindDone UnbindDone();
@@ -3057,6 +3088,13 @@ class Coordinator final {
     // and the unbinding of its children.
     static zx_status_t ScheduleRemove_Deprecated(zx::unowned_channel _client_end);
 
+    // Requests the devcoordinator schedule the unbinding of this device's children.
+    static ResultOf::ScheduleUnbindChildren ScheduleUnbindChildren(zx::unowned_channel _client_end);
+
+
+    // Requests the devcoordinator schedule the unbinding of this device's children.
+    static zx_status_t ScheduleUnbindChildren_Deprecated(zx::unowned_channel _client_end);
+
     // Sent as the response to |Unbind| or |CompleteRemoval|.
     static ResultOf::UnbindDone UnbindDone(zx::unowned_channel _client_end);
 
@@ -3337,6 +3375,9 @@ class Coordinator final {
     // and the unbinding of its children.
     static ::fidl::internal::StatusAndError ScheduleRemove(zx::unowned_channel _client_end);
 
+    // Requests the devcoordinator schedule the unbinding of this device's children.
+    static ::fidl::internal::StatusAndError ScheduleUnbindChildren(zx::unowned_channel _client_end);
+
     // Sent as the response to |Unbind| or |CompleteRemoval|.
     static ::fidl::internal::StatusAndError UnbindDone(zx::unowned_channel _client_end);
 
@@ -3435,6 +3476,10 @@ class Coordinator final {
     using ScheduleRemoveCompleter = ::fidl::Completer<>;
 
     virtual void ScheduleRemove(ScheduleRemoveCompleter::Sync _completer) = 0;
+
+    using ScheduleUnbindChildrenCompleter = ::fidl::Completer<>;
+
+    virtual void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync _completer) = 0;
 
     using UnbindDoneCompleter = ::fidl::Completer<>;
 

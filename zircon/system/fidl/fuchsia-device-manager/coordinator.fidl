@@ -190,6 +190,9 @@ protocol Coordinator {
     /// and the unbinding of its children.
     ScheduleRemove();
 
+    /// Requests the devcoordinator schedule the unbinding of this device's children.
+    ScheduleUnbindChildren();
+
     /// Sent as the response to |Unbind| or |CompleteRemoval|.
     UnbindDone();
 

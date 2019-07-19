@@ -163,6 +163,7 @@ class Coordinator {
   // This is for scheduling the initial unbind task as a result of a devhost's |ScheduleRemove|
   // request.
   void ScheduleDevhostRequestedRemove(const fbl::RefPtr<Device>& dev);
+  void ScheduleDevhostRequestedUnbindChildren(const fbl::RefPtr<Device>& parent);
   zx_status_t RemoveDevice(const fbl::RefPtr<Device>& dev, bool forced);
   zx_status_t MakeVisible(const fbl::RefPtr<Device>& dev);
   zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece drvlibname,
