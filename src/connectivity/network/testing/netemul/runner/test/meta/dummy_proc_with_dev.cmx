@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "bin/dummy_proc"
+    },
+    "sandbox": {
+        "dev": [
+            "class/ethernet"
+        ],
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.netemul.sync.SyncManager",
+            "fuchsia.netemul.environment.ManagedEnvironment"
+        ]
+    }
+}

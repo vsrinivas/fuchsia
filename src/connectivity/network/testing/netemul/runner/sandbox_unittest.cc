@@ -4,14 +4,14 @@
 
 #include "sandbox.h"
 
+#include <iostream>
+#include <unordered_set>
+
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/fit/sequencer.h>
 #include <lib/fit/single_threaded_executor.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <src/lib/fxl/strings/join_strings.h>
-
-#include <iostream>
-#include <unordered_set>
 
 #include "lib/gtest/real_loop_fixture.h"
 #include "log_listener_test_helpers.h"
@@ -929,13 +929,39 @@ TEST_F(SandboxTest, InvalidEnvironmentDevice) {
 }
 
 TEST_F(SandboxTest, ServicesHaveVdev) {
-  // Check that /vdev is passed to services.
+  // Check that /vdev is passed to services that have "dev" in their sandbox.
   // We run one dummy_proc as a service fuchsia.dummy.service that will check for a path
   // "/dev/class/ethernet/ep" and then publish event 1.
   // The test will hit "fuchsia.dummy.service" (to make the service proc launch) and then
   // publish event 1.
   // Then we can check that the test suite runs to completion. (If /vdev was not
   // available, we'd fail due to the dummy service "crashing")
+  SetCmx(R"(
+{
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+   "environment": {
+      "test" : [{"arguments":["-s", "fuchsia.dummy.service", "-e", "1", "-n", "test"]}],
+      "services" : {
+        "fuchsia.dummy.service": {
+            "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc_with_dev.cmx",
+            "arguments": ["-P", "/vdev/class/ethernet/ep", "-p", "1", "-n", "svc"]
+        }
+      },
+      "devices": ["ep"]
+   },
+   "networks": [{
+       "name": "net",
+       "endpoints": [{"name":"ep"}]
+   }]
+}
+)");
+  RunSandboxSuccess();
+}
+
+TEST_F(SandboxTest, NotAllServicesHaveVdev) {
+  // This is the same test as ServicesHaveVdev, but it'll fail because we're launching a version of
+  // dummy_proc that does not have "dev" in its sandbox. This asserts that we're using the "dev"
+  // field in the service's component manifest to decide whether it receives /vdev in its namespace
   SetCmx(R"(
 {
    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
@@ -952,7 +978,8 @@ TEST_F(SandboxTest, ServicesHaveVdev) {
    }]
 }
 )");
-  RunSandboxSuccess();
+  // dummy service will just exit with an error because it won't be able to find /vdev:
+  RunSandbox(SandboxResult::Status::SERVICE_EXITED);
 }
 
 }  // namespace testing

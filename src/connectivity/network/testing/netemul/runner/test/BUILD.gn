@@ -63,6 +63,10 @@ test_package("netemul_sandbox_test") {
       dest = "dummy_proc.cmx"
     },
     {
+      path = rebase_path("meta/dummy_proc_with_dev.cmx")
+      dest = "dummy_proc_with_dev.cmx"
+    },
+    {
       path = rebase_path("meta/svc_list.cmx")
       dest = "svc_list.cmx"
     },

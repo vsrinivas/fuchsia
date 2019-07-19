@@ -136,7 +136,7 @@ async fn main() -> Result<(), Error> {
     };
 
     if let Some(path) = opt.check_path {
-        println!("Looking at path {}...", &path);
+        println!("Checking path existence {}...", &path);
         if !std::path::Path::new(&path).exists() {
             return Err(format_err!("{} is not in namespace", &path));
         }

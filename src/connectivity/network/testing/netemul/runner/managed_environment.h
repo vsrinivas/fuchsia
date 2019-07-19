@@ -5,11 +5,11 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MANAGED_ENVIRONMENT_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MANAGED_ENVIRONMENT_H_
 
+#include <memory>
+
 #include <fuchsia/netemul/environment/cpp/fidl.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <src/lib/fxl/macros.h>
-
-#include <memory>
 
 #include "log_listener.h"
 #include "managed_launcher.h"
@@ -47,8 +47,6 @@ class ManagedEnvironment : public fuchsia::netemul::environment::ManagedEnvironm
   void SetRunningCallback(EnvironmentRunningCallback cb) { running_callback_ = std::move(cb); }
 
   void Bind(fidl::InterfaceRequest<FManagedEnvironment> req);
-
-  fuchsia::sys::FlatNamespacePtr CreateServiceFlatNamespace();
 
  protected:
   friend ManagedLauncher;

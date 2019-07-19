@@ -4,11 +4,11 @@
 
 #include "managed_environment.h"
 
+#include <random>
+
 #include <fuchsia/logger/cpp/fidl.h>
 #include <sdk/lib/sys/cpp/termination_reason.h>
 #include <src/lib/fxl/strings/string_printf.h>
-
-#include <random>
 
 namespace netemul {
 
@@ -70,7 +70,7 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   services->SetServiceTerminatedCallback([this, name = options.name()](
                                              const std::string& service, int64_t exit_code,
                                              fuchsia::sys::TerminationReason reason) {
-    FXL_LOG(WARNING) << "Service " << service << " exitted on environment " << name << " with ("
+    FXL_LOG(WARNING) << "Service " << service << " exited on environment " << name << " with ("
                      << exit_code << ") reason: " << sys::HumanReadableTerminationReason(reason);
     if (sandbox_env_->events().service_terminated) {
       sandbox_env_->events().service_terminated(service, exit_code, reason);
@@ -154,10 +154,14 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
           linfo.url = svc.url;
           linfo.arguments->insert(linfo.arguments->begin(), svc.arguments->begin(),
                                   svc.arguments->end());
-          linfo.out = loggers_->CreateLogger(svc.url, false);
-          linfo.err = loggers_->CreateLogger(svc.url, true);
-          linfo.flat_namespace = CreateServiceFlatNamespace();
-          loggers_->IncrementCounter();
+
+          if (!launcher_->MakeServiceLaunchInfo(&linfo)) {
+            // NOTE: we can just log an return code of MakeServiceLaunchInfo here, since those are
+            // caused by fuchsia::sys::Loader errors that will happen again once we return the
+            // launch info. That failure, in turn, will be caught by the service termination
+            // callback installed in the services instance.
+            FXL_LOG(ERROR) << "Make service launch info failed";
+          }
           return linfo;
         },
         svc.name);
@@ -241,17 +245,5 @@ void ManagedEnvironment::AddDevice(fuchsia::netemul::environment::VirtualDevice 
 }
 
 void ManagedEnvironment::RemoveDevice(::std::string path) { virtual_devices_.RemoveEntry(path); }
-
-fuchsia::sys::FlatNamespacePtr ManagedEnvironment::CreateServiceFlatNamespace() {
-  auto flat_ns = std::make_unique<fuchsia::sys::FlatNamespace>();
-  // We'll add /vdev to the namespace of all launched services.
-  // Unlike for components that are launched by the ManagedLauncher, we don't check if
-  // services have "dev" in their sandbox like ManagedLauncher does. It's just cheaper to
-  // expose /vdev to all services than to load the manifest for each service requested and
-  // attach /vdev only to those that have "dev" in their sandbox.
-  flat_ns->paths.emplace_back(ManagedLauncher::kVdevRoot);
-  flat_ns->directories.emplace_back(OpenVdevDirectory());
-  return flat_ns;
-}
 
 }  // namespace netemul
