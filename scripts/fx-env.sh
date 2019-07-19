@@ -148,7 +148,7 @@ if [[ -z "${ZSH_VERSION}" ]]; then
     if [[ ${COMP_CWORD} -eq 1 ]]; then
       for dir in "${FUCHSIA_DIR}/tools/devshell" "${FUCHSIA_DIR}/tools/devshell/contrib" "${fuchsia_tools_dir}"
       do
-        COMPREPLY=(${COMPREPLY} $(/bin/ls -dp1 ${dir}/${COMP_WORDS[1]}* 2>/dev/null | \
+        COMPREPLY=(${COMPREPLY[*]} $(/bin/ls -dp1 ${dir}/${COMP_WORDS[1]}* 2>/dev/null | \
           sed -n "s|^${dir}/\([^/]*\)\$|\1|p" | xargs echo))
       done
     else
