@@ -8,8 +8,6 @@ import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 
 executable_package("module_resolver") {
-  system_deprecated_data = "//build"
-
   meta = [
     {
       path = "meta/module_resolver.cmx"
