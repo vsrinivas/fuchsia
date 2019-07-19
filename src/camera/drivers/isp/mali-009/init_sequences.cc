@@ -1018,11 +1018,11 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
 
   ping::Top_Bypass1::Get()
       .ReadFrom(&isp_mmio_local_)
-      .set_bypass_digital_gain(0)
+      .set_bypass_digital_gain(1)
       .set_bypass_frontend_sensor_offset(0x1)
-      .set_bypass_fe_sqrt(0)
-      .set_bypass_raw_frontend(0)
-      .set_bypass_defect_pixel(0)
+      .set_bypass_fe_sqrt(1)
+      .set_bypass_raw_frontend(1)
+      .set_bypass_defect_pixel(1)
       .WriteTo(&isp_mmio_local_);
 
   ping::SensorOffsetPreShading_Offset00::Get()
@@ -1053,9 +1053,9 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
 
   ping::Top_Bypass2::Get()
       .ReadFrom(&isp_mmio_local_)
-      .set_bypass_sinter(0)
+      .set_bypass_sinter(1)
       .set_bypass_temper(1)
-      .set_bypass_ca_correction(0)
+      .set_bypass_ca_correction(1)
       .WriteTo(&isp_mmio_local_);
 
   ping::SinterNoiseProfile_Thresh2::Get()
@@ -1070,13 +1070,13 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
 
   ping::Top_Bypass3::Get()
       .ReadFrom(&isp_mmio_local_)
-      .set_bypass_square_be(0)
-      .set_bypass_sensor_offset_pre_shading(0)
-      .set_bypass_radial_shading(0)
-      .set_bypass_mesh_shading(0)
-      .set_bypass_white_balance(0)
-      .set_bypass_iridix_gain(0)
-      .set_bypass_iridix(0)
+      .set_bypass_square_be(1)
+      .set_bypass_sensor_offset_pre_shading(1)
+      .set_bypass_radial_shading(1)
+      .set_bypass_mesh_shading(1)
+      .set_bypass_white_balance(1)
+      .set_bypass_iridix_gain(1)
+      .set_bypass_iridix(1)
       .WriteTo(&isp_mmio_local_);
 
   ping::PurpleFringeCorrection_Center::Get()
@@ -1098,11 +1098,11 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
   ping::Top_Bypass4::Get()
       .ReadFrom(&isp_mmio_local_)
       .set_bypass_mirror(0x1)
-      .set_bypass_demosaic_rgb(0)
+      .set_bypass_demosaic_rgb(1)
       .set_bypass_demosaic_rgbir(0x1)
-      .set_bypass_pf_correction(0)
-      .set_bypass_ccm(0)
-      .set_bypass_cnr(0)
+      .set_bypass_pf_correction(1)
+      .set_bypass_ccm(1)
+      .set_bypass_cnr(1)
       .set_bypass_3d_lut(0x1)
       .set_bypass_nonequ_gamma(0x1)
       .WriteTo(&isp_mmio_local_);
@@ -1118,10 +1118,10 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
 
   ping::Top_BypassFr::Get()
       .ReadFrom(&isp_mmio_local_)
-      .set_bypass_fr_crop(0)
-      .set_bypass_fr_gamma_rgb(0)
-      .set_bypass_fr_sharpen(0)
-      .set_bypass_fr_cs_conv(0)
+      .set_bypass_fr_crop(1)
+      .set_bypass_fr_gamma_rgb(1)
+      .set_bypass_fr_sharpen(1)
+      .set_bypass_fr_cs_conv(1)
       .WriteTo(&isp_mmio_local_);
 
   ping::ColorNoiseReduction_Scale::Get()
@@ -1132,11 +1132,11 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
 
   ping::Top_BypassDs::Get()
       .ReadFrom(&isp_mmio_local_)
-      .set_bypass_ds_crop(0)
-      .set_bypass_ds_scaler(0)
-      .set_bypass_ds_gamma_rgb(0)
-      .set_bypass_ds_sharpen(0)
-      .set_bypass_ds_cs_conv(0)
+      .set_bypass_ds_crop(1)
+      .set_bypass_ds_scaler(1)
+      .set_bypass_ds_gamma_rgb(1)
+      .set_bypass_ds_sharpen(1)
+      .set_bypass_ds_cs_conv(1)
       .WriteTo(&isp_mmio_local_);
 
   ping::SensorOffsetPreShading_Offset01::Get()
