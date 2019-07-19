@@ -62,13 +62,15 @@ class DmaManager {
   // frame_available_callback.
   void OnFrameWritten();
 
+  // Prints status registers. Used for debugging.
+  void PrintStatus(ddk::MmioBuffer *mmio);
+
   // Allow the streaming of frames to a consumer.
   void Enable();
 
   // Stop writing frames and sending them to the consumer.
   // If frames are currently being written, they will be dropped.
   void Disable();
-
 
   bool enabled() { return enabled_; }
 
@@ -92,6 +94,10 @@ class DmaManager {
   auto GetUvActiveDim();
   auto GetPrimaryLineOffset();
   auto GetUvLineOffset();
+  auto GetPrimaryFrameCount();
+  auto GetUvFrameCount();
+  auto GetPrimaryFailures();
+  auto GetUvFailures();
 
   // Writes the dma format to the registers
   void WriteFormat();

@@ -370,7 +370,8 @@ class IspGlobalInterrupt_Clear
 };
 
 class IspGlobalInterrupt_StatusVector
-    : public hwreg::RegisterBase<IspGlobalInterrupt_StatusVector, uint32_t> {
+    : public hwreg::RegisterBase<IspGlobalInterrupt_StatusVector, uint32_t,
+                                 hwreg::EnablePrinter> {
  public:
   DEF_BIT(0, isp_start);
   DEF_BIT(1, isp_done);
@@ -499,7 +500,8 @@ class IspGlobalLp_ClockGateDisable
 };
 
 class IspGlobalMonitor_Status
-    : public hwreg::RegisterBase<IspGlobalMonitor_Status, uint32_t> {
+    : public hwreg::RegisterBase<IspGlobalMonitor_Status, uint32_t,
+                                 hwreg::EnablePrinter> {
  public:
   // bit[0] : active width mismatch
   //     bit[1] : active_height mismatch
@@ -520,7 +522,8 @@ class IspGlobalMonitor_Status
 };
 
 class IspGlobalMonitor_Failures
-    : public hwreg::RegisterBase<IspGlobalMonitor_Failures, uint32_t> {
+    : public hwreg::RegisterBase<IspGlobalMonitor_Failures, uint32_t,
+                                 hwreg::EnablePrinter> {
  public:
   DEF_BIT(0, fr_y_dma_wfifo_fail_full);
   DEF_BIT(1, fr_y_dma_wfifo_fail_empty);

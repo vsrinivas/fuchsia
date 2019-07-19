@@ -6023,7 +6023,8 @@ DEF_NAMESPACE_REG(DmaWriter_WBank, pong::FullResolution::Primary, 0x340d0)
 DEF_NAMESPACE_REG(DmaWriter_WBank, pong::FullResolution::Uv, 0x34128)
 
 class DmaWriter_FrameCount
-    : public hwreg::RegisterBase<DmaWriter_FrameCount, uint32_t> {
+    : public hwreg::RegisterBase<DmaWriter_FrameCount, uint32_t,
+                                 hwreg::EnablePrinter> {
  public:
   //  count of incomming frames (starts) to vdma_writer on video input,
   //   non resetable, rolls over, updates at pixel 1 of new frame on
@@ -6045,7 +6046,8 @@ DEF_NAMESPACE_REG(DmaWriter_FrameCount, pong::FullResolution::Primary, 0x340dc)
 DEF_NAMESPACE_REG(DmaWriter_FrameCount, pong::FullResolution::Uv, 0x34134)
 
 class DmaWriter_Failures
-    : public hwreg::RegisterBase<DmaWriter_Failures, uint32_t> {
+    : public hwreg::RegisterBase<DmaWriter_Failures, uint32_t,
+                                 hwreg::EnablePrinter> {
  public:
   // clearable alarm, high to indicate bad  bresp captured
   DEF_BIT(0, axi_fail_bresp);

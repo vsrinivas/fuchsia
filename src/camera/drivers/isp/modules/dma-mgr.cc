@@ -92,6 +92,50 @@ auto DmaManager::GetUvActiveDim() {
   }
 }
 
+auto DmaManager::GetPrimaryFrameCount() {
+  if (stream_type_ == Stream::Downscaled) {
+    return ping::DownScaled::Primary::DmaWriter_FrameCount::Get();
+  } else {
+    return ping::FullResolution::Primary::DmaWriter_FrameCount::Get();
+  }
+}
+
+auto DmaManager::GetUvFrameCount() {
+  if (stream_type_ == Stream::Downscaled) {
+    return ping::DownScaled::Uv::DmaWriter_FrameCount::Get();
+  } else {
+    return ping::FullResolution::Uv::DmaWriter_FrameCount::Get();
+  }
+}
+
+auto DmaManager::GetPrimaryFailures() {
+  if (stream_type_ == Stream::Downscaled) {
+    return ping::DownScaled::Primary::DmaWriter_Failures::Get();
+  } else {
+    return ping::FullResolution::Primary::DmaWriter_Failures::Get();
+  }
+}
+
+auto DmaManager::GetUvFailures() {
+  if (stream_type_ == Stream::Downscaled) {
+    return ping::DownScaled::Uv::DmaWriter_Failures::Get();
+  } else {
+    return ping::FullResolution::Uv::DmaWriter_Failures::Get();
+  }
+}
+
+void DmaManager::PrintStatus(ddk::MmioBuffer *mmio) {
+    printf("%s DMA Status:\n   Primary:\n",
+           (stream_type_ == Stream::Downscaled) ? "Downscaled" :
+                                                  "Full Resolution" );
+    GetPrimaryFrameCount().ReadFrom(mmio).Print();
+    GetPrimaryFailures().ReadFrom(mmio).Print();
+    printf("   Secondary:\n");
+    GetUvFrameCount().ReadFrom(mmio).Print();
+    GetUvFailures().ReadFrom(mmio).Print();
+}
+
+
 zx_status_t DmaManager::Configure(
     fuchsia_sysmem_BufferCollectionInfo buffer_collection,
     fit::function<void(fuchsia_camera_common_FrameAvailableEvent)>
@@ -245,7 +289,7 @@ void DmaManager::WriteFormat() {
         // TODO: should there be a format.WidthUv() ?
         GetUvMisc().ReadFrom(&isp_mmio_local_)
             .set_base_mode(current_format_->GetBaseMode())
-            .set_plane_select(current_format_->GetPlaneSelect())
+            .set_plane_select(current_format_->GetPlaneSelectUv())
             .WriteTo(&isp_mmio_local_);
         GetUvActiveDim().ReadFrom(&isp_mmio_local_)
             .set_active_width(current_format_->width())
