@@ -1,0 +1,28 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /fuchsia-src/development/system_monitor/index
+- title: "Dockyard"
+  section:
+  - title: "Overview"
+    path: /fuchsia-src/development/system_monitor/dockyard/index
+  - title: "Terms"
+    path: /fuchsia-src/development/system_monitor/dockyard/terms
+- title: "Harvester"
+  section:
+  - title: "Overview"
+    path: /fuchsia-src/development/system_monitor/harvester/index
+  - title: "Task samples"
+    path: /fuchsia-src/development/system_monitor/harvester/task_samples
+  - title: "Component introspection"
+    path: /fuchsia-src/development/system_monitor/harvester/component_introspection
+  - title: "CPU samples"
+    path: /fuchsia-src/development/system_monitor/harvester/cpu_samples
+  - title: "Memory samples"
+    path: /fuchsia-src/development/system_monitor/harvester/memory_samples
+

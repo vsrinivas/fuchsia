@@ -1,0 +1,46 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Driver Development Kit"
+  path: /fuchsia-src/zircon/ddk/overview
+- title: "Getting started"
+  path: /fuchsia-src/zircon/ddk/getting_started
+- title: "Device model"
+  path: /fuchsia-src/zircon/ddk/device-model
+- title: "Composite devices"
+  path: /fuchsia-src/zircon/ddk/composite
+- title: "Device protocol"
+  path: /fuchsia-src/zircon/ddk/device-ops
+- title: "Driver development"
+  path: /fuchsia-src/zircon/ddk/driver-development
+  section:
+  - title: "Hardware interfacing"
+    path: /fuchsia-src/zircon/ddk/hardware
+  - title: "Simple drivers"
+    path: /fuchsia-src/zircon/ddk/simple
+  - title: "Ethernet devices"
+    path: /fuchsia-src/zircon/ddk/ethernet
+  - title: "RAMdisk device"
+    path: /fuchsia-src/zircon/ddk/ramdisk
+  - title: "Adding tracing to device drivers"
+    path: /fuchsia-src/zircon/ddk/tracing
+  - title: "Using the C++ DDK template library"
+    path: /fuchsia-src/zircon/ddk/using-ddktl
+- title: "Platform bus"
+  path: /fuchsia-src/zircon/ddk/platform-bus
+- title: "Device firmware"
+  path: /fuchsia-src/zircon/ddk/firmware
+- title: Tutorial presentations
+  section:
+  - title: "The Banjo tutorial"
+    path: /fuchsia-src/zircon/ddk/banjo-tutorial
+  - title: "The Driver Development Kit tutorial"
+    path: /fuchsia-src/zircon/ddk/ddk-tutorial
+- title: "Advanced topics and tips"
+  path: /fuchsia-src/zircon/ddk/advanced
+- title: "Reference"
+  path: /fuchsia-src/zircon/ddk/reference

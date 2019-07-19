@@ -1,0 +1,49 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Bus transaction initiator"
+  path: /fuchsia-src/zircon/objects/bus_transaction_initiator
+- title: "Channel"
+  path: /fuchsia-src/zircon/objects/channel
+- title: "Log"
+  path: /fuchsia-src/zircon/objects/debuglog
+- title: "Event"
+  path: /fuchsia-src/zircon/objects/event
+- title: "Event pair"
+  path: /fuchsia-src/zircon/objects/eventpair
+- title: "FIFO"
+  path: /fuchsia-src/zircon/objects/fifo
+- title: "Futex"
+  path: /fuchsia-src/zircon/objects/futex
+- title: "Interrupts"
+  path: /fuchsia-src/zircon/objects/interrupts
+- title: "Job"
+  path: /fuchsia-src/zircon/objects/job
+- title: "Pager"
+  path: /fuchsia-src/zircon/objects/pager
+- title: "Pinned memory token"
+  path: /fuchsia-src/zircon/objects/pinned_memory_token
+- title: "Port"
+  path: /fuchsia-src/zircon/objects/port
+- title: "Process"
+  path: /fuchsia-src/zircon/objects/process
+- title: "Profile"
+  path: /fuchsia-src/zircon/objects/profile
+- title: "Resource"
+  path: /fuchsia-src/zircon/objects/resource
+- title: "Socket"
+  path: /fuchsia-src/zircon/objects/socket
+- title: "Task"
+  path: /fuchsia-src/zircon/objects/task
+- title: "Thread"
+  path: /fuchsia-src/zircon/objects/thread
+- title: "Timer"
+  path: /fuchsia-src/zircon/objects/timer
+- title: "Virtual memory address region"
+  path: /fuchsia-src/zircon/objects/vm_address_region
+- title: "Virtual memory object"
+  path: /fuchsia-src/zircon/objects/vm_object

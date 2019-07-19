@@ -1,0 +1,19 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /fuchsia-src/the-book/ui
+- title: "Scenic (compositor)"
+  path: /fuchsia-src/the-book/ui/scenic
+- title: "Input manager"
+  path: /fuchsia-src/the-book/ui/input
+- title: "Life of a pixel"
+  path: /fuchsia-src/the-book/ui/life_of_a_pixel
+- title: "Lifecycle of a scene graph resource"
+  path: /fuchsia-src/the-book/ui/scenic_resource_lifecycle
+- title: "Units and metrics"
+  path: /fuchsia-src/the-book/ui/units_and_metrics

@@ -1,0 +1,91 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /fuchsia-src/the-book
+- title: "Zircon kernel"
+  section:
+  - title: "Concepts"
+    path: /fuchsia-src/zircon/concepts
+  - title: "System calls"
+    path: /fuchsia-src/zircon/syscalls
+  - title: "vDSO (libzircon)"
+    path: /fuchsia-src/zircon/vdso
+- title: "Zircon core"
+  section:
+  - title: "Device driver model (DDK)"
+    path: /fuchsia-src/zircon/ddk/overview
+  - title: "C library (libc)"
+    path: /fuchsia-src/the-book/libc
+  - title: "POSIX I/O (libfdio)"
+    path: /fuchsia-src/the-book/life_of_an_open
+  - title: "Process creation"
+    path: /fuchsia-src/the-book/process_creation
+- title: "Framework"
+  section:
+  - title: "Core libraries"
+    path: /fuchsia-src/the-book/core_libraries
+  - title: "Application model"
+    section:
+    - title: "Interface Definition Language (FIDL)"
+      path: /fuchsia-src/development/languages/fidl
+  - title: "Boot sequence"
+    path: /fuchsia-src/the-book/boot_sequence
+  - title: "Namespaces"
+    path: /fuchsia-src/the-book/namespaces
+  - title: "Sandboxing"
+    path: /fuchsia-src/the-book/sandboxing
+  - title: "Hub"
+    path: /fuchsia-src/the-book/hub
+  - title: "Modular"
+    section:
+    - include: /fuchsia-src/the-book/modular/_toc.yaml
+  - title: "Components"
+    section:
+    - include: /fuchsia-src/the-book/components/_toc.yaml
+- title: "Storage"
+  section:
+  - title: "Block devices"
+    path: /fuchsia-src/the-book/block_devices
+  - title: "File systems"
+    path: /fuchsia-src/the-book/filesystems
+  - title: "Ledger"
+    path: https://fuchsia.googlesource.com/fuchsia/+/master/src/ledger/docs/README.md
+  - title: "Archive format"
+    path: /fuchsia-src/the-book/archive_format
+  - title: "Merkle roots"
+    path:  /fuchsia-src/the-book/merkleroot
+  - title: "Package metadata"
+    path: /fuchsia-src/the-book/package_metadata
+  - title: "Package URIs"
+    path: /fuchsia-src/the-book/package_url
+  - title: "'Dot dot' considered harmful"
+    path: /fuchsia-src/the-book/dotdot
+
+- title: "Networking"
+  section:
+  - title: "Wireless"
+    path: /fuchsia-src/the-book/wireless_networking
+  - title: "Bluetooth architecture"
+    path: /fuchsia-src/the-book/bluetooth_architecture
+  - title: "Bluetooth source code"
+    path: /fuchsia-src/the-book/bluetooth_source_layout
+  - title: "Telephony"
+    path: https://fuchsia.googlesource.com/fuchsia/+/master/src/connectivity/telephony/
+- title: "Graphics"
+  section:
+  - title: "Magma (Vulkan driver)"
+    section:
+    - include: /fuchsia-src/the-book/magma/_toc.yaml
+  - title: "Escher (physically-based renderer)"
+    path: https://fuchsia.googlesource.com/fuchsia/+/master/src/ui/lib/escher/README.md
+  - title: "UI services"
+    section:
+    - include: /fuchsia-src/the-book/ui/_toc.yaml
+  - title: "Flutter (UI toolkit)"
+    path: //flutter.io/
+    status: external

@@ -1,0 +1,27 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /fuchsia-src/the-book/modular/overview
+- title: "Configuring the Modular framework"
+  path: /fuchsia-src/the-book/modular/guide/config
+- title: "Story"
+  path: /fuchsia-src/the-book/modular/story
+- title: "Module"
+  path: /fuchsia-src/the-book/modular/module
+- title: "Module facet"
+  path: /fuchsia-src/the-book/modular/module_facet
+- title: "Agent"
+  path: /fuchsia-src/the-book/modular/agent
+- title: "Intent"
+  path: /fuchsia-src/the-book/modular/intent
+- title: "Shell"
+  path: /fuchsia-src/the-book/modular/shell
+- title: "Entity"
+  path: /fuchsia-src/the-book/modular/entity
+- title: "Entity provider"
+  path: /fuchsia-src/the-book/modular/guide/entity_provider

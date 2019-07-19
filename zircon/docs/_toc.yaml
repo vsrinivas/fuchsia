@@ -1,0 +1,167 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Getting started"
+  path: /fuchsia-src/zircon/getting_started
+
+- title: "Architecture support"
+  path: /fuchsia-src/zircon/architecture_support
+
+- title: "Concepts"
+  path: /fuchsia-src/zircon/concepts
+
+- title: "Contributing patches"
+  path: /fuchsia-src/zircon/contributing
+
+- title: "C++"
+  section:
+  - title: "Overview"
+    path: /fuchsia-src/zircon/cxx
+  - title: "Compile time collections"
+    path: /fuchsia-src/zircon/compile_time_object_collections
+  - title: "fit::promise<> guide"
+    path: /fuchsia-src/zircon/fit_promise_guide
+
+- title: "Editors"
+  path: /fuchsia-src/zircon/editors
+
+- title: "Self-hosted build"
+  path: /fuchsia-src/zircon/self_hosting
+
+- title: "libc support"
+  path: /fuchsia-src/zircon/libc
+
+- title: Objects
+  section:
+  - title: "Kernel objects"
+    path: /fuchsia-src/zircon/objects
+  - include: /fuchsia-src/zircon/objects/_toc.yaml
+  - title: "Timer Slack"
+    path: /fuchsia-src/zircon/timer_slack
+
+- title: "Kernel"
+  section:
+  - title: "Kernel command line options"
+    path: /fuchsia-src/zircon/kernel_cmdline
+  - title: "Kernel internal errors"
+    path: /fuchsia-src/zircon/kernel_internal_errors
+  - title: "Kernel invariants"
+    path: /fuchsia-src/zircon/kernel_invariants
+  - title: "Kernel scheduling"
+    path: /fuchsia-src/zircon/kernel_scheduling
+  - title: "Fair scheduling"
+    path: /fuchsia-src/zircon/fair_scheduler
+
+- title: "Errors"
+  path: /fuchsia-src/zircon/errors
+
+- title: "Exceptions"
+  path: /fuchsia-src/zircon/exceptions
+
+- title: "Handles"
+  path: /fuchsia-src/zircon/handles
+
+- title: "Rights"
+  path: /fuchsia-src/zircon/rights
+
+- title: "Signals"
+  path: /fuchsia-src/zircon/signals
+
+- title: "Thread safety annotations"
+  path:  /fuchsia-src/zircon/thread_annotations
+
+- title: "Thread local storage"
+  path: /fuchsia-src/zircon/tls
+
+- title: "Runtime locks"
+  section:
+  - title: Overview
+    path: /fuchsia-src/zircon/lockdep
+  - title: Design
+    path: /fuchsia-src/zircon/lockdep-design
+
+- title: "System calls"
+  section:
+  - include: /fuchsia-src/zircon/syscalls/_toc.yaml
+
+- title: "Bootsvc"
+  path: /fuchsia-src/zircon/bootsvc
+
+- title: "Userspace bootstrapping"
+  path: /fuchsia-src/zircon/userboot
+
+- title: "Program loading"
+  path: /fuchsia-src/zircon/program_loading
+
+- title: "Minfs"
+  path: /fuchsia-src/zircon/minfs
+
+- title: "Zxcrypt"
+  path: /fuchsia-src/zircon/zxcrypt
+
+- title: "Driver interfaces"
+  section:
+  - include: /fuchsia-src/zircon/driver_interfaces/_toc.yaml
+
+- title: "DDK"
+  section:
+  - include: /fuchsia-src/zircon/ddk/_toc.yaml
+
+- title: "Targets"
+  section:
+  - include: /fuchsia-src/zircon/targets/_toc.yaml
+
+- title: "Testing"
+  section:
+  - title: "Overview"
+    path: /fuchsia-src/zircon/testing
+  - title: "Block device testing"
+    path: /fuchsia-src/zircon/block_device_testing
+  - title: "Entropy quality tests"
+    path:  /fuchsia-src/zircon/entropy_quality_tests
+  - title: "Fuzzing the FIDL host tools"
+    path:  /fuchsia-src/zircon/fuzzing_fidl
+  - title: "NAND testing"
+    path: /fuchsia-src/zircon/nand_testing
+
+- title: "Hacking notes"
+  path: /fuchsia-src/zircon/hacking
+
+- title: "Memory usage analysis tools"
+  path: /fuchsia-src/zircon/memory
+
+- title: "Out of memory system"
+  path: /fuchsia-src/zircon/oom
+
+- title: "Safe stack"
+  path: /fuchsia-src/zircon/safestack
+
+- title: "Symbolizer markup format"
+  path: /fuchsia-src/zircon/symbolizer_markup
+
+- title: "Static Analysis"
+  path: /fuchsia-src/zircon/static_analysis
+
+- title: "Zircon and LK"
+  path: /fuchsia-src/zircon/zx_and_lk
+
+- title: "Benchmarks"
+  section:
+  - include: /fuchsia-src/zircon/benchmarks/_toc.yaml
+
+- title: "Notes"
+  section:
+  - title: "Entropy collection TODOs"
+    path: /fuchsia-src/zircon/entropy_collection_todos
+  - title: "Avoiding a problem with the SYSRET"
+    path: /fuchsia-src/zircon/sysret_problem
+
+- title: "Exporting images using DOT files"
+  path: /fuchsia-src/zircon/images/src/handle-creation
+
+- title: "QEMU"
+  path: /fuchsia-src/zircon/qemu

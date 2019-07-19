@@ -1,0 +1,25 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Build system"
+  path: /fuchsia-src/development/build
+- title: "Fuchsia build information"
+  path: /fuchsia-src/development/build/build_information
+- title: "The build system"
+  path: /fuchsia-src/development/build/overview
+- title: "Boards and products"
+  path: /fuchsia-src/development/build/boards_and_products
+- title: "Toolchain"
+  path: /fuchsia-src/development/build/toolchain
+- title: "Tools dashboards"
+  path: /fuchsia-src/development/build/tools-dashboards
+- title: "Fuchsia build system: variants"
+  path: /fuchsia-src/development/build/variants
+- title: "Bundles"
+  path: /fuchsia-src/development/build/bundles
+- title: "GN build arguments"
+  path: /fuchsia-src/gen/build_arguments

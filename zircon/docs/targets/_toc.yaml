@@ -1,0 +1,21 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Acer Switch Alpha 12"
+  path: /fuchsia-src/zircon/targets/acer12.md
+- title: "Zircon on HiKey960 (96boards.org)"
+  path: /fuchsia-src/zircon/targets/hikey960.md
+- title: "Zircon on iMX8M EVK"
+  path: /fuchsia-src/zircon/targets/imx8mevk.md
+- title: "Zircon on Khadas VIM2 Board"
+  path: /fuchsia-src/zircon/targets/khadas-vim.md
+- title: "Intel NUC (Kaby Lake, Skylake and Broadwell)"
+  path: /fuchsia-src/zircon/targets/nuc.md
+- title: "Toulouse"
+  path: /fuchsia-src/zircon/targets/toulouse.md
+- title: "Setup with a USB Flash Drive"
+  path: /fuchsia-src/zircon/targets/usb_setup.md

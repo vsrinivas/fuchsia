@@ -1,0 +1,34 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "ABI and source compatibility guide"
+  path: /fuchsia-src/development/languages/fidl/reference/abi-compat
+- title: "Attributes"
+  path: /fuchsia-src/development/languages/fidl/reference/attributes
+- title: "Bindings"
+  path: /fuchsia-src/development/languages/fidl/reference/bindings
+- title: "Compiler"
+  path: /fuchsia-src/development/languages/fidl/reference/compiler
+- title: "Editors"
+  path: /fuchsia-src/development/languages/fidl/reference/editors
+- title: "Grammar"
+  path: /fuchsia-src/development/languages/fidl/reference/grammar
+- title: "Host side"
+  path: /fuchsia-src/development/languages/fidl/reference/host
+- title: "Internal library: 'zx'"
+  path: /fuchsia-src/development/languages/fidl/reference/library-zx
+- title: "JSON internal representation"
+  path: /fuchsia-src/development/languages/fidl/reference/json-ir
+- title: "Language specification"
+  path: /fuchsia-src/development/languages/fidl/reference/language
+- title: "Linter"
+  path: /fuchsia-src/development/languages/fidl/reference/linter
+- title: "Wire format"
+  path: /fuchsia-src/development/languages/fidl/reference/wire-format
+- title: "Language tuning proposals"
+  section:
+  - include: /fuchsia-src/development/languages/fidl/reference/ftp/_toc.yaml

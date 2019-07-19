@@ -1,0 +1,36 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /fuchsia-src/development/languages/fidl
+- title: "Introduction"
+  path: /fuchsia-src/development/languages/fidl/intro
+- title: "Tutorials"
+  path: /fuchsia-src/development/languages/fidl/tutorial
+- title: "Reference"
+  section:
+  - include: /fuchsia-src/development/languages/fidl/reference/_toc.yaml
+- title: "Supported languages"
+  section:
+  - title: "Comparison of C, Low-Level C++, and High-Level C++ Language Bindings"
+    path: /fuchsia-src/development/languages/fidl/tutorial/c-family-comparison
+  - title: "C tutorial"
+    path: /fuchsia-src/development/languages/fidl/tutorial/tutorial-c
+  - title: "C++ tutorial"
+    path: /fuchsia-src/development/languages/fidl/tutorial/tutorial-cpp
+  - title: "Low-level C++ language bindings tutorial"
+    path: /fuchsia-src/development/languages/fidl/tutorial/bindings-llcpp
+  - title: "Dart"
+    path:  /fuchsia-src/development/languages/fidl/tutorial/tutorial-dart
+  - title: "Go"
+    path:  /fuchsia-src/development/languages/fidl/tutorial/tutorial-go
+  - title: "Rust"
+    path:  /fuchsia-src/development/languages/fidl/tutorial/tutorial-rust
+- title: "Style guide"
+  path: /fuchsia-src/development/languages/fidl/style
+- title: "Contributing"
+  path: /fuchsia-src/development/languages/fidl/CONTRIBUTING

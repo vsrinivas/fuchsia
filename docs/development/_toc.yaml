@@ -1,0 +1,57 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: Development
+  path: /fuchsia-src/development/index
+- title: "ABI"
+  section:
+  - include: /fuchsia-src/development/abi/_toc.yaml
+- title: "API"
+  section:
+  - include: /fuchsia-src/development/api/_toc.yaml
+- title: "Benchmarking"
+  section:
+  - include: /fuchsia-src/development/benchmarking/_toc.yaml
+- title: "Build"
+  section:
+  - include: /fuchsia-src/development/build/_toc.yaml
+- title: "Supplying build-time configuration data to components"
+  path: /fuchsia-src/development/config_data
+- title: "Component Inspection"
+  section:
+  - include: /fuchsia-src/development/inspect/_toc.yaml
+- title: "Hardware"
+  section:
+  - include: /fuchsia-src/development/hardware/_toc.yaml
+- title: "Languages"
+  section:
+  - include: /fuchsia-src/development/languages/_toc.yaml
+- title: "SDK"
+  section:
+  - include: /fuchsia-src/development/sdk/_toc.yaml
+- title: "Source code"
+  section:
+  - include: /fuchsia-src/development/source_code/_toc.yaml
+- title: "Testing"
+  section:
+  - include: /fuchsia-src/development/testing/_toc.yaml
+- title: "Tracing"
+  section:
+  - include: /fuchsia-src/development/tracing/_toc.yaml
+- title: "Workflows"
+  section:
+  - include: /fuchsia-src/development/workflows/_toc.yaml
+- title: "Tools"
+  section:
+  - title: "FIDLcat"
+    path: /fuchsia-src/development/fidl_inspecting
+  - title: "System monitor"
+    section:
+    - include: /fuchsia-src/development/system_monitor/_toc.yaml
+  - title: "Debugger"
+    section:
+    - include: /fuchsia-src/development/debugger/_toc.yaml

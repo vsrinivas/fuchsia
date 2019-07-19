@@ -1,0 +1,15 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "SDK"
+  path: /fuchsia-src/development/sdk/index.md
+- title: "Download the Fuchsia SDK"
+  path: /fuchsia-src/development/sdk/download.md
+- title: "SDK layout"
+  path: /fuchsia-src/development/sdk/layout.md
+- title: "SDK standards"
+  path: /fuchsia-src/development/sdk/standards.md

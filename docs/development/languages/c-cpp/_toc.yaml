@@ -1,0 +1,27 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /fuchsia-src/development/languages/c-cpp
+- title: "Editor setup"
+  path: /fuchsia-src/development/languages/c-cpp/editors
+- title: "Naming conventions"
+  path: /fuchsia-src/development/languages/c-cpp/naming
+- title: "C style guide"
+  path: /fuchsia-src/development/languages/c-cpp/c-style
+- title: "C++ style guide"
+  path: /fuchsia-src/development/languages/c-cpp/cpp-style
+- title: "Lint"
+  path: /fuchsia-src/development/languages/c-cpp/lint
+- title: "Library restrictions"
+  path: /fuchsia-src/development/languages/c-cpp/library_restrictions
+- title: "Testing FAQ"
+  path: /fuchsia-src/development/languages/c-cpp/testing_faq
+- title: "Syslog"
+  path: /fuchsia-src/development/languages/c-cpp/syslog
+- title: "Perftest micro-benchmark library"
+  path: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/perftest/README.md

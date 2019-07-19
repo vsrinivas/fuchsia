@@ -1,0 +1,29 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "API development"
+  path: /fuchsia-src/development/api
+- title: "CLI tool help requirements"
+  path: /fuchsia-src/development/api/cli_help
+- title: "Command-line tools rubric"
+  path: /fuchsia-src/development/api/cli
+- title: "C library readability rubric"
+  path: /fuchsia-src/development/api/c
+- title: "Dart API readability Rubric"
+  path: /fuchsia-src/development/api/dart
+- title: "Fuchsia API council charter"
+  path: /fuchsia-src/development/api/council
+- title: "Fuchsia device interface rubric"
+  path: /fuchsia-src/development/api/device_interfaces
+- title: "API documentation readability rubric"
+  path: /fuchsia-src/development/api/documentation
+- title: "FIDL API readability rubric"
+  path: /fuchsia-src/development/api/fidl
+- title: "Zircon system interface rubric"
+  path: /fuchsia-src/development/api/system
+- title: "Developer tool guidelines"
+  path: /fuchsia-src/development/api/tools

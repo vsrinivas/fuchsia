@@ -1,0 +1,75 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp
+- title: "ftp-001"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-001
+- title: "ftp-002"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-002
+- title: "ftp-003"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-003
+- title: "ftp-004"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-004
+- title: "ftp-005"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-005
+- title: "ftp-006"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-006
+- title: "ftp-007"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-007
+- title: "ftp-008"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-008
+- title: "ftp-009"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-009
+- title: "ftp-010"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-010
+- title: "ftp-012"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-012
+- title: "ftp-013"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-013
+- title: "ftp-014"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-014
+- title: "ftp-015"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-015
+- title: "ftp-016"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-016
+- title: "ftp-020"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-020
+- title: "ftp-021"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-021
+- title: "ftp-023"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-023
+- title: "ftp-024"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-024
+- title: "ftp-025"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-025
+- title: "ftp-026"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-026
+- title: "ftp-027"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-027
+- title: "ftp-029"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-029
+- title: "ftp-030"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-030
+- title: "ftp-032"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-032
+- title: "ftp-033"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-033
+- title: "ftp-035"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-035
+- title: "ftp-036"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-036
+- title: "ftp-040"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-040
+- title: "ftp-041"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-041
+- title: "ftp-042"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-042
+- title: "ftp-043"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-043
+- title: "ftp-045"
+  path: /fuchsia-src/development/languages/fidl/reference/ftp/ftp-045

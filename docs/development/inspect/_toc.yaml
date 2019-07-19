@@ -1,0 +1,19 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /fuchsia-src/development/inspect
+- title: "Quickstart"
+  path: /fuchsia-src/development/inspect/quickstart
+- title: "Health check"
+  path: /fuchsia-src/development/inspect/health
+- title: "Inspect API"
+  path: /fuchsia-src/development/inspect/gsw-inspect
+- title: "Iquery command"
+  path: /fuchsia-src/development/inspect/iquery
+- title: "Inspection VMO heap format"
+  path: /fuchsia-src/development/inspect/vmo-format
