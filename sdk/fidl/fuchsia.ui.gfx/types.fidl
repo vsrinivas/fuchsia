@@ -232,6 +232,7 @@ struct ViewProperties {
     /// Whether the View allows geometrically underlying Views to receive input;
     /// default is true. When false, Scenic does not send input events to
     /// underlying Views.
+    // TODO(SCN-1513): not implemented yet.
     bool downward_input = true;
 };
 

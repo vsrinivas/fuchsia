@@ -9,5 +9,5 @@
   "fidl/fuchsia.ui.gfx/resources.fidl": "3b2f08a638c74f83a2ac4b86d425b56c",
   "fidl/fuchsia.ui.gfx/shapes.fidl": "23a5942211b2c222eb6b6ebeddee0695",
   "fidl/fuchsia.ui.gfx/tokens.fidl": "00d93d452e0445cabe6bfe5455887bd0",
-  "fidl/fuchsia.ui.gfx/types.fidl": "3c94e22301577bd4827128e3b1cd96af"
+  "fidl/fuchsia.ui.gfx/types.fidl": "c8e835e014150c2db02f8526031f903a"
 }
