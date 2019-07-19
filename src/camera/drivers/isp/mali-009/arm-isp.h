@@ -142,6 +142,7 @@ class ArmIspDevice : public IspDeviceType,
   fbl::unique_ptr<camera::StatsManager> statsMgr_;
   fbl::unique_ptr<camera::DmaManager> full_resolution_dma_;
   fbl::unique_ptr<camera::DmaManager> downscaled_dma_;
+  bool streaming_ = false;
 
   //TODO(CAM-88): Formalize isp sub-block ownership.
   GammaRgbRegisters gamma_rgb_fr_regs_;

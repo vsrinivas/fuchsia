@@ -518,17 +518,25 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t ArmIspDevice::StartStreaming() {
+  if (streaming_) {
+      return ZX_OK;
+  }
   // At reset we use PING config
   IspGlobal_Config3::Get()
       .ReadFrom(&isp_mmio_)
       .select_config_ping()
       .WriteTo(&isp_mmio_);
 
+  // Grab a new frame for whichever dma is streaming:
+  downscaled_dma_->OnNewFrame();
+  full_resolution_dma_->OnNewFrame();
+
   // Copy current context to ISP
   CopyContextInfo(kPing, kCopyToIsp);
 
-  // TODO(garratt@) Get the next bufffer
-
+  // TODO(Garratt): Test if we need to load pong configuration now.
+  full_resolution_dma_->OnNewFrame();
+  downscaled_dma_->OnNewFrame();
   CopyContextInfo(kPong, kCopyToIsp);
 
   zx_status_t status = SetPort(kSafeStart);
@@ -537,12 +545,21 @@ zx_status_t ArmIspDevice::StartStreaming() {
   }
 
   statsMgr_->SensorStartStreaming();
-  return status;
+  streaming_ = true;
+  return ZX_OK;
 }
 
 zx_status_t ArmIspDevice::StopStreaming() {
+  if (!streaming_) {
+      return ZX_OK;
+  }
   statsMgr_->SensorStopStreaming();
-  return SetPort(kSafeStop);
+  zx_status_t status = SetPort(kSafeStop);
+  if (status != ZX_OK) {
+    return status;
+  }
+  streaming_ = false;
+  return ZX_OK;
 }
 
 zx_status_t ArmIspDevice::IspCreateInputStream(
