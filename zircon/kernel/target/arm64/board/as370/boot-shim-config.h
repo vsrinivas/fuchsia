@@ -72,6 +72,7 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
                    sizeof(psci_driver));
   append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, &timer_driver,
                    sizeof(timer_driver));
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_AS370_POWER, NULL, 0);
 
   // add platform ID
   append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));

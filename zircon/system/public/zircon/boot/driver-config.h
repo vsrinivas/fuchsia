@@ -22,6 +22,7 @@
 #define KDRV_MSM_UART 0x554D534D          // 'MSMU'
 #define KDRV_MSM_POWER 1347244877         // 'MSMP'
 #define KDRV_DW8250_UART 0x44573855       // 'DW8U'
+#define KDRV_AS370_POWER 0x50303733       // '370P'
 
 // kernel driver struct that can be used for simple drivers
 // used by KDRV_PL011_UART, KDRV_AMLOGIC_UART and KDRV_NXP_IMX_UART
