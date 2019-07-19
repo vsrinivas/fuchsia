@@ -97,7 +97,6 @@ impl RoutedCapability {
             ),
             // Directory offered to me that matches a directory `use` or `offer` declaration.
             (RoutedCapability::Use(UseDecl::Directory(child_use)), OfferDecl::Directory(offer)) => {
-                eprintln!("finding directory use for {} to match {:?}", child_moniker, self);
                 Self::is_offer_service_or_dir_match(
                     child_moniker,
                     &child_use.source_path,
@@ -109,7 +108,6 @@ impl RoutedCapability {
                 RoutedCapability::Offer(OfferDecl::Directory(child_offer)),
                 OfferDecl::Directory(offer),
             ) => {
-                eprintln!("finding offer directory for {} to match {:?}", child_moniker, self);
                 Self::is_offer_service_or_dir_match(
                     child_moniker,
                     &child_offer.source_path,
@@ -119,7 +117,6 @@ impl RoutedCapability {
             }
             // Directory offered to me that matches a `storage` declaration which consumes it.
             (RoutedCapability::Storage(child_storage), OfferDecl::Directory(offer)) => {
-                eprintln!("finding offer directory for {} to match {:?}", child_moniker, self);
                 Self::is_offer_service_or_dir_match(
                     child_moniker,
                     &child_storage.source_path,
@@ -129,7 +126,6 @@ impl RoutedCapability {
             }
             // Storage offered to me.
             (RoutedCapability::Use(UseDecl::Storage(child_use)), OfferDecl::Storage(offer)) => {
-                eprintln!("finding storage use for {}, {:?}", child_moniker, self);
                 Self::is_offer_storage_match(
                     child_moniker,
                     child_use.type_(),
@@ -141,7 +137,6 @@ impl RoutedCapability {
                 RoutedCapability::Offer(OfferDecl::Storage(child_offer)),
                 OfferDecl::Storage(offer),
             ) => {
-                eprintln!("finding storage offer for {}, {:?}", child_moniker, self);
                 Self::is_offer_storage_match(
                     child_moniker,
                     child_offer.type_(),
@@ -150,7 +145,6 @@ impl RoutedCapability {
                 )
             }
             _ => {
-                eprintln!("found no match for {}, {:?} in decl: {:?}", child_moniker, self, decl);
                 false
             }
         })
