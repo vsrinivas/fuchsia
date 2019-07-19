@@ -4,7 +4,6 @@ per-file bugreport=frousseau@google.com
 per-file clang-tidy=juliehockett@google.com
 per-file dart-remote-test=zra@google.com
 per-file dart-tunnel=zra@google.com
-per-file debug-report=donosoc@google.com
 per-file debug=brettw@google.com
 per-file debug=donosoc@google.com
 per-file debug=sadmac@google.com

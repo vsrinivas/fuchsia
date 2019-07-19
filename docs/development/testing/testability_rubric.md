@@ -89,8 +89,8 @@ receiving Testability+1.
     that contract is worth testing. This can also apply to other forms of
     instrumentation, such as Tracing. This does not apply to instrumentation
     when it is used as a contract, for instance Inspect usage can be tested, and
-    should be if you rely on it working as intended (for instance in fx
-    debug-report or Feedback).
+    should be if you rely on it working as intended (for instance in fx iquery
+    or feedback reports).
 *   **Code that we don’t own** (the source of truth is not in Fuchsia tree).
     Changes that pick up an update to source code that’s copied from elsewhere
     don’t bear testability requirements.

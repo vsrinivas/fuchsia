@@ -621,12 +621,12 @@ From Chris:
     This will find the component wherever it is and output its information.
 
 
-    From the host, fx debug-report finds all nodes on the system and includes
+    From the host, fx iquery finds all nodes on the system and includes
     it in a report:
 
-    $ fx debug-report
-    $ fx debug-report -s   # include system nodes with -s
-    $ fx debug-report -f json  # set format using -f
+    $ fx iquery
+    $ fx iquery -s   # include system nodes with -s
+    $ fx iquery -f json  # set format using -f
 -->
 
 <!-- cross references -->
