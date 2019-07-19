@@ -6,7 +6,6 @@
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/overnet/cpp/fidl.h>
-#include <unistd.h>
 
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
@@ -20,13 +19,6 @@ UserCommunicatorFactoryImpl::~UserCommunicatorFactoryImpl() {}
 
 std::unique_ptr<UserCommunicator> UserCommunicatorFactoryImpl::GetUserCommunicator(
     std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider) {
-  char host_name_buffer[HOST_NAME_MAX + 1];
-  int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
-  if (result < 0) {
-    FXL_LOG(ERROR) << "unable to get hostname. errno " << errno;
-    return nullptr;
-  }
-
   fuchsia::overnet::OvernetPtr overnet =
       environment_->component_context()->svc()->Connect<fuchsia::overnet::Overnet>();
 
