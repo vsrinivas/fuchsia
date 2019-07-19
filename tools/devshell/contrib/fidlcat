@@ -30,6 +30,13 @@
 ##    --debug-mode         Whether the debug agent's debug logs should be shown.
 ##    --with-process-info  Display the process name, process id and thread id on
 ##                         each line (useful for grep).
+##    --verbose=<value>    The log verbosity.  Legal values are "info", "warning",
+##                         "error", "fatal", or a number, starting from 0. Extra
+##                         verbosity comes with higher levels.
+##    --quiet=<value>      The log verbosity.  Legal values are "info", "warning",
+##                         "error", "fatal", or a number, starting from 0. Extra
+##                         verbosity comes with lower levels.
+##    --log-file=<path>    The log file destination.
 ##    --remote-pid         The koid of the remote process to trace
 ##    --remote-name        A set of comma-separated regexes.  When a process
 ##                         whose name matches one of the regexes starts, fidlcat
@@ -62,6 +69,9 @@ agent_out="/dev/null"
 action=
 debug_mode=
 with_process_info=
+verbose=
+quiet=
+log_file=
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -79,6 +89,15 @@ while [[ $# -gt 0 ]]; do
       ;;
     --with-process-info)
       with_process_info="--with-process-info"
+      ;;
+    --verbose=*)
+      verbose="$1"
+      ;;
+    --quiet=*)
+      quiet="$1"
+      ;;
+    --log-file=*)
+      log_file="$1"
       ;;
     --remote-pid)
       break # Remaining flags are passed to fidlcat
@@ -157,4 +176,7 @@ launch_debug_agent
   "-s" "${BUILDTOOLS_CLANG_DIR}/lib/debug" \
   --pretty-print \
   ${with_process_info} \
+  ${verbose} \
+  ${quiet} \
+  ${log_file} \
   $@

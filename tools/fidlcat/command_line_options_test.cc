@@ -11,6 +11,7 @@
 #include <fstream>
 
 #include "gtest/gtest.h"
+#include "src/lib/fxl/logging.h"
 
 namespace fidlcat {
 
@@ -126,6 +127,8 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
                         connect.c_str(),
                         "--remote-pid",
                         remote_pid.c_str(),
+                        "--verbose",
+                        "error",
                         "leftover",
                         "args"};
   int argc = sizeof(argv) / sizeof(argv[0]);
@@ -139,6 +142,8 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   ASSERT_EQ(remote_pid, options.remote_pid[0]);
   ASSERT_EQ(symbol_path, options.symbol_paths[0]);
   ASSERT_EQ(fidl_ir_path, options.fidl_ir_paths[0]);
+  ASSERT_TRUE(fxl::ShouldCreateLogMessage(fxl::LOG_ERROR));
+  ASSERT_FALSE(fxl::ShouldCreateLogMessage(fxl::LOG_INFO));
   ASSERT_TRUE(std::find(params.begin(), params.end(), "leftover") != params.end());
   ASSERT_TRUE(std::find(params.begin(), params.end(), "args") != params.end());
 }
@@ -170,6 +175,35 @@ TEST_F(CommandLineOptionsTest, NoActionMeansFailure) {
   std::vector<std::string> params;
   auto status = ParseCommandLine(argc, argv, &options, &display_options, &params);
   ASSERT_TRUE(!status.ok());
+}
+
+TEST_F(CommandLineOptionsTest, QuietTrumpsVerbose) {
+  std::string fidl_ir_path = "blah.fidl.json";
+  std::string symbol_path = "path/to/debug/symbols";
+  std::string remote_pid = "3141";
+  std::string connect = "localhost:8080";
+  const char* argv[] = {"fakebinary",
+                        "--fidl-ir-path",
+                        fidl_ir_path.c_str(),
+                        "-s",
+                        symbol_path.c_str(),
+                        "--connect",
+                        connect.c_str(),
+                        "--remote-pid",
+                        remote_pid.c_str(),
+                        "--verbose",
+                        "info",
+                        "--quiet",
+                        "2",
+                        "leftover",
+                        "args"};
+  int argc = sizeof(argv) / sizeof(argv[0]);
+  CommandLineOptions options;
+  DisplayOptions display_options;
+  std::vector<std::string> params;
+  auto status = ParseCommandLine(argc, argv, &options, &display_options, &params);
+  ASSERT_TRUE(fxl::ShouldCreateLogMessage(fxl::LOG_ERROR));
+  ASSERT_FALSE(fxl::ShouldCreateLogMessage(fxl::LOG_INFO));
 }
 
 }  // namespace fidlcat

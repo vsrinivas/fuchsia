@@ -238,6 +238,8 @@ void SyscallDecoder::StepToReturnAddress() {
   settings.scope_target = thread_->GetProcess()->GetTarget();
   settings.one_shot = true;
   thread_observer_->CreateNewBreakpoint(settings);
+  FXL_VLOG(2) << "Creating return value breakpoint for " << syscall_->name() << " at address "
+              << std::hex << return_address_ << std::dec;
   // Registers a one time breakpoint for this decoder.
   thread_observer_->Register(thread_->GetKoid(), this);
   // Restarts the stopped thread. When the breakpoint will be reached (at the

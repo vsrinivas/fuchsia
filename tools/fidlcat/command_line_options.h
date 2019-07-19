@@ -21,6 +21,10 @@ struct CommandLineOptions {
   bool with_process_info = false;
   std::string colors = "auto";
   int columns = 0;
+
+  std::optional<std::string> verbose;
+  std::optional<std::string> quiet;
+  std::optional<std::string> log_file;
 };
 
 // Parses the given |argc| and |argv| into the well-defined |options|.  If there
