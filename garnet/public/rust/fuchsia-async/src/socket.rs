@@ -12,32 +12,17 @@ use futures::{
     try_ready, Poll,
 };
 use std::fmt;
-use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
-/// An I/O object representing a `Socket`.
-pub type Socket = GenericSocket<SocketDataFlags>;
-
-/// An I/O object representing the control plane of a `Socket`.
-pub type SocketControl = GenericSocket<SocketControlFlags>;
-
-/// Underlying type representing a `Socket`, which can be reading either from the data plane or the
-/// control plane.
-pub struct GenericSocket<F: SocketRWFlags> {
-    handle: Arc<zx::Socket>,
-    receiver: ReceiverRegistration<SocketPacketReceiver<F>>,
+pub struct SocketPacketReceiver {
+    signals: AtomicU32,
+    read_task: AtomicWaker,
+    write_task: AtomicWaker,
 }
 
-/// Represents a `PacketReceiver` that keeps track of read and write tasks, what signals it's
-/// received, and wakes the correct task on receiving a signal.
-pub trait SocketRWFlags: 'static + Send + Sync {
-    const READABLE: Signals;
-    const WRITABLE: Signals;
-}
-
-impl<F: SocketRWFlags> PacketReceiver for SocketPacketReceiver<F> {
+impl PacketReceiver for SocketPacketReceiver {
     fn receive_packet(&self, packet: zx::Packet) {
         let observed = if let zx::PacketContents::SignalOne(p) = packet.contents() {
             p.observed()
@@ -51,89 +36,40 @@ impl<F: SocketRWFlags> PacketReceiver for SocketPacketReceiver<F> {
         let became_closed = observed.contains(Signals::SOCKET_PEER_CLOSED)
             && !old.contains(Signals::SOCKET_PEER_CLOSED);
 
-        if observed.contains(F::READABLE) && !old.contains(F::READABLE) || became_closed {
+        if observed.contains(Signals::SOCKET_READABLE) && !old.contains(Signals::SOCKET_READABLE)
+            || became_closed
+        {
             self.read_task.wake();
         }
-        if observed.contains(F::WRITABLE) && !old.contains(F::WRITABLE) || became_closed {
+        if observed.contains(Signals::SOCKET_WRITABLE) && !old.contains(Signals::SOCKET_WRITABLE)
+            || became_closed
+        {
             self.write_task.wake();
         }
     }
 }
 
-pub struct SocketPacketReceiver<T: SocketRWFlags> {
-    signals: AtomicU32,
-    read_task: AtomicWaker,
-    write_task: AtomicWaker,
-    flags: PhantomData<T>,
-}
-
-impl<T: SocketRWFlags> SocketPacketReceiver<T> {
+impl SocketPacketReceiver {
     fn new(signals: AtomicU32, read_task: AtomicWaker, write_task: AtomicWaker) -> Self {
-        Self { signals, read_task, write_task, flags: PhantomData }
+        Self { signals, read_task, write_task }
     }
 }
 
-pub struct SocketDataFlags;
-
-impl SocketRWFlags for SocketDataFlags {
-    const READABLE: Signals = Signals::SOCKET_READABLE;
-    const WRITABLE: Signals = Signals::SOCKET_WRITABLE;
+/// An I/O object representing a `Socket`.
+pub struct Socket {
+    handle: Arc<zx::Socket>,
+    receiver: ReceiverRegistration<SocketPacketReceiver>,
 }
 
-pub struct SocketControlFlags;
-
-impl SocketRWFlags for SocketControlFlags {
-    const READABLE: Signals = Signals::SOCKET_CONTROL_READABLE;
-    const WRITABLE: Signals = Signals::SOCKET_CONTROL_WRITABLE;
-}
-
-impl<F: SocketRWFlags> AsRef<zx::Socket> for GenericSocket<F> {
+impl AsRef<zx::Socket> for Socket {
     fn as_ref(&self) -> &zx::Socket {
         &self.handle
     }
 }
 
-impl<F: SocketRWFlags> AsHandleRef for GenericSocket<F> {
+impl AsHandleRef for Socket {
     fn as_handle_ref(&self) -> zx::HandleRef {
         self.handle.as_handle_ref()
-    }
-}
-
-/// This trait allows for reading and writing from a socket, regardless of whether we're reading
-/// from the control plane or the data plane.
-pub trait SocketHandleRW {
-    fn read(&self, bytes: &mut [u8]) -> Result<usize, zx::Status>;
-    fn write(&self, bytes: &[u8]) -> Result<usize, zx::Status>;
-    fn avail_bytes(&self) -> Result<usize, zx::Status>;
-}
-
-impl SocketHandleRW for Socket {
-    fn read(&self, bytes: &mut [u8]) -> Result<usize, zx::Status> {
-        self.handle.read(bytes)
-    }
-
-    fn write(&self, bytes: &[u8]) -> Result<usize, zx::Status> {
-        self.handle.write(bytes)
-    }
-
-    fn avail_bytes(&self) -> Result<usize, zx::Status> {
-        self.handle.outstanding_read_bytes()
-    }
-}
-
-impl SocketHandleRW for SocketControl {
-    fn read(&self, bytes: &mut [u8]) -> Result<usize, zx::Status> {
-        self.handle.read_opts(bytes, zx::SocketReadOpts::CONTROL)
-    }
-
-    fn write(&self, bytes: &[u8]) -> Result<usize, zx::Status> {
-        self.handle.write_opts(bytes, zx::SocketWriteOpts::CONTROL)
-    }
-
-    fn avail_bytes(&self) -> Result<usize, zx::Status> {
-        // TODO(wesleyac) Once ZX-458 is fixed, add control message size to zx_info_socket_t,
-        // and use that instead of assuming a 1024 byte message.
-        Ok(1024)
     }
 }
 
@@ -142,59 +78,10 @@ impl Socket {
     pub fn from_socket(handle: zx::Socket) -> Result<Self, zx::Status> {
         Self::from_socket_arc_unchecked(Arc::new(handle))
     }
-
-    /// Get a `SocketControl` for the control plane of this `Socket`.
-    ///
-    /// Panics:
-    ///
-    /// * If the zx::Socket does not have a control plane.
-    /// * If there is already an existing control handle to this socket.
-    pub fn get_control_handle(&self) -> Result<SocketControl, zx::Status> {
-        assert!(&self.handle.info()?.options.contains(zx::SocketOpts::FLAG_CONTROL));
-        assert_eq!(Arc::strong_count(&self.handle), 1);
-        SocketControl::from_socket_arc_unchecked(Arc::clone(&self.handle))
-    }
 }
 
-impl SocketControl {
-    /// Create a new `SocketControl` from a previously-created zx::Socket.
-    ///
-    /// Panics: If the zx::Socket does not have a control plane.
-    pub fn from_socket(handle: zx::Socket) -> Result<Self, zx::Status> {
-        assert!(handle.info()?.options.contains(zx::SocketOpts::FLAG_CONTROL));
-        Self::from_socket_arc_unchecked(Arc::new(handle))
-    }
-
-    /// Get a `Socket` for the data plane of this `SocketControl`.
-    ///
-    /// Panics: If there is already an existing data handle to this socket.
-    pub fn get_data_handle(&self) -> Result<SocketControl, zx::Status> {
-        assert_eq!(Arc::strong_count(&self.handle), 1);
-        SocketControl::from_socket_arc_unchecked(Arc::clone(&self.handle))
-    }
-}
-
-impl<F: SocketRWFlags> GenericSocket<F>
-where
-    GenericSocket<F>: SocketHandleRW,
-{
-    /// Create a new `Socket` and `SocketControl` from a previously-created zx::Socket.
-    ///
-    /// Panics: If the zx::Socket does not have a control plane.
-    pub fn make_socket_and_control(
-        handle: zx::Socket,
-    ) -> Result<(Socket, SocketControl), zx::Status> {
-        assert!(handle.info()?.options.contains(zx::SocketOpts::FLAG_CONTROL));
-        let sock = Socket::from_socket(handle)?;
-        let sock_control = sock.get_control_handle()?;
-        Ok((sock, sock_control))
-    }
-
+impl Socket {
     /// Creates a new `Socket` from a previously-created `zx::Socket`.
-    ///
-    /// This allows a control plane socket to be created even if the underlying zx::Socket does not
-    /// have a control plane - it is the responsibility of the caller to ensure that a control
-    /// plane exists, if one is needed.
     fn from_socket_arc_unchecked(handle: Arc<zx::Socket>) -> Result<Self, zx::Status> {
         let ehandle = EHandle::local();
 
@@ -205,12 +92,12 @@ where
         // readable or writable. In return, there will be an extra wasted
         // syscall per read/write if the handle is not readable or writable.
         let receiver = ehandle.register_receiver(Arc::new(SocketPacketReceiver::new(
-            AtomicU32::new(F::READABLE.bits() | F::WRITABLE.bits()),
+            AtomicU32::new(Signals::SOCKET_READABLE.bits() | Signals::SOCKET_WRITABLE.bits()),
             AtomicWaker::new(),
             AtomicWaker::new(),
         )));
 
-        let socket = GenericSocket { handle, receiver };
+        let socket = Self { handle, receiver };
 
         // Make sure we get notifications when the handle closes.
         socket.schedule_packet(Signals::SOCKET_PEER_CLOSED)?;
@@ -248,7 +135,7 @@ where
     ///
     /// Returns `true` if the CLOSED signal was set.
     pub fn poll_read_task(&self, cx: &mut Context<'_>) -> Poll<Result<bool, zx::Status>> {
-        self.poll_signal_or_closed(cx, &self.receiver.read_task, F::READABLE)
+        self.poll_signal_or_closed(cx, &self.receiver.read_task, Signals::SOCKET_READABLE)
     }
 
     /// Test whether this socket is ready to be written to or not.
@@ -260,7 +147,7 @@ where
     ///
     /// Returns `true` if the CLOSED signal was set.
     pub fn poll_write_task(&self, cx: &mut Context<'_>) -> Poll<Result<bool, zx::Status>> {
-        self.poll_signal_or_closed(cx, &self.receiver.write_task, F::WRITABLE)
+        self.poll_signal_or_closed(cx, &self.receiver.write_task, Signals::SOCKET_WRITABLE)
     }
 
     fn need_signal(
@@ -290,7 +177,7 @@ where
     /// now reset the CLOSED bit. This value should often be passed in directly
     /// from the output of `poll_read`.
     pub fn need_read(&self, cx: &mut Context<'_>, clear_closed: bool) -> Result<(), zx::Status> {
-        self.need_signal(cx, &self.receiver.read_task, F::READABLE, clear_closed)
+        self.need_signal(cx, &self.receiver.read_task, Signals::SOCKET_READABLE, clear_closed)
     }
 
     /// Arranges for the current task to receive a notification when a
@@ -301,7 +188,7 @@ where
     /// now reset the CLOSED bit. This value should often be passed in directly
     /// from the output of `poll_write`.
     pub fn need_write(&self, cx: &mut Context<'_>, clear_closed: bool) -> Result<(), zx::Status> {
-        self.need_signal(cx, &self.receiver.write_task, F::WRITABLE, clear_closed)
+        self.need_signal(cx, &self.receiver.write_task, Signals::SOCKET_WRITABLE, clear_closed)
     }
 
     fn schedule_packet(&self, signals: Signals) -> Result<(), zx::Status> {
@@ -317,7 +204,7 @@ where
     // This is used in the impls of `Read` for `Socket` and `&Socket`.
     fn read_nomut(&self, buf: &mut [u8], cx: &mut Context<'_>) -> Poll<Result<usize, zx::Status>> {
         let clear_closed = try_ready!(self.poll_read_task(cx));
-        let res = self.read(buf);
+        let res = self.handle.read(buf);
         if res == Err(zx::Status::SHOULD_WAIT) {
             self.need_read(cx, clear_closed)?;
             return Poll::Pending;
@@ -332,7 +219,7 @@ where
     // This is used in the impls of `Write` for `Socket` and `&Socket`.
     fn write_nomut(&self, buf: &[u8], cx: &mut Context<'_>) -> Poll<Result<usize, zx::Status>> {
         let clear_closed = try_ready!(self.poll_write_task(cx));
-        let res = self.write(buf);
+        let res = self.handle.write(buf);
         if res == Err(zx::Status::SHOULD_WAIT) {
             self.need_write(cx, clear_closed)?;
             Poll::Pending
@@ -350,11 +237,11 @@ where
         out: &mut Vec<u8>,
     ) -> Poll<Result<usize, zx::Status>> {
         let clear_closed = try_ready!(self.poll_read_task(cx));
-        let avail = self.avail_bytes()?;
+        let avail = self.handle.outstanding_read_bytes()?;
         let len = out.len();
         out.resize(len + avail, 0);
         let (_, mut tail) = out.split_at_mut(len);
-        match self.read(&mut tail) {
+        match self.handle.read(&mut tail) {
             Err(zx::Status::SHOULD_WAIT) => {
                 self.need_read(cx, clear_closed)?;
                 Poll::Pending
@@ -377,16 +264,13 @@ where
     }
 }
 
-impl<F: SocketRWFlags> fmt::Debug for GenericSocket<F> {
+impl fmt::Debug for Socket {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.handle.fmt(f)
     }
 }
 
-impl<F: SocketRWFlags> AsyncRead for GenericSocket<F>
-where
-    GenericSocket<F>: SocketHandleRW,
-{
+impl AsyncRead for Socket {
     unsafe fn initializer(&self) -> Initializer {
         // This is safe because `zx::Socket::read` does not examine
         // the buffer before reading into it.
@@ -402,10 +286,7 @@ where
     }
 }
 
-impl<F: SocketRWFlags> AsyncWrite for GenericSocket<F>
-where
-    GenericSocket<F>: SocketHandleRW,
-{
+impl AsyncWrite for Socket {
     fn poll_write(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -423,10 +304,7 @@ where
     }
 }
 
-impl<'a, F: SocketRWFlags> AsyncRead for &'a GenericSocket<F>
-where
-    GenericSocket<F>: SocketHandleRW,
-{
+impl<'a> AsyncRead for &'a Socket {
     unsafe fn initializer(&self) -> Initializer {
         // This is safe because `zx::Socket::read` does not examine
         // the buffer before reading into it.
@@ -442,10 +320,7 @@ where
     }
 }
 
-impl<'a, F: SocketRWFlags> AsyncWrite for &'a GenericSocket<F>
-where
-    GenericSocket<F>: SocketHandleRW,
-{
+impl<'a> AsyncWrite for &'a Socket {
     fn poll_write(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -466,10 +341,7 @@ where
 /// Note: It's probably a good idea to split the socket into read/write halves
 /// before using this so you can still write on this socket.
 /// Taking two streams of the same socket will not work.
-impl<F: SocketRWFlags> Stream for GenericSocket<F>
-where
-    GenericSocket<F>: SocketHandleRW,
-{
+impl Stream for Socket {
     type Item = Result<Vec<u8>, zx::Status>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -482,10 +354,7 @@ where
     }
 }
 
-impl<'a, F: SocketRWFlags> Stream for &'a GenericSocket<F>
-where
-    GenericSocket<F>: SocketHandleRW,
-{
+impl<'a> Stream for &'a Socket {
     type Item = Result<Vec<u8>, zx::Status>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -530,25 +399,6 @@ mod tests {
 
         let done = try_join(receiver, sender);
         exec.run_singlethreaded(done).unwrap();
-    }
-
-    #[test]
-    fn can_read_write_control() {
-        let mut exec = Executor::new().unwrap();
-
-        let test_msg = &[1, 2, 3, 4, 5];
-
-        let (tx, rx) =
-            zx::Socket::create(zx::SocketOpts::DATAGRAM | zx::SocketOpts::FLAG_CONTROL).unwrap();
-        let tx = Socket::from_socket(tx).unwrap().get_control_handle().unwrap();
-        let rx = Socket::from_socket(rx).unwrap().get_control_handle().unwrap();
-
-        let mut out = vec![50];
-
-        let _ = exec.run_singlethreaded(tx.write_all(test_msg));
-        let _ = exec.run_singlethreaded(rx.read_datagram(&mut out));
-
-        assert_eq!([50, 1, 2, 3, 4, 5], &out[0..6]);
     }
 
     #[test]
@@ -614,14 +464,5 @@ mod tests {
         };
 
         exec.run_singlethreaded(stream_read_fut);
-    }
-
-    #[test]
-    #[should_panic]
-    fn multiple_sockets_panic() {
-        let (_, rx) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        let rx = Socket::from_socket(rx).unwrap();
-        let rx_ctl = rx.get_control_handle().unwrap();
-        let _dup_rx = rx_ctl.get_data_handle();
     }
 }

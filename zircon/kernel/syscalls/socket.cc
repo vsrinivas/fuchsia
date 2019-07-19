@@ -49,7 +49,7 @@ zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options, user_in_ptr<c
   if ((size > 0u) && !buffer)
     return ZX_ERR_INVALID_ARGS;
 
-  if (options & ~ZX_SOCKET_CONTROL)
+  if (options)
     return ZX_ERR_INVALID_ARGS;
 
   auto up = ProcessDispatcher::GetCurrent();
@@ -59,11 +59,8 @@ zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options, user_in_ptr<c
   if (status != ZX_OK)
     return status;
 
-  SocketDispatcher::Plane plane = (options & ZX_SOCKET_CONTROL) ? SocketDispatcher::Plane::kControl
-                                                                : SocketDispatcher::Plane::kData;
-
   size_t nwritten;
-  status = socket->Write(plane, buffer, size, &nwritten);
+  status = socket->Write(buffer, size, &nwritten);
 
   // Caller may ignore results if desired.
   if (status == ZX_OK && actual)
@@ -80,7 +77,7 @@ zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options, user_out_ptr<v
   if (!buffer && size > 0)
     return ZX_ERR_INVALID_ARGS;
 
-  if (options & ~(ZX_SOCKET_CONTROL | ZX_SOCKET_PEEK))
+  if (options & ~ZX_SOCKET_PEEK)
     return ZX_ERR_INVALID_ARGS;
 
   auto up = ProcessDispatcher::GetCurrent();
@@ -90,70 +87,18 @@ zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options, user_out_ptr<v
   if (status != ZX_OK)
     return status;
 
-  SocketDispatcher::Plane plane = (options & ZX_SOCKET_CONTROL) ? SocketDispatcher::Plane::kControl
-                                                                : SocketDispatcher::Plane::kData;
   SocketDispatcher::ReadType type = (options & ZX_SOCKET_PEEK)
                                         ? SocketDispatcher::ReadType::kPeek
                                         : SocketDispatcher::ReadType::kConsume;
 
   size_t nread;
-  status = socket->Read(plane, type, buffer, size, &nread);
+  status = socket->Read(type, buffer, size, &nread);
 
   // Caller may ignore results if desired.
   if (status == ZX_OK && actual)
     status = actual.copy_to_user(nread);
 
   return status;
-}
-
-// zx_status_t zx_socket_share
-zx_status_t sys_socket_share(zx_handle_t handle, zx_handle_t socket_to_share) {
-  auto up = ProcessDispatcher::GetCurrent();
-
-  fbl::RefPtr<SocketDispatcher> socket;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &socket);
-  if (status != ZX_OK) {
-    up->RemoveHandle(socket_to_share);
-    return status;
-  }
-
-  HandleOwner other_handle = up->RemoveHandle(socket_to_share);
-  if (!other_handle) {
-    return ZX_ERR_BAD_HANDLE;
-  }
-  if (!other_handle->HasRights(ZX_RIGHT_TRANSFER)) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
-
-  fbl::RefPtr<Dispatcher> other_dispatcher = other_handle->dispatcher();
-  auto other_socket = DownCastDispatcher<SocketDispatcher>(&other_dispatcher);
-  if (other_socket == nullptr) {
-    return ZX_ERR_WRONG_TYPE;
-  }
-
-  status = socket->CheckShareable(other_socket.get());
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  return socket->Share(ktl::move(other_handle));
-}
-
-// zx_status_t zx_socket_accept
-zx_status_t sys_socket_accept(zx_handle_t handle, user_out_handle* out) {
-  auto up = ProcessDispatcher::GetCurrent();
-
-  fbl::RefPtr<SocketDispatcher> socket;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &socket);
-  if (status != ZX_OK)
-    return status;
-
-  HandleOwner outhandle;
-  status = socket->Accept(&outhandle);
-  if (status != ZX_OK)
-    return status;
-
-  return out->transfer(ktl::move(outhandle));
 }
 
 // zx_status_t zx_socket_shutdown

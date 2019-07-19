@@ -31,9 +31,7 @@ class BoundSocket {
   void Close(const overnet::Status& status);
   void StartNetRead();
 
-  void WriteToSocketAndStartNextRead(std::vector<uint8_t> message,
-                                     bool control);
-  void ShareToSocketAndStartNextRead(zx::socket socket);
+  void WriteToSocketAndStartNextRead(std::vector<uint8_t> message);
 
   void StartSocketRead();
 
@@ -45,16 +43,9 @@ class BoundSocket {
   static void SendReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
                         zx_status_t status, const zx_packet_signal_t* signal);
   void OnSendReady(zx_status_t status, const zx_packet_signal_t* signal);
-  static void CtlSendReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
-                           zx_status_t status,
-                           const zx_packet_signal_t* signal);
-  void OnCtlSendReady(zx_status_t status, const zx_packet_signal_t* signal);
   static void RecvReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
                         zx_status_t status, const zx_packet_signal_t* signal);
   void OnRecvReady(zx_status_t status, const zx_packet_signal_t* signal);
-  static void ShareReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
-                         zx_status_t status, const zx_packet_signal_t* signal);
-  void OnShareReady(zx_status_t status, const zx_packet_signal_t* signal);
 
   class Proxy final : public fuchsia::overnet::protocol::ZirconSocket_Proxy {
    public:
@@ -73,14 +64,11 @@ class BoundSocket {
     void Send_(fidl::Message message) override { abort(); }
 
     void Message(std::vector<uint8_t> message) override;
-    void Control(std::vector<uint8_t> message) override;
-    void Share(fuchsia::overnet::protocol::SocketHandle socket) override;
 
    private:
     BoundSocket* const socket_;
   };
 
-  OvernetApp* const app_;
   Proxy proxy_{this};
   Stub stub_{this};
   async_dispatcher_t* const dispatcher_ = async_get_default_dispatcher();
@@ -89,30 +77,16 @@ class BoundSocket {
   zx::socket zx_socket_;
   overnet::Optional<overnet::RouterEndpoint::Stream::ReceiveOp> net_recv_;
   std::vector<uint8_t> pending_write_;
-  zx::socket pending_share_;
   bool sock_read_data_ = true;
-  bool sock_read_ctl_ = true;
-  bool sock_read_accept_ = true;
   BoundWait wait_send_{{{ASYNC_STATE_INIT},
                         &BoundSocket::SendReady,
                         zx_socket_.get(),
                         ZX_SOCKET_WRITABLE},
                        this};
-  BoundWait wait_ctl_send_{{{ASYNC_STATE_INIT},
-                            &BoundSocket::CtlSendReady,
-                            zx_socket_.get(),
-                            ZX_SOCKET_CONTROL_WRITABLE},
-                           this};
-  BoundWait wait_share_{{{ASYNC_STATE_INIT},
-                         &BoundSocket::ShareReady,
-                         zx_socket_.get(),
-                         ZX_SOCKET_SHARE},
-                        this};
   BoundWait wait_recv_{{{ASYNC_STATE_INIT},
                         &BoundSocket::RecvReady,
                         zx_socket_.get(),
-                        ZX_SOCKET_READABLE | ZX_SOCKET_CONTROL_READABLE |
-                            ZX_SOCKET_ACCEPT | ZX_SOCKET_PEER_CLOSED},
+                        ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED},
                        this};
 };
 

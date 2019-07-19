@@ -29,12 +29,6 @@ Data written to one handle may be read from the opposite.
 The *options* must set either the **ZX_SOCKET_STREAM** or
 **ZX_SOCKET_DATAGRAM** flag.
 
-The **ZX_SOCKET_HAS_CONTROL** flag may be set to enable the
-socket control plane.
-
-The **ZX_SOCKET_HAS_ACCEPT** flag may be set to enable transfer
-of sockets over this socket via [`zx_socket_share()`] and [`zx_socket_accept()`].
-
 ## RIGHTS
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
@@ -61,16 +55,12 @@ The maximum capacity is not currently set-able.
 
 ## SEE ALSO
 
- - [`zx_socket_accept()`]
  - [`zx_socket_read()`]
- - [`zx_socket_share()`]
  - [`zx_socket_shutdown()`]
  - [`zx_socket_write()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
-[`zx_socket_accept()`]: socket_accept.md
 [`zx_socket_read()`]: socket_read.md
-[`zx_socket_share()`]: socket_share.md
 [`zx_socket_shutdown()`]: socket_shutdown.md
 [`zx_socket_write()`]: socket_write.md

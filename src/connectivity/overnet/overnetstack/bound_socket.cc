@@ -15,7 +15,7 @@ constexpr size_t kMaxIOSize = 65536;
 
 BoundSocket::BoundSocket(OvernetApp* app, overnet::RouterEndpoint::NewStream ns,
                          zx::socket socket)
-    : app_(app), overnet_stream_(std::move(ns)), zx_socket_(std::move(socket)) {
+    : overnet_stream_(std::move(ns)), zx_socket_(std::move(socket)) {
   assert(zx_socket_.is_valid());
   // Kick off the two read loops: one from the network and the other from the zx
   // channel. Each proceeds much the same: as data is read, it's written and
@@ -37,14 +37,11 @@ void BoundSocket::Close(const overnet::Status& status) {
   overnet_stream_.Close(status, [this] { delete this; });
 }
 
-void BoundSocket::WriteToSocketAndStartNextRead(std::vector<uint8_t> message,
-                                                bool control) {
+void BoundSocket::WriteToSocketAndStartNextRead(std::vector<uint8_t> message) {
   assert(pending_write_.empty());
-  assert(!pending_share_.is_valid());
   OVERNET_TRACE(DEBUG) << "WriteToSocketAndStartNextRead";
   size_t written;
-  auto err = zx_socket_.write(control ? ZX_SOCKET_CONTROL : 0, message.data(),
-                              message.size(), &written);
+  auto err = zx_socket_.write(0, message.data(), message.size(), &written);
   switch (err) {
     case ZX_OK:
       if (written == message.size()) {
@@ -59,8 +56,7 @@ void BoundSocket::WriteToSocketAndStartNextRead(std::vector<uint8_t> message,
       // Kernel push back: capture the message, and ask to be informed when we
       // can write.
       pending_write_ = std::move(message);
-      err = async_begin_wait(dispatcher_,
-                             control ? &wait_ctl_send_.wait : &wait_send_.wait);
+      err = async_begin_wait(dispatcher_, &wait_send_.wait);
       if (err != ZX_OK) {
         Close(overnet::Status::FromZx(err).WithContext(
             "Beginning wait for write"));
@@ -69,36 +65,6 @@ void BoundSocket::WriteToSocketAndStartNextRead(std::vector<uint8_t> message,
     default:
       // If the write failed, close the stream.
       Close(overnet::Status::FromZx(err).WithContext("Write"));
-  }
-}
-
-void BoundSocket::ShareToSocketAndStartNextRead(zx::socket socket) {
-  assert(!pending_share_.is_valid());
-  pending_share_ = std::move(socket);
-  if (auto err = async_begin_wait(dispatcher_, &wait_share_.wait);
-      err != ZX_OK) {
-    Close(overnet::Status::FromZx(err).WithContext("Beginning wait for share"));
-  }
-}
-
-void BoundSocket::ShareReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
-                             zx_status_t status,
-                             const zx_packet_signal_t* signal) {
-  // Trampoline back into sharing.
-  static_assert(offsetof(BoundWait, wait) == 0,
-                "The wait must be the first member of BoundWait for this "
-                "cast to be valid.");
-  reinterpret_cast<BoundWait*>(wait)->stream->OnShareReady(status, signal);
-}
-
-void BoundSocket::OnShareReady(zx_status_t status,
-                               const zx_packet_signal_t* signal) {
-  OVERNET_TRACE(DEBUG) << "OnShareReady: status="
-                       << overnet::Status::FromZx(status);
-  if (auto err = zx_socket_.share(std::move(pending_share_)); err == ZX_OK) {
-    StartNetRead();
-  } else {
-    Close(overnet::Status::FromZx(err).WithContext("Socket share"));
   }
 }
 
@@ -123,69 +89,7 @@ void BoundSocket::StartSocketRead() {
         return;
     }
   }
-  if (sock_read_accept_) {
-    zx::socket new_socket;
-    auto err = zx_socket_.accept(&new_socket);
-    switch (err) {
-      case ZX_ERR_WRONG_TYPE:
-      case ZX_ERR_NOT_SUPPORTED:
-        sock_read_accept_ = false;
-        break;
-      case ZX_OK: {
-        zx_info_socket_t socket_info;
-        err = new_socket.get_info(ZX_INFO_SOCKET, &socket_info,
-                                  sizeof(socket_info), nullptr, nullptr);
-        if (err != ZX_OK) {
-          Close(
-              overnet::Status::FromZx(err).WithContext("Getting socket info"));
-          return;
-        }
-        auto fork_status = overnet_stream_.InitiateFork(
-            // TODO(ctiller): unreliable for udp!
-            fuchsia::overnet::protocol::ReliabilityAndOrdering::
-                ReliableOrdered);
-        if (fork_status.is_error()) {
-          Close(fork_status.AsStatus());
-          return;
-        }
-        proxy_.Share(fuchsia::overnet::protocol::SocketHandle{
-            fork_status->stream_id().as_fidl(), socket_info.options});
-        app_->BindSocket(std::move(*fork_status), std::move(new_socket));
-        return;
-      }
-      case ZX_ERR_SHOULD_WAIT:
-        sock_read_accept_ = false;
-        break;
-      default:
-        // If the read failed, close the stream.
-        Close(overnet::Status::FromZx(err).WithContext("ReadAccept"));
-        return;
-    }
-  }
-  if (sock_read_ctl_) {
-    std::vector<uint8_t> message(kMaxIOSize);
-    size_t read;
-    auto err = zx_socket_.read(ZX_SOCKET_CONTROL, message.data(),
-                               message.size(), &read);
-    switch (err) {
-      case ZX_ERR_BAD_STATE:
-        sock_read_ctl_ = false;
-        break;
-      case ZX_OK: {
-        message.resize(read);
-        proxy_.Control(std::move(message));
-        return;
-      }
-      case ZX_ERR_SHOULD_WAIT:
-        sock_read_ctl_ = false;
-        break;
-      default:
-        // If the read failed, close the stream.
-        Close(overnet::Status::FromZx(err).WithContext("ReadControl"));
-        return;
-    }
-  }
-  assert(!sock_read_ctl_ && !sock_read_data_ && !sock_read_accept_);
+  assert(!sock_read_data_);
   // Kernel push back: ask to be informed when we can try again.
   auto err = async_begin_wait(dispatcher_, &wait_recv_.wait);
   OVERNET_TRACE(DEBUG) << "async_begin_wait result: "
@@ -217,24 +121,7 @@ void BoundSocket::OnSendReady(zx_status_t status,
                               const zx_packet_signal_t* signal) {
   OVERNET_TRACE(DEBUG) << "OnSendReady: status="
                        << overnet::Status::FromZx(status);
-  WriteToSocketAndStartNextRead(std::move(pending_write_), false);
-}
-
-void BoundSocket::CtlSendReady(async_dispatcher_t* dispatcher,
-                               async_wait_t* wait, zx_status_t status,
-                               const zx_packet_signal_t* signal) {
-  // Trampoline back into writing.
-  static_assert(offsetof(BoundWait, wait) == 0,
-                "The wait must be the first member of BoundWait for this "
-                "cast to be valid.");
-  reinterpret_cast<BoundWait*>(wait)->stream->OnCtlSendReady(status, signal);
-}
-
-void BoundSocket::OnCtlSendReady(zx_status_t status,
-                                 const zx_packet_signal_t* signal) {
-  OVERNET_TRACE(DEBUG) << "OnCtlSendReady: status="
-                       << overnet::Status::FromZx(status);
-  WriteToSocketAndStartNextRead(std::move(pending_write_), true);
+  WriteToSocketAndStartNextRead(std::move(pending_write_));
 }
 
 void BoundSocket::RecvReady(async_dispatcher_t* dispatcher, async_wait_t* wait,
@@ -262,11 +149,7 @@ void BoundSocket::OnRecvReady(zx_status_t status,
     sock_read_data_ = true;
   }
 
-  if (signal->observed & ZX_SOCKET_CONTROL_READABLE) {
-    sock_read_ctl_ = true;
-  }
-
-  if (sock_read_data_ || sock_read_ctl_) {
+  if (sock_read_data_) {
     StartSocketRead();
     return;
   }
@@ -309,32 +192,7 @@ void BoundSocket::StartNetRead() {
 }
 
 void BoundSocket::Stub::Message(std::vector<uint8_t> message) {
-  socket_->WriteToSocketAndStartNextRead(std::move(message), false);
-}
-
-void BoundSocket::Stub::Control(std::vector<uint8_t> message) {
-  socket_->WriteToSocketAndStartNextRead(std::move(message), true);
-}
-
-void BoundSocket::Stub::Share(fuchsia::overnet::protocol::SocketHandle hdl) {
-  zx_handle_t ha, hb;
-  if (auto err = zx_socket_create(hdl.options, &ha, &hb); err != ZX_OK) {
-    socket_->Close(
-        overnet::Status::FromZx(err).WithContext("Failed to create socket"));
-    return;
-  }
-  zx::socket a(ha);
-  zx::socket b(hb);
-  auto fork_status = socket_->overnet_stream_.ReceiveFork(
-      hdl.stream_id,
-      // TODO(ctiller): unreliable for udp!
-      fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered);
-  if (fork_status.is_error()) {
-    socket_->Close(fork_status.AsStatus());
-    return;
-  }
-  socket_->app_->BindSocket(std::move(*fork_status), std::move(b));
-  socket_->ShareToSocketAndStartNextRead(std::move(a));
+  socket_->WriteToSocketAndStartNextRead(std::move(message));
 }
 
 }  // namespace overnetstack

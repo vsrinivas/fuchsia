@@ -17,9 +17,7 @@ class ZxSocket final : public fuchsia::overnet::protocol::ZirconSocket {
 
   void Close(Callback<void> quiesced) {}
 
-  void Message(std::vector<uint8_t> bytes);
-  void Control(std::vector<uint8_t> bytes);
-  void Share(fuchsia::overnet::protocol::SocketHandle handle);
+  void Message(std::vector<uint8_t> bytes) override;
 
   void Encode(internal::Encoder* encoder, size_t offset);
   static ClosedPtr<ZxSocket> Decode(internal::Decoder* decoder, size_t offset);
@@ -35,9 +33,7 @@ class ZxSocket final : public fuchsia::overnet::protocol::ZirconSocket {
   // Bound constructor
   ZxSocket(uint32_t options, RouterEndpoint::NewStream new_stream);
 
-  enum class QueueItem { kMessage, kControl, kShare };
   struct QueueSlot {
-    QueueItem item;
     std::vector<uint8_t> bytes;
     fuchsia::overnet::protocol::SocketHandle handle;
   };

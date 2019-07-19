@@ -201,16 +201,6 @@ extern {
         actual: *mut usize
         ) -> zx_status_t;
 
-    pub fn zx_socket_share(
-        handle: zx_handle_t,
-        socket_to_share: zx_handle_t
-        ) -> zx_status_t;
-
-    pub fn zx_socket_accept(
-        handle: zx_handle_t,
-        out_socket: *mut zx_handle_t
-        ) -> zx_status_t;
-
     pub fn zx_socket_shutdown(
         handle: zx_handle_t,
         options: u32

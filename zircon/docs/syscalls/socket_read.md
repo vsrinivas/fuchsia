@@ -35,7 +35,6 @@ truncated, and any remaining bytes in the datagram will be discarded.
 
 Supported *options* are:
 
-* **ZX_SOCKET_CONTROL** to read from the socket control plane.
 * **ZX_SOCKET_PEEK** to leave the message in the socket.
 
 To determine how many bytes are available to read, use the **rx_buf_available**
@@ -57,16 +56,12 @@ field of the resulting `zx_info_socket_t`, which you can obtain using the
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
-**ZX_ERR_BAD_STATE** Either:
-1. *options* includes **ZX_SOCKET_CONTROL** and the socket was not created
-   with **ZX_SOCKET_HAS_CONTROL**, or
-2. reading has been disabled for this socket endpoint via [`zx_socket_shutdown()`].
+**ZX_ERR_BAD_STATE**  reading has been disabled for this socket endpoint via [`zx_socket_shutdown()`].
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not a socket handle.
 
 **ZX_ERR_INVALID_ARGS** If any of *buffer* or *actual* are non-NULL
-but invalid pointers, or if *buffer* is NULL, or if *options* is not either zero
-or **ZX_SOCKET_CONTROL**.
+but invalid pointers, or if *buffer* is NULL, or if *options* is zero.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_READ**.
 
@@ -77,17 +72,13 @@ readable.
 
 ## SEE ALSO
 
- - [`zx_socket_accept()`]
  - [`zx_socket_create()`]
- - [`zx_socket_share()`]
  - [`zx_socket_shutdown()`]
  - [`zx_socket_write()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
 [`zx_object_get_info()`]: object_get_info.md
-[`zx_socket_accept()`]: socket_accept.md
 [`zx_socket_create()`]: socket_create.md
-[`zx_socket_share()`]: socket_share.md
 [`zx_socket_shutdown()`]: socket_shutdown.md
 [`zx_socket_write()`]: socket_write.md

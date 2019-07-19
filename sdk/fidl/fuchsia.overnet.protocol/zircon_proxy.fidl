@@ -39,10 +39,9 @@ struct SocketHandle {
     uint32 options;
 };
 
-
 /// Proxy protocol for channels.
 /// This protocol is published for each side of the Overnet stream.
-[Transport="OvernetInternal"]
+[Transport = "OvernetInternal"]
 protocol ZirconChannel {
     /// Send a message to the stream's peer.
     Message(ZirconChannelMessage message);
@@ -50,14 +49,10 @@ protocol ZirconChannel {
 
 /// Proxy protocol for sockets.
 /// This protocol is published for each side of the Overnet stream.
-[Transport="OvernetInternal"]
+[Transport = "OvernetInternal"]
 protocol ZirconSocket {
     /// Send some bytes to the stream's peer.
     /// For datagram sockets, this is one datagram.
     /// For stream sockets, this is the next bundle of bytes.
     Message(vector<uint8> bytes);
-    /// Send a control message to the stream's peer.
-    Control(vector<uint8> bytes);
-    /// Share a handle to the stream's peer (to be collected via zx_socket_accept).
-    Share(SocketHandle socket);
 };

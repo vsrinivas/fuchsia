@@ -201,7 +201,7 @@ unsafe_handle_properties!(object: Socket,
     ]
 );
 
-// TODO(wesleyac): Test control plane and peeking
+// TODO(wesleyac): Test peeking
 
 #[cfg(test)]
 mod tests {

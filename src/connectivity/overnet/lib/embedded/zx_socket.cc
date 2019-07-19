@@ -51,42 +51,10 @@ void ZxSocket::Message(std::vector<uint8_t> bytes) {
       ZX_ASSERT(state_.unbound.peer->state_tag_ == StateTag::kUnbound);
       ZX_ASSERT(state_.unbound.queued.empty());
       state_.unbound.peer->state_.unbound.queued.emplace_back(
-          QueueSlot{QueueItem::kMessage, std::move(bytes), {}});
+          QueueSlot{std::move(bytes), {}});
       break;
     case StateTag::kBound:
       state_.bound.proxy.Message(std::move(bytes));
-      break;
-  }
-}
-
-void ZxSocket::Control(std::vector<uint8_t> bytes) {
-  switch (state_tag_) {
-    case StateTag::kDisconnected:
-      break;
-    case StateTag::kUnbound:
-      ZX_ASSERT(state_.unbound.peer->state_tag_ == StateTag::kUnbound);
-      ZX_ASSERT(state_.unbound.queued.empty());
-      state_.unbound.peer->state_.unbound.queued.emplace_back(
-          QueueSlot{QueueItem::kControl, std::move(bytes), {}});
-      break;
-    case StateTag::kBound:
-      state_.bound.proxy.Control(std::move(bytes));
-      break;
-  }
-}
-
-void ZxSocket::Share(fuchsia::overnet::protocol::SocketHandle handle) {
-  switch (state_tag_) {
-    case StateTag::kDisconnected:
-      break;
-    case StateTag::kUnbound:
-      ZX_ASSERT(state_.unbound.peer->state_tag_ == StateTag::kUnbound);
-      ZX_ASSERT(state_.unbound.queued.empty());
-      state_.unbound.peer->state_.unbound.queued.emplace_back(
-          QueueSlot{QueueItem::kControl, {}, std::move(handle)});
-      break;
-    case StateTag::kBound:
-      state_.bound.proxy.Share(std::move(handle));
       break;
   }
 }
@@ -109,17 +77,7 @@ void ZxSocket::Encode(internal::Encoder* encoder, size_t offset) {
   new (&peer->state_.bound) Bound(std::move(stream));
 
   for (auto& msg : state_.unbound.queued) {
-    switch (msg.item) {
-      case QueueItem::kMessage:
-        peer->Message(std::move(msg.bytes));
-        break;
-      case QueueItem::kControl:
-        peer->Control(std::move(msg.bytes));
-        break;
-      case QueueItem::kShare:
-        peer->Share(std::move(msg.handle));
-        break;
-    }
+    peer->Message(std::move(msg.bytes));
   }
 
   state_.unbound.~Unbound();

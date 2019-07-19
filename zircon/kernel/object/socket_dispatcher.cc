@@ -38,37 +38,18 @@ zx_status_t SocketDispatcher::Create(uint32_t flags, KernelHandle<SocketDispatch
 
   zx_signals_t starting_signals = ZX_SOCKET_WRITABLE;
 
-  if (flags & ZX_SOCKET_HAS_ACCEPT)
-    starting_signals |= ZX_SOCKET_SHARE;
-
-  ktl::unique_ptr<ControlMsg> control0;
-  ktl::unique_ptr<ControlMsg> control1;
-
-  // TODO: use mbufs to avoid pinning control buffer memory.
-  if (flags & ZX_SOCKET_HAS_CONTROL) {
-    starting_signals |= ZX_SOCKET_CONTROL_WRITABLE;
-
-    control0.reset(new (&ac) ControlMsg());
-    if (!ac.check())
-      return ZX_ERR_NO_MEMORY;
-
-    control1.reset(new (&ac) ControlMsg());
-    if (!ac.check())
-      return ZX_ERR_NO_MEMORY;
-  }
-
   auto holder0 = fbl::AdoptRef(new (&ac) PeerHolder<SocketDispatcher>());
   if (!ac.check())
     return ZX_ERR_NO_MEMORY;
   auto holder1 = holder0;
 
-  KernelHandle new_handle0(fbl::AdoptRef(new (&ac) SocketDispatcher(
-      ktl::move(holder0), starting_signals, flags, ktl::move(control0))));
+  KernelHandle new_handle0(
+      fbl::AdoptRef(new (&ac) SocketDispatcher(ktl::move(holder0), starting_signals, flags)));
   if (!ac.check())
     return ZX_ERR_NO_MEMORY;
 
-  KernelHandle new_handle1(fbl::AdoptRef(new (&ac) SocketDispatcher(
-      ktl::move(holder1), starting_signals, flags, ktl::move(control1))));
+  KernelHandle new_handle1(
+      fbl::AdoptRef(new (&ac) SocketDispatcher(ktl::move(holder1), starting_signals, flags)));
   if (!ac.check())
     return ZX_ERR_NO_MEMORY;
 
@@ -82,12 +63,9 @@ zx_status_t SocketDispatcher::Create(uint32_t flags, KernelHandle<SocketDispatch
 }
 
 SocketDispatcher::SocketDispatcher(fbl::RefPtr<PeerHolder<SocketDispatcher>> holder,
-                                   zx_signals_t starting_signals, uint32_t flags,
-                                   ktl::unique_ptr<ControlMsg> control_msg)
+                                   zx_signals_t starting_signals, uint32_t flags)
     : PeeredDispatcher(ktl::move(holder), starting_signals),
       flags_(flags),
-      control_msg_(ktl::move(control_msg)),
-      control_msg_len_(0),
       read_threshold_(0),
       write_threshold_(0),
       read_disabled_(false) {
@@ -179,25 +157,7 @@ zx_status_t SocketDispatcher::ShutdownOtherLocked(uint32_t how) {
   return ZX_OK;
 }
 
-zx_status_t SocketDispatcher::Write(Plane plane, user_in_ptr<const void> src, size_t len,
-                                    size_t* nwritten) {
-  canary_.Assert();
-
-  if (plane == Plane::kData) {
-    return WriteData(src, len, nwritten);
-  } else {
-    zx_status_t status = WriteControl(src, len);
-
-    // No partial control messages, on success we wrote everything.
-    if (status == ZX_OK) {
-      *nwritten = len;
-    }
-
-    return status;
-  }
-}
-
-zx_status_t SocketDispatcher::WriteData(user_in_ptr<const void> src, size_t len, size_t* nwritten) {
+zx_status_t SocketDispatcher::Write(user_in_ptr<const void> src, size_t len, size_t* nwritten) {
   canary_.Assert();
 
   LTRACE_ENTRY;
@@ -219,46 +179,6 @@ zx_status_t SocketDispatcher::WriteData(user_in_ptr<const void> src, size_t len,
 
   AssertHeld(*peer_->get_lock());
   return peer_->WriteSelfLocked(src, len, nwritten);
-}
-
-zx_status_t SocketDispatcher::WriteControl(user_in_ptr<const void> src, size_t len) {
-  canary_.Assert();
-
-  if ((flags_ & ZX_SOCKET_HAS_CONTROL) == 0)
-    return ZX_ERR_BAD_STATE;
-
-  if (len == 0)
-    return ZX_ERR_INVALID_ARGS;
-
-  if (len > ControlMsg::kSize)
-    return ZX_ERR_OUT_OF_RANGE;
-
-  Guard<fbl::Mutex> guard{get_lock()};
-  if (!peer_)
-    return ZX_ERR_PEER_CLOSED;
-
-  AssertHeld(*peer_->get_lock());
-  return peer_->WriteControlSelfLocked(src, len);
-}
-
-zx_status_t SocketDispatcher::WriteControlSelfLocked(user_in_ptr<const void> src, size_t len) {
-  canary_.Assert();
-
-  if (control_msg_len_ != 0)
-    return ZX_ERR_SHOULD_WAIT;
-
-  if (src.copy_array_from_user(&control_msg_->msg, len) != ZX_OK)
-    return ZX_ERR_INVALID_ARGS;  // Bad user buffer.
-
-  control_msg_len_ = static_cast<uint32_t>(len);
-
-  UpdateStateLocked(0u, ZX_SOCKET_CONTROL_READABLE);
-  if (peer_) {
-    AssertHeld(*peer_->get_lock());
-    peer_->UpdateStateLocked(ZX_SOCKET_CONTROL_WRITABLE, 0u);
-  }
-
-  return ZX_OK;
 }
 
 zx_status_t SocketDispatcher::WriteSelfLocked(user_in_ptr<const void> src, size_t len,
@@ -312,19 +232,8 @@ zx_status_t SocketDispatcher::WriteSelfLocked(user_in_ptr<const void> src, size_
   return status;
 }
 
-zx_status_t SocketDispatcher::Read(Plane plane, ReadType type, user_out_ptr<void> dst, size_t len,
+zx_status_t SocketDispatcher::Read(ReadType type, user_out_ptr<void> dst, size_t len,
                                    size_t* nread) {
-  canary_.Assert();
-
-  if (plane == Plane::kData) {
-    return ReadData(type, dst, len, nread);
-  } else {
-    return ReadControl(type, dst, len, nread);
-  }
-}
-
-zx_status_t SocketDispatcher::ReadData(ReadType type, user_out_ptr<void> dst, size_t len,
-                                       size_t* nread) {
   canary_.Assert();
 
   LTRACE_ENTRY;
@@ -388,101 +297,6 @@ zx_status_t SocketDispatcher::ReadData(ReadType type, user_out_ptr<void> dst, si
   }
 
   *nread = actual;
-  return ZX_OK;
-}
-
-zx_status_t SocketDispatcher::ReadControl(ReadType type, user_out_ptr<void> dst, size_t len,
-                                          size_t* nread) {
-  canary_.Assert();
-
-  if ((flags_ & ZX_SOCKET_HAS_CONTROL) == 0) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  Guard<fbl::Mutex> guard{get_lock()};
-
-  if (control_msg_len_ == 0)
-    return ZX_ERR_SHOULD_WAIT;
-
-  size_t copy_len = MIN(control_msg_len_, len);
-  if (dst.copy_array_to_user(&control_msg_->msg, copy_len) != ZX_OK)
-    return ZX_ERR_INVALID_ARGS;  // Invalid user buffer.
-
-  if (type == ReadType::kConsume) {
-    control_msg_len_ = 0;
-    UpdateStateLocked(ZX_SOCKET_CONTROL_READABLE, 0u);
-    if (peer_) {
-      AssertHeld(*peer_->get_lock());
-      peer_->UpdateStateLocked(0u, ZX_SOCKET_CONTROL_WRITABLE);
-    }
-  }
-
-  *nread = copy_len;
-  return ZX_OK;
-}
-
-zx_status_t SocketDispatcher::CheckShareable(SocketDispatcher* to_send) {
-  // We disallow sharing of sockets that support sharing themselves
-  // and disallow sharing either end of the socket we're going to
-  // share on, thus preventing loops, etc.
-  Guard<fbl::Mutex> guard{get_lock()};
-  if ((to_send->flags_ & ZX_SOCKET_HAS_ACCEPT) || (to_send == this) || (to_send == peer_.get()))
-    return ZX_ERR_BAD_STATE;
-  return ZX_OK;
-}
-
-zx_status_t SocketDispatcher::Share(HandleOwner h) {
-  canary_.Assert();
-
-  LTRACE_ENTRY;
-
-  if (!(flags_ & ZX_SOCKET_HAS_ACCEPT))
-    return ZX_ERR_NOT_SUPPORTED;
-
-  Guard<fbl::Mutex> guard{get_lock()};
-  if (!peer_)
-    return ZX_ERR_PEER_CLOSED;
-
-  AssertHeld(*peer_->get_lock());
-  return peer_->ShareSelfLocked(ktl::move(h));
-}
-
-zx_status_t SocketDispatcher::ShareSelfLocked(HandleOwner h) {
-  canary_.Assert();
-
-  if (accept_queue_)
-    return ZX_ERR_SHOULD_WAIT;
-
-  accept_queue_ = ktl::move(h);
-
-  UpdateStateLocked(0, ZX_SOCKET_ACCEPT);
-  if (peer_) {
-    AssertHeld(*peer_->get_lock());
-    peer_->UpdateStateLocked(ZX_SOCKET_SHARE, 0);
-  }
-
-  return ZX_OK;
-}
-
-zx_status_t SocketDispatcher::Accept(HandleOwner* h) {
-  canary_.Assert();
-
-  if (!(flags_ & ZX_SOCKET_HAS_ACCEPT))
-    return ZX_ERR_NOT_SUPPORTED;
-
-  Guard<fbl::Mutex> guard{get_lock()};
-
-  if (!accept_queue_)
-    return ZX_ERR_SHOULD_WAIT;
-
-  *h = ktl::move(accept_queue_);
-
-  UpdateStateLocked(ZX_SOCKET_ACCEPT, 0);
-  if (peer_) {
-    AssertHeld(*peer_->get_lock());
-    peer_->UpdateStateLocked(0, ZX_SOCKET_SHARE);
-  }
-
   return ZX_OK;
 }
 

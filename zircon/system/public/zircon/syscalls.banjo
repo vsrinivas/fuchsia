@@ -373,16 +373,6 @@ protocol Api {
                 array<voidptr>:buffer_size buffer, usize buffer_size) ->
         (zx.status status, usize actual);
 
-    /// Send another socket object via a socket.
-    [rights="handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.",
-     rights="socket_to_share must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_TRANSFER."]
-    socket_share(handle<socket> handle, handle<socket> socket_to_share) -> (zx.status status);
-
-    /// Receive another socket object via a socket.
-    [rights="handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_READ.",
-     argtype="out_socket handle_acquire"]
-    socket_accept(handle<socket> handle) -> (zx.status status, handle<socket> out_socket);
-
     /// Prevent reading or writing.
     [rights="handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE."]
     socket_shutdown(handle<socket> handle, uint32 options) -> (zx.status status);

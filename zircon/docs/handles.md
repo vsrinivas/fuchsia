@@ -195,16 +195,14 @@ with fewer rights), invalidating the original handle:
 There is one syscall that just destroys a handle:
 + [`zx_handle_close()`](syscalls/handle_close.md)
 
-There are two syscalls that takes a handle bound to calling
+There is one syscall that takes a handle bound to the calling
 process and binds it into kernel (puts the handle in-transit):
 + [`zx_channel_write()`](syscalls/channel_write.md)
-+ [`zx_socket_share()`](syscalls/socket_share.md)
 
-There are three syscalls that takes an in-transit handle and
-binds it to the calling process:
+There are two syscalls that take an in-transit handle and
+bind it to the calling process:
 + [`zx_channel_read()`](syscalls/channel_read.md)
 + [`zx_channel_call()`](syscalls/channel_call.md)
-+ [`zx_socket_accept()`](syscalls/socket_accept.md)
 
 The channel and socket syscalls above are used to transfer a handle from
 one process to another. For example it is possible to connect

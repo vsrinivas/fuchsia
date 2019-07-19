@@ -62,15 +62,6 @@ was written before writing was disabled.
 either because of passing **ZX_SOCKET_SHUTDOWN_WRITE** to this endpoint or
 passing **ZX_SOCKET_SHUTDOWN_READ** to the peer.
 
-**ZX_SOCKET_CONTROL_READABLE** data is available to read from the
-socket control plane.
-
-**ZX_SOCKET_CONTROL_WRITABLE** data may be written to the socket control plane.
-
-**ZX_SOCKET_SHARE** a socket may be sent via [`zx_socket_share()`].
-
-**ZX_SOCKET_ACCEPT** a socket may be received via [`zx_socket_accept()`].
-
 **ZX_SOCKET_READ_THRESHOLD** data queued up on socket for reading exceeds
 the read threshold.
 
@@ -79,16 +70,12 @@ the write threshold.
 
 ## SYSCALLS
 
- - [`zx_socket_accept()`] - receive a socket via a socket
  - [`zx_socket_create()`] - create a new socket
  - [`zx_socket_read()`] - read data from a socket
- - [`zx_socket_share()`] - share a socket via a socket
  - [`zx_socket_shutdown()`] - prevent reading or writing
  - [`zx_socket_write()`] - write data to a socket
 
-[`zx_socket_accept()`]: ../syscalls/socket_accept.md
 [`zx_socket_create()`]: ../syscalls/socket_create.md
 [`zx_socket_read()`]: ../syscalls/socket_read.md
-[`zx_socket_share()`]: ../syscalls/socket_share.md
 [`zx_socket_shutdown()`]: ../syscalls/socket_shutdown.md
 [`zx_socket_write()`]: ../syscalls/socket_write.md

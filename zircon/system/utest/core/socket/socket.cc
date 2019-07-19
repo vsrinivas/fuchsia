@@ -179,13 +179,15 @@ TEST(SocketTest, SetThreshholdsProp) {
                                  &count, sizeof(size_t)));
     count = 0xefffffff;
     EXPECT_EQ(local.set_property(ZX_PROP_SOCKET_RX_THRESHOLD,
-                                 &count, sizeof(size_t)), ZX_ERR_INVALID_ARGS);
+                                 &count, sizeof(size_t)),
+              ZX_ERR_INVALID_ARGS);
     count = 0;
     EXPECT_OK(local.set_property(ZX_PROP_SOCKET_TX_THRESHOLD,
                                  &count, sizeof(size_t)));
     count = 0xefffffff;
     EXPECT_EQ(local.set_property(ZX_PROP_SOCKET_TX_THRESHOLD,
-                                 &count, sizeof(size_t)), ZX_ERR_INVALID_ARGS);
+                                 &count, sizeof(size_t)),
+              ZX_ERR_INVALID_ARGS);
 }
 
 TEST(SocketTest, SetThreshholdsAndCheckSignals) {
@@ -212,9 +214,9 @@ TEST(SocketTest, SetThreshholdsAndCheckSignals) {
     zx_info_socket_t info;
     memset(&info, 0, sizeof(info));
     ASSERT_OK(remote.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr,
-              nullptr));
+                              nullptr));
     size_t write_threshold =
-                info.tx_buf_max - (SOCKET2_SIGNALTEST_RX_THRESHOLD + 2);
+        info.tx_buf_max - (SOCKET2_SIGNALTEST_RX_THRESHOLD + 2);
     ASSERT_OK(remote.set_property(ZX_PROP_SOCKET_TX_THRESHOLD,
                                   &write_threshold, sizeof(size_t)));
     ASSERT_OK(remote.get_property(ZX_PROP_SOCKET_TX_THRESHOLD,
@@ -354,7 +356,8 @@ TEST(SocketTest, PeerClosedSetProperty) {
         ASSERT_OK(zx::socket::create(0, &local, &remote));
 
         ASSERT_EQ(local.set_property(ZX_PROP_SOCKET_TX_THRESHOLD, &t,
-                  sizeof(t)), ZX_OK);
+                                     sizeof(t)),
+                  ZX_OK);
         // remote closed
     }
     ASSERT_EQ(local.set_property(ZX_PROP_SOCKET_TX_THRESHOLD, &t, sizeof(t)),
@@ -375,7 +378,7 @@ TEST(SocketTest, ShutdownWrite) {
     EXPECT_OK(remote.shutdown(ZX_SOCKET_SHUTDOWN_WRITE));
 
     EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE |
-              ZX_SOCKET_PEER_WRITE_DISABLED);
+                                     ZX_SOCKET_PEER_WRITE_DISABLED);
     EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITE_DISABLED);
 
     EXPECT_OK(local.write(0u, kMsg2, kMsg2Len, &count));
@@ -406,7 +409,7 @@ TEST(SocketTest, ShutdownWrite) {
 
     EXPECT_EQ(GetSignals(remote),
               ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_WRITE_DISABLED |
-              ZX_SOCKET_PEER_CLOSED);
+                  ZX_SOCKET_PEER_CLOSED);
 
     remote.reset();
 }
@@ -425,14 +428,14 @@ TEST(SocketTest, ShutdownRead) {
     EXPECT_OK(local.shutdown(ZX_SOCKET_SHUTDOWN_READ));
 
     EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE |
-              ZX_SOCKET_PEER_WRITE_DISABLED);
+                                     ZX_SOCKET_PEER_WRITE_DISABLED);
     EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITE_DISABLED);
 
     EXPECT_OK(local.write(0u, kMsg2, kMsg2Len, &count));
     EXPECT_EQ(count, 5);
 
     EXPECT_EQ(GetSignals(remote), ZX_SOCKET_READABLE |
-              ZX_SOCKET_WRITE_DISABLED);
+                                      ZX_SOCKET_WRITE_DISABLED);
 
     EXPECT_EQ(remote.write(0u, kMsg3, kMsg3Len, &count), ZX_ERR_BAD_STATE);
 
@@ -444,7 +447,7 @@ TEST(SocketTest, ShutdownRead) {
 
     EXPECT_EQ(local.read(0u, rbuf, 1u, &count), ZX_ERR_BAD_STATE);
     EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE |
-              ZX_SOCKET_PEER_WRITE_DISABLED);
+                                     ZX_SOCKET_PEER_WRITE_DISABLED);
 
     EXPECT_OK(remote.read(0u, rbuf, sizeof(rbuf), &count));
     EXPECT_EQ(count, 5);
@@ -547,7 +550,7 @@ TEST(SocketTest, ShutdownReadBytesOutstanding) {
     EXPECT_OK(local.shutdown(ZX_SOCKET_SHUTDOWN_READ));
 
     EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE |
-              ZX_SOCKET_PEER_WRITE_DISABLED);
+                                     ZX_SOCKET_PEER_WRITE_DISABLED);
     EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITE_DISABLED);
 
     EXPECT_OK(local.write(0u, kMsg2, kMsg2Len, &count));
@@ -695,7 +698,7 @@ TEST(SocketTest, DatagramNoShortWrite) {
     zx_info_socket_t info;
     memset(&info, 0, sizeof(info));
     EXPECT_OK(remote.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr,
-              nullptr));
+                              nullptr));
     EXPECT_GT(info.tx_buf_max, 0);
 
     // Pick a size for a huge datagram, and make sure not to overflow.
@@ -711,201 +714,6 @@ TEST(SocketTest, DatagramNoShortWrite) {
     // Since the syscall failed, it should not have overwritten this output
     // parameter.
     EXPECT_EQ(written, ~0u);
-}
-
-TEST(SocketTest, ControlPlaneAbsent) {
-    size_t count;
-    zx::socket local, remote;
-    ASSERT_OK(zx::socket::create(0, &local, &remote));
-
-    EXPECT_EQ(local.write(ZX_SOCKET_CONTROL, "hi", 2u, nullptr), ZX_ERR_BAD_STATE);
-    EXPECT_EQ(remote.write(ZX_SOCKET_CONTROL, "hi", 2u, nullptr), ZX_ERR_BAD_STATE);
-
-    char rbuf[10] = {0};
-
-    EXPECT_EQ(local.read(ZX_SOCKET_CONTROL, rbuf, sizeof(rbuf), &count),
-              ZX_ERR_BAD_STATE);
-    EXPECT_EQ(remote.read(ZX_SOCKET_CONTROL, rbuf, sizeof(rbuf), &count),
-              ZX_ERR_BAD_STATE);
-}
-
-TEST(SocketTest, ControlPlane) {
-    size_t count;
-    zx::socket local, remote;
-    ASSERT_OK(zx::socket::create(ZX_SOCKET_HAS_CONTROL, &local, &remote));
-
-    EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE |
-              ZX_SOCKET_CONTROL_WRITABLE);
-    EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE |
-              ZX_SOCKET_CONTROL_WRITABLE);
-
-    // Write to the control plane.
-    EXPECT_OK(local.write(ZX_SOCKET_CONTROL, "hello1", 6u, &count));
-    EXPECT_EQ(count, 6);
-
-    EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
-    EXPECT_EQ(GetSignals(remote),
-              ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_READABLE |
-              ZX_SOCKET_CONTROL_WRITABLE);
-
-    EXPECT_EQ(local.write(ZX_SOCKET_CONTROL, "hi", 2u, nullptr),
-              ZX_ERR_SHOULD_WAIT);
-
-    EXPECT_OK(remote.write(ZX_SOCKET_CONTROL, "hello0", 6u, &count));
-    EXPECT_EQ(count, 6);
-
-    EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_READABLE);
-    EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_READABLE);
-
-    EXPECT_EQ(remote.write(ZX_SOCKET_CONTROL, "hi", 2u, nullptr), ZX_ERR_SHOULD_WAIT);
-
-    char rbuf[10] = {0};
-
-    // The control plane is independent of normal reads and writes.
-    EXPECT_EQ(local.read(0, rbuf, sizeof(rbuf), &count), ZX_ERR_SHOULD_WAIT);
-    EXPECT_EQ(remote.read(0, rbuf, sizeof(rbuf), &count), ZX_ERR_SHOULD_WAIT);
-    EXPECT_OK(local.write(0, "normal", 7u, &count));
-    EXPECT_EQ(count, 7);
-    EXPECT_OK(remote.read(0, rbuf, sizeof(rbuf), &count));
-    EXPECT_EQ(count, 7);
-    EXPECT_BYTES_EQ(rbuf, "normal", 7);
-
-    // Read from the control plane.
-    EXPECT_OK(local.read(ZX_SOCKET_CONTROL, rbuf, sizeof(rbuf), &count));
-    EXPECT_EQ(count, 6);
-    EXPECT_BYTES_EQ(rbuf, "hello0", 6);
-
-    EXPECT_EQ(local.read(ZX_SOCKET_CONTROL, rbuf, sizeof(rbuf), &count),
-              ZX_ERR_SHOULD_WAIT);
-
-    EXPECT_OK(remote.read(ZX_SOCKET_CONTROL, rbuf, sizeof(rbuf), &count));
-    EXPECT_EQ(count, 6);
-    EXPECT_BYTES_EQ(rbuf, "hello1", 6);
-
-    EXPECT_EQ(remote.read(ZX_SOCKET_CONTROL, rbuf, sizeof(rbuf), &count),
-              ZX_ERR_SHOULD_WAIT);
-
-    EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE);
-    EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE);
-}
-
-TEST(SocketTest, ControlPlanePeek) {
-    size_t count;
-    zx::socket local, remote;
-    ASSERT_OK(zx::socket::create(ZX_SOCKET_HAS_CONTROL, &local, &remote));
-
-    EXPECT_OK(local.write(ZX_SOCKET_CONTROL, "hello0", 6u, &count));
-    EXPECT_EQ(count, 6);
-
-    char rbuf[10] = {0};
-
-    EXPECT_OK(remote.read(ZX_SOCKET_CONTROL | ZX_SOCKET_PEEK, rbuf,
-              sizeof(rbuf), &count));
-    EXPECT_EQ(count, 6);
-    EXPECT_BYTES_EQ(rbuf, "hello0", 6);
-
-    // The message should still be pending for h1 to read.
-    EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
-    EXPECT_EQ(GetSignals(remote),
-              ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE | ZX_SOCKET_CONTROL_READABLE);
-
-    rbuf[0] = '\0';
-    EXPECT_OK(remote.read(ZX_SOCKET_CONTROL, rbuf, sizeof(rbuf), &count));
-    EXPECT_EQ(count, 6);
-    EXPECT_BYTES_EQ(rbuf, "hello0", 6);
-
-    EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE);
-    EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE);
-}
-
-TEST(SocketTest, ControlPlanePeekEmpty) {
-    size_t count;
-    zx::socket local, remote;
-    ASSERT_OK(zx::socket::create(ZX_SOCKET_HAS_CONTROL, &local, &remote));
-    char data;
-    EXPECT_EQ(local.read(ZX_SOCKET_CONTROL | ZX_SOCKET_PEEK, &data,
-              sizeof(data), &count), ZX_ERR_SHOULD_WAIT);
-}
-
-TEST(SocketTest, ControlPlaneShutdown) {
-    size_t count;
-    zx::socket local, remote;
-    ASSERT_OK(zx::socket::create(ZX_SOCKET_HAS_CONTROL, &local, &remote));
-
-    EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE);
-    EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE);
-
-    EXPECT_OK(remote.write(0u, kMsg1, kMsg1Len, &count));
-    EXPECT_EQ(count, 5);
-
-    EXPECT_OK(remote.shutdown(ZX_SOCKET_SHUTDOWN_WRITE));
-
-    EXPECT_EQ(GetSignals(local),
-              ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE | ZX_SOCKET_READABLE |
-              ZX_SOCKET_PEER_WRITE_DISABLED);
-    EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_CONTROL_WRITABLE);
-
-    EXPECT_OK(local.write(ZX_SOCKET_CONTROL, "hello1", 6u, &count));
-    EXPECT_EQ(count, 6);
-
-    EXPECT_OK(remote.write(ZX_SOCKET_CONTROL, "hello0", 6u, &count));
-    EXPECT_EQ(count, 6);
-
-    EXPECT_EQ(GetSignals(local),
-              ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_READABLE | ZX_SOCKET_READABLE |
-              ZX_SOCKET_PEER_WRITE_DISABLED);
-    EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_CONTROL_READABLE);
-}
-
-TEST(SocketTest, Accept) {
-    zx::socket a0, a1;
-    ASSERT_OK(zx::socket::create(ZX_SOCKET_HAS_ACCEPT, &a0, &a1));
-
-    zx::socket b0, b1;
-    ASSERT_OK(zx::socket::create(0, &b0, &b1));
-
-    zx::socket c0, c1;
-    ASSERT_OK(zx::socket::create(0, &c0, &c1));
-
-    EXPECT_EQ(GetSignals(a0), ZX_SOCKET_WRITABLE | ZX_SOCKET_SHARE);
-    EXPECT_EQ(GetSignals(a1), ZX_SOCKET_WRITABLE | ZX_SOCKET_SHARE);
-
-    // cannot share a HAS_ACCEPT socket
-    EXPECT_EQ(b0.share(std::move(a0)), ZX_ERR_BAD_STATE);
-    a1.reset();
-    ASSERT_OK(zx::socket::create(ZX_SOCKET_HAS_ACCEPT, &a0, &a1));
-
-    // cannot share via a non-HAS_ACCEPT socket
-    EXPECT_EQ(b0.share(std::move(c0)), ZX_ERR_NOT_SUPPORTED);
-
-    EXPECT_EQ(a0.share(std::move(a1)), ZX_ERR_BAD_STATE);
-    a0.reset();
-    ASSERT_OK(zx::socket::create(ZX_SOCKET_HAS_ACCEPT, &a0, &a1));
-
-    EXPECT_EQ(a1.share(std::move(a0)), ZX_ERR_BAD_STATE);
-    a1.reset();
-    ASSERT_OK(zx::socket::create(ZX_SOCKET_HAS_ACCEPT, &a0, &a1));
-
-    // cannot accept from a non-HAS_ACCEPT socket
-    zx::socket out_socket;
-    EXPECT_EQ(b0.accept(&out_socket), ZX_ERR_NOT_SUPPORTED);
-
-    EXPECT_OK(a0.share(std::move(b0)));
-
-    EXPECT_EQ(GetSignals(a0), ZX_SOCKET_WRITABLE);
-    EXPECT_EQ(GetSignals(a1), ZX_SOCKET_WRITABLE | ZX_SOCKET_SHARE | ZX_SOCKET_ACCEPT);
-
-    // queue is only one deep
-    EXPECT_EQ(a0.share(std::move(b1)), ZX_ERR_SHOULD_WAIT);
-
-    EXPECT_OK(a1.accept(&out_socket));
-    b0 = std::move(out_socket);
-
-    // queue is only one deep
-    EXPECT_EQ(a0.accept(&out_socket), ZX_ERR_SHOULD_WAIT);
-
-    EXPECT_EQ(GetSignals(a0), ZX_SOCKET_WRITABLE | ZX_SOCKET_SHARE);
-    EXPECT_EQ(GetSignals(a1), ZX_SOCKET_WRITABLE | ZX_SOCKET_SHARE);
 }
 
 TEST(SocketTest, ZeroSize) {

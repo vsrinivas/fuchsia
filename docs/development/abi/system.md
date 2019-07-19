@@ -224,11 +224,6 @@ aspects of the system ABI.
 
 ### Sockets
 
-#### Control channel
-
-Some socket objects have an associated control plane. The protocol used by that
-control plane is also part of the system ABI.
-
 #### Datagram framing
 
 Datagram sockets used for networking include a frame that specifies the network

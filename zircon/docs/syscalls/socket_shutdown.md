@@ -55,16 +55,12 @@ where options can be a combination of **ZX_SOCKET_SHUTDOWN_READ** and
 
 ## SEE ALSO
 
- - [`zx_socket_accept()`]
  - [`zx_socket_create()`]
  - [`zx_socket_read()`]
- - [`zx_socket_share()`]
  - [`zx_socket_write()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
-[`zx_socket_accept()`]: socket_accept.md
 [`zx_socket_create()`]: socket_create.md
 [`zx_socket_read()`]: socket_read.md
-[`zx_socket_share()`]: socket_share.md
 [`zx_socket_write()`]: socket_write.md
