@@ -166,8 +166,8 @@ zx_status_t Sensor::Init() {
     return status;
   }
 
-  // Default mode is 0
-  status = SetMode(0);
+  // Default mode is 1
+  status = SetMode(1);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "", "%s: Sensor SetMode failed %d\n", __func__, status);
     return status;
