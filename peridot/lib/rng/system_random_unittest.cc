@@ -34,18 +34,15 @@ TEST(SystemRandomTest, MiscRandomTest) {
   for (size_t i = 0; i < kNbElement; ++i) {
     v1.push_back(random.Draw<uint32_t>());
   }
-  EXPECT_TRUE(std::any_of(v1.begin(), v1.end(),
-                          [](const uint8_t& v) { return v != 0; }));
+  EXPECT_TRUE(std::any_of(v1.begin(), v1.end(), [](const uint8_t& v) { return v != 0; }));
 
   std::vector<uint8_t> v2(kNbElement, 0);
   random.Draw(&v2);
-  EXPECT_TRUE(std::any_of(v2.begin(), v2.end(),
-                          [](const uint8_t& v) { return v != 0; }));
+  EXPECT_TRUE(std::any_of(v2.begin(), v2.end(), [](const uint8_t& v) { return v != 0; }));
 
   uint8_t bytes[kNbElement];
   random.Draw(bytes, kNbElement);
-  EXPECT_TRUE(std::any_of(bytes, bytes + kNbElement,
-                          [](const uint8_t& v) { return v != 0; }));
+  EXPECT_TRUE(std::any_of(bytes, bytes + kNbElement, [](const uint8_t& v) { return v != 0; }));
 }
 
 TEST(SystemRandomTest, BitGeneratorTest) {
@@ -77,8 +74,7 @@ TEST(SystemRandomTest, RandomStructTest) {
   std::set<uint64_t> v2(s2.array, s2.array + kNbElement);
 
   std::vector<uint64_t> common_data;
-  set_intersection(v1.begin(), v1.end(), v2.begin(), v2.end(),
-                   std::back_inserter(common_data));
+  set_intersection(v1.begin(), v1.end(), v2.begin(), v2.end(), std::back_inserter(common_data));
   EXPECT_THAT(common_data, SizeIs(Le(2u)));
 }
 

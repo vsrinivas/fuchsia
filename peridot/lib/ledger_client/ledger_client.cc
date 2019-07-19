@@ -4,11 +4,11 @@
 
 #include "peridot/lib/ledger_client/ledger_client.h"
 
+#include <algorithm>
+
 #include <lib/fsl/vmo/strings.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-
-#include <algorithm>
 
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
@@ -32,8 +32,8 @@ PageClient::Conflict ToConflict(const fuchsia::ledger::DiffEntry* entry) {
     conflict.has_left = true;
     std::string value;
     if (!fsl::StringFromVmo(*entry->left->value, &value)) {
-      FXL_LOG(ERROR) << "Unable to read vmo for left entry of "
-                     << to_hex_string(conflict.key) << ".";
+      FXL_LOG(ERROR) << "Unable to read vmo for left entry of " << to_hex_string(conflict.key)
+                     << ".";
       return conflict;
     }
     conflict.left = std::move(value);
@@ -44,8 +44,8 @@ PageClient::Conflict ToConflict(const fuchsia::ledger::DiffEntry* entry) {
     conflict.has_right = true;
     std::string value;
     if (!fsl::StringFromVmo(*entry->right->value, &value)) {
-      FXL_LOG(ERROR) << "Unable to read vmo for right entry of "
-                     << to_hex_string(conflict.key) << ".";
+      FXL_LOG(ERROR) << "Unable to read vmo for right entry of " << to_hex_string(conflict.key)
+                     << ".";
       return conflict;
     }
     conflict.right = std::move(value);
@@ -55,13 +55,11 @@ PageClient::Conflict ToConflict(const fuchsia::ledger::DiffEntry* entry) {
   return conflict;
 }
 
-void GetDiffRecursive(
-    fuchsia::ledger::MergeResultProvider* const result_provider,
-    std::map<std::string, PageClient::Conflict>* conflicts, LedgerToken token,
-    fit::closure callback) {
+void GetDiffRecursive(fuchsia::ledger::MergeResultProvider* const result_provider,
+                      std::map<std::string, PageClient::Conflict>* conflicts, LedgerToken token,
+                      fit::closure callback) {
   auto cont = [result_provider, conflicts, callback = std::move(callback)](
-                  std::vector<fuchsia::ledger::DiffEntry> change_delta,
-                  LedgerToken token) mutable {
+                  std::vector<fuchsia::ledger::DiffEntry> change_delta, LedgerToken token) mutable {
     for (auto& diff_entry : change_delta) {
       (*conflicts)[to_string(diff_entry.key)] = ToConflict(&diff_entry);
     }
@@ -71,18 +69,15 @@ void GetDiffRecursive(
       return;
     }
 
-    GetDiffRecursive(result_provider, conflicts, std::move(token),
-                     std::move(callback));
+    GetDiffRecursive(result_provider, conflicts, std::move(token), std::move(callback));
   };
 
   result_provider->GetConflictingDiff(std::move(token), std::move(cont));
 }
 
 void GetDiff(fuchsia::ledger::MergeResultProvider* const result_provider,
-             std::map<std::string, PageClient::Conflict>* conflicts,
-             fit::closure callback) {
-  GetDiffRecursive(result_provider, conflicts, nullptr /* token */,
-                   std::move(callback));
+             std::map<std::string, PageClient::Conflict>* conflicts, fit::closure callback) {
+  GetDiffRecursive(result_provider, conflicts, nullptr /* token */, std::move(callback));
 }
 
 bool HasPrefix(const std::string& value, const std::string& prefix) {
@@ -116,11 +111,9 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
         common_version_(std::move(common_version)) {
     result_provider_.set_error_handler([](zx_status_t status) {
       if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
-        FXL_LOG(ERROR) << "ResultProvider error: "
-                       << zx_status_get_string(status);
+        FXL_LOG(ERROR) << "ResultProvider error: " << zx_status_get_string(status);
       } else {
-        FXL_LOG(INFO) << "ResultProvider disconnected: "
-                      << zx_status_get_string(status);
+        FXL_LOG(INFO) << "ResultProvider disconnected: " << zx_status_get_string(status);
       }
     });
   }
@@ -131,8 +124,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
 
     result_provider_->MergeNonConflictingEntries();
 
-    GetDiff(result_provider_.get(), &conflicts_,
-            [this, flow] { WithDiff(flow); });
+    GetDiff(result_provider_.get(), &conflicts_, [this, flow] { WithDiff(flow); });
 
     GetEntries(left_version_.get(), &left_entries_,
                [this, flow] { LogEntries("left", left_entries_); });
@@ -167,10 +159,8 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
                   merged_value.source = fuchsia::ledger::ValueSource::DELETE;
                 } else {
                   merged_value.source = fuchsia::ledger::ValueSource::NEW;
-                  merged_value.new_value =
-                      fuchsia::ledger::BytesOrReference::New();
-                  merged_value.new_value->set_bytes(
-                      to_array(pair.second.merged));
+                  merged_value.new_value = fuchsia::ledger::BytesOrReference::New();
+                  merged_value.new_value->set_bytes(to_array(pair.second.merged));
                 }
               }
               merge_changes.push_back(std::move(merged_value));
@@ -200,8 +190,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
     result_provider_->Sync([this, flow] { impl_->NotifyWatchers(); });
   }
 
-  void LogEntries(const std::string& headline,
-                  const std::vector<fuchsia::ledger::Entry>& entries) {
+  void LogEntries(const std::string& headline, const std::vector<fuchsia::ledger::Entry>& entries) {
     FXL_VLOG(4) << "Entries " << headline;
     for (const fuchsia::ledger::Entry& entry : entries) {
       FXL_VLOG(4) << " - " << to_string(entry.key);
@@ -236,9 +225,8 @@ LedgerClient::LedgerClient(fuchsia::ledger::LedgerPtr ledger,
   ledger_->SetConflictResolverFactory(bindings_.AddBinding(this));
 }
 
-LedgerClient::LedgerClient(
-    fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
-    const std::string& name, fit::function<void(zx_status_t)> error) {
+LedgerClient::LedgerClient(fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
+                           const std::string& name, fit::function<void(zx_status_t)> error) {
   ledger_.set_error_handler([error = std::move(error)](zx_status_t status) {
     if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
       FXL_LOG(ERROR) << "Ledger error: " << zx_status_get_string(status);
@@ -257,12 +245,11 @@ LedgerClient::LedgerClient(
 
 LedgerClient::~LedgerClient() = default;
 
-fuchsia::ledger::Page* LedgerClient::GetPage(
-    PageClient* const page_client, const std::string& context,
-    const fuchsia::ledger::PageId& page_id) {
-  auto i = std::find_if(pages_.begin(), pages_.end(), [&page_id](auto& entry) {
-    return PageIdsEqual(entry->page_id, page_id);
-  });
+fuchsia::ledger::Page* LedgerClient::GetPage(PageClient* const page_client,
+                                             const std::string& context,
+                                             const fuchsia::ledger::PageId& page_id) {
+  auto i = std::find_if(pages_.begin(), pages_.end(),
+                        [&page_id](auto& entry) { return PageIdsEqual(entry->page_id, page_id); });
 
   if (i != pages_.end()) {
     (*i)->clients.push_back(page_client);
@@ -296,9 +283,8 @@ void LedgerClient::DropPageClient(PageClient* const page_client) {
   for (auto i = pages_.begin(); i < pages_.end(); ++i) {
     std::vector<PageClient*>* const page_clients = &(*i)->clients;
 
-    auto ii = std::remove_if(
-        page_clients->begin(), page_clients->end(),
-        [page_client](PageClient* item) { return item == page_client; });
+    auto ii = std::remove_if(page_clients->begin(), page_clients->end(),
+                             [page_client](PageClient* item) { return item == page_client; });
 
     if (ii != page_clients->end()) {
       page_clients->erase(ii, page_clients->end());
@@ -313,9 +299,8 @@ void LedgerClient::DropPageClient(PageClient* const page_client) {
 }
 
 void LedgerClient::GetPolicy(LedgerPageId page_id, GetPolicyCallback callback) {
-  auto i = std::find_if(pages_.begin(), pages_.end(), [&page_id](auto& entry) {
-    return PageIdsEqual(entry->page_id, page_id);
-  });
+  auto i = std::find_if(pages_.begin(), pages_.end(),
+                        [&page_id](auto& entry) { return PageIdsEqual(entry->page_id, page_id); });
 
   // This is wrong if GetPolicy() is called for a page before its page client
   // has registered. Therefore, if an app keeps multiple connections to a page,
@@ -333,8 +318,7 @@ void LedgerClient::GetPolicy(LedgerPageId page_id, GetPolicyCallback callback) {
 }
 
 void LedgerClient::NewConflictResolver(
-    LedgerPageId page_id,
-    fidl::InterfaceRequest<fuchsia::ledger::ConflictResolver> request) {
+    LedgerPageId page_id, fidl::InterfaceRequest<fuchsia::ledger::ConflictResolver> request) {
   for (auto& i : resolvers_) {
     if (PageIdsEqual(i->page_id(), page_id)) {
       i->Connect(std::move(request));
@@ -342,24 +326,22 @@ void LedgerClient::NewConflictResolver(
     }
   }
 
-  resolvers_.emplace_back(
-      std::make_unique<ConflictResolverImpl>(this, std::move(page_id)));
+  resolvers_.emplace_back(std::make_unique<ConflictResolverImpl>(this, std::move(page_id)));
   resolvers_.back()->Connect(std::move(request));
 }
 
 void LedgerClient::ClearConflictResolver(const LedgerPageId& page_id) {
-  auto i = std::remove_if(resolvers_.begin(), resolvers_.end(),
-                          [&page_id](auto& item) {
-                            return PageIdsEqual(item->page_id(), page_id);
-                          });
+  auto i = std::remove_if(resolvers_.begin(), resolvers_.end(), [&page_id](auto& item) {
+    return PageIdsEqual(item->page_id(), page_id);
+  });
 
   if (i != resolvers_.end()) {
     resolvers_.erase(i, resolvers_.end());
   }
 }
 
-LedgerClient::ConflictResolverImpl::ConflictResolverImpl(
-    LedgerClient* const ledger_client, const LedgerPageId& page_id)
+LedgerClient::ConflictResolverImpl::ConflictResolverImpl(LedgerClient* const ledger_client,
+                                                         const LedgerPageId& page_id)
     : ledger_client_(ledger_client), page_id_(CloneStruct(page_id)) {}
 
 LedgerClient::ConflictResolverImpl::~ConflictResolverImpl() = default;
@@ -373,18 +355,15 @@ void LedgerClient::ConflictResolverImpl::Resolve(
     fidl::InterfaceHandle<fuchsia::ledger::PageSnapshot> left_version,
     fidl::InterfaceHandle<fuchsia::ledger::PageSnapshot> right_version,
     fidl::InterfaceHandle<fuchsia::ledger::PageSnapshot> common_version,
-    fidl::InterfaceHandle<fuchsia::ledger::MergeResultProvider>
-        result_provider) {
-  operation_queue_.Add(std::make_unique<ResolveCall>(
-      this, result_provider.Bind(), left_version.Bind(), right_version.Bind(),
-      common_version.Bind()));
+    fidl::InterfaceHandle<fuchsia::ledger::MergeResultProvider> result_provider) {
+  operation_queue_.Add(std::make_unique<ResolveCall>(this, result_provider.Bind(),
+                                                     left_version.Bind(), right_version.Bind(),
+                                                     common_version.Bind()));
 }
 
-void LedgerClient::ConflictResolverImpl::GetPageClients(
-    std::vector<PageClient*>* page_clients) {
-  auto i = std::find_if(
-      ledger_client_->pages_.begin(), ledger_client_->pages_.end(),
-      [this](auto& item) { return PageIdsEqual(item->page_id, page_id_); });
+void LedgerClient::ConflictResolverImpl::GetPageClients(std::vector<PageClient*>* page_clients) {
+  auto i = std::find_if(ledger_client_->pages_.begin(), ledger_client_->pages_.end(),
+                        [this](auto& item) { return PageIdsEqual(item->page_id, page_id_); });
 
   FXL_CHECK(i != ledger_client_->pages_.end());
   *page_clients = (*i)->clients;

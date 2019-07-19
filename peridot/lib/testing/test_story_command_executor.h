@@ -5,8 +5,10 @@
 #ifndef PERIDOT_LIB_TESTING_TEST_STORY_COMMAND_EXECUTOR_H_
 #define PERIDOT_LIB_TESTING_TEST_STORY_COMMAND_EXECUTOR_H_
 
-#include <fuchsia/modular/cpp/fidl.h>
 #include <vector>
+
+#include <fuchsia/modular/cpp/fidl.h>
+
 #include "peridot/bin/sessionmgr/puppet_master/story_command_executor.h"
 
 namespace modular {
@@ -27,10 +29,9 @@ class TestStoryCommandExecutor : public StoryCommandExecutor {
 
  private:
   // |StoryCommandExecutor|
-  void ExecuteCommandsInternal(
-      fidl::StringPtr story_id,
-      std::vector<fuchsia::modular::StoryCommand> commands,
-      fit::function<void(fuchsia::modular::ExecuteResult)> done) override;
+  void ExecuteCommandsInternal(fidl::StringPtr story_id,
+                               std::vector<fuchsia::modular::StoryCommand> commands,
+                               fit::function<void(fuchsia::modular::ExecuteResult)> done) override;
 
   int execute_count_{0};
   fidl::StringPtr last_story_id_;

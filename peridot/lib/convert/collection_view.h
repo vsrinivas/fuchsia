@@ -25,13 +25,9 @@ class CollectionView {
   using const_iterator = typename T::const_iterator;
 
   CollectionView(T& collection)  // NOLINT
-      : collection_(collection),
-        begin_(std::begin(collection)),
-        end_(std::end(collection)) {}
+      : collection_(collection), begin_(std::begin(collection)), end_(std::end(collection)) {}
   CollectionView(T& collection, iterator begin, iterator end)
-      : collection_(collection),
-        begin_(std::move(begin)),
-        end_(std::move(end)) {}
+      : collection_(collection), begin_(std::move(begin)), end_(std::move(end)) {}
   CollectionView(const CollectionView& collection) = default;
   CollectionView& operator=(const CollectionView& collection) = default;
 
@@ -54,10 +50,8 @@ class CollectionView {
       return CollectionView<T>(collection_, end_, end_);
     }
     auto begin_it = std::next(begin_, begin);
-    size_t final_length =
-        std::min(length, static_cast<size_t>(std::distance(begin_it, end_)));
-    return CollectionView(collection_, begin_it,
-                          std::next(begin_it, final_length));
+    size_t final_length = std::min(length, static_cast<size_t>(std::distance(begin_it, end_)));
+    return CollectionView(collection_, begin_it, std::next(begin_it, final_length));
   }
 
   const auto& operator[](size_t pos) const {

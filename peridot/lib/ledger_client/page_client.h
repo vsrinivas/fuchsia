@@ -5,13 +5,13 @@
 #ifndef PERIDOT_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_
 #define PERIDOT_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_
 
+#include <array>
+#include <string>
+
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <src/lib/fxl/macros.h>
-
-#include <array>
-#include <string>
 
 #include "peridot/lib/ledger_client/types.h"
 
@@ -43,8 +43,8 @@ class PageClient : fuchsia::ledger::PageWatcher {
   // key, including the prefix.
   //
   // |ledger_client| must outlive *this.
-  PageClient(std::string context, LedgerClient* ledger_client,
-             LedgerPageId page_id, std::string prefix = "");
+  PageClient(std::string context, LedgerClient* ledger_client, LedgerPageId page_id,
+             std::string prefix = "");
   ~PageClient() override;
 
   // Returns a snapshot of the Ledger page under |prefix| at the most recent
@@ -88,8 +88,7 @@ class PageClient : fuchsia::ledger::PageWatcher {
   // Derived classes may implement this method as needed. The default
   // implementation copies the VMO to a string and forwards to
   // |OnPageChange(const std::string&, const std::string&)|.
-  virtual void OnPageChange(const std::string& key,
-                            fuchsia::mem::BufferPtr value);
+  virtual void OnPageChange(const std::string& key, fuchsia::mem::BufferPtr value);
 
   using PageWatcher::OnChangeCallback;
   // |PageWatcher|
@@ -97,8 +96,7 @@ class PageClient : fuchsia::ledger::PageWatcher {
   // Derived classes may implement this method as needed. The default
   // implementation forwards individual changed keys to OnPageChange() and
   // OnPageDelete().
-  void OnChange(fuchsia::ledger::PageChange page,
-                fuchsia::ledger::ResultState result_state,
+  void OnChange(fuchsia::ledger::PageChange page, fuchsia::ledger::ResultState result_state,
                 OnChangeCallback callback) override;
 
  private:
@@ -145,8 +143,7 @@ class PageClient : fuchsia::ledger::PageWatcher {
 // |entries|, so that callbacks are cancelled when |entries| are deleted before
 // |callback| is invoked.
 void GetEntries(fuchsia::ledger::PageSnapshot* snapshot,
-                std::vector<fuchsia::ledger::Entry>* entries,
-                fit::function<void()> done);
+                std::vector<fuchsia::ledger::Entry>* entries, fit::function<void()> done);
 
 }  // namespace modular
 

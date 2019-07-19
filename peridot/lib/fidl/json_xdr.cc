@@ -37,27 +37,15 @@ const char* JsonTypeName(const rapidjson::Type type) {
 // HACK(mesch): We should not need this, get rid of it.
 thread_local JsonValue XdrContext::null_ = JsonValue();
 
-XdrContext::XdrContext(const XdrOp op, JsonDoc* const doc,
-                       std::string* const error)
-    : parent_(nullptr),
-      name_(nullptr),
-      error_(error),
-      op_(op),
-      doc_(doc),
-      value_(doc) {
+XdrContext::XdrContext(const XdrOp op, JsonDoc* const doc, std::string* const error)
+    : parent_(nullptr), name_(nullptr), error_(error), op_(op), doc_(doc), value_(doc) {
   FXL_DCHECK(doc_ != nullptr);
   FXL_DCHECK(error_ != nullptr);
 }
 
-XdrContext::XdrContext(XdrContext* const parent, const char* const name,
-                       const XdrOp op, JsonDoc* const doc,
-                       JsonValue* const value)
-    : parent_(parent),
-      name_(name),
-      error_(nullptr),
-      op_(op),
-      doc_(doc),
-      value_(value) {
+XdrContext::XdrContext(XdrContext* const parent, const char* const name, const XdrOp op,
+                       JsonDoc* const doc, JsonValue* const value)
+    : parent_(parent), name_(name), error_(nullptr), op_(op), doc_(doc), value_(value) {
   FXL_DCHECK(parent_ != nullptr);
   FXL_DCHECK(doc_ != nullptr);
   FXL_DCHECK(value_ != nullptr);
@@ -98,25 +86,17 @@ void XdrContext::Value(unsigned char* const data) {
   ValueWithDefault(data, true, static_cast<unsigned char>(0));
 }
 
-void XdrContext::Value(int8_t* const data) {
-  ValueWithDefault(data, true, static_cast<int8_t>(0));
-}
+void XdrContext::Value(int8_t* const data) { ValueWithDefault(data, true, static_cast<int8_t>(0)); }
 
 void XdrContext::Value(unsigned short* const data) {
   ValueWithDefault(data, true, static_cast<unsigned short>(0));
 }
 
-void XdrContext::Value(short* const data) {
-  ValueWithDefault(data, true, static_cast<short>(0));
-}
+void XdrContext::Value(short* const data) { ValueWithDefault(data, true, static_cast<short>(0)); }
 
-void XdrContext::Value(fidl::StringPtr* const data) {
-  ValueWithDefault(data, true, nullptr);
-}
+void XdrContext::Value(fidl::StringPtr* const data) { ValueWithDefault(data, true, nullptr); }
 
-void XdrContext::Value(std::string* const data) {
-  ValueWithDefault(data, true, "");
-}
+void XdrContext::Value(std::string* const data) { ValueWithDefault(data, true, ""); }
 
 void XdrContext::ValueWithDefault(unsigned char* const data, bool use_data,
                                   unsigned char default_value) {
@@ -140,8 +120,7 @@ void XdrContext::ValueWithDefault(unsigned char* const data, bool use_data,
   }
 }
 
-void XdrContext::ValueWithDefault(int8_t* const data, bool use_data,
-                                  int8_t default_value) {
+void XdrContext::ValueWithDefault(int8_t* const data, bool use_data, int8_t default_value) {
   switch (op_) {
     case XdrOp::TO_JSON:
       use_data ? value_->Set(static_cast<int>(*data), allocator())
@@ -184,8 +163,7 @@ void XdrContext::ValueWithDefault(unsigned short* const data, bool use_data,
   }
 }
 
-void XdrContext::ValueWithDefault(short* const data, bool use_data,
-                                  short default_value) {
+void XdrContext::ValueWithDefault(short* const data, bool use_data, short default_value) {
   switch (op_) {
     case XdrOp::TO_JSON:
       use_data ? value_->Set(static_cast<int>(*data), allocator())
@@ -214,8 +192,7 @@ void XdrContext::ValueWithDefault(fidl::StringPtr* const data, bool use_data,
         value_->SetString(default_value.get(), allocator());
         break;
       }
-      data->is_null() ? value_->SetNull()
-                      : value_->SetString(data->get(), allocator());
+      data->is_null() ? value_->SetNull() : value_->SetString(data->get(), allocator());
       break;
 
     case XdrOp::FROM_JSON:
@@ -406,8 +383,6 @@ std::string* XdrContext::AddError() {
   return ret;
 }
 
-std::string* XdrContext::GetError() {
-  return parent_ ? parent_->GetError() : error_;
-}
+std::string* XdrContext::GetError() { return parent_ ? parent_->GetError() : error_; }
 
 }  // namespace modular

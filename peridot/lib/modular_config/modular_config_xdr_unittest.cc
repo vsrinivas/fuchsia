@@ -4,12 +4,12 @@
 
 #include "peridot/lib/modular_config/modular_config_xdr.h"
 
+#include <algorithm>
+#include <cctype>
+
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-
-#include <algorithm>
-#include <cctype>
 
 #include "gtest/gtest.h"
 #include "src/lib/files/file.h"
@@ -48,9 +48,8 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
     "story_shell_url":"fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx"})";
 
   // Remove whitespace for string comparison
-  expected_json.erase(
-      std::remove_if(expected_json.begin(), expected_json.end(), ::isspace),
-      expected_json.end());
+  expected_json.erase(std::remove_if(expected_json.begin(), expected_json.end(), ::isspace),
+                      expected_json.end());
   EXPECT_EQ(expected_json, write_json);
 
   std::string read_json = "\"\"";
@@ -106,9 +105,8 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
       "agent_service_index":null})";
 
   // Remove whitespace for string comparison
-  expected_json.erase(
-      std::remove_if(expected_json.begin(), expected_json.end(), ::isspace),
-      expected_json.end());
+  expected_json.erase(std::remove_if(expected_json.begin(), expected_json.end(), ::isspace),
+                      expected_json.end());
   EXPECT_EQ(expected_json, write_json);
 
   std::string read_json = "\"\"";

@@ -54,10 +54,8 @@ TEST_F(PseudoDirServerTest, OpenAt) {
 TEST_F(PseudoDirServerTest, Serve) {
   constexpr char kFileName[] = "file_name";
   constexpr char kContents[] = "file contents";
-  modular::PseudoDirServer server(
-      MakeFilePathWithContents(kFileName, kContents));
-  auto dir_fd =
-      fsl::OpenChannelAsFileDescriptor(server.Serve().Unbind().TakeChannel());
+  modular::PseudoDirServer server(MakeFilePathWithContents(kFileName, kContents));
+  auto dir_fd = fsl::OpenChannelAsFileDescriptor(server.Serve().Unbind().TakeChannel());
 
   std::string contents;
   ASSERT_TRUE(files::ReadFileToStringAt(dir_fd.get(), kFileName, &contents));

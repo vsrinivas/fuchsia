@@ -9,25 +9,20 @@
 
 namespace modular {
 
-Environment::Environment(const fuchsia::sys::EnvironmentPtr& parent_env,
-                         const std::string& label,
-                         const std::vector<std::string>& service_names,
-                         bool kill_on_oom)
+Environment::Environment(const fuchsia::sys::EnvironmentPtr& parent_env, const std::string& label,
+                         const std::vector<std::string>& service_names, bool kill_on_oom)
     : vfs_(async_get_default_dispatcher()) {
   InitEnvironment(parent_env, label, service_names, kill_on_oom);
 }
 
-Environment::Environment(const Environment* const parent_env,
-                         const std::string& label,
-                         const std::vector<std::string>& service_names,
-                         bool kill_on_oom)
+Environment::Environment(const Environment* const parent_env, const std::string& label,
+                         const std::vector<std::string>& service_names, bool kill_on_oom)
     : vfs_(async_get_default_dispatcher()) {
   FXL_DCHECK(parent_env != nullptr);
   InitEnvironment(parent_env->environment(), label, service_names, kill_on_oom);
 }
 
-void Environment::OverrideLauncher(
-    std::unique_ptr<fuchsia::sys::Launcher> launcher) {
+void Environment::OverrideLauncher(std::unique_ptr<fuchsia::sys::Launcher> launcher) {
   override_launcher_ = std::move(launcher);
 }
 
@@ -50,9 +45,9 @@ zx::channel Environment::OpenAsDirectory() {
   return h2;
 }
 
-void Environment::InitEnvironment(
-    const fuchsia::sys::EnvironmentPtr& parent_env, const std::string& label,
-    const std::vector<std::string>& service_names, bool kill_on_oom) {
+void Environment::InitEnvironment(const fuchsia::sys::EnvironmentPtr& parent_env,
+                                  const std::string& label,
+                                  const std::vector<std::string>& service_names, bool kill_on_oom) {
   services_dir_ = fbl::AdoptRef(new fs::PseudoDir);
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
   for (const auto& name : service_names) {
@@ -60,8 +55,7 @@ void Environment::InitEnvironment(
   }
   service_list->host_directory = OpenAsDirectory();
   parent_env->CreateNestedEnvironment(
-      env_.NewRequest(), env_controller_.NewRequest(), label,
-      std::move(service_list),
+      env_.NewRequest(), env_controller_.NewRequest(), label, std::move(service_list),
       {.inherit_parent_services = true, .kill_on_oom = kill_on_oom});
 }
 

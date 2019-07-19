@@ -20,11 +20,9 @@ std::vector<uint8_t> ExtendedStringView::ToArray() {
   return result;
 }
 
-flatbuffers::Offset<flatbuffers::Vector<uint8_t>>
-ExtendedStringView::ToFlatBufferVector(
+flatbuffers::Offset<flatbuffers::Vector<uint8_t>> ExtendedStringView::ToFlatBufferVector(
     flatbuffers::FlatBufferBuilder* builder) {
-  return builder->CreateVector(reinterpret_cast<const unsigned char*>(data()),
-                               size());
+  return builder->CreateVector(reinterpret_cast<const unsigned char*>(data()), size());
 }
 
 std::string ExtendedStringView::ToHex() {
@@ -37,9 +35,7 @@ std::string ExtendedStringView::ToHex() {
   return result;
 }
 
-std::vector<uint8_t> ToArray(ExtendedStringView value) {
-  return value.ToArray();
-}
+std::vector<uint8_t> ToArray(ExtendedStringView value) { return value.ToArray(); }
 
 std::string ToString(ExtendedStringView value) { return value.ToString(); }
 

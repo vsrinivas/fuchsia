@@ -28,22 +28,18 @@ class TestWithSessionStorage : public testing::TestWithLedger {
 
   fidl::StringPtr CreateStory(SessionStorage* const storage);
 
-  void SetLinkValue(StoryStorage* const story_storage,
-                    const std::string& link_name,
+  void SetLinkValue(StoryStorage* const story_storage, const std::string& link_name,
                     const std::string& link_value);
 
-  void SetLinkValue(StoryStorage* const story_storage,
-                    const fuchsia::modular::LinkPath& link_path,
+  void SetLinkValue(StoryStorage* const story_storage, const fuchsia::modular::LinkPath& link_path,
                     const std::string& link_value);
 
-  void WriteModuleData(StoryStorage* const story_storage,
-                       fuchsia::modular::ModuleData module_data);
+  void WriteModuleData(StoryStorage* const story_storage, fuchsia::modular::ModuleData module_data);
 
   std::string GetLinkValue(StoryStorage* const story_storage,
                            const fuchsia::modular::LinkPath& path);
 
-  std::string GetLinkValue(StoryStorage* const story_storage,
-                           const std::string& link_name);
+  std::string GetLinkValue(StoryStorage* const story_storage, const std::string& link_name);
 
   fuchsia::modular::LinkPath MakeLinkPath(const std::string& name);
 };

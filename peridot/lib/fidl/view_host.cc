@@ -11,10 +11,8 @@ namespace modular {
 ViewHost::ViewHost(scenic::ViewContext view_context)
     : BaseView(std::move(view_context), "ViewHost") {}
 
-void ViewHost::ConnectView(
-    fuchsia::ui::views::ViewHolderToken view_holder_token) {
-  auto view_data =
-      std::make_unique<ViewData>(session(), std::move(view_holder_token));
+void ViewHost::ConnectView(fuchsia::ui::views::ViewHolderToken view_holder_token) {
+  auto view_data = std::make_unique<ViewData>(session(), std::move(view_holder_token));
 
   root_node().AddChild(view_data->host_node);
   views_.emplace(view_data->host_view_holder.id(), std::move(view_data));
@@ -23,8 +21,7 @@ void ViewHost::ConnectView(
   InvalidateScene();
 }
 
-void ViewHost::OnPropertiesChanged(
-    fuchsia::ui::gfx::ViewProperties /*old_properties*/) {
+void ViewHost::OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties /*old_properties*/) {
   UpdateScene();
 }
 
@@ -33,8 +30,7 @@ void ViewHost::OnScenicEvent(fuchsia::ui::scenic::Event event) {
     case fuchsia::ui::scenic::Event::Tag::kGfx:
       switch (event.gfx().Which()) {
         case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
-          uint32_t view_holder_id =
-              event.gfx().view_disconnected().view_holder_id;
+          uint32_t view_holder_id = event.gfx().view_disconnected().view_holder_id;
           FXL_LOG(ERROR) << "View died unexpectedly, id=" << view_holder_id;
 
           auto it = views_.find(view_holder_id);
@@ -69,12 +65,8 @@ void ViewHost::UpdateScene() {
     fuchsia::ui::gfx::ViewProperties view_properties = {
         .bounding_box =
             fuchsia::ui::gfx::BoundingBox{
-                .min =
-                    fuchsia::ui::gfx::vec3{
-                        .x = 0.f, .y = 0.f, .z = -logical_size().z},
-                .max =
-                    fuchsia::ui::gfx::vec3{
-                        .x = width, .y = logical_size().y, .z = 0.f},
+                .min = fuchsia::ui::gfx::vec3{.x = 0.f, .y = 0.f, .z = -logical_size().z},
+                .max = fuchsia::ui::gfx::vec3{.x = width, .y = logical_size().y, .z = 0.f},
             },
         .inset_from_min = fuchsia::ui::gfx::vec3{.x = 0.f, .y = 0.f, .z = 0.f},
         .inset_from_max = fuchsia::ui::gfx::vec3{.x = 0.f, .y = 0.f, .z = 0.f},

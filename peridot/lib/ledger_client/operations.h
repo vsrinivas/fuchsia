@@ -7,12 +7,12 @@
 #ifndef PERIDOT_LIB_LEDGER_CLIENT_OPERATIONS_H_
 #define PERIDOT_LIB_LEDGER_CLIENT_OPERATIONS_H_
 
+#include <string>
+
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
 #include <lib/fsl/vmo/strings.h>
 #include <zircon/status.h>
-
-#include <string>
 
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
@@ -45,8 +45,7 @@ class PageOperation : public Operation<Args...> {
 
   PageOperation(const char* const trace_name, fuchsia::ledger::Page* const page,
                 ResultCall result_call, const std::string& trace_info = "")
-      : Operation<Args...>(trace_name, std::move(result_call), trace_info),
-        page_(page) {}
+      : Operation<Args...>(trace_name, std::move(result_call), trace_info), page_(page) {}
 
  protected:
   fuchsia::ledger::Page* page() const { return page_; }
@@ -90,10 +89,8 @@ class ReadDataCall : public PageOperation<DataPtr> {
   using FlowToken = typename Operation<DataPtr>::FlowToken;
 
   ReadDataCall(fuchsia::ledger::Page* const page, const std::string& key,
-               const bool not_found_is_ok, DataFilter filter,
-               ResultCall result_call)
-      : PageOperation<DataPtr>("ReadDataCall", page, std::move(result_call),
-                               key),
+               const bool not_found_is_ok, DataFilter filter, ResultCall result_call)
+      : PageOperation<DataPtr>("ReadDataCall", page, std::move(result_call), key),
         key_(key),
         not_found_is_ok_(not_found_is_ok),
         filter_(filter) {}
@@ -102,25 +99,21 @@ class ReadDataCall : public PageOperation<DataPtr> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    this->page()->GetSnapshot(page_snapshot_.NewRequest(),
-                              fidl::VectorPtr<uint8_t>::New(0), nullptr);
+    this->page()->GetSnapshot(page_snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                              nullptr);
     page_snapshot_->Get(
-        to_array(key_),
-        [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
+        to_array(key_), [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
           if (result.is_err()) {
-            if (result.err() != fuchsia::ledger::Error::KEY_NOT_FOUND ||
-                !not_found_is_ok_) {
-              FXL_LOG(ERROR)
-                  << this->trace_name() << " " << key_ << " "
-                  << "PageSnapshot.Get() " << fidl::ToUnderlying(result.err());
+            if (result.err() != fuchsia::ledger::Error::KEY_NOT_FOUND || !not_found_is_ok_) {
+              FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
+                             << "PageSnapshot.Get() " << fidl::ToUnderlying(result.err());
             }
             return;
           }
 
           std::string value_as_string;
           if (!fsl::StringFromVmo(result.response().buffer, &value_as_string)) {
-            FXL_LOG(ERROR) << this->trace_name() << " " << key_
-                           << " Unable to extract data.";
+            FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " Unable to extract data.";
             return;
           }
 
@@ -147,10 +140,9 @@ class ReadAllDataCall : public PageOperation<DataArray> {
   using ResultCall = fit::function<void(DataArray)>;
   using FlowToken = typename Operation<DataArray>::FlowToken;
 
-  ReadAllDataCall(fuchsia::ledger::Page* const page, std::string prefix,
-                  DataFilter const filter, ResultCall result_call)
-      : PageOperation<DataArray>("ReadAllDataCall", page,
-                                 std::move(result_call), prefix),
+  ReadAllDataCall(fuchsia::ledger::Page* const page, std::string prefix, DataFilter const filter,
+                  ResultCall result_call)
+      : PageOperation<DataArray>("ReadAllDataCall", page, std::move(result_call), prefix),
         prefix_(std::move(prefix)),
         filter_(filter) {
     data_.resize(0);
@@ -160,8 +152,7 @@ class ReadAllDataCall : public PageOperation<DataArray> {
   void Run() override {
     FlowToken flow{this, &data_};
 
-    this->page()->GetSnapshot(page_snapshot_.NewRequest(), to_array(prefix_),
-                              nullptr);
+    this->page()->GetSnapshot(page_snapshot_.NewRequest(), to_array(prefix_), nullptr);
     GetEntries(page_snapshot_.get(), &entries_, [this, flow] { Cont(flow); });
   }
 
@@ -194,8 +185,8 @@ template <typename Data, typename DataPtr = std::unique_ptr<Data>,
           typename DataFilter = XdrFilterList<Data>>
 class WriteDataCall : public PageOperation<> {
  public:
-  WriteDataCall(fuchsia::ledger::Page* const page, const std::string& key,
-                DataFilter filter, DataPtr data, ResultCall result_call)
+  WriteDataCall(fuchsia::ledger::Page* const page, const std::string& key, DataFilter filter,
+                DataPtr data, ResultCall result_call)
       : PageOperation("WriteDataCall", page, std::move(result_call), key),
         key_(key),
         filter_(filter),
@@ -223,8 +214,7 @@ class WriteDataCall : public PageOperation<> {
                            << zx_status_get_string(result.err());
             return;
           }
-          page()->PutReference(to_array(key_),
-                               std::move(result.response().reference),
+          page()->PutReference(to_array(key_), std::move(result.response().reference),
                                fuchsia::ledger::Priority::EAGER);
         });
   }
@@ -236,17 +226,14 @@ class WriteDataCall : public PageOperation<> {
 
 class DumpPageSnapshotCall : public PageOperation<std::string> {
  public:
-  DumpPageSnapshotCall(fuchsia::ledger::Page* const page,
-                       ResultCall result_call)
-      : PageOperation<std::string>("DumpPageSnapshotCall", page,
-                                   std::move(result_call)) {}
+  DumpPageSnapshotCall(fuchsia::ledger::Page* const page, ResultCall result_call)
+      : PageOperation<std::string>("DumpPageSnapshotCall", page, std::move(result_call)) {}
 
  private:
   void Run() override {
     FlowToken flow{this, &dump_};
 
-    page()->GetSnapshot(page_snapshot_.NewRequest(),
-                        fidl::VectorPtr<uint8_t>::New(0), nullptr);
+    page()->GetSnapshot(page_snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
     GetEntries(page_snapshot_.get(), &entries_, [this, flow] { Cont(flow); });
   }
 

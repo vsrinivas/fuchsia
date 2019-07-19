@@ -16,11 +16,9 @@ class ModuleResolverFake : fuchsia::modular::ModuleResolver {
   ~ModuleResolverFake() override;
 
   // |ModuleResolver|
-  void FindModules(fuchsia::modular::FindModulesQuery query,
-                   FindModulesCallback callback) override;
+  void FindModules(fuchsia::modular::FindModulesQuery query, FindModulesCallback callback) override;
 
-  void Connect(
-      fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request);
+  void Connect(fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request);
 
   // Sets the manifest for GetModuleManifest.
   void SetManifest(fuchsia::modular::ModuleManifestPtr manifest);
@@ -33,18 +31,15 @@ class ModuleResolverFake : fuchsia::modular::ModuleResolver {
 
   // Sets a function for validation of the query when calling FindModules. This
   // is useful to intercept the query and ensure it was built as expected.
-  void SetFindModulesValidation(
-      fit::function<void(const fuchsia::modular::FindModulesQuery&)> fn);
+  void SetFindModulesValidation(fit::function<void(const fuchsia::modular::FindModulesQuery&)> fn);
 
   // Sets a function for validation of the query when calling GetModuleManifest.
   // This is useful to intercept the query and ensure it was built as expected.
-  void SetGetModuleManifestValidation(
-      fit::function<void(const fidl::StringPtr&)> fn);
+  void SetGetModuleManifestValidation(fit::function<void(const fidl::StringPtr&)> fn);
 
  private:
   fidl::BindingSet<fuchsia::modular::ModuleResolver> bindings_;
-  fit::function<void(const fuchsia::modular::FindModulesQuery&)>
-      find_modules_validate_fn_;
+  fit::function<void(const fuchsia::modular::FindModulesQuery&)> find_modules_validate_fn_;
   fit::function<void(const fidl::StringPtr&)> get_module_manifest_validate_fn_;
   fuchsia::modular::ModuleManifestPtr manifest_;
   fuchsia::modular::FindModulesResponse find_modules_response_;

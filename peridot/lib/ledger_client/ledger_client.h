@@ -29,19 +29,15 @@ class PageClient;
 class LedgerClient : fuchsia::ledger::ConflictResolverFactory {
  public:
   LedgerClient(fuchsia::ledger::internal::LedgerRepository* ledger_repository,
-               const std::string& name,
-               fit::function<void(zx_status_t status)> error);
-  LedgerClient(fuchsia::ledger::LedgerPtr ledger,
-               fit::function<void(zx_status_t status)> error);
+               const std::string& name, fit::function<void(zx_status_t status)> error);
+  LedgerClient(fuchsia::ledger::LedgerPtr ledger, fit::function<void(zx_status_t status)> error);
   ~LedgerClient() override;
 
   fuchsia::ledger::Ledger* ledger() const { return ledger_.get(); }
 
   // A callback that is invoked every time one conflict resolution completes.
   // Used only for testing so far.
-  void add_watcher(fit::function<void()> watcher) {
-    watchers_.emplace_back(std::move(watcher));
-  }
+  void add_watcher(fit::function<void()> watcher) { watchers_.emplace_back(std::move(watcher)); }
 
  private:
   friend class PageClient;
@@ -50,8 +46,7 @@ class LedgerClient : fuchsia::ledger::ConflictResolverFactory {
 
   // Used by PageClient to access a new page on creation. Two page clients of
   // the same page share the same ledger::Page connection.
-  fuchsia::ledger::Page* GetPage(PageClient* page_client,
-                                 const std::string& context,
+  fuchsia::ledger::Page* GetPage(PageClient* page_client, const std::string& context,
                                  const fuchsia::ledger::PageId& page_id);
 
   // PageClient deregisters itself on destrution.
@@ -63,8 +58,7 @@ class LedgerClient : fuchsia::ledger::ConflictResolverFactory {
   // |ConflictResolverFactory|
   void NewConflictResolver(
       LedgerPageId page_id,
-      fidl::InterfaceRequest<fuchsia::ledger::ConflictResolver> request)
-      override;
+      fidl::InterfaceRequest<fuchsia::ledger::ConflictResolver> request) override;
 
   void ClearConflictResolver(const LedgerPageId& page_id);
 
@@ -89,12 +83,10 @@ class LedgerClient : fuchsia::ledger::ConflictResolverFactory {
 // appropriate page client that handles that key.
 class LedgerClient::ConflictResolverImpl : fuchsia::ledger::ConflictResolver {
  public:
-  ConflictResolverImpl(LedgerClient* ledger_client,
-                       const LedgerPageId& page_id);
+  ConflictResolverImpl(LedgerClient* ledger_client, const LedgerPageId& page_id);
   ~ConflictResolverImpl() override;
 
-  void Connect(
-      fidl::InterfaceRequest<fuchsia::ledger::ConflictResolver> request);
+  void Connect(fidl::InterfaceRequest<fuchsia::ledger::ConflictResolver> request);
 
   const LedgerPageId& page_id() const { return page_id_; }
 
@@ -104,8 +96,7 @@ class LedgerClient::ConflictResolverImpl : fuchsia::ledger::ConflictResolver {
       fidl::InterfaceHandle<fuchsia::ledger::PageSnapshot> left_version,
       fidl::InterfaceHandle<fuchsia::ledger::PageSnapshot> right_version,
       fidl::InterfaceHandle<fuchsia::ledger::PageSnapshot> common_version,
-      fidl::InterfaceHandle<fuchsia::ledger::MergeResultProvider>
-          result_provider) override;
+      fidl::InterfaceHandle<fuchsia::ledger::MergeResultProvider> result_provider) override;
 
   void GetPageClients(std::vector<PageClient*>* page_clients);
 

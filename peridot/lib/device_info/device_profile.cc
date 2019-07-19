@@ -22,8 +22,7 @@ bool DeviceProfile::Parse(const std::string& jsonProfile) {
     return false;
   }
 
-  if (document.HasMember(kPresentationServer) &&
-      document[kPresentationServer].IsBool()) {
+  if (document.HasMember(kPresentationServer) && document[kPresentationServer].IsBool()) {
     presentation_server = document[kPresentationServer].GetBool();
   }
 

@@ -19,12 +19,10 @@ namespace util {
 // error handler on the debug interface pointer provided, and clears it
 // afterwards.
 template <class Interface>
-void WaitUntilIdle(fidl::InterfacePtr<Interface>* debug_interface_ptr,
-                   async::Loop* loop) {
+void WaitUntilIdle(fidl::InterfacePtr<Interface>* debug_interface_ptr, async::Loop* loop) {
   debug_interface_ptr->set_error_handler([loop](zx_status_t status) {
     loop->Quit();
-    ADD_FAILURE() << Interface::Name_
-                  << " disconnected (check app logs for crash)";
+    ADD_FAILURE() << Interface::Name_ << " disconnected (check app logs for crash)";
   });
 
   // We can't just use a synchronous ptr or

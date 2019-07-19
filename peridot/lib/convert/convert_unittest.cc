@@ -31,13 +31,11 @@ TEST(Convert, ToSlice) {
 TEST(Convert, ToArray) {
   std::string str = "Hello";
   std::vector<uint8_t> array = ToArray(str);
-  EXPECT_EQ(str,
-            std::string(reinterpret_cast<char*>(array.data()), array.size()));
+  EXPECT_EQ(str, std::string(reinterpret_cast<char*>(array.data()), array.size()));
 
   leveldb::Slice slice(str.data(), str.size());
   array = ToArray(slice);
-  EXPECT_EQ(str,
-            std::string(reinterpret_cast<char*>(array.data()), array.size()));
+  EXPECT_EQ(str, std::string(reinterpret_cast<char*>(array.data()), array.size()));
 }
 
 TEST(Convert, ToString) {
@@ -71,8 +69,7 @@ TEST(Convert, ToFlatBufferVector) {
   auto bytes = str_view.ToFlatBufferVector(&builder);
   builder.Finish(CreateBytesTest(builder, bytes));
 
-  ExtendedStringView result =
-      GetBytesTest(builder.GetCurrentBufferPointer())->bytes();
+  ExtendedStringView result = GetBytesTest(builder.GetCurrentBufferPointer())->bytes();
   EXPECT_EQ(str, result);
 }
 
@@ -95,8 +92,7 @@ TEST(Convert, FromFlatBufferBuilder) {
   builder.Finish(CreateBytesTest(builder, bytes));
 
   ExtendedStringView result(builder);
-  std::string buffer_bytes(reinterpret_cast<char*>(builder.GetBufferPointer()),
-                           builder.GetSize());
+  std::string buffer_bytes(reinterpret_cast<char*>(builder.GetBufferPointer()), builder.GetSize());
 
   EXPECT_EQ(buffer_bytes, result);
 }

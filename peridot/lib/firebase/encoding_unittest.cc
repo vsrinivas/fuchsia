@@ -16,9 +16,7 @@ namespace {
 
 // Allows to create correct std::strings with \0 bytes inside from C-style
 // string constants.
-std::string operator"" _s(const char* str, size_t size) {
-  return std::string(str, size);
-}
+std::string operator"" _s(const char* str, size_t size) { return std::string(str, size); }
 
 // See
 // https://www.firebase.com/docs/rest/guide/understanding-data.html#section-limitations
@@ -36,8 +34,7 @@ bool IsValidKey(const std::string& s) {
       return false;
     }
 
-    if (c == '+' || c == '$' || c == '[' || c == ']' || c == '/' || c == '\"' ||
-        c == '\\') {
+    if (c == '+' || c == '$' || c == '[' || c == ']' || c == '/' || c == '\"' || c == '\\') {
       return false;
     }
   }

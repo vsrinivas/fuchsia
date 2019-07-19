@@ -22,8 +22,7 @@ class EntityResolverFake : public fuchsia::modular::EntityResolver {
   EntityResolverFake();
   ~EntityResolverFake() override;
 
-  void Connect(
-      fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request);
+  void Connect(fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request);
 
   // Returns an fuchsia::modular::Entity reference that will resolve to an
   // fuchsia::modular::Entity. |types_and_data| is a map of data type to data
@@ -33,9 +32,8 @@ class EntityResolverFake : public fuchsia::modular::EntityResolver {
  private:
   class EntityImpl;
 
-  void ResolveEntity(
-      std::string entity_reference,
-      fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) override;
+  void ResolveEntity(std::string entity_reference,
+                     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) override;
 
   int next_entity_id_{0};
   std::map<std::string, std::unique_ptr<EntityImpl>> entities_;

@@ -5,6 +5,9 @@
 #ifndef PERIDOT_LIB_FIDL_VIEW_HOST_H_
 #define PERIDOT_LIB_FIDL_VIEW_HOST_H_
 
+#include <map>
+#include <memory>
+
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/ui/base_view/cpp/base_view.h>
@@ -12,8 +15,6 @@
 #include <lib/ui/scenic/cpp/session.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
-#include <map>
-#include <memory>
 
 namespace modular {
 
@@ -38,8 +39,7 @@ class ViewHost : public scenic::BaseView {
     explicit ViewData(scenic::Session* session,
                       fuchsia::ui::views::ViewHolderToken view_holder_token)
         : host_node(session),
-          host_view_holder(session, std::move(view_holder_token),
-                           "modular::ViewHost") {
+          host_view_holder(session, std::move(view_holder_token), "modular::ViewHost") {
       host_node.Attach(host_view_holder);
     }
 
@@ -48,13 +48,10 @@ class ViewHost : public scenic::BaseView {
   };
 
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override {
-    FXL_LOG(ERROR) << "Scenic Error " << error;
-  }
+  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
   // |scenic::BaseView|
-  void OnPropertiesChanged(
-      fuchsia::ui::gfx::ViewProperties old_properties) override;
+  void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) override;
   void OnScenicEvent(fuchsia::ui::scenic::Event event) override;
 
   void UpdateScene();

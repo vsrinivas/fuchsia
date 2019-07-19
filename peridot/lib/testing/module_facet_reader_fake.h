@@ -5,12 +5,12 @@
 #ifndef PERIDOT_LIB_TESTING_MODULE_FACET_READER_FAKE_H_
 #define PERIDOT_LIB_TESTING_MODULE_FACET_READER_FAKE_H_
 
-#include "peridot/lib/module_manifest/module_facet_reader.h"
-
 #include <functional>
 #include <string>
 
 #include <fuchsia/modular/cpp/fidl.h>
+
+#include "peridot/lib/module_manifest/module_facet_reader.h"
 
 namespace modular {
 
@@ -25,8 +25,7 @@ class ModuleFacetReaderFake : public ModuleFacetReader {
 
  private:
   // |modular::ModuleFacetReader|
-  void GetModuleManifest(const std::string& module_url,
-                         GetModuleManifestCallback) override;
+  void GetModuleManifest(const std::string& module_url, GetModuleManifestCallback) override;
 
   fit::function<void(const std::string&, GetModuleManifestCallback)> sink_;
 };

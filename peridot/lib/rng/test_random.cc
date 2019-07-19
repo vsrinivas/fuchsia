@@ -8,8 +8,7 @@
 
 namespace rng {
 
-TestRandom::TestRandom(std::uint_fast64_t seed)
-    : char_engine_(std::mt19937_64(seed)) {}
+TestRandom::TestRandom(std::uint_fast64_t seed) : char_engine_(std::mt19937_64(seed)) {}
 
 void TestRandom::InternalDraw(void* buffer, size_t buffer_size) {
   uint8_t* char_buffer = static_cast<uint8_t*>(buffer);

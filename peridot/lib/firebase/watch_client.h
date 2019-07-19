@@ -15,10 +15,8 @@ class WatchClient {
 
   // See
   // https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-streaming
-  virtual void OnPut(const std::string& path,
-                     const rapidjson::Value& value) = 0;
-  virtual void OnPatch(const std::string& path,
-                       const rapidjson::Value& value) = 0;
+  virtual void OnPut(const std::string& path, const rapidjson::Value& value) = 0;
+  virtual void OnPatch(const std::string& path, const rapidjson::Value& value) = 0;
   virtual void OnCancel() = 0;
   virtual void OnAuthRevoked(const std::string& reason) = 0;
 

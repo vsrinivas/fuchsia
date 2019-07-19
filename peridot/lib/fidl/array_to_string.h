@@ -60,10 +60,8 @@ inline fidl::VectorPtr<uint8_t> to_array(const std::string& val) {
   return ret;
 }
 
-inline fidl::VectorPtr<fidl::StringPtr> to_array(
-    const std::vector<std::string>& val) {
-  fidl::VectorPtr<fidl::StringPtr> ret =
-      fidl::VectorPtr<fidl::StringPtr>::New(0);
+inline fidl::VectorPtr<fidl::StringPtr> to_array(const std::vector<std::string>& val) {
+  fidl::VectorPtr<fidl::StringPtr> ret = fidl::VectorPtr<fidl::StringPtr>::New(0);
   for (const std::string& s : val) {
     ret.push_back(s);
   }

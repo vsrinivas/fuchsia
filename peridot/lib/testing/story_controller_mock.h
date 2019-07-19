@@ -5,12 +5,12 @@
 #ifndef PERIDOT_LIB_TESTING_STORY_CONTROLLER_MOCK_H_
 #define PERIDOT_LIB_TESTING_STORY_CONTROLLER_MOCK_H_
 
+#include <string>
+
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
-
-#include <string>
 
 namespace modular {
 
@@ -45,33 +45,26 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
   }
 
   // |fuchsia::modular::StoryController|
-  void Watch(
-      fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) override {
+  void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) override {
     FXL_NOTIMPLEMENTED();
   }
 
   // |fuchsia::modular::StoryController|
-  void GetActiveModules(GetActiveModulesCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
+  void GetActiveModules(GetActiveModulesCallback callback) override { FXL_NOTIMPLEMENTED(); }
 
   // |fuchsia::modular::StoryController|
-  void GetModules(GetModulesCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
+  void GetModules(GetModulesCallback callback) override { FXL_NOTIMPLEMENTED(); }
 
   // |fuchsia::modular::StoryController|
   void GetModuleController(
       std::vector<std::string> module_path,
-      fidl::InterfaceRequest<fuchsia::modular::ModuleController> request)
-      override {
+      fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) override {
     FXL_NOTIMPLEMENTED();
   }
 
   // |fuchsia::modular::StoryController|
-  void GetLink(
-      fuchsia::modular::LinkPath link_path,
-      fidl::InterfaceRequest<fuchsia::modular::Link> request) override {
+  void GetLink(fuchsia::modular::LinkPath link_path,
+               fidl::InterfaceRequest<fuchsia::modular::Link> request) override {
     GetLinkCall call{std::move(link_path)};
     get_link_calls.push_back(std::move(call));
   }

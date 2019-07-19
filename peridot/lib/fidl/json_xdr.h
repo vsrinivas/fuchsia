@@ -5,15 +5,15 @@
 #ifndef PERIDOT_LIB_FIDL_JSON_XDR_H_
 #define PERIDOT_LIB_FIDL_JSON_XDR_H_
 
-#include <lib/fidl/cpp/string.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
-
 #include <array>
 #include <map>
 #include <string>
 #include <type_traits>
 #include <vector>
+
+#include <lib/fidl/cpp/string.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
@@ -239,8 +239,7 @@ class XdrContext {
   // bool has_field = data->has_field();
   // xdr->FieldWithDefault("field", data->mutable_field(), has_field, "value");
   template <typename V>
-  void FieldWithDefault(const char field[], V* const data, bool use_data,
-                        V default_value) {
+  void FieldWithDefault(const char field[], V* const data, bool use_data, V default_value) {
     FieldWithDefault(field).ValueWithDefault(data, use_data, default_value);
   }
 
@@ -271,11 +270,9 @@ class XdrContext {
   // |use_data| is false, the supplied |default_value| is used. Otherwise,
   // |data| is used.
   template <typename D, typename V>
-  void FieldWithDefault(const char field[], D* const data,
-                        XdrFilterType<V> const filter, bool use_data,
-                        D default_value) {
-    FieldWithDefault(field).ValueWithDefault(data, filter, use_data,
-                                             std::move(default_value));
+  void FieldWithDefault(const char field[], D* const data, XdrFilterType<V> const filter,
+                        bool use_data, D default_value) {
+    FieldWithDefault(field).ValueWithDefault(data, filter, use_data, std::move(default_value));
   }
 
   // Below are methods analog to those for values on properties of
@@ -302,12 +299,11 @@ class XdrContext {
   // corresponding JSON type (int, float, bool). If |use_data| is true, read
   // from |data|, otherwise, use |default_value|.
   template <typename V>
-  typename std::enable_if<!std::is_enum<V>::value>::type ValueWithDefault(
-      V* data, bool use_data, V default_value) {
+  typename std::enable_if<!std::is_enum<V>::value>::type ValueWithDefault(V* data, bool use_data,
+                                                                          V default_value) {
     switch (op_) {
       case XdrOp::TO_JSON:
-        use_data ? value_->Set(*data, allocator())
-                 : value_->Set(default_value, allocator());
+        use_data ? value_->Set(*data, allocator()) : value_->Set(default_value, allocator());
         break;
 
       case XdrOp::FROM_JSON:
@@ -326,8 +322,9 @@ class XdrContext {
   // This function is used when |data| is an enum. It maps enums to a JSON int.
   // If |use_data| is true, read from |data|, otherwise, use |default_value|.
   template <typename V>
-  typename std::enable_if<std::is_enum<V>::value>::type ValueWithDefault(
-      V* const data, bool use_data, V default_value) {
+  typename std::enable_if<std::is_enum<V>::value>::type ValueWithDefault(V* const data,
+                                                                         bool use_data,
+                                                                         V default_value) {
     switch (op_) {
       case XdrOp::TO_JSON:
         use_data ? value_->Set(static_cast<int>(*data), allocator())
@@ -363,16 +360,12 @@ class XdrContext {
 
   // Allows for default values to be specified for the following types.
   // These follow the mapping properties listed in Value().
-  void ValueWithDefault(unsigned char* data, bool use_data,
-                        unsigned char default_value);
+  void ValueWithDefault(unsigned char* data, bool use_data, unsigned char default_value);
   void ValueWithDefault(int8_t* data, bool use_data, int8_t default_value);
-  void ValueWithDefault(unsigned short* data, bool use_data,
-                        unsigned short default_value);
+  void ValueWithDefault(unsigned short* data, bool use_data, unsigned short default_value);
   void ValueWithDefault(short* data, bool use_data, short default_value);
-  void ValueWithDefault(fidl::StringPtr* data, bool use_data,
-                        fidl::StringPtr default_value);
-  void ValueWithDefault(std::string* data, bool use_data,
-                        std::string default_value);
+  void ValueWithDefault(fidl::StringPtr* data, bool use_data, fidl::StringPtr default_value);
+  void ValueWithDefault(std::string* data, bool use_data, std::string default_value);
 
   // A value of a custom type is mapped using the custom filter. See
   // the corresponding Field() method for why there are two type
@@ -384,8 +377,7 @@ class XdrContext {
 
   // Same as Value() but allows a default value to be specified.
   template <typename D, typename V>
-  void ValueWithDefault(D* data, XdrFilterType<V> filter, bool use_data,
-                        D default_value) {
+  void ValueWithDefault(D* data, XdrFilterType<V> filter, bool use_data, D default_value) {
     switch (op_) {
       case XdrOp::TO_JSON: {
         if (use_data) {
@@ -533,9 +525,8 @@ class XdrContext {
         }
 
         if (value_->Size() != N) {
-          AddError(std::string("Array size unexpected: found ") +
-                   std::to_string(value_->Size()) + " expected " +
-                   std::to_string(N));
+          AddError(std::string("Array size unexpected: found ") + std::to_string(value_->Size()) +
+                   " expected " + std::to_string(N));
           return;
         }
 
@@ -585,8 +576,7 @@ class XdrContext {
   // arrays with a custom filter for the elements. This only supports vectors
   // with simple types.
   template <typename D, typename V>
-  void ValueWithDefault(std::vector<D>* const data,
-                        const XdrFilterType<V> filter, bool use_data,
+  void ValueWithDefault(std::vector<D>* const data, const XdrFilterType<V> filter, bool use_data,
                         std::vector<D> default_value) {
     switch (op_) {
       case XdrOp::TO_JSON:
@@ -601,8 +591,8 @@ class XdrContext {
         }
         data->resize(default_value.size());
         for (size_t i = 0; i < default_value.size(); ++i) {
-          ElementWithDefault(i).ValueWithDefault(
-              &data->at(i), filter, use_data, std::move(default_value.at(i)));
+          ElementWithDefault(i).ValueWithDefault(&data->at(i), filter, use_data,
+                                                 std::move(default_value.at(i)));
         }
         break;
 
@@ -614,8 +604,8 @@ class XdrContext {
           }
           data->resize(default_value.size());
           for (size_t i = 0; i < default_value.size(); ++i) {
-            ElementWithDefault(i).ValueWithDefault(
-                &data->at(i), filter, use_data, std::move(default_value.at(i)));
+            ElementWithDefault(i).ValueWithDefault(&data->at(i), filter, use_data,
+                                                   std::move(default_value.at(i)));
           }
           return;
         }
@@ -636,8 +626,7 @@ class XdrContext {
   // Allows for a default value to be specified for STL vector with a simple
   // element type
   template <typename V>
-  void ValueWithDefault(std::vector<V>* const data, bool use_data,
-                        std::vector<V> default_value) {
+  void ValueWithDefault(std::vector<V>* const data, bool use_data, std::vector<V> default_value) {
     ValueWithDefault(data, XdrFilter<V>, use_data, default_value);
   }
 
@@ -699,8 +688,7 @@ class XdrContext {
   }
 
  private:
-  XdrContext(XdrContext* parent, const char* name, XdrOp op, JsonDoc* doc,
-             JsonValue* value);
+  XdrContext(XdrContext* parent, const char* name, XdrOp op, JsonDoc* doc, JsonValue* value);
   JsonDoc::AllocatorType& allocator() const { return doc_->GetAllocator(); }
   XdrContext Field(const char field[]);
   XdrContext FieldWithDefault(const char field[]);
@@ -766,8 +754,7 @@ void XdrFilter(XdrContext* const xdr, V* const value) {
 // The items in the filter versions list are tried in turn until one succeeds.
 // The filter versions list must end with a nullptr entry to mark the end.
 template <typename D, typename V>
-bool XdrRead(JsonDoc* const doc, D* const data,
-             XdrFilterList<V> filter_versions) {
+bool XdrRead(JsonDoc* const doc, D* const data, XdrFilterList<V> filter_versions) {
   std::vector<std::string> errors;
   for (XdrFilterList<V> filter = filter_versions; *filter; ++filter) {
     std::string error;
@@ -783,8 +770,7 @@ bool XdrRead(JsonDoc* const doc, D* const data,
   }
 
   FXL_LOG(ERROR) << "XdrRead: No filter version succeeded"
-                 << " to extract data from JSON: "
-                 << JsonValueToPrettyString(*doc) << std::endl;
+                 << " to extract data from JSON: " << JsonValueToPrettyString(*doc) << std::endl;
   for (const std::string& error : errors) {
     FXL_LOG(INFO) << "XdrRead error message: " << error;
   }
@@ -797,8 +783,7 @@ bool XdrRead(JsonDoc* const doc, D* const data,
 // list. In that case it logs an error and returns false. Clients are expected
 // to either crash or recover e.g. by ignoring the value.
 template <typename D, typename V>
-bool XdrRead(const std::string& json, D* const data,
-             XdrFilterList<V> filter_versions) {
+bool XdrRead(const std::string& json, D* const data, XdrFilterList<V> filter_versions) {
   JsonDoc doc;
   doc.Parse(json);
   if (doc.HasParseError()) {
@@ -814,21 +799,18 @@ bool XdrRead(const std::string& json, D* const data,
 // anyway for symmetry with XdrRead(), so that the same filter version list
 // constant can be passed to both XdrRead and XdrWrite.
 template <typename D, typename V>
-void XdrWrite(JsonDoc* const doc, D* const data,
-              XdrFilterList<V> filter_versions) {
+void XdrWrite(JsonDoc* const doc, D* const data, XdrFilterList<V> filter_versions) {
   std::string error;
   XdrContext xdr(XdrOp::TO_JSON, doc, &error);
   xdr.Value(data, filter_versions[0]);
-  FXL_DCHECK(error.empty())
-      << "There are no errors possible in XdrOp::TO_JSON: " << std::endl
-      << error << std::endl
-      << JsonValueToPrettyString(*doc) << std::endl;
+  FXL_DCHECK(error.empty()) << "There are no errors possible in XdrOp::TO_JSON: " << std::endl
+                            << error << std::endl
+                            << JsonValueToPrettyString(*doc) << std::endl;
 }
 
 // A wrapper function to write data as JSON to a string. This never fails.
 template <typename D, typename V>
-void XdrWrite(std::string* const json, D* const data,
-              XdrFilterList<V> filter_versions) {
+void XdrWrite(std::string* const json, D* const data, XdrFilterList<V> filter_versions) {
   JsonDoc doc;
   XdrWrite(&doc, data, filter_versions);
   *json = JsonValueToString(doc);

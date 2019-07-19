@@ -7,8 +7,8 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "src/lib/fxl/macros.h"
 #include "peridot/lib/module_manifest/module_facet_reader.h"
+#include "src/lib/fxl/macros.h"
 
 namespace modular {
 

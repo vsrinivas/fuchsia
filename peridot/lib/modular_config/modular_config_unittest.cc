@@ -4,6 +4,8 @@
 
 #include "peridot/lib/modular_config/modular_config.h"
 
+#include <thread>
+
 #include <lib/fsl/io/fd.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
@@ -16,8 +18,6 @@
 #include <src/lib/files/unique_fd.h>
 #include <src/lib/fxl/strings/split_string.h>
 #include <src/lib/fxl/strings/substitute.h>
-
-#include <thread>
 
 class ModularConfigReaderTest : public gtest::RealLoopFixture {};
 
@@ -41,22 +41,19 @@ TEST_F(ModularConfigReaderTest, OverrideConfigDir) {
       kSessionShellForTest);
 
   modular::PseudoDirServer server(modular::MakeFilePathWithContents(
-      files::JoinPath(modular_config::kOverriddenConfigDir,
-                      modular_config::kStartupConfigFilePath),
+      files::JoinPath(modular_config::kOverriddenConfigDir, modular_config::kStartupConfigFilePath),
       config_contents));
 
   modular::ModularConfigReader reader(server.OpenAt("."));
   auto config = reader.GetBasemgrConfig();
 
   // Verify that ModularConfigReader parsed the config value we gave it.
-  EXPECT_EQ(kSessionShellForTest,
-            config.session_shell_map().at(0).config().app_config().url());
+  EXPECT_EQ(kSessionShellForTest, config.session_shell_map().at(0).config().app_config().url());
 }
 
 // Test that ModularConfigReader finds and reads the AgentServiceIndex.
 TEST_F(ModularConfigReaderTest, ProvideAgentServiceIndex) {
-  const std::string kServiceNameForTest =
-      "fuchsia.modular.ModularConfigReaderTest";
+  const std::string kServiceNameForTest = "fuchsia.modular.ModularConfigReaderTest";
   const std::string kAgentUrlForTest =
       "fuchsia-pkg://example.com/ModularConfigReaderTest#meta/"
       "ModularConfigReaderTest.cmx";
@@ -86,8 +83,7 @@ TEST_F(ModularConfigReaderTest, ProvideAgentServiceIndex) {
       service_name_0, agent_url_0, service_name_1, agent_url_1);
 
   modular::PseudoDirServer server(modular::MakeFilePathWithContents(
-      files::JoinPath(modular_config::kOverriddenConfigDir,
-                      modular_config::kStartupConfigFilePath),
+      files::JoinPath(modular_config::kOverriddenConfigDir, modular_config::kStartupConfigFilePath),
       config_contents));
 
   modular::ModularConfigReader reader(server.OpenAt("."));

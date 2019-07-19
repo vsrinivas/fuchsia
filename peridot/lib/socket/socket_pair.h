@@ -5,9 +5,9 @@
 #ifndef PERIDOT_LIB_SOCKET_SOCKET_PAIR_H_
 #define PERIDOT_LIB_SOCKET_SOCKET_PAIR_H_
 
+#include <lib/zx/socket.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
-#include <lib/zx/socket.h>
 
 namespace socket {
 
@@ -24,9 +24,7 @@ class SocketPair {
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketPair);
 };
 
-inline SocketPair::SocketPair() {
-  FXL_CHECK(zx::socket::create(0u, &socket1, &socket2) == ZX_OK);
-}
+inline SocketPair::SocketPair() { FXL_CHECK(zx::socket::create(0u, &socket1, &socket2) == ZX_OK); }
 
 inline SocketPair::~SocketPair() {}
 

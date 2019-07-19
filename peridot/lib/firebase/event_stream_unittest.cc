@@ -10,8 +10,8 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fsl/socket/strings.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/socket/socket_pair.h"
 
@@ -31,8 +31,7 @@ class EventStreamTest : public ::gtest::TestLoopFixture {
     event_stream_ = std::make_unique<EventStream>();
     event_stream_->Start(
         std::move(socket.socket2),
-        [this](Status status, const std::string& event,
-               const std::string& data) {
+        [this](Status status, const std::string& event, const std::string& data) {
           status_.push_back(status);
           events_.push_back(event);
           data_.push_back(data);
@@ -48,9 +47,7 @@ class EventStreamTest : public ::gtest::TestLoopFixture {
     ::testing::Test::TearDown();
   }
 
-  void Feed(const std::string& data) {
-    event_stream_->OnDataAvailable(data.data(), data.size());
-  }
+  void Feed(const std::string& data) { event_stream_->OnDataAvailable(data.data(), data.size()); }
 
   void Done() { event_stream_->OnDataComplete(); }
 
@@ -178,8 +175,7 @@ TEST_F(EventStreamTest, MultipleEvents) {
 
 TEST_F(EventStreamTest, DeleteOnEvent) {
   delete_on_event_ = true;
-  fsl::BlockingCopyFromString("event: abc\ndata: bazinga\n\n",
-                              producer_socket_);
+  fsl::BlockingCopyFromString("event: abc\ndata: bazinga\n\n", producer_socket_);
 
   RunLoopUntilIdle();
 

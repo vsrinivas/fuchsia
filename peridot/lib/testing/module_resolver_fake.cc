@@ -6,9 +6,7 @@
 
 namespace modular {
 
-ModuleResolverFake::ModuleResolverFake() {
-  find_modules_response_.results.resize(0);
-}
+ModuleResolverFake::ModuleResolverFake() { find_modules_response_.results.resize(0); }
 
 ModuleResolverFake::~ModuleResolverFake() = default;
 
@@ -24,18 +22,15 @@ void ModuleResolverFake::FindModules(fuchsia::modular::FindModulesQuery query,
   callback(std::move(find_modules_response_));
 }
 
-void ModuleResolverFake::Connect(
-    fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request) {
+void ModuleResolverFake::Connect(fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-void ModuleResolverFake::SetManifest(
-    fuchsia::modular::ModuleManifestPtr manifest) {
+void ModuleResolverFake::SetManifest(fuchsia::modular::ModuleManifestPtr manifest) {
   manifest_ = std::move(manifest);
 }
 
-void ModuleResolverFake::AddFindModulesResult(
-    fuchsia::modular::FindModulesResult result) {
+void ModuleResolverFake::AddFindModulesResult(fuchsia::modular::FindModulesResult result) {
   find_modules_response_.results.push_back(std::move(result));
 }
 

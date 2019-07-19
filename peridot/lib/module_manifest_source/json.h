@@ -9,10 +9,8 @@
 
 namespace modular {
 
-bool ModuleManifestEntryFromJson(const std::string& json,
-                                 fuchsia::modular::ModuleManifest* entry);
-void ModuleManifestEntryToJson(const fuchsia::modular::ModuleManifest& entry,
-                               std::string* json);
+bool ModuleManifestEntryFromJson(const std::string& json, fuchsia::modular::ModuleManifest* entry);
+void ModuleManifestEntryToJson(const fuchsia::modular::ModuleManifest& entry, std::string* json);
 
 }  // namespace modular
 

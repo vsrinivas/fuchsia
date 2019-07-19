@@ -33,45 +33,37 @@ class ComponentContextFake : public fuchsia::modular::ComponentContext {
   ComponentContextFake();
   ~ComponentContextFake() override;
 
-  void Connect(
-      fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request);
+  void Connect(fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request);
 
   EntityResolverFake& entity_resolver_fake() { return entity_resolver_; }
 
  private:
   // |fuchsia::modular::ComponentContext|
-  void GetLedger(
-      fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) override;
+  void GetLedger(fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) override;
 
   // |fuchsia::modular::ComponentContext|
-  void ConnectToAgent(std::string url,
-                      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
-                          incoming_services_request,
-                      fidl::InterfaceRequest<fuchsia::modular::AgentController>
-                          agent_controller_request) override;
+  void ConnectToAgent(
+      std::string url,
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
+      fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) override;
 
   // |fuchsia::modular::ComponentContext|
-  void ObtainMessageQueue(
-      std::string name,
-      fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) override;
+  void ObtainMessageQueue(std::string name,
+                          fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) override;
 
   // |fuchsia::modular::ComponentContext|
   void DeleteMessageQueue(std::string name) override;
 
   // |fuchsia::modular::ComponentContext|
-  void GetMessageSender(
-      std::string queue_token,
-      fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) override;
+  void GetMessageSender(std::string queue_token,
+                        fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) override;
 
   // |fuchsia::modular::ComponentContext|
-  void GetEntityResolver(
-      fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request)
-      override;
+  void GetEntityResolver(fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) override;
 
   // |fuchsia::modular::ComponentContext|
-  void CreateEntityWithData(
-      std::vector<fuchsia::modular::TypeToDataEntry> type_to_data,
-      CreateEntityWithDataCallback result) override;
+  void CreateEntityWithData(std::vector<fuchsia::modular::TypeToDataEntry> type_to_data,
+                            CreateEntityWithDataCallback result) override;
 
   // |fuchsia::modular::ComponentContext|
   void GetPackageName(GetPackageNameCallback result) override;

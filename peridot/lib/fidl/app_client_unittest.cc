@@ -31,8 +31,7 @@ class TestComponentController : fuchsia::sys::ComponentController {
  public:
   TestComponentController() : binding_(this) {}
 
-  void Connect(
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> request) {
+  void Connect(fidl::InterfaceRequest<fuchsia::sys::ComponentController> request) {
     binding_.Bind(std::move(request));
     binding_.set_error_handler([this](zx_status_t status) { Kill(); });
   }
@@ -57,10 +56,8 @@ TEST_F(AppClientTest, BaseRun_Success) {
   bool callback_called = false;
   FakeLauncher launcher;
   launcher.RegisterComponent(
-      kTestUrl,
-      [&callback_called](
-          fuchsia::sys::LaunchInfo launch_info,
-          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+      kTestUrl, [&callback_called](fuchsia::sys::LaunchInfo launch_info,
+                                   fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
       });
@@ -73,22 +70,20 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
   FakeLauncher launcher;
   TestComponentController controller;
   bool callback_called = false;
-  launcher.RegisterComponent(
-      kTestUrl,
-      [&callback_called, &controller](
-          fuchsia::sys::LaunchInfo launch_info,
-          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
-        EXPECT_EQ(kTestUrl, launch_info.url);
-        callback_called = true;
-        controller.Connect(std::move(ctrl));
-      });
+  launcher.RegisterComponent(kTestUrl,
+                             [&callback_called, &controller](
+                                 fuchsia::sys::LaunchInfo launch_info,
+                                 fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+                               EXPECT_EQ(kTestUrl, launch_info.url);
+                               callback_called = true;
+                               controller.Connect(std::move(ctrl));
+                             });
 
   AppClientBase app_client_base(&launcher, GetTestAppConfig());
 
   bool app_terminated_callback_called = false;
-  app_client_base.Teardown(zx::duration(), [&app_terminated_callback_called] {
-    app_terminated_callback_called = true;
-  });
+  app_client_base.Teardown(
+      zx::duration(), [&app_terminated_callback_called] { app_terminated_callback_called = true; });
 
   EXPECT_TRUE(callback_called);
   RunLoopUntilIdle();
@@ -100,10 +95,8 @@ TEST_F(AppClientTest, Run_Success) {
   bool callback_called = false;
   FakeLauncher launcher;
   launcher.RegisterComponent(
-      kTestUrl,
-      [&callback_called](
-          fuchsia::sys::LaunchInfo launch_info,
-          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+      kTestUrl, [&callback_called](fuchsia::sys::LaunchInfo launch_info,
+                                   fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
       });
@@ -114,8 +107,7 @@ TEST_F(AppClientTest, Run_Success) {
 }
 
 TEST_F(AppClientTest, RunWithParams_Success) {
-  fuchsia::sys::ServiceListPtr additional_services =
-      fuchsia::sys::ServiceList::New();
+  fuchsia::sys::ServiceListPtr additional_services = fuchsia::sys::ServiceList::New();
   additional_services->names.push_back(kServiceName);
   // We just need |provider_request| to stay around till the end of this test.
   auto provider_request = additional_services->provider.NewRequest();
@@ -123,10 +115,8 @@ TEST_F(AppClientTest, RunWithParams_Success) {
   bool callback_called = false;
   FakeLauncher launcher;
   launcher.RegisterComponent(
-      kTestUrl,
-      [&callback_called](
-          fuchsia::sys::LaunchInfo launch_info,
-          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+      kTestUrl, [&callback_called](fuchsia::sys::LaunchInfo launch_info,
+                                   fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         auto additional_services = std::move(launch_info.additional_services);
         EXPECT_EQ(kServiceName, additional_services->names.at(0));

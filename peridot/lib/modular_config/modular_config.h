@@ -39,8 +39,7 @@ class ModularConfigReader {
   static ModularConfigReader CreateFromNamespace();
 
   // Parses |doc| into |basemgr_config_| and |sessionmgr_config_|.
-  void ParseConfig(json::JSONParser json_parser, rapidjson::Document doc,
-                   std::string config_path);
+  void ParseConfig(json::JSONParser json_parser, rapidjson::Document doc, std::string config_path);
 
   // Returns the parsed `basemgr` section of the config.
   fuchsia::modular::session::BasemgrConfig GetBasemgrConfig() const;
@@ -49,8 +48,7 @@ class ModularConfigReader {
   fuchsia::modular::session::SessionmgrConfig GetSessionmgrConfig() const;
 
   // Returns a SessionmgrConfig with all default values
-  fuchsia::modular::session::SessionmgrConfig GetDefaultSessionmgrConfig()
-      const;
+  fuchsia::modular::session::SessionmgrConfig GetDefaultSessionmgrConfig() const;
 
  private:
   fuchsia::modular::session::SessionmgrConfig sessionmgr_config_;

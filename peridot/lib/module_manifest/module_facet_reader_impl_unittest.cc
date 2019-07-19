@@ -14,13 +14,13 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/io/fd.h"
+#include "lib/gtest/real_loop_fixture.h"
+#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/strings/substitute.h"
-#include "lib/gtest/real_loop_fixture.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace {
 
@@ -47,10 +47,8 @@ class FilesystemForTest {
   // required for |path| exist are created as needed.
   void AddFile(fxl::StringView path, const std::string& data) {
     std::string path_str = ToRelativePath(path);
-    FXL_CHECK(files::CreateDirectoryAt(tmpfs_.root_fd(),
-                                       files::GetDirectoryName(path_str)));
-    FXL_CHECK(files::WriteFileAt(tmpfs_.root_fd(), path_str, data.data(),
-                                 data.size()));
+    FXL_CHECK(files::CreateDirectoryAt(tmpfs_.root_fd(), files::GetDirectoryName(path_str)));
+    FXL_CHECK(files::WriteFileAt(tmpfs_.root_fd(), path_str, data.data(), data.size()));
   }
 
  private:
@@ -112,8 +110,7 @@ class SysLoaderForTest : fuchsia::sys::Loader {
 
 class ModuleFacetReaderImplTest : public gtest::RealLoopFixture {
  protected:
-  ModuleFacetReaderImplTest()
-      : module_facet_reader_impl_(sys_loader_.NewEndpoint()) {}
+  ModuleFacetReaderImplTest() : module_facet_reader_impl_(sys_loader_.NewEndpoint()) {}
 
   static constexpr char kNoFacet[] = R"({})";
   static constexpr char kBasicFacet[] = R"(
@@ -139,19 +136,14 @@ class ModuleFacetReaderImplTest : public gtest::RealLoopFixture {
     }
   )";
 
-  modular::ModuleFacetReader* module_facet_reader() {
-    return &module_facet_reader_impl_;
-  }
+  modular::ModuleFacetReader* module_facet_reader() { return &module_facet_reader_impl_; }
 
   // Populates a one-shot answer for fuchsia::sys::Loader used by
   // ModuleFacetReaderImpl::GetModuleFacet()
-  void PopulateModFacetFromPkgUrl(fxl::StringView mod_pkg_name,
-                                  fxl::StringView mod_cmx_data) {
-    fs_.AddFile(fxl::Substitute("/$0/meta/$0.cmx", mod_pkg_name),
-                mod_cmx_data.data());
+  void PopulateModFacetFromPkgUrl(fxl::StringView mod_pkg_name, fxl::StringView mod_cmx_data) {
+    fs_.AddFile(fxl::Substitute("/$0/meta/$0.cmx", mod_pkg_name), mod_cmx_data.data());
     auto pkg = fuchsia::sys::Package::New();
-    pkg->resolved_url = fxl::Substitute(
-        "fuchsia-pkg://fuchsia.com/$0#meta/$0.cmx", mod_pkg_name);
+    pkg->resolved_url = fxl::Substitute("fuchsia-pkg://fuchsia.com/$0#meta/$0.cmx", mod_pkg_name);
     pkg->directory = fs_.GetChannelForDir(mod_pkg_name);
     sys_loader_.AddLoadInfo(mod_pkg_name.ToString(), std::move(pkg));
   }
@@ -161,18 +153,15 @@ class ModuleFacetReaderImplTest : public gtest::RealLoopFixture {
   void PopulateModFacetFromComponentUrl(fxl::StringView mod_pkg_name,
                                         fxl::StringView mod_component_name,
                                         fxl::StringView mod_cmx_data) {
-    fs_.AddFile(
-        fxl::Substitute("/$0/meta/$1.cmx", mod_pkg_name, mod_component_name),
-        mod_cmx_data.data());
+    fs_.AddFile(fxl::Substitute("/$0/meta/$1.cmx", mod_pkg_name, mod_component_name),
+                mod_cmx_data.data());
     auto pkg = fuchsia::sys::Package::New();
-    pkg->resolved_url =
-        fxl::Substitute("fuchsia-pkg://fuchsia.com/$0#meta/$1.cmx",
-                        mod_pkg_name, mod_component_name);
+    pkg->resolved_url = fxl::Substitute("fuchsia-pkg://fuchsia.com/$0#meta/$1.cmx", mod_pkg_name,
+                                        mod_component_name);
     pkg->directory = fs_.GetChannelForDir(mod_pkg_name);
-    sys_loader_.AddLoadInfo(
-        fxl::Substitute("fuchsia-pkg://fuchsia.com/$0#meta/$1.cmx",
-                        mod_pkg_name, mod_component_name),
-        std::move(pkg));
+    sys_loader_.AddLoadInfo(fxl::Substitute("fuchsia-pkg://fuchsia.com/$0#meta/$1.cmx",
+                                            mod_pkg_name, mod_component_name),
+                            std::move(pkg));
   }
 
  private:
@@ -205,12 +194,10 @@ TEST_F(ModuleFacetReaderImplTest, ModFacetFoundFromComponentUrl) {
 
   bool done = false;
   module_facet_reader()->GetModuleManifest(
-      fxl::Substitute("fuchsia-pkg://fuchsia.com/$0#meta/$1.cmx", kPkgName,
-                      kModName),
+      fxl::Substitute("fuchsia-pkg://fuchsia.com/$0#meta/$1.cmx", kPkgName, kModName),
       [&done](fuchsia::modular::ModuleManifestPtr manifest) {
         EXPECT_TRUE(manifest);
-        EXPECT_EQ("fuchsia-pkg://fuchsia.com/my_pkg_name#meta/my_mod_name.cmx",
-                  manifest->binary);
+        EXPECT_EQ("fuchsia-pkg://fuchsia.com/my_pkg_name#meta/my_mod_name.cmx", manifest->binary);
         EXPECT_EQ("suggestion_headline", manifest->suggestion_headline);
         EXPECT_EQ(1u, manifest->intent_filters->size());
         done = true;
@@ -223,22 +210,22 @@ TEST_F(ModuleFacetReaderImplTest, ModHasNoFacet) {
   constexpr char kModName[] = "my_mod_url";
   PopulateModFacetFromPkgUrl(kModName, kNoFacet);
   bool done = false;
-  module_facet_reader()->GetModuleManifest(
-      kModName, [&done](fuchsia::modular::ModuleManifestPtr manifest) {
-        EXPECT_FALSE(manifest);
-        done = true;
-      });
+  module_facet_reader()->GetModuleManifest(kModName,
+                                           [&done](fuchsia::modular::ModuleManifestPtr manifest) {
+                                             EXPECT_FALSE(manifest);
+                                             done = true;
+                                           });
   RunLoopUntil([&done] { return done; });
   EXPECT_TRUE(done);
 }
 
 TEST_F(ModuleFacetReaderImplTest, ModDoesntExist) {
   bool done = false;
-  module_facet_reader()->GetModuleManifest(
-      "kajsdhf", [&done](fuchsia::modular::ModuleManifestPtr manifest) {
-        EXPECT_FALSE(manifest);
-        done = true;
-      });
+  module_facet_reader()->GetModuleManifest("kajsdhf",
+                                           [&done](fuchsia::modular::ModuleManifestPtr manifest) {
+                                             EXPECT_FALSE(manifest);
+                                             done = true;
+                                           });
   RunLoopUntil([&done] { return done; });
   EXPECT_TRUE(done);
 }

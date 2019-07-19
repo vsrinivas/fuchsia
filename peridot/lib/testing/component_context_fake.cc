@@ -17,33 +17,26 @@ void ComponentContextFake::Connect(
   bindings_.AddBinding(this, std::move(request));
 }
 
-void ComponentContextFake::GetLedger(
-    fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
+void ComponentContextFake::GetLedger(fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
   FXL_NOTIMPLEMENTED();
 }
 
 void ComponentContextFake::ConnectToAgent(
     std::string url,
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
-        incoming_services_request,
-    fidl::InterfaceRequest<fuchsia::modular::AgentController>
-        agent_controller_request) {
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
+    fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) {
   FXL_NOTIMPLEMENTED();
 }
 
 void ComponentContextFake::ObtainMessageQueue(
-    std::string name,
-    fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) {
+    std::string name, fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request) {
   FXL_NOTIMPLEMENTED();
 }
 
-void ComponentContextFake::DeleteMessageQueue(std::string name) {
-  FXL_NOTIMPLEMENTED();
-}
+void ComponentContextFake::DeleteMessageQueue(std::string name) { FXL_NOTIMPLEMENTED(); }
 
 void ComponentContextFake::GetMessageSender(
-    std::string queue_token,
-    fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) {
+    std::string queue_token, fidl::InterfaceRequest<fuchsia::modular::MessageSender> request) {
   FXL_NOTIMPLEMENTED();
 }
 
@@ -58,8 +51,6 @@ void ComponentContextFake::CreateEntityWithData(
   FXL_NOTIMPLEMENTED();
 }
 
-void ComponentContextFake::GetPackageName(GetPackageNameCallback result) {
-  FXL_NOTIMPLEMENTED();
-}
+void ComponentContextFake::GetPackageName(GetPackageNameCallback result) { FXL_NOTIMPLEMENTED(); }
 
 }  // namespace modular

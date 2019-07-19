@@ -21,8 +21,7 @@ std::string StringEscape(fxl::StringView input, fxl::StringView chars_to_escape,
 // Unescape all escape sequences in |input|, where the escape sequence begins
 // with |escape_char|. All input params are expected to be in ASCII. In debug
 // mode, crashes if |input| cannot be unescaped.
-std::string StringUnescape(fxl::StringView input,
-                           char escape_char = kDefaultEscapeChar);
+std::string StringUnescape(fxl::StringView input, char escape_char = kDefaultEscapeChar);
 
 // Splits an escaped string |input| by |split_char|; this splitter skips over
 // any characters escaped using |escape_char|s. All params are expected to be in
@@ -31,9 +30,8 @@ std::string StringUnescape(fxl::StringView input,
 // Example:
 //  SplitEscapedString("a_b\\_c_d", '_', '\\')
 //    => std::vector<StringView>{"a", "b\\_c", "d"}
-std::vector<fxl::StringView> SplitEscapedString(
-    fxl::StringView input, char split_char,
-    char escape_char = kDefaultEscapeChar);
+std::vector<fxl::StringView> SplitEscapedString(fxl::StringView input, char split_char,
+                                                char escape_char = kDefaultEscapeChar);
 
 }  // namespace modular
 

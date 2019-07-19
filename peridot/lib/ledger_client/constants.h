@@ -10,13 +10,11 @@ namespace modular {
 inline constexpr char kCloudProviderFirestoreAppUrl[] =
     "fuchsia-pkg://fuchsia.com/cloud_provider_firestore#meta/"
     "cloud_provider_firestore.cmx";
-inline constexpr char kLedgerAppUrl[] =
-    "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
+inline constexpr char kLedgerAppUrl[] = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
 
 // Hard-coded communal Ledger instance.
 inline constexpr char kFirebaseProjectId[] = "fuchsia-ledger";
-inline constexpr char kFirebaseApiKey[] =
-    "AIzaSyDzzuJILOn6riFPTXC36HlH6CEdliLapDA";
+inline constexpr char kFirebaseApiKey[] = "AIzaSyDzzuJILOn6riFPTXC36HlH6CEdliLapDA";
 
 }  // namespace modular
 

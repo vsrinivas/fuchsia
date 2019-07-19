@@ -49,9 +49,8 @@ UniqueType Identify(FidlType* binding) {
 //  the pointer to the binding.
 // * Identify - a function that derives a UniqueType from a FidlType. Defaults
 //  behave as described at UniqueType.
-template <typename FidlType, typename T = FidlType,
-          FidlType* GetFidlType(T*) = GetFidlType, typename UniqueType = void*,
-          UniqueType Identify(FidlType*) = Identify>
+template <typename FidlType, typename T = FidlType, FidlType* GetFidlType(T*) = GetFidlType,
+          typename UniqueType = void*, UniqueType Identify(FidlType*) = Identify>
 class BoundSet {
  public:
   typedef typename std::vector<T>::iterator iterator;
@@ -68,8 +67,7 @@ class BoundSet {
     UniqueType const id = Identify(m);
     // Set the connection error handler for the newly added item to be a
     // function that will erase it from the vector.
-    m->set_error_handler(
-        [this, id](zx_status_t status) { OnConnectionError(id); });
+    m->set_error_handler([this, id](zx_status_t status) { OnConnectionError(id); });
     return c;
   }
 
@@ -115,15 +113,12 @@ template <typename FidlType, typename T = std::unique_ptr<FidlType>,
           FidlType* GetFidlType(T*) = GetFidlType>
 using BoundNonMovableSet = BoundSet<FidlType, T, GetFidlType, FidlType*>;
 
-template <typename Interface,
-          typename T = std::unique_ptr<fidl::InterfacePtr<Interface>>,
+template <typename Interface, typename T = std::unique_ptr<fidl::InterfacePtr<Interface>>,
           fidl::InterfacePtr<Interface>* GetFidlType(T*) = GetFidlType>
-using BoundPtrSet =
-    BoundNonMovableSet<fidl::InterfacePtr<Interface>, T, GetFidlType>;
+using BoundPtrSet = BoundNonMovableSet<fidl::InterfacePtr<Interface>, T, GetFidlType>;
 
 // Convenience alias of BoundSet to handle Binding containers.
-template <typename Interface,
-          typename T = std::unique_ptr<fidl::Binding<Interface>>,
+template <typename Interface, typename T = std::unique_ptr<fidl::Binding<Interface>>,
           fidl::Binding<Interface>* GetFidlType(T*) = GetFidlType>
 using BindingSet = BoundNonMovableSet<fidl::Binding<Interface>, T, GetFidlType>;
 

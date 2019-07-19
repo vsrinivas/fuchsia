@@ -20,8 +20,7 @@
 namespace firebase {
 
 // TODO(ppi): Use a client interface instead.
-using EventCallback = void(Status status, const std::string& event,
-                           const std::string& data);
+using EventCallback = void(Status status, const std::string& event, const std::string& data);
 using CompletionCallback = void();
 
 // Socket drainer that parses a stream of Server-Sent Events.

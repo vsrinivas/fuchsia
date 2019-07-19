@@ -22,10 +22,9 @@ AsyncHolderBase::~AsyncHolderBase() {
   *down_ = true;
 }
 
-void AsyncHolderBase::Teardown(zx::duration timeout,
-                               fit::function<void()> done) {
-  fit::callback<void(bool)> cont = [this, down = down_, done = std::move(done)](
-                                       const bool from_timeout) mutable {
+void AsyncHolderBase::Teardown(zx::duration timeout, fit::function<void()> done) {
+  fit::callback<void(bool)> cont = [this, down = down_,
+                                    done = std::move(done)](const bool from_timeout) mutable {
     if (*down) {  // |down| shared_ptr prevents using |this| after destruct
       return;
     }
@@ -51,23 +50,18 @@ void AsyncHolderBase::Teardown(zx::duration timeout,
       cont(false);
   };
 
-  async::PostDelayedTask(async_get_default_dispatcher(),
-                         std::move(cont_timeout), timeout);
+  async::PostDelayedTask(async_get_default_dispatcher(), std::move(cont_timeout), timeout);
   ImplTeardown(std::move(cont_normal));
 }
 
-ClosureAsyncHolder::ClosureAsyncHolder(
-    std::string name, fit::function<void(DoneCallback)> on_teardown)
-    : AsyncHolderBase(name),
-      on_teardown_(std::move(on_teardown)),
-      on_reset_([]() {}) {}
+ClosureAsyncHolder::ClosureAsyncHolder(std::string name,
+                                       fit::function<void(DoneCallback)> on_teardown)
+    : AsyncHolderBase(name), on_teardown_(std::move(on_teardown)), on_reset_([]() {}) {}
 
-ClosureAsyncHolder::ClosureAsyncHolder(
-    std::string name, fit::function<void(DoneCallback)> on_teardown,
-    fit::function<void()> on_reset)
-    : AsyncHolderBase(name),
-      on_teardown_(std::move(on_teardown)),
-      on_reset_(std::move(on_reset)) {}
+ClosureAsyncHolder::ClosureAsyncHolder(std::string name,
+                                       fit::function<void(DoneCallback)> on_teardown,
+                                       fit::function<void()> on_reset)
+    : AsyncHolderBase(name), on_teardown_(std::move(on_teardown)), on_reset_(std::move(on_reset)) {}
 
 ClosureAsyncHolder::~ClosureAsyncHolder() = default;
 

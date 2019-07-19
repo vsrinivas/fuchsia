@@ -33,27 +33,21 @@ class FirebaseImpl : public Firebase {
   // |prefix| is a url prefix against which all requests will be made, without a
   // leading or trailing slash. (possible with slashes inside) If empty,
   // requests will be made against root of the database.
-  FirebaseImpl(network_wrapper::NetworkWrapper* network_wrapper,
-               const std::string& db_id, const std::string& prefix);
+  FirebaseImpl(network_wrapper::NetworkWrapper* network_wrapper, const std::string& db_id,
+               const std::string& prefix);
   ~FirebaseImpl() override;
 
   // Firebase:
   void Get(const std::string& key, const std::vector<std::string>& query_params,
-           fit::function<void(Status status,
-                              std::unique_ptr<rapidjson::Value> value)>
-               callback) override;
+           fit::function<void(Status status, std::unique_ptr<rapidjson::Value> value)> callback)
+      override;
   void Put(const std::string& key, const std::vector<std::string>& query_params,
-           const std::string& data,
-           fit::function<void(Status status)> callback) override;
-  void Patch(const std::string& key,
-             const std::vector<std::string>& query_params,
-             const std::string& data,
-             fit::function<void(Status status)> callback) override;
-  void Delete(const std::string& key,
-              const std::vector<std::string>& query_params,
+           const std::string& data, fit::function<void(Status status)> callback) override;
+  void Patch(const std::string& key, const std::vector<std::string>& query_params,
+             const std::string& data, fit::function<void(Status status)> callback) override;
+  void Delete(const std::string& key, const std::vector<std::string>& query_params,
               fit::function<void(Status status)> callback) override;
-  void Watch(const std::string& key,
-             const std::vector<std::string>& query_params,
+  void Watch(const std::string& key, const std::vector<std::string>& query_params,
              WatchClient* watch_client) override;
   void UnWatch(WatchClient* watch_client) override;
 
@@ -62,30 +56,24 @@ class FirebaseImpl : public Firebase {
  private:
   std::string BuildApiUrl(const std::string& db_id, const std::string& prefix);
 
-  std::string BuildRequestUrl(
-      const std::string& key,
-      const std::vector<std::string>& query_params) const;
+  std::string BuildRequestUrl(const std::string& key,
+                              const std::vector<std::string>& query_params) const;
 
-  void Request(
-      const std::string& url, const std::string& method,
-      const std::string& message,
-      fit::function<void(Status status, std::string response)> callback);
+  void Request(const std::string& url, const std::string& method, const std::string& message,
+               fit::function<void(Status status, std::string response)> callback);
 
-  void OnResponse(
-      fit::function<void(Status status, std::string response)> callback,
-      ::fuchsia::net::oldhttp::URLResponse response);
+  void OnResponse(fit::function<void(Status status, std::string response)> callback,
+                  ::fuchsia::net::oldhttp::URLResponse response);
 
-  void OnStream(WatchClient* watch_client,
-                ::fuchsia::net::oldhttp::URLResponse response);
+  void OnStream(WatchClient* watch_client, ::fuchsia::net::oldhttp::URLResponse response);
 
   void OnStreamComplete(WatchClient* watch_client);
 
-  void OnStreamEvent(WatchClient* watch_client, Status status,
-                     const std::string& event, const std::string& payload);
+  void OnStreamEvent(WatchClient* watch_client, Status status, const std::string& event,
+                     const std::string& payload);
 
   void HandleMalformedEvent(WatchClient* watch_client, const std::string& event,
-                            const std::string& payload,
-                            const char error_description[]);
+                            const std::string& payload, const char error_description[]);
 
   network_wrapper::NetworkWrapper* const network_wrapper_;
   // Api url against which requests are made, without a trailing slash.

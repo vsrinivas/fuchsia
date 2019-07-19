@@ -16,8 +16,7 @@ EventStream::EventStream() {}
 
 EventStream::~EventStream() {}
 
-void EventStream::Start(zx::socket source,
-                        fit::function<EventCallback> event_callback,
+void EventStream::Start(zx::socket source, fit::function<EventCallback> event_callback,
                         fit::function<CompletionCallback> completion_callback) {
   event_callback_ = std::move(event_callback);
   completion_callback_ = std::move(completion_callback);

@@ -37,8 +37,7 @@ class FirebaseModuleManifestSource : public ModuleManifestSource {
  public:
   FirebaseModuleManifestSource(
       async_dispatcher_t* dispatcher,
-      fit::function<::fuchsia::net::oldhttp::HttpServicePtr()>
-          network_service_factory,
+      fit::function<::fuchsia::net::oldhttp::HttpServicePtr()> network_service_factory,
       std::string db_id, std::string prefix);
   ~FirebaseModuleManifestSource() override;
 

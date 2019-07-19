@@ -6,8 +6,8 @@
 namespace modular {
 namespace testing {
 
-void TestStoryCommandExecutor::SetExecuteReturnResult(
-    fuchsia::modular::ExecuteStatus status, fidl::StringPtr error_message) {
+void TestStoryCommandExecutor::SetExecuteReturnResult(fuchsia::modular::ExecuteStatus status,
+                                                      fidl::StringPtr error_message) {
   result_.status = status;
   result_.error_message = error_message;
 }
@@ -19,8 +19,7 @@ void TestStoryCommandExecutor::Reset() {
 }
 
 void TestStoryCommandExecutor::ExecuteCommandsInternal(
-    fidl::StringPtr story_id,
-    std::vector<fuchsia::modular::StoryCommand> commands,
+    fidl::StringPtr story_id, std::vector<fuchsia::modular::StoryCommand> commands,
     fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   ++execute_count_;
   last_story_id_ = story_id;

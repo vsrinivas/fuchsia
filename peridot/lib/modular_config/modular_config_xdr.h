@@ -16,20 +16,17 @@ namespace modular {
 void XdrBasemgrConfig_v1(XdrContext* const xdr,
                          fuchsia::modular::session::BasemgrConfig* const data);
 
-void XdrSessionmgrConfig_v1(
-    XdrContext* const xdr,
-    fuchsia::modular::session::SessionmgrConfig* const data);
+void XdrSessionmgrConfig_v1(XdrContext* const xdr,
+                            fuchsia::modular::session::SessionmgrConfig* const data);
 
-constexpr XdrFilterType<fuchsia::modular::session::BasemgrConfig>
-    XdrBasemgrConfig[] = {
-        XdrBasemgrConfig_v1,
-        nullptr,
+constexpr XdrFilterType<fuchsia::modular::session::BasemgrConfig> XdrBasemgrConfig[] = {
+    XdrBasemgrConfig_v1,
+    nullptr,
 };
 
-constexpr XdrFilterType<fuchsia::modular::session::SessionmgrConfig>
-    XdrSessionmgrConfig[] = {
-        XdrSessionmgrConfig_v1,
-        nullptr,
+constexpr XdrFilterType<fuchsia::modular::session::SessionmgrConfig> XdrSessionmgrConfig[] = {
+    XdrSessionmgrConfig_v1,
+    nullptr,
 };
 
 }  // namespace modular

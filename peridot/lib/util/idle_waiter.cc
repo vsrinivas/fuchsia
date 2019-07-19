@@ -9,8 +9,7 @@
 
 namespace util {
 
-IdleWaiter::Activity::Activity(fxl::WeakPtr<IdleWaiter> tracker)
-    : tracker_(tracker) {
+IdleWaiter::Activity::Activity(fxl::WeakPtr<IdleWaiter> tracker) : tracker_(tracker) {
   tracker_->activity_ = this;
 }
 

@@ -5,6 +5,7 @@
 #include "peridot/lib/fidl/app_client.h"
 
 #include <fcntl.h>
+
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -18,8 +19,7 @@
 
 namespace modular {
 AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
-                             fuchsia::modular::AppConfig config,
-                             std::string data_origin,
+                             fuchsia::modular::AppConfig config, std::string data_origin,
                              fuchsia::sys::ServiceListPtr additional_services,
                              fuchsia::sys::FlatNamespacePtr flat_namespace)
     : AsyncHolderBase(config.url) {
@@ -41,8 +41,7 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
 
     fxl::UniqueFD dir(open(data_origin.c_str(), O_DIRECTORY | O_RDONLY));
     if (!dir.is_valid()) {
-      FXL_LOG(ERROR) << "Unable to open directory at " << data_origin
-                     << ". errno: " << errno;
+      FXL_LOG(ERROR) << "Unable to open directory at " << data_origin << ". errno: " << errno;
       return;
     }
 
@@ -65,8 +64,7 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
 
     for (size_t i = 0; i < flat_namespace->paths.size(); ++i) {
       launch_info.flat_namespace->paths.push_back(flat_namespace->paths[i]);
-      launch_info.flat_namespace->directories.push_back(
-          std::move(flat_namespace->directories[i]));
+      launch_info.flat_namespace->directories.push_back(std::move(flat_namespace->directories[i]));
     }
   }
 
@@ -75,9 +73,7 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
 
 AppClientBase::~AppClientBase() = default;
 
-void AppClientBase::ImplTeardown(fit::function<void()> done) {
-  ServiceTerminate(std::move(done));
-}
+void AppClientBase::ImplTeardown(fit::function<void()> done) { ServiceTerminate(std::move(done)); }
 
 void AppClientBase::ImplReset() {
   app_.Unbind();
@@ -85,8 +81,8 @@ void AppClientBase::ImplReset() {
 }
 
 void AppClientBase::SetAppErrorHandler(fit::function<void()> error_handler) {
-  app_.set_error_handler([error_handler = std::move(error_handler)](
-                             zx_status_t status) { error_handler(); });
+  app_.set_error_handler(
+      [error_handler = std::move(error_handler)](zx_status_t status) { error_handler(); });
 }
 
 void AppClientBase::ServiceTerminate(fit::function<void()> /* done */) {}
@@ -94,8 +90,7 @@ void AppClientBase::ServiceTerminate(fit::function<void()> /* done */) {}
 void AppClientBase::ServiceUnbind() {}
 
 template <>
-void AppClient<fuchsia::modular::Lifecycle>::ServiceTerminate(
-    fit::function<void()> done) {
+void AppClient<fuchsia::modular::Lifecycle>::ServiceTerminate(fit::function<void()> done) {
   SetAppErrorHandler(std::move(done));
   if (primary_service())
     primary_service()->Terminate();

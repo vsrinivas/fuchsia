@@ -25,8 +25,7 @@ bool CanValueBeVerbatim(fxl::StringView bytes) {
   }
 
   for (const char& byte : bytes) {
-    if (static_cast<unsigned char>(byte) <= 31 || byte == 127 || byte == '\"' ||
-        byte == '\\') {
+    if (static_cast<unsigned char>(byte) <= 31 || byte == 127 || byte == '\"' || byte == '\\') {
       return false;
     }
   }

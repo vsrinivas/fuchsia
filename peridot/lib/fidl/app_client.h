@@ -5,6 +5,9 @@
 #ifndef PERIDOT_LIB_FIDL_APP_CLIENT_H_
 #define PERIDOT_LIB_FIDL_APP_CLIENT_H_
 
+#include <memory>
+#include <string>
+
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -12,9 +15,6 @@
 #include <lib/svc/cpp/services.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/time/time_delta.h>
-
-#include <memory>
-#include <string>
 
 #include "peridot/lib/common/async_holder.h"
 
@@ -41,8 +41,7 @@ namespace modular {
 // be inline. It can be used on its own too.
 class AppClientBase : public AsyncHolderBase {
  public:
-  AppClientBase(fuchsia::sys::Launcher* launcher,
-                fuchsia::modular::AppConfig config,
+  AppClientBase(fuchsia::sys::Launcher* launcher, fuchsia::modular::AppConfig config,
                 std::string data_origin = "",
                 fuchsia::sys::ServiceListPtr additional_services = nullptr,
                 fuchsia::sys::FlatNamespacePtr flat_namespace = nullptr);
@@ -80,13 +79,12 @@ class AppClientBase : public AsyncHolderBase {
 template <class Service>
 class AppClient : public AppClientBase {
  public:
-  AppClient(fuchsia::sys::Launcher* const launcher,
-            fuchsia::modular::AppConfig config, std::string data_origin = "",
+  AppClient(fuchsia::sys::Launcher* const launcher, fuchsia::modular::AppConfig config,
+            std::string data_origin = "",
             fuchsia::sys::ServiceListPtr additional_services = nullptr,
             fuchsia::sys::FlatNamespacePtr flat_namespace = nullptr)
       : AppClientBase(launcher, std::move(config), std::move(data_origin),
-                      std::move(additional_services),
-                      std::move(flat_namespace)) {
+                      std::move(additional_services), std::move(flat_namespace)) {
     services().ConnectToService(service_.NewRequest());
   }
   ~AppClient() override = default;
@@ -97,8 +95,7 @@ class AppClient : public AppClientBase {
   void ServiceTerminate(fit::function<void()> done) override {
     // The service is expected to acknowledge the Terminate() request by
     // closing its connection within the timeout set in Teardown().
-    service_.set_error_handler(
-        [done = std::move(done)](zx_status_t status) { done(); });
+    service_.set_error_handler([done = std::move(done)](zx_status_t status) { done(); });
     service_->Terminate();
   }
 
@@ -110,8 +107,7 @@ class AppClient : public AppClientBase {
 };
 
 template <>
-void AppClient<fuchsia::modular::Lifecycle>::ServiceTerminate(
-    fit::function<void()> done);
+void AppClient<fuchsia::modular::Lifecycle>::ServiceTerminate(fit::function<void()> done);
 
 }  // namespace modular
 

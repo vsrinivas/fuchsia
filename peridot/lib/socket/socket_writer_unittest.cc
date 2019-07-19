@@ -7,8 +7,8 @@
 #include <utility>
 
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/socket/socket_drainer_client.h"
 #include "peridot/lib/socket/socket_pair.h"
@@ -45,8 +45,7 @@ TEST_F(SocketWriterTest, WriteAndRead) {
 
   std::string value;
   auto drainer = std::make_unique<SocketDrainerClient>();
-  drainer->Start(std::move(socket.socket2),
-                 [&value](const std::string& v) { value = v; });
+  drainer->Start(std::move(socket.socket2), [&value](const std::string& v) { value = v; });
   RunLoopUntilIdle();
 
   EXPECT_EQ("bazinga\n", value);
@@ -69,8 +68,7 @@ TEST_F(SocketWriterTest, StringSocketWriter) {
 
   std::string value;
   auto drainer = std::make_unique<SocketDrainerClient>();
-  drainer->Start(std::move(socket.socket2),
-                 [&value](const std::string& v) { value = v; });
+  drainer->Start(std::move(socket.socket2), [&value](const std::string& v) { value = v; });
   RunLoopUntilIdle();
 
   EXPECT_EQ("bazinga\n", value);

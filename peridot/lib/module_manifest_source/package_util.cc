@@ -10,8 +10,8 @@ namespace modular {
 
 std::string GetModuleManifestPathFromPackage(fxl::StringView package_name,
                                              fxl::StringView package_version) {
-  return fxl::StringPrintf("/pkgfs/packages/%s/%s/meta/module.json",
-                           package_name.data(), package_version.data());
+  return fxl::StringPrintf("/pkgfs/packages/%s/%s/meta/module.json", package_name.data(),
+                           package_version.data());
 }
 
 }  // namespace modular

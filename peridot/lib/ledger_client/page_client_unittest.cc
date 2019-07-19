@@ -25,10 +25,8 @@ constexpr zx::duration kTimeout = zx::sec(10);
 
 class PageClientImpl : public PageClient {
  public:
-  PageClientImpl(LedgerClient* ledger_client, LedgerPageId page_id,
-                 std::string prefix = "")
-      : PageClient("PageClientImpl", ledger_client, std::move(page_id),
-                   std::move(prefix)) {}
+  PageClientImpl(LedgerClient* ledger_client, LedgerPageId page_id, std::string prefix = "")
+      : PageClient("PageClientImpl", ledger_client, std::move(page_id), std::move(prefix)) {}
 
   ~PageClientImpl() override = default;
 
@@ -48,9 +46,8 @@ class PageClientImpl : public PageClient {
   void OnPageConflict(Conflict* const conflict) override {
     ++conflict_count_;
 
-    FXL_LOG(INFO) << "OnPageConflict " << prefix() << " " << conflict_count_
-                  << " " << to_string(conflict->key) << " " << conflict->left
-                  << " " << conflict->right;
+    FXL_LOG(INFO) << "OnPageConflict " << prefix() << " " << conflict_count_ << " "
+                  << to_string(conflict->key) << " " << conflict->left << " " << conflict->right;
 
     conflict_resolver_(conflict);
   }
@@ -86,10 +83,9 @@ class PageClientTest : public TestWithLedger {
     TestWithLedger::TearDown();
   }
 
-  PageClientImpl* CreatePageClient(const std::string& page_id,
-                                   const std::string& prefix = "") {
-    auto page_client = std::make_unique<PageClientImpl>(
-        ledger_client(), MakePageId(page_id), prefix);
+  PageClientImpl* CreatePageClient(const std::string& page_id, const std::string& prefix = "") {
+    auto page_client =
+        std::make_unique<PageClientImpl>(ledger_client(), MakePageId(page_id), prefix);
     auto* ptr = page_client.get();
     page_clients_.emplace_back(std::move(page_client));
     return ptr;
@@ -98,8 +94,7 @@ class PageClientTest : public TestWithLedger {
   fuchsia::ledger::PagePtr CreatePagePtr(const std::string& page_id) {
     fuchsia::ledger::PagePtr page;
     ledger_client()->ledger()->GetPage(
-        std::make_unique<fuchsia::ledger::PageId>(MakePageId(page_id)),
-        page.NewRequest());
+        std::make_unique<fuchsia::ledger::PageId>(MakePageId(page_id)), page.NewRequest());
     return page;
   }
 
@@ -125,8 +120,7 @@ TEST_F(PageClientTest, DISABLED_SimpleWriteObserve) {
 
   client->page()->Put(to_array("key"), to_array("value"));
 
-  RunLoopWithTimeoutOrUntil([&] { return client->value("key") == "value"; },
-                            kTimeout);
+  RunLoopWithTimeoutOrUntil([&] { return client->value("key") == "value"; }, kTimeout);
 
   EXPECT_EQ(0, client->conflict_count());
   EXPECT_EQ("value", client->value("key"));
@@ -144,10 +138,7 @@ TEST_F(PageClientTest, PrefixWriteObserve) {
   page->Put(to_array("b/key"), to_array("value"));
 
   RunLoopWithTimeoutOrUntil(
-      [&] {
-        return client_a->value("a/key") == "value" &&
-               client_b->value("b/key") == "value";
-      },
+      [&] { return client_a->value("a/key") == "value" && client_b->value("b/key") == "value"; },
       kTimeout);
 
   EXPECT_EQ(0, client_a->conflict_count());
@@ -169,10 +160,7 @@ TEST_F(PageClientTest, ConcurrentWrite) {
   page2->Put(to_array("key2"), to_array("value2"));
 
   RunLoopWithTimeoutOrUntil(
-      [&] {
-        return client->value("key1") == "value1" &&
-               client->value("key2") == "value2";
-      },
+      [&] { return client->value("key1") == "value1" && client->value("key2") == "value2"; },
       kTimeout);
 
   EXPECT_EQ(0, client->conflict_count());
@@ -207,10 +195,7 @@ TEST_F(PageClientTest, ConflictWrite) {
   });
 
   RunLoopWithTimeoutOrUntil(
-      [&] {
-        return finished && resolved() && client->value("key") == "value3";
-      },
-      kTimeout);
+      [&] { return finished && resolved() && client->value("key") == "value3"; }, kTimeout);
 
   EXPECT_EQ(1, client->conflict_count());
   EXPECT_EQ("value3", client->value("key"));
@@ -244,10 +229,7 @@ TEST_F(PageClientTest, ConflictPrefixWrite) {
   });
 
   RunLoopWithTimeoutOrUntil(
-      [&] {
-        return finished && resolved() && client_a->value("a/key") == "value3";
-      },
-      kTimeout);
+      [&] { return finished && resolved() && client_a->value("a/key") == "value3"; }, kTimeout);
 
   EXPECT_EQ(1, client_a->conflict_count());
   EXPECT_EQ(0, client_b->conflict_count());
@@ -285,8 +267,7 @@ TEST_F(PageClientTest, ConcurrentConflictWrite) {
   RunLoopWithTimeoutOrUntil(
       [&] {
         return finished && resolved() && client->value("key") == "value3" &&
-               client->value("key1") == "value1" &&
-               client->value("key2") == "value2";
+               client->value("key1") == "value1" && client->value("key2") == "value2";
       },
       kTimeout);
 

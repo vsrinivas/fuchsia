@@ -6,8 +6,9 @@
 #define PERIDOT_LIB_SCOPED_TMPFS_SCOPED_TMPFS_H_
 
 #include <lib/async-loop/cpp/loop.h>
-#include "src/lib/files/unique_fd.h"
 #include <lib/memfs/memfs.h>
+
+#include "src/lib/files/unique_fd.h"
 
 namespace scoped_tmpfs {
 

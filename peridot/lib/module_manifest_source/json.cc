@@ -11,8 +11,7 @@
 
 namespace modular {
 
-bool ModuleManifestEntryFromJson(const std::string& json,
-                                 fuchsia::modular::ModuleManifest* entry) {
+bool ModuleManifestEntryFromJson(const std::string& json, fuchsia::modular::ModuleManifest* entry) {
   rapidjson::Document doc;
   // Schema validation of the JSON is happening at publish time. By the time we
   // get here, we assume it's valid manifest JSON.
@@ -33,8 +32,7 @@ bool ModuleManifestEntryFromJson(const std::string& json,
   return true;
 }
 
-void ModuleManifestEntryToJson(const fuchsia::modular::ModuleManifest& entry,
-                               std::string* json) {
+void ModuleManifestEntryToJson(const fuchsia::modular::ModuleManifest& entry, std::string* json) {
   rapidjson::Document doc;
   fuchsia::modular::ModuleManifest local_entry;
   fidl::Clone(entry, &local_entry);

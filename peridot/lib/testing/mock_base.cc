@@ -15,8 +15,8 @@ MockBase::MockBase() = default;
 MockBase::~MockBase() = default;
 
 void MockBase::ExpectCalledOnce(const std::string& func) {
-  EXPECT_EQ(1U, counts.count(func)) << "Expected 1 invocation of '" << func
-                                    << "' but got " << counts.count(func);
+  EXPECT_EQ(1U, counts.count(func))
+      << "Expected 1 invocation of '" << func << "' but got " << counts.count(func);
   if (counts.count(func) > 0) {
     EXPECT_EQ(1U, counts[func]);
     counts.erase(func);

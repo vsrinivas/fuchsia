@@ -15,8 +15,7 @@
 
 namespace modular {
 namespace {
-std::string GetSectionAsString(const rapidjson::Document& doc,
-                               const std::string& section_name) {
+std::string GetSectionAsString(const rapidjson::Document& doc, const std::string& section_name) {
   auto config_json = doc.FindMember(section_name);
   if (config_json == doc.MemberEnd()) {
     // |section_name| was not found
@@ -39,13 +38,11 @@ ModularConfigReader::ModularConfigReader(fxl::UniqueFD dir_fd) {
   FXL_CHECK(dir_fd.get() >= 0);
 
   // 1.  Figure out where the config file is.
-  std::string config_path =
-      files::JoinPath(StripLeadingSlash(modular_config::kOverriddenConfigDir),
-                      modular_config::kStartupConfigFilePath);
+  std::string config_path = files::JoinPath(StripLeadingSlash(modular_config::kOverriddenConfigDir),
+                                            modular_config::kStartupConfigFilePath);
   if (!files::IsFileAt(dir_fd.get(), config_path)) {
-    config_path =
-        files::JoinPath(StripLeadingSlash(modular_config::kDefaultConfigDir),
-                        modular_config::kStartupConfigFilePath);
+    config_path = files::JoinPath(StripLeadingSlash(modular_config::kDefaultConfigDir),
+                                  modular_config::kStartupConfigFilePath);
   }
 
   // 2. Parse the JSON out of the config file.
@@ -55,8 +52,7 @@ ModularConfigReader::ModularConfigReader(fxl::UniqueFD dir_fd) {
   ParseConfig(std::move(json_parser), std::move(doc), config_path);
 }
 
-ModularConfigReader::ModularConfigReader(std::string config,
-                                         std::string config_path) {
+ModularConfigReader::ModularConfigReader(std::string config, std::string config_path) {
   // Parse the JSON out of the config string.
   json::JSONParser json_parser;
   auto doc = json_parser.ParseFromString(config, config_path);
@@ -71,8 +67,7 @@ ModularConfigReader ModularConfigReader::CreateFromNamespace() {
 
 ModularConfigReader::~ModularConfigReader() {}
 
-void ModularConfigReader::ParseConfig(json::JSONParser json_parser,
-                                      rapidjson::Document doc,
+void ModularConfigReader::ParseConfig(json::JSONParser json_parser, rapidjson::Document doc,
                                       std::string config_path) {
   std::string basemgr_json;
   std::string sessionmgr_json;
@@ -85,8 +80,7 @@ void ModularConfigReader::ParseConfig(json::JSONParser json_parser,
   } else {
     // Parse the `basemgr` and `sessionmgr` sections out of the config.
     basemgr_json = GetSectionAsString(doc, modular_config::kBasemgrConfigName);
-    sessionmgr_json =
-        GetSectionAsString(doc, modular_config::kSessionmgrConfigName);
+    sessionmgr_json = GetSectionAsString(doc, modular_config::kSessionmgrConfigName);
   }
 
   if (!XdrRead(basemgr_json, &basemgr_config_, XdrBasemgrConfig)) {
@@ -97,22 +91,20 @@ void ModularConfigReader::ParseConfig(json::JSONParser json_parser,
   }
 }
 
-fuchsia::modular::session::BasemgrConfig ModularConfigReader::GetBasemgrConfig()
-    const {
+fuchsia::modular::session::BasemgrConfig ModularConfigReader::GetBasemgrConfig() const {
   fuchsia::modular::session::BasemgrConfig result;
   basemgr_config_.Clone(&result);
   return result;
 }
 
-fuchsia::modular::session::SessionmgrConfig
-ModularConfigReader::GetSessionmgrConfig() const {
+fuchsia::modular::session::SessionmgrConfig ModularConfigReader::GetSessionmgrConfig() const {
   fuchsia::modular::session::SessionmgrConfig result;
   sessionmgr_config_.Clone(&result);
   return result;
 }
 
-fuchsia::modular::session::SessionmgrConfig
-ModularConfigReader::GetDefaultSessionmgrConfig() const {
+fuchsia::modular::session::SessionmgrConfig ModularConfigReader::GetDefaultSessionmgrConfig()
+    const {
   fuchsia::modular::session::SessionmgrConfig sessionmgr_config;
   XdrRead("{}", &sessionmgr_config, XdrSessionmgrConfig);
   return sessionmgr_config;

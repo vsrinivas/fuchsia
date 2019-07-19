@@ -5,9 +5,9 @@
 #ifndef PERIDOT_LIB_RNG_SYSTEM_RANDOM_H_
 #define PERIDOT_LIB_RNG_SYSTEM_RANDOM_H_
 
-#include "peridot/lib/rng/random.h"
-
 #include <zircon/syscalls.h>
+
+#include "peridot/lib/rng/random.h"
 
 namespace rng {
 

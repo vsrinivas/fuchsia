@@ -17,8 +17,7 @@ void EntityWatcherImpl::SetOnUpdated(
   callback_ = std::move(callback);
 }
 
-void EntityWatcherImpl::Connect(
-    fidl::InterfaceRequest<fuchsia::modular::EntityWatcher> request) {
+void EntityWatcherImpl::Connect(fidl::InterfaceRequest<fuchsia::modular::EntityWatcher> request) {
   binding_.Bind(std::move(request));
 }
 

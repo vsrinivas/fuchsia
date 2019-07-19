@@ -4,19 +4,19 @@
 
 #include "peridot/lib/ledger_client/page_client.h"
 
-#include <lib/fsl/vmo/strings.h>
-#include <zircon/status.h>
-
 #include <memory>
 #include <utility>
+
+#include <lib/fsl/vmo/strings.h>
+#include <zircon/status.h>
 
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 
 namespace modular {
 
-PageClient::PageClient(std::string context, LedgerClient* ledger_client,
-                       LedgerPageId page_id, std::string prefix)
+PageClient::PageClient(std::string context, LedgerClient* ledger_client, LedgerPageId page_id,
+                       std::string prefix)
     : binding_(this),
       context_(std::move(context)),
       ledger_client_(ledger_client),
@@ -24,8 +24,7 @@ PageClient::PageClient(std::string context, LedgerClient* ledger_client,
       page_(ledger_client_->GetPage(this, context_, page_id_)),
       prefix_(std::move(prefix)) {
   fuchsia::ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshot(snapshot.NewRequest(), to_array(prefix_),
-                     binding_.NewBinding());
+  page_->GetSnapshot(snapshot.NewRequest(), to_array(prefix_), binding_.NewBinding());
 }
 
 PageClient::~PageClient() {
@@ -40,15 +39,13 @@ fuchsia::ledger::PageSnapshotPtr PageClient::NewSnapshot() {
       FXL_LOG(ERROR) << "PageSnapshot error: " << zx_status_get_string(status);
     }
   });
-  page_->GetSnapshot(ptr.NewRequest(), to_array(prefix_),
-                     nullptr /* page_watcher */);
+  page_->GetSnapshot(ptr.NewRequest(), to_array(prefix_), nullptr /* page_watcher */);
   return ptr;
 }
 
 // |PageWatcher|
 void PageClient::OnChange(fuchsia::ledger::PageChange page,
-                          fuchsia::ledger::ResultState result_state,
-                          OnChangeCallback callback) {
+                          fuchsia::ledger::ResultState result_state, OnChangeCallback callback) {
   // NOTE: |result_state| can indicate that this change notification is
   // partial: if a single FIDL message cannot contain the entire change
   // notification, the Ledger will break the notification into multiple chunks.
@@ -66,8 +63,7 @@ void PageClient::OnChange(fuchsia::ledger::PageChange page,
   callback(nullptr);
 }
 
-void PageClient::OnPageChange(const std::string& key,
-                              fuchsia::mem::BufferPtr value) {
+void PageClient::OnPageChange(const std::string& key, fuchsia::mem::BufferPtr value) {
   std::string value_string;
   if (fsl::StringFromVmo(*value, &value_string)) {
     OnPageChange(key, value_string);
@@ -77,15 +73,13 @@ void PageClient::OnPageChange(const std::string& key,
   }
 }
 
-void PageClient::OnPageChange(const std::string& /*key*/,
-                              const std::string& /*value*/) {}
+void PageClient::OnPageChange(const std::string& /*key*/, const std::string& /*value*/) {}
 
 void PageClient::OnPageDelete(const std::string& /*key*/) {}
 
 void PageClient::OnPageConflict(Conflict* const conflict) {
   FXL_LOG(INFO) << "PageClient::OnPageConflict() " << context_ << " "
-                << to_hex_string(conflict->key) << " " << conflict->left << " "
-                << conflict->right;
+                << to_hex_string(conflict->key) << " " << conflict->left << " " << conflict->right;
 };
 
 namespace {
@@ -96,8 +90,7 @@ void GetEntriesRecursive(fuchsia::ledger::PageSnapshot* const snapshot,
                          fit::function<void()> done) {
   snapshot->GetEntries(
       std::vector<uint8_t>{} /* key_start */, std::move(next_token),
-      [snapshot, entries, done = std::move(done)](auto new_entries,
-                                                  auto next_token) mutable {
+      [snapshot, entries, done = std::move(done)](auto new_entries, auto next_token) mutable {
         for (size_t i = 0; i < new_entries.size(); ++i) {
           entries->push_back(std::move(new_entries.at(i)));
         }
@@ -107,18 +100,15 @@ void GetEntriesRecursive(fuchsia::ledger::PageSnapshot* const snapshot,
           return;
         }
 
-        GetEntriesRecursive(snapshot, entries, std::move(next_token),
-                            std::move(done));
+        GetEntriesRecursive(snapshot, entries, std::move(next_token), std::move(done));
       });
 }
 
 }  // namespace
 
 void GetEntries(fuchsia::ledger::PageSnapshot* const snapshot,
-                std::vector<fuchsia::ledger::Entry>* const entries,
-                fit::function<void()> done) {
-  GetEntriesRecursive(snapshot, entries, nullptr /* next_token */,
-                      std::move(done));
+                std::vector<fuchsia::ledger::Entry>* const entries, fit::function<void()> done) {
+  GetEntriesRecursive(snapshot, entries, nullptr /* next_token */, std::move(done));
 }
 
 }  // namespace modular

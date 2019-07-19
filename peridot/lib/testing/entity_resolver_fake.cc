@@ -10,8 +10,7 @@ namespace modular {
 
 class EntityResolverFake::EntityImpl : fuchsia::modular::Entity {
  public:
-  EntityImpl(std::map<std::string, std::string> types_and_data)
-      : types_and_data_(types_and_data) {}
+  EntityImpl(std::map<std::string, std::string> types_and_data) : types_and_data_(types_and_data) {}
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::Entity> request) {
     bindings_.AddBinding(this, std::move(request));
@@ -36,15 +35,13 @@ class EntityResolverFake::EntityImpl : fuchsia::modular::Entity {
     }
     fsl::SizedVmo vmo;
     FXL_CHECK(fsl::VmoFromString(it->second, &vmo));
-    auto vmo_ptr =
-        std::make_unique<fuchsia::mem::Buffer>(std::move(vmo).ToTransport());
+    auto vmo_ptr = std::make_unique<fuchsia::mem::Buffer>(std::move(vmo).ToTransport());
 
     callback(std::move(vmo_ptr));
   }
 
   // |fuchsia::modular::Entity|
-  void WriteData(std::string type, fuchsia::mem::Buffer data,
-                 WriteDataCallback callback) override {
+  void WriteData(std::string type, fuchsia::mem::Buffer data, WriteDataCallback callback) override {
     // TODO(rosswang)
     callback(fuchsia::modular::EntityWriteStatus::READ_ONLY);
   }
@@ -56,9 +53,8 @@ class EntityResolverFake::EntityImpl : fuchsia::modular::Entity {
   }
 
   // |fuchsia::modular::Entity|
-  void Watch(
-      std::string type,
-      fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override {
+  void Watch(std::string type,
+             fidl::InterfaceHandle<fuchsia::modular::EntityWatcher> watcher) override {
     // TODO(MI4-1301)
     FXL_NOTIMPLEMENTED();
   }
@@ -71,16 +67,14 @@ class EntityResolverFake::EntityImpl : fuchsia::modular::Entity {
 EntityResolverFake::EntityResolverFake() = default;
 EntityResolverFake::~EntityResolverFake() = default;
 
-void EntityResolverFake::Connect(
-    fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) {
+void EntityResolverFake::Connect(fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 // Returns an fuchsia::modular::Entity reference that will resolve to an
 // fuchsia::modular::Entity. |types_and_data| is a map of data type to data
 // bytes.
-fidl::StringPtr EntityResolverFake::AddEntity(
-    std::map<std::string, std::string> types_and_data) {
+fidl::StringPtr EntityResolverFake::AddEntity(std::map<std::string, std::string> types_and_data) {
   const std::string id = std::to_string(next_entity_id_++);
 
   auto entity = std::make_unique<EntityImpl>(std::move(types_and_data));
@@ -89,8 +83,7 @@ fidl::StringPtr EntityResolverFake::AddEntity(
 }
 
 void EntityResolverFake::ResolveEntity(
-    std::string entity_reference,
-    fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) {
+    std::string entity_reference, fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) {
   auto it = entities_.find(entity_reference);
   if (it == entities_.end()) {
     return;  // |entity_request| is reset here.

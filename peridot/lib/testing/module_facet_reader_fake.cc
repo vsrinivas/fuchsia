@@ -13,8 +13,8 @@ void ModuleFacetReaderFake::SetGetModuleManifestSink(
   sink_ = std::move(sink);
 }
 
-void ModuleFacetReaderFake::GetModuleManifest(
-    const std::string& module_url, GetModuleManifestCallback callback) {
+void ModuleFacetReaderFake::GetModuleManifest(const std::string& module_url,
+                                              GetModuleManifestCallback callback) {
   if (sink_) {
     sink_(module_url, std::move(callback));
   } else {

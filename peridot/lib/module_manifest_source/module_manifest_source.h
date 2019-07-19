@@ -17,8 +17,8 @@ namespace modular {
 // Abstract base class for all Module Manifest Source implementations.
 class ModuleManifestSource {
  public:
-  using NewEntryFn = fit::function<void(std::string /* source name*/,
-                                        fuchsia::modular::ModuleManifest)>;
+  using NewEntryFn =
+      fit::function<void(std::string /* source name*/, fuchsia::modular::ModuleManifest)>;
   using RemovedEntryFn = fit::function<void(std::string /* module uri */)>;
   using IdleFn = fit::function<void()>;
 
@@ -37,8 +37,8 @@ class ModuleManifestSource {
   // |new_fn| takes a string Entry id and the Entry itself.
   //
   // |removed_fn| takes only the string Entry id.
-  virtual void Watch(async_dispatcher_t* dispatcher, IdleFn idle_fn,
-                     NewEntryFn new_fn, RemovedEntryFn removed_fn) = 0;
+  virtual void Watch(async_dispatcher_t* dispatcher, IdleFn idle_fn, NewEntryFn new_fn,
+                     RemovedEntryFn removed_fn) = 0;
 };
 
 }  // namespace modular

@@ -10,8 +10,8 @@
 #include <string>
 
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/zx/time.h>
+#include <src/lib/fxl/macros.h>
 
 namespace modular {
 
@@ -91,10 +91,8 @@ class ClosureAsyncHolder : public AsyncHolderBase {
  public:
   using DoneCallback = fit::function<void()>;
 
-  ClosureAsyncHolder(std::string name,
-                     fit::function<void(DoneCallback)> on_teardown);
-  ClosureAsyncHolder(std::string name,
-                     fit::function<void(DoneCallback)> on_teardown,
+  ClosureAsyncHolder(std::string name, fit::function<void(DoneCallback)> on_teardown);
+  ClosureAsyncHolder(std::string name, fit::function<void(DoneCallback)> on_teardown,
                      fit::function<void()> on_reset);
   ~ClosureAsyncHolder() override;
 

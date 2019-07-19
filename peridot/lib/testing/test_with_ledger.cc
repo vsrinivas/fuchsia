@@ -42,8 +42,7 @@ bool TestWithLedger::RunLoopWithTimeout(zx::duration timeout) {
 
 bool TestWithLedger::RunLoopWithTimeoutOrUntil(fit::function<bool()> condition,
                                                zx::duration timeout) {
-  return RealLoopFixture::RunLoopWithTimeoutOrUntil(std::move(condition),
-                                                    timeout);
+  return RealLoopFixture::RunLoopWithTimeoutOrUntil(std::move(condition), timeout);
 }
 
 }  // namespace testing

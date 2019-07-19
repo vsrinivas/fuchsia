@@ -46,24 +46,19 @@ class SessionShellImpl : fuchsia::modular::SessionShell {
 
   // Configures the delay after which the return callback of DetachView() is
   // invoked. Used to test the timeout behavior of sessionmgr.
-  void set_detach_delay(zx::duration detach_delay) {
-    detach_delay_ = std::move(detach_delay);
-  }
+  void set_detach_delay(zx::duration detach_delay) { detach_delay_ = std::move(detach_delay); }
 
  private:
   // |SessionShell|
-  void AttachView(
-      fuchsia::modular::ViewIdentifier view_id,
-      fuchsia::ui::views::ViewHolderToken view_holder_token) override;
+  void AttachView(fuchsia::modular::ViewIdentifier view_id,
+                  fuchsia::ui::views::ViewHolderToken view_holder_token) override;
 
   // |SessionShell|
-  void AttachView2(
-      fuchsia::modular::ViewIdentifier view_id,
-      fuchsia::ui::views::ViewHolderToken view_holder_token) override;
+  void AttachView2(fuchsia::modular::ViewIdentifier view_id,
+                   fuchsia::ui::views::ViewHolderToken view_holder_token) override;
 
   // |SessionShell|
-  void DetachView(fuchsia::modular::ViewIdentifier view_id,
-                  fit::function<void()> done) override;
+  void DetachView(fuchsia::modular::ViewIdentifier view_id, fit::function<void()> done) override;
 
   fidl::BindingSet<fuchsia::modular::SessionShell> bindings_;
   fit::function<void(ViewId view_id)> on_attach_view_{[](ViewId) {}};

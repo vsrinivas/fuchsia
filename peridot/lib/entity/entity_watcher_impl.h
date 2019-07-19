@@ -5,12 +5,12 @@
 #ifndef PERIDOT_LIB_ENTITY_ENTITY_WATCHER_IMPL_H_
 #define PERIDOT_LIB_ENTITY_ENTITY_WATCHER_IMPL_H_
 
+#include <memory>
+
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>
-
-#include <memory>
 
 namespace modular {
 
@@ -19,14 +19,10 @@ namespace modular {
 class EntityWatcherImpl : public fuchsia::modular::EntityWatcher {
  public:
   EntityWatcherImpl();
-  EntityWatcherImpl(
-      fit::function<void(std::unique_ptr<fuchsia::mem::Buffer> value)>
-          callback);
+  EntityWatcherImpl(fit::function<void(std::unique_ptr<fuchsia::mem::Buffer> value)> callback);
 
   // Sets the callback which will be called with the updated entity value.
-  void SetOnUpdated(
-      fit::function<void(std::unique_ptr<fuchsia::mem::Buffer> value)>
-          callback);
+  void SetOnUpdated(fit::function<void(std::unique_ptr<fuchsia::mem::Buffer> value)> callback);
 
   // Binds |request| to this EntityWatcher implementation.
   void Connect(fidl::InterfaceRequest<fuchsia::modular::EntityWatcher> request);

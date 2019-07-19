@@ -26,8 +26,7 @@ bool Base64UrlDecode(fxl::StringView input, std::string* output) {
   std::string tmp_output;
   size_t output_maxlength = modp_b64_decode_len(input.size());
   tmp_output.resize(output_maxlength);
-  size_t output_length =
-      modp_b64_decode(&tmp_output[0], input.data(), input.size());
+  size_t output_length = modp_b64_decode(&tmp_output[0], input.data(), input.size());
   if (output_length == MODP_B64_ERROR) {
     return false;
   }

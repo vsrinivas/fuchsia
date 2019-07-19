@@ -9,8 +9,7 @@ namespace modular_config {
 
 constexpr char kBasemgrConfigName[] = "basemgr";
 constexpr char kSessionmgrConfigName[] = "sessionmgr";
-constexpr char kSessionmgrUrl[] =
-    "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx";
+constexpr char kSessionmgrUrl[] = "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx";
 
 constexpr char kDefaultConfigDir[] = "/config/data";
 constexpr char kOverriddenConfigDir[] = "/config_override/data";
@@ -46,8 +45,7 @@ constexpr char kEnableCobalt[] = "enable_cobalt";
 constexpr char kEnablePresenter[] = "enable_presenter";
 constexpr char kTest[] = "test";
 constexpr char kUseMinfs[] = "use_minfs";
-constexpr char kUseSessionShellForStoryShellFactory[] =
-    "use_session_shell_for_story_shell_factory";
+constexpr char kUseSessionShellForStoryShellFactory[] = "use_session_shell_for_story_shell_factory";
 
 // Sessionmgr constants
 constexpr char kComponentArgs[] = "component_args";
@@ -67,8 +65,7 @@ inline constexpr char kDefaultBaseShellUrl[] =
 inline constexpr char kDefaultSessionShellUrl[] =
     "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/"
     "ermine_session_shell.cmx";
-constexpr char kDefaultStoryShellUrl[] =
-    "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx";
+constexpr char kDefaultStoryShellUrl[] = "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx";
 constexpr char kBaseShell[] = "base_shell";
 constexpr char kKeepAliveAfterLogin[] = "keep_alive_after_login";
 constexpr char kName[] = "name";
@@ -86,10 +83,8 @@ constexpr char kSessionmgrArgs[] = "sessionmgr_args";
 constexpr char kDisableStatistics[] = "disable_statistics";
 constexpr char kNoCloudProviderForLedger[] = "no_cloud_provider_for_ledger";
 constexpr char kNoMinfs[] = "no_minfs";
-constexpr char kRunBaseShellWithTestRunner[] =
-    "run_base_shell_with_test_runner";
-constexpr char kUseCloudProviderFromEnvironment[] =
-    "use_cloud_provider_from_environment";
+constexpr char kRunBaseShellWithTestRunner[] = "run_base_shell_with_test_runner";
+constexpr char kUseCloudProviderFromEnvironment[] = "use_cloud_provider_from_environment";
 
 }  // namespace modular_config
 

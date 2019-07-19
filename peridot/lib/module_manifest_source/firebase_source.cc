@@ -8,14 +8,15 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
 #include <thread>
 
 #include <lib/async/cpp/task.h>
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/fdio/watcher.h>
+#include <lib/network_wrapper/network_wrapper_impl.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
-#include <lib/network_wrapper/network_wrapper_impl.h>
 
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/firebase/firebase_impl.h"
@@ -29,8 +30,7 @@ namespace http = ::fuchsia::net::oldhttp;
 class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
  public:
   Watcher(async_dispatcher_t* dispatcher, ModuleManifestSource::IdleFn idle_fn,
-          ModuleManifestSource::NewEntryFn new_fn,
-          ModuleManifestSource::RemovedEntryFn removed_fn,
+          ModuleManifestSource::NewEntryFn new_fn, ModuleManifestSource::RemovedEntryFn removed_fn,
           fxl::WeakPtr<FirebaseModuleManifestSource> owner)
       : dispatcher_(dispatcher),
         idle_fn_(std::move(idle_fn)),
@@ -62,8 +62,8 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
         return;
       }
 
-      for (rapidjson::Value::ConstMemberIterator it = value.MemberBegin();
-           it != value.MemberEnd(); ++it) {
+      for (rapidjson::Value::ConstMemberIterator it = value.MemberBegin(); it != value.MemberEnd();
+           ++it) {
         // When we get updates, the path is "/<module id>", so we add "/" here
         // to the member name.
         ProcessEntry(path + it->name.GetString(), it->value);
@@ -79,8 +79,7 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
       }
     }
   }
-  void OnPatch(const std::string& path,
-               const rapidjson::Value& value) override {}
+  void OnPatch(const std::string& path, const rapidjson::Value& value) override {}
   void OnCancel() override {}
   void OnAuthRevoked(const std::string& reason) override {}
 
@@ -99,8 +98,7 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
     }
 
     // Try to reconnect.
-    FXL_LOG(INFO) << "Reconnecting to Firebase in " << reconnect_wait_seconds_
-                  << " seconds.";
+    FXL_LOG(INFO) << "Reconnecting to Firebase in " << reconnect_wait_seconds_ << " seconds.";
     async::PostDelayedTask(
         dispatcher_,
         [owner = owner_, this]() {
@@ -145,16 +143,14 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
 };
 
 FirebaseModuleManifestSource::FirebaseModuleManifestSource(
-    async_dispatcher_t* dispatcher,
-    fit::function<http::HttpServicePtr()> network_service_factory,
+    async_dispatcher_t* dispatcher, fit::function<http::HttpServicePtr()> network_service_factory,
     std::string db_id, std::string prefix)
     : db_id_(db_id),
       prefix_(prefix),
       network_wrapper_(new network_wrapper::NetworkWrapperImpl(
           dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
           std::move(network_service_factory))),
-      client_(
-          new firebase::FirebaseImpl(network_wrapper_.get(), db_id, prefix)),
+      client_(new firebase::FirebaseImpl(network_wrapper_.get(), db_id, prefix)),
       weak_factory_(this) {}
 
 FirebaseModuleManifestSource::~FirebaseModuleManifestSource() {
@@ -163,12 +159,10 @@ FirebaseModuleManifestSource::~FirebaseModuleManifestSource() {
   }
 }
 
-void FirebaseModuleManifestSource::Watch(async_dispatcher_t* dispatcher,
-                                         IdleFn idle_fn, NewEntryFn new_fn,
-                                         RemovedEntryFn removed_fn) {
-  auto watcher = std::make_unique<Watcher>(
-      dispatcher, std::move(idle_fn), std::move(new_fn), std::move(removed_fn),
-      weak_factory_.GetWeakPtr());
+void FirebaseModuleManifestSource::Watch(async_dispatcher_t* dispatcher, IdleFn idle_fn,
+                                         NewEntryFn new_fn, RemovedEntryFn removed_fn) {
+  auto watcher = std::make_unique<Watcher>(dispatcher, std::move(idle_fn), std::move(new_fn),
+                                           std::move(removed_fn), weak_factory_.GetWeakPtr());
 
   StartWatching(watcher.get());
   watchers_.push_back(std::move(watcher));

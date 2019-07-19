@@ -11,14 +11,11 @@
 
 namespace modular {
 
-extern const XdrFilterType<fuchsia::modular::ModuleManifest>
-    XdrModuleManifest[];
+extern const XdrFilterType<fuchsia::modular::ModuleManifest> XdrModuleManifest[];
 
-void XdrModuleManifest_v1(XdrContext* const xdr,
-                          fuchsia::modular::ModuleManifest* const data);
+void XdrModuleManifest_v1(XdrContext* const xdr, fuchsia::modular::ModuleManifest* const data);
 
-void XdrModuleManifest_v2(XdrContext* const xdr,
-                          fuchsia::modular::ModuleManifest* const data);
+void XdrModuleManifest_v2(XdrContext* const xdr, fuchsia::modular::ModuleManifest* const data);
 
 }  // namespace modular
 

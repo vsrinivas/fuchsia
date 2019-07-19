@@ -5,14 +5,14 @@
 #ifndef PERIDOT_LIB_UTIL_PSEUDO_DIR_SERVER_H_
 #define PERIDOT_LIB_UTIL_PSEUDO_DIR_SERVER_H_
 
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <src/lib/files/unique_fd.h>
-
-#include <condition_variable>
-#include <mutex>
-#include <thread>
 
 namespace modular {
 

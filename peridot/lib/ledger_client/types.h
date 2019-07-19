@@ -16,9 +16,7 @@ using LedgerPageId = fuchsia::ledger::PageId;
 using LedgerPageKey = fidl::VectorPtr<uint8_t>;
 using LedgerToken = std::unique_ptr<fuchsia::ledger::Token>;
 
-inline bool PageIdsEqual(const LedgerPageId& a, const LedgerPageId& b) {
-  return a.id == b.id;
-}
+inline bool PageIdsEqual(const LedgerPageId& a, const LedgerPageId& b) { return a.id == b.id; }
 
 }  // namespace modular
 

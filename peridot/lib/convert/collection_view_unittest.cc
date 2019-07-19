@@ -33,8 +33,8 @@ namespace convert {
 namespace {
 
 template <typename T>
-::testing::AssertionResult Equals(const T& collection, size_t begin,
-                                  size_t length, CollectionView<T> view) {
+::testing::AssertionResult Equals(const T& collection, size_t begin, size_t length,
+                                  CollectionView<T> view) {
   auto it1 = std::next(collection.begin(), begin);
   auto it2 = view.begin();
   for (size_t i = 0; i < length; ++i) {
@@ -55,8 +55,7 @@ template <typename T>
 using CollectionViewTest = ::testing::Test;
 
 using CollectionTypes =
-    ::testing::Types<std::vector<uint32_t>, std::unordered_set<uint32_t>,
-                     std::set<uint32_t>>;
+    ::testing::Types<std::vector<uint32_t>, std::unordered_set<uint32_t>, std::set<uint32_t>>;
 
 TYPED_TEST_SUITE(CollectionViewTest, CollectionTypes);
 
@@ -66,8 +65,7 @@ TYPED_TEST(CollectionViewTest, Views) {
 
   EXPECT_TRUE(Equals(values, 0, values.size(), view));
   EXPECT_TRUE(Equals(values, 1, values.size(), view.Tail()));
-  EXPECT_TRUE(Equals(values, 1, values.size() - 2,
-                     view.SubCollection(1, values.size() - 2)));
+  EXPECT_TRUE(Equals(values, 1, values.size() - 2, view.SubCollection(1, values.size() - 2)));
   EXPECT_EQ(*std::next(values.begin()), view.Tail()[0]);
 }
 

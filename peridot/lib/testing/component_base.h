@@ -25,9 +25,7 @@ namespace testing {
 template <typename Component>
 class ComponentBase : protected SingleServiceApp<Component> {
  public:
-  void Terminate(fit::function<void()> done) override {
-    modular::testing::Done(std::move(done));
-  }
+  void Terminate(fit::function<void()> done) override { modular::testing::Done(std::move(done)); }
 
  protected:
   // Invocations of methods of the base class must be unambiguously recognizable
@@ -48,9 +46,7 @@ class ComponentBase : protected SingleServiceApp<Component> {
   // We must not call testing::Init() in the base class
   // constructor, because that's before the test points are initialized. It's
   // fine to call this from the derived class constructor.
-  void TestInit(const char* const file) {
-    testing::Init(Base::component_context(), file);
-  }
+  void TestInit(const char* const file) { testing::Init(Base::component_context(), file); }
 
   // Wraps the callback function into a layer that protects executing the
   // callback in the argument against execution after this instance is deleted,
@@ -76,9 +72,7 @@ class ComponentBase : protected SingleServiceApp<Component> {
 template <>
 class ComponentBase<void> : protected ViewApp {
  public:
-  void Terminate(fit::function<void()> done) override {
-    modular::testing::Done(std::move(done));
-  }
+  void Terminate(fit::function<void()> done) override { modular::testing::Done(std::move(done)); }
 
  protected:
   ComponentBase(sys::ComponentContext* const component_context)
@@ -89,9 +83,7 @@ class ComponentBase<void> : protected ViewApp {
   // We must not call testing::Init() in the base class
   // constructor, because that's before the test points are initialized. It's
   // fine to call this from the derived class constructor.
-  void TestInit(const char* const file) {
-    testing::Init(ViewApp::component_context(), file);
-  }
+  void TestInit(const char* const file) { testing::Init(ViewApp::component_context(), file); }
 
   // Wraps the callback function into a layer that protects executing the
   // callback in the argument against execution after this instance is deleted,

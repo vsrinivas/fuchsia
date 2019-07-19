@@ -5,15 +5,15 @@
 #ifndef PERIDOT_LIB_MODULE_MANIFEST_SOURCE_MODULE_PACKAGE_SOURCE_H_
 #define PERIDOT_LIB_MODULE_MANIFEST_SOURCE_MODULE_PACKAGE_SOURCE_H_
 
-#include <fuchsia/maxwell/internal/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
-#include <lib/sys/cpp/component_context.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
-
 #include <functional>
 #include <map>
 #include <string>
 #include <vector>
+
+#include <fuchsia/maxwell/internal/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
@@ -35,13 +35,11 @@ class ModulePackageSource : public ModuleManifestSource,
 
  private:
   // |ModulePackageIndexer|
-  void IndexManifest(std::string package_name,
-                     std::string module_manifest_path) override;
+  void IndexManifest(std::string package_name, std::string module_manifest_path) override;
 
   const std::string dir_;
   NewEntryFn new_entry_fn_;
-  fidl::BindingSet<::fuchsia::maxwell::internal::ModulePackageIndexer>
-      indexer_bindings_;
+  fidl::BindingSet<::fuchsia::maxwell::internal::ModulePackageIndexer> indexer_bindings_;
   async_dispatcher_t* dispatcher_;
 
   fxl::WeakPtrFactory<ModulePackageSource> weak_factory_;

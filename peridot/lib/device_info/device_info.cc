@@ -7,13 +7,14 @@
 #include <limits.h>
 #include <unistd.h>
 
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
-#include "src/lib/uuid/uuid.h"
 #include <src/lib/fxl/strings/string_printf.h>
 #include <src/lib/fxl/strings/trim.h>
+
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/uuid/uuid.h"
 
 namespace modular {
 
@@ -99,8 +100,7 @@ std::string LoadDeviceName(const std::string& user) {
     // that the network stack may not have started.
     // TODO(jimbe) Don't write the result of gethostname() to this file once
     // NET-79 is fixed. (Maybe write an empty file so users can find it.)
-    bool success =
-        files::WriteFile(path, device_name.data(), device_name.length());
+    bool success = files::WriteFile(path, device_name.data(), device_name.length());
     FXL_DCHECK(success);
   }
 

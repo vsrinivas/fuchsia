@@ -5,6 +5,8 @@
 #ifndef PERIDOT_LIB_FIDL_SINGLE_SERVICE_APP_H_
 #define PERIDOT_LIB_FIDL_SINGLE_SERVICE_APP_H_
 
+#include <memory>
+
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
@@ -12,8 +14,6 @@
 #include <lib/zx/eventpair.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
-
-#include <memory>
 
 namespace modular {
 
@@ -24,13 +24,11 @@ class ViewApp : private fuchsia::ui::app::ViewProvider {
  public:
   ViewApp(sys::ComponentContext* const component_context)
       : component_context_(component_context), view_provider_binding_(this) {
-    component_context_->outgoing()
-        ->AddPublicService<fuchsia::ui::app::ViewProvider>(
-            [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>
-                       request) {
-              FXL_DCHECK(!view_provider_binding_.is_bound());
-              view_provider_binding_.Bind(std::move(request));
-            });
+    component_context_->outgoing()->AddPublicService<fuchsia::ui::app::ViewProvider>(
+        [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
+          FXL_DCHECK(!view_provider_binding_.is_bound());
+          view_provider_binding_.Bind(std::move(request));
+        });
   }
 
   ~ViewApp() override = default;
@@ -38,17 +36,14 @@ class ViewApp : private fuchsia::ui::app::ViewProvider {
   virtual void Terminate(fit::function<void()> done) { done(); }
 
  protected:
-  sys::ComponentContext* component_context() const {
-    return component_context_;
-  }
+  sys::ComponentContext* component_context() const { return component_context_; }
 
  private:
   // |ViewProvider| -- Derived classes should override this method.
   void CreateView(
       zx::eventpair /*view_token*/,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
-      fidl::InterfaceHandle<
-          fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {}
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {}
 
   sys::ComponentContext* const component_context_;
   fidl::Binding<fuchsia::ui::app::ViewProvider> view_provider_binding_;

@@ -11,8 +11,8 @@
 #include <flatbuffers/flatbuffers.h>
 #include <leveldb/db.h>
 #include <lib/fidl/cpp/vector.h>
-#include <src/lib/fxl/strings/string_view.h>
 #include <rapidjson/document.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 namespace convert {
 
@@ -29,11 +29,9 @@ namespace convert {
 class ExtendedStringView : public fxl::StringView {
  public:
   ExtendedStringView(const std::vector<uint8_t>& array)  // NOLINT
-      : fxl::StringView(reinterpret_cast<const char*>(array.data()),
-                        array.size()) {}
+      : fxl::StringView(reinterpret_cast<const char*>(array.data()), array.size()) {}
   ExtendedStringView(const fidl::VectorPtr<uint8_t>& array)  // NOLINT
-      : fxl::StringView(reinterpret_cast<const char*>(array->data()),
-                        array->size()) {}
+      : fxl::StringView(reinterpret_cast<const char*>(array->data()), array->size()) {}
   template <size_t N>
   constexpr ExtendedStringView(const std::array<uint8_t, N>& array)  // NOLINT
       : fxl::StringView(reinterpret_cast<const char*>(array.data()), N) {}
@@ -52,13 +50,12 @@ class ExtendedStringView : public fxl::StringView {
       : fxl::StringView(str) {}
   ExtendedStringView(  // NOLINT
       const flatbuffers::Vector<uint8_t>* byte_storage)
-      : fxl::StringView(reinterpret_cast<const char*>(byte_storage->data()),
-                        byte_storage->size()) {}
+      : fxl::StringView(reinterpret_cast<const char*>(byte_storage->data()), byte_storage->size()) {
+  }
   ExtendedStringView(  // NOLINT
       const flatbuffers::FlatBufferBuilder& buffer_builder)
-      : fxl::StringView(
-            reinterpret_cast<char*>(buffer_builder.GetBufferPointer()),
-            buffer_builder.GetSize()) {}
+      : fxl::StringView(reinterpret_cast<char*>(buffer_builder.GetBufferPointer()),
+                        buffer_builder.GetSize()) {}
 
   operator leveldb::Slice() const {  // NOLINT
     return leveldb::Slice(data(), size());
@@ -73,9 +70,7 @@ class ExtendedStringView : public fxl::StringView {
 };
 
 // Returns the ExtendedStringView representation of the given value.
-inline ExtendedStringView ToStringView(ExtendedStringView value) {
-  return value;
-}
+inline ExtendedStringView ToStringView(ExtendedStringView value) { return value; }
 
 // Returns the representation of the given value in LevelDB.
 inline leveldb::Slice ToSlice(ExtendedStringView value) { return value; }
@@ -104,9 +99,7 @@ flatbuffers::Offset<flatbuffers::Vector<uint8_t>> ToFlatBufferVector(
 // std::string in a container with the key type of std::string.
 struct StringViewComparator {
   using is_transparent = std::true_type;
-  bool operator()(const std::string& lhs, const std::string& rhs) const {
-    return lhs < rhs;
-  }
+  bool operator()(const std::string& lhs, const std::string& rhs) const { return lhs < rhs; }
   bool operator()(ExtendedStringView lhs, const std::string& rhs) const {
     return lhs < fxl::StringView(rhs);
   }

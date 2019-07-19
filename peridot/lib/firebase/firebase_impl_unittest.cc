@@ -11,12 +11,12 @@
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fsl/socket/strings.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/network_wrapper/fake_network_wrapper.h>
 #include <lib/network_wrapper/network_wrapper_impl.h>
 #include <rapidjson/document.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 
 #include "peridot/lib/socket/socket_pair.h"
 
@@ -38,8 +38,7 @@ class FirebaseImplTest : public gtest::TestLoopFixture, public WatchClient {
     put_data_.emplace_back(value, document_.GetAllocator());
   }
 
-  void OnPatch(const std::string& path,
-               const rapidjson::Value& value) override {
+  void OnPatch(const std::string& path, const rapidjson::Value& value) override {
     patch_count_++;
     patch_paths_.push_back(path);
     patch_data_.emplace_back(value, document_.GetAllocator());
@@ -89,9 +88,8 @@ TEST_F(FirebaseImplTest, Get) {
   bool called;
   Status status;
   std::unique_ptr<rapidjson::Value> value;
-  firebase_.Get(
-      "bazinga", {},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &value));
+  firebase_.Get("bazinga", {},
+                callback::Capture(callback::SetWhenCalled(&called), &status, &value));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -109,9 +107,8 @@ TEST_F(FirebaseImplTest, GetError) {
   bool called;
   Status status;
   std::unique_ptr<rapidjson::Value> value;
-  firebase_.Get(
-      "bazinga", {},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &value));
+  firebase_.Get("bazinga", {},
+                callback::Capture(callback::SetWhenCalled(&called), &status, &value));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -125,8 +122,7 @@ TEST_F(FirebaseImplTest, GetWithSingleQueryParam) {
   bool called;
   Status status;
   firebase_.Get("bazinga", {"orderBy=\"timestamp\""},
-                callback::Capture(callback::SetWhenCalled(&called), &status,
-                                  &std::ignore));
+                callback::Capture(callback::SetWhenCalled(&called), &status, &std::ignore));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -143,8 +139,7 @@ TEST_F(FirebaseImplTest, GetWithTwoQueryParams) {
   bool called;
   Status status;
   firebase_.Get("bazinga", {"one_param", "other_param=bla"},
-                callback::Capture(callback::SetWhenCalled(&called), &status,
-                                  &std::ignore));
+                callback::Capture(callback::SetWhenCalled(&called), &status, &std::ignore));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::PARSE_ERROR, status);
@@ -160,9 +155,7 @@ TEST_F(FirebaseImplTest, Root) {
   fake_network_wrapper_.SetStringResponse("42", 200);
   bool called;
   Status status;
-  firebase_.Get("", {},
-                callback::Capture(callback::SetWhenCalled(&called), &status,
-                                  &std::ignore));
+  firebase_.Get("", {}, callback::Capture(callback::SetWhenCalled(&called), &status, &std::ignore));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -195,8 +188,7 @@ TEST_F(FirebaseImplTest, Patch) {
   bool called;
   Status status;
   std::string data = R"({"name":"Alice"})";
-  firebase_.Patch("person", {}, data,
-                  callback::Capture(callback::SetWhenCalled(&called), &status));
+  firebase_.Patch("person", {}, data, callback::Capture(callback::SetWhenCalled(&called), &status));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -211,8 +203,7 @@ TEST_F(FirebaseImplTest, Delete) {
   fake_network_wrapper_.SetStringResponse("", 200);
   bool called;
   Status status;
-  firebase_.Delete(
-      "name", {}, callback::Capture(callback::SetWhenCalled(&called), &status));
+  firebase_.Delete("name", {}, callback::Capture(callback::SetWhenCalled(&called), &status));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -234,8 +225,7 @@ TEST_F(FirebaseImplTest, WatchRequest) {
   EXPECT_EQ("GET", fake_network_wrapper_.GetRequest()->method);
   EXPECT_EQ(1u, fake_network_wrapper_.GetRequest()->headers->size());
   EXPECT_EQ("Accept", fake_network_wrapper_.GetRequest()->headers->at(0).name);
-  EXPECT_EQ("text/event-stream",
-            fake_network_wrapper_.GetRequest()->headers->at(0).value);
+  EXPECT_EQ("text/event-stream", fake_network_wrapper_.GetRequest()->headers->at(0).value);
 }
 
 TEST_F(FirebaseImplTest, WatchRequestWithQuery) {
@@ -251,8 +241,7 @@ TEST_F(FirebaseImplTest, WatchRequestWithQuery) {
   EXPECT_EQ("GET", fake_network_wrapper_.GetRequest()->method);
   EXPECT_EQ(1u, fake_network_wrapper_.GetRequest()->headers->size());
   EXPECT_EQ("Accept", fake_network_wrapper_.GetRequest()->headers->at(0).name);
-  EXPECT_EQ("text/event-stream",
-            fake_network_wrapper_.GetRequest()->headers->at(0).value);
+  EXPECT_EQ("text/event-stream", fake_network_wrapper_.GetRequest()->headers->at(0).value);
 }
 
 TEST_F(FirebaseImplTest, WatchPut) {

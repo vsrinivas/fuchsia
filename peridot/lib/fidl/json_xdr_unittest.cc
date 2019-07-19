@@ -4,10 +4,10 @@
 
 #include "peridot/lib/fidl/json_xdr.h"
 
-#include <test/peridot/lib/fidl/jsonxdr/cpp/fidl.h>
-
 #include <map>
 #include <vector>
+
+#include <test/peridot/lib/fidl/jsonxdr/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 
@@ -297,8 +297,7 @@ void XdrUnion(XdrContext* const xdr, json_xdr_unittest::Union* const data) {
           break;
         }
         case json_xdr_unittest::Union::Tag::Invalid:
-          ASSERT_TRUE(false) << "XdrUnion TO_JSON unknown tag: "
-                             << static_cast<int>(data->Which());
+          ASSERT_TRUE(false) << "XdrUnion TO_JSON unknown tag: " << static_cast<int>(data->Which());
           break;
       }
 
@@ -864,12 +863,10 @@ TEST(Xdr, FidlArray) {
 }
 
 template <typename FillWithDefaultValues>
-void XdrFillWithDefaultValues_v1(
-    XdrContext* const xdr,
-    json_xdr_unittest::FillWithDefaultValues* const data) {
+void XdrFillWithDefaultValues_v1(XdrContext* const xdr,
+                                 json_xdr_unittest::FillWithDefaultValues* const data) {
   bool has_string = data->has_string();
-  xdr->FieldWithDefault("string", data->mutable_string(), has_string,
-                        std::string("string"));
+  xdr->FieldWithDefault("string", data->mutable_string(), has_string, std::string("string"));
   bool has_bool = data->has_bool();
   xdr->FieldWithDefault("bool", data->mutable_bool_(), has_bool, true);
   bool has_int8 = data->has_int8();
@@ -883,23 +880,17 @@ void XdrFillWithDefaultValues_v1(
   bool has_uint8 = data->has_uint8();
   xdr->FieldWithDefault("uint8", data->mutable_uint8(), has_uint8, (uint8_t)5);
   bool has_uint16 = data->has_uint16();
-  xdr->FieldWithDefault("uint16", data->mutable_uint16(), has_uint16,
-                        (uint16_t)6);
+  xdr->FieldWithDefault("uint16", data->mutable_uint16(), has_uint16, (uint16_t)6);
   bool has_uint32 = data->has_uint32();
-  xdr->FieldWithDefault("uint32", data->mutable_uint32(), has_uint32,
-                        (uint32_t)7);
+  xdr->FieldWithDefault("uint32", data->mutable_uint32(), has_uint32, (uint32_t)7);
   bool has_uint64 = data->has_uint64();
-  xdr->FieldWithDefault("uint64", data->mutable_uint64(), has_uint64,
-                        (uint64_t)8);
+  xdr->FieldWithDefault("uint64", data->mutable_uint64(), has_uint64, (uint64_t)8);
   bool has_float32 = data->has_float32();
-  xdr->FieldWithDefault("float32", data->mutable_float32(), has_float32,
-                        (float)9);
+  xdr->FieldWithDefault("float32", data->mutable_float32(), has_float32, (float)9);
   bool has_float64 = data->has_float64();
-  xdr->FieldWithDefault("float64", data->mutable_float64(), has_float64,
-                        (double)10);
+  xdr->FieldWithDefault("float64", data->mutable_float64(), has_float64, (double)10);
   bool has_enum = data->has_enum();
-  xdr->FieldWithDefault("enum", data->mutable_enum_(), has_enum,
-                        json_xdr_unittest::Enum::ZERO);
+  xdr->FieldWithDefault("enum", data->mutable_enum_(), has_enum, json_xdr_unittest::Enum::ZERO);
 
   std::vector<std::string> v = {"a", "vector"};
   bool has_vector_of_strings = data->has_vector_of_strings();
@@ -907,10 +898,9 @@ void XdrFillWithDefaultValues_v1(
                         has_vector_of_strings, v);
 }
 
-constexpr XdrFilterType<json_xdr_unittest::FillWithDefaultValues>
-    XdrFillWithDefaultType[] = {
-        XdrFillWithDefaultValues_v1<json_xdr_unittest::FillWithDefaultValues>,
-        nullptr,
+constexpr XdrFilterType<json_xdr_unittest::FillWithDefaultValues> XdrFillWithDefaultType[] = {
+    XdrFillWithDefaultValues_v1<json_xdr_unittest::FillWithDefaultValues>,
+    nullptr,
 };
 
 TEST(Xdr, FillWithDefaults) {

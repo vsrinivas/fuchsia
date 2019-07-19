@@ -5,6 +5,7 @@
 #include "peridot/lib/socket/socket_writer.h"
 
 #include <string.h>
+
 #include <algorithm>
 #include <utility>
 
@@ -20,10 +21,8 @@ constexpr size_t kDefaultSocketBufferSize = 256 * 1024u;
 SocketWriter::SocketWriter(Client* client, async_dispatcher_t* dispatcher)
     : client_(client), dispatcher_(dispatcher) {
   wait_.set_trigger(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED);
-  wait_.set_handler(
-      [this](async_dispatcher_t* dispatcher, async::Wait* wait,
-             zx_status_t status,
-             const zx_packet_signal_t* signal) { WriteData(data_view_); });
+  wait_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+                           const zx_packet_signal_t* signal) { WriteData(data_view_); });
 }
 
 SocketWriter::~SocketWriter() = default;
@@ -38,15 +37,14 @@ void SocketWriter::Start(zx::socket destination) {
 void SocketWriter::GetData() {
   FXL_DCHECK(data_.empty());
   wait_.Cancel();
-  client_->GetNext(offset_, kDefaultSocketBufferSize,
-                   [this](fxl::StringView data) {
-                     if (data.empty()) {
-                       Done();
-                       return;
-                     }
-                     offset_ += data.size();
-                     WriteData(data);
-                   });
+  client_->GetNext(offset_, kDefaultSocketBufferSize, [this](fxl::StringView data) {
+    if (data.empty()) {
+      Done();
+      return;
+    }
+    offset_ += data.size();
+    WriteData(data);
+  });
 }
 
 void SocketWriter::WriteData(fxl::StringView data) {
@@ -102,9 +100,8 @@ void StringSocketWriter::Start(std::string data, zx::socket destination) {
   socket_writer_.Start(std::move(destination));
 }
 
-void StringSocketWriter::GetNext(
-    size_t offset, size_t max_size,
-    fit::function<void(fxl::StringView)> callback) {
+void StringSocketWriter::GetNext(size_t offset, size_t max_size,
+                                 fit::function<void(fxl::StringView)> callback) {
   fxl::StringView data = data_;
   callback(data.substr(offset, max_size));
 }

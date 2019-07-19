@@ -20,8 +20,7 @@ class FakeAgentRunnerStorage : public AgentRunnerStorage {
   FakeAgentRunnerStorage() = default;
 
   // |AgentRunnerStorage|
-  void Initialize(NotificationDelegate* /*delegate*/,
-                  fit::function<void()> done) override {
+  void Initialize(NotificationDelegate* /*delegate*/, fit::function<void()> done) override {
     done();
   }
 
@@ -32,8 +31,7 @@ class FakeAgentRunnerStorage : public AgentRunnerStorage {
   }
 
   // |AgentRunnerStorage|
-  void DeleteTask(const std::string& /*agent_url*/,
-                  const std::string& /*task_id*/,
+  void DeleteTask(const std::string& /*agent_url*/, const std::string& /*task_id*/,
                   fit::function<void(bool)> done) override {
     done(true);
   }

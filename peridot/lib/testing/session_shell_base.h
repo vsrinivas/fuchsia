@@ -19,22 +19,17 @@ class SessionShellBase : public ComponentBase<void> {
 
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    component_context->outgoing()->AddPublicService(
-        session_shell_impl_.GetHandler());
+    component_context->outgoing()->AddPublicService(session_shell_impl_.GetHandler());
   }
 
  protected:
-  modular::testing::SessionShellImpl* session_shell_impl() {
-    return &session_shell_impl_;
-  }
+  modular::testing::SessionShellImpl* session_shell_impl() { return &session_shell_impl_; }
 
   fuchsia::modular::SessionShellContext* session_shell_context() {
     return session_shell_context_.get();
   }
 
-  fuchsia::modular::StoryProvider* story_provider() {
-    return story_provider_.get();
-  }
+  fuchsia::modular::StoryProvider* story_provider() { return story_provider_.get(); }
 
  private:
   modular::testing::SessionShellImpl session_shell_impl_;

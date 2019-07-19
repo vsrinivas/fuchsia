@@ -36,15 +36,9 @@ class Random {
     BitGenerator(const BitGenerator&) = default;
     BitGenerator& operator=(const BitGenerator&) = default;
 
-    static constexpr result_type min() {
-      return std::numeric_limits<result_type>::min();
-    }
-    static constexpr result_type max() {
-      return std::numeric_limits<result_type>::max();
-    }
-    constexpr double entropy() const noexcept {
-      return std::numeric_limits<result_type>::digits;
-    };
+    static constexpr result_type min() { return std::numeric_limits<result_type>::min(); }
+    static constexpr result_type max() { return std::numeric_limits<result_type>::max(); }
+    constexpr double entropy() const noexcept { return std::numeric_limits<result_type>::digits; };
     result_type operator()() { return random_->Draw<I>(); }
 
    private:
@@ -57,9 +51,7 @@ class Random {
   virtual ~Random() = default;
 
   // Fill |buffer| with |buffer_size| random bytes.
-  void Draw(void* buffer, size_t buffer_size) {
-    InternalDraw(buffer, buffer_size);
-  }
+  void Draw(void* buffer, size_t buffer_size) { InternalDraw(buffer, buffer_size); }
 
   // Fills |*string_like| with random bytes. |string_like| must have a random
   // access operator returning a non-const reference. |string_like must have a

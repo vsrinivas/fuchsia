@@ -19,8 +19,6 @@ fxl::StringView StatusToString(Status status) {
   }
 }
 
-std::ostream& operator<<(std::ostream& os, Status status) {
-  return os << StatusToString(status);
-}
+std::ostream& operator<<(std::ostream& os, Status status) { return os << StatusToString(status); }
 
 }  // namespace firebase
