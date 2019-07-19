@@ -4,12 +4,12 @@
 
 #include "wlantap-mac.h"
 
+#include <mutex>
+
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <wlan/common/channel.h>
-
-#include <mutex>
 
 #include "utils.h"
 #include "wlanmac-ifc-proxy.h"
@@ -23,8 +23,13 @@ namespace {
 
 struct WlantapMacImpl : WlantapMac {
   WlantapMacImpl(zx_device_t* phy_device, uint16_t id, wlan_device::MacRole role,
-                 const wlantap::WlantapPhyConfig* phy_config, Listener* listener)
-      : id_(id), role_(role), phy_config_(phy_config), listener_(listener) {}
+                 const wlantap::WlantapPhyConfig* phy_config, Listener* listener,
+                 zx::channel sme_channel)
+      : id_(id),
+        role_(role),
+        phy_config_(phy_config),
+        listener_(listener),
+        sme_channel_(std::move(sme_channel)) {}
 
   static void DdkUnbind(void* ctx) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
@@ -52,9 +57,13 @@ struct WlantapMacImpl : WlantapMac {
       if (self.ifc_) {
         return ZX_ERR_ALREADY_BOUND;
       }
+      if (!self.sme_channel_.is_valid()) {
+        return ZX_ERR_ALREADY_BOUND;
+      }
       self.ifc_ = WlanmacIfcClient{ifc, cookie};
     }
     self.listener_->WlantapMacStart(self.id_);
+    *out_sme_channel = self.sme_channel_.release();
     return ZX_OK;
   }
 
@@ -200,17 +209,19 @@ struct WlantapMacImpl : WlantapMac {
   WlanmacIfcClient ifc_ __TA_GUARDED(lock_);
   const wlantap::WlantapPhyConfig* phy_config_;
   Listener* listener_;
+  zx::channel sme_channel_;
 };
 
 }  // namespace
 
 zx_status_t CreateWlantapMac(zx_device_t* parent_phy, const wlan_device::MacRole role,
                              const wlantap::WlantapPhyConfig* phy_config, uint16_t id,
-                             WlantapMac::Listener* listener, WlantapMac** ret) {
+                             WlantapMac::Listener* listener, zx::channel sme_channel,
+                             WlantapMac** ret) {
   char name[ZX_MAX_NAME_LEN + 1];
   snprintf(name, sizeof(name), "%s-mac%u", device_get_name(parent_phy), id);
   std::unique_ptr<WlantapMacImpl> wlanmac(
-      new WlantapMacImpl(parent_phy, id, role, phy_config, listener));
+      new WlantapMacImpl(parent_phy, id, role, phy_config, listener, std::move(sme_channel)));
   static zx_protocol_device_t device_ops = {.version = DEVICE_OPS_VERSION,
                                             .unbind = &WlantapMacImpl::DdkUnbind,
                                             .release = &WlantapMacImpl::DdkRelease};

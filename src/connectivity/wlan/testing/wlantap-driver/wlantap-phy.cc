@@ -4,6 +4,8 @@
 
 #include "wlantap-phy.h"
 
+#include <array>
+
 #include <ddk/debug.h>
 #include <ddk/protocol/wlanphyimpl.h>
 #include <fuchsia/wlan/device/c/fidl.h>
@@ -13,8 +15,6 @@
 #include <wlan/common/phy.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/status.h>
-
-#include <array>
 
 #include "utils.h"
 #include "wlantap-mac.h"
@@ -191,26 +191,53 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     return std::find(v.cbegin(), v.cend(), t) != v.cend();
   }
 
+  static std::string RoleToString(wlan_device::MacRole role) {
+    switch (role) {
+      case wlan_device::MacRole::CLIENT:
+        return "client";
+      case wlan_device::MacRole::AP:
+        return "ap";
+      case wlan_device::MacRole::MESH:
+        return "mesh";
+      default:
+        return "invalid";
+    }
+  }
+
   zx_status_t CreateIface(const wlanphy_impl_create_iface_req_t* req, uint16_t* out_iface_id) {
     zxlogf(INFO, "wlantap phy: received a 'CreateIface' DDK request\n");
     wlan_device::MacRole dev_role = ConvertMacRole(req->role);
+    auto role_str = RoleToString(dev_role);
     if (!contains(phy_config_->phy_info.mac_roles, dev_role)) {
-      zxlogf(ERROR, "wlantap phy: CreateIface: role not supported\n");
+      zxlogf(ERROR, "wlantap phy: CreateIface(%s): role not supported\n", role_str.c_str());
       return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (!contains(phy_config_->phy_info.driver_features,
+                  wlan_common::DriverFeature::TEMP_DIRECT_SME_CHANNEL)) {
+      zxlogf(ERROR,
+             "wlantap phy: CraeteIface(%s): phy without SME channel support is not allowed.\n",
+             role_str.c_str());
+      ZX_ASSERT(0);
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx::channel sme_channel = zx::channel(req->sme_channel);
+    if (!sme_channel.is_valid()) {
+      return ZX_ERR_IO_INVALID;
     }
     std::lock_guard<std::mutex> guard(wlanmac_lock_);
     zx_status_t status = wlanmac_devices_.TryCreateNew(
         [&](uint16_t id, WlantapMac** out_dev) {
-          return CreateWlantapMac(device_, dev_role, phy_config_.get(), id, this, out_dev);
+          return CreateWlantapMac(device_, dev_role, phy_config_.get(), id, this,
+                                  std::move(sme_channel), out_dev);
         },
         out_iface_id);
     if (status != ZX_OK) {
-      zxlogf(ERROR,
-             "wlantap phy: CreateIface: maximum number of interfaces already "
-             "reached\n");
+      zxlogf(ERROR, "wlantap phy: CreateIface(%s): maximum number of interfaces already reached\n",
+             role_str.c_str());
       return ZX_ERR_NO_RESOURCES;
     }
-    zxlogf(INFO, "wlantap phy: CreateIface: success\n");
+    zxlogf(INFO, "wlantap phy: CreateIface(%s): success\n", role_str.c_str());
     return ZX_OK;
   }
 

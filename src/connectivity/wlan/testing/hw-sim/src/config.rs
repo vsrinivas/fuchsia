@@ -27,7 +27,11 @@ pub fn create_wlantap_config(
                 SupportedPhy::Ofdm,
                 SupportedPhy::Ht,
             ],
-            driver_features: vec![DriverFeature::Synth, DriverFeature::TxStatusReport],
+            driver_features: vec![
+                DriverFeature::TempDirectSmeChannel,
+                DriverFeature::Synth,
+                DriverFeature::TxStatusReport,
+            ],
             mac_roles: vec![mac_role],
             caps: vec![],
             bands: vec![create_2_4_ghz_band_info()],

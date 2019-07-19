@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+#include <mutex>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -14,9 +17,6 @@
 #include <wlan/protocol/wlantap.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
-
-#include <memory>
-#include <mutex>
 
 #include "wlantap-phy.h"
 
