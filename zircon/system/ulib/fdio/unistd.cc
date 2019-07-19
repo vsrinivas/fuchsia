@@ -1715,7 +1715,7 @@ static zx_status_t zx_utimens(fdio_t* io, const struct timespec times[2],
     // Extract modify time.
     if (times == NULL || times[1].tv_nsec == UTIME_NOW) {
         zx_time_t now = 0;
-        zx_status_t status = zx_clock_get_new(ZX_CLOCK_UTC, &now);
+        zx_status_t status = zx_clock_get(ZX_CLOCK_UTC, &now);
         if (status != ZX_OK) {
             return status;
         }

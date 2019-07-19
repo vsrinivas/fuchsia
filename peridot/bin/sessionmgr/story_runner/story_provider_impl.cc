@@ -639,7 +639,7 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
     auto on_run = Future<>::Create("StoryProviderImpl.OnFocusChange.on_run");
     auto done = on_run->AsyncMap([this, story_id = info->focused_story_id] {
       zx_time_t now = 0;
-      zx_clock_get_new(ZX_CLOCK_UTC, &now);
+      zx_clock_get(ZX_CLOCK_UTC, &now);
       return session_storage_->UpdateLastFocusedTimestamp(story_id, now);
     });
     fit::function<void()> callback = [] {};

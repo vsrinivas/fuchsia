@@ -268,7 +268,7 @@ impl Time {
     pub fn get(clock_id: ClockId) -> Time {
         unsafe {
             let mut now: sys::zx_time_t = 0;
-            sys::zx_clock_get_new(clock_id as u32, &mut now);
+            sys::zx_clock_get(clock_id as u32, &mut now);
             Time(now)
         }
     }

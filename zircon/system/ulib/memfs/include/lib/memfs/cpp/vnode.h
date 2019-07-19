@@ -43,7 +43,7 @@ public:
     bool IsDirectory() const final { return dnode_ != nullptr; }
     void UpdateModified() {
         zx_time_t now = 0;
-        zx_clock_get_new(ZX_CLOCK_UTC, &now);
+        zx_clock_get(ZX_CLOCK_UTC, &now);
         modify_time_ = now;
     }
 

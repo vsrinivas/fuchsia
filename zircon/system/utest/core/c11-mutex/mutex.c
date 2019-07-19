@@ -18,7 +18,7 @@ static mtx_t g_mutex = MTX_INIT;
 
 static void xlog(const char* str) {
     zx_time_t now = 0;
-    zx_clock_get_new(ZX_CLOCK_UTC, &now);
+    zx_clock_get(ZX_CLOCK_UTC, &now);
     unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
                     now / 1000000000, now % 1000000000, str);
 }
@@ -209,7 +209,7 @@ static bool test_timeout_elapsed(void) {
 
     for (int i = 0; i < 5; ++i) {
         zx_time_t now = 0;
-        ASSERT_EQ(ZX_OK, zx_clock_get_new(ZX_CLOCK_UTC, &now), "could not read clock");
+        ASSERT_EQ(ZX_OK, zx_clock_get(ZX_CLOCK_UTC, &now), "could not read clock");
         struct timespec then = {
             .tv_sec = now / ZX_SEC(1),
             .tv_nsec = now % ZX_SEC(1),
@@ -222,7 +222,7 @@ static bool test_timeout_elapsed(void) {
         int rc = mtx_timedlock(&args.mutex, &then);
         ASSERT_EQ(rc, thrd_timedout, "wait should time out");
         zx_time_t later = 0;
-        ASSERT_EQ(ZX_OK, zx_clock_get_new(ZX_CLOCK_UTC, &later), "could not read clock");
+        ASSERT_EQ(ZX_OK, zx_clock_get(ZX_CLOCK_UTC, &later), "could not read clock");
         zx_duration_t elapsed = zx_time_sub_time(later, now);
         EXPECT_GE(elapsed, kRelativeDeadline, "wait returned early");
     }

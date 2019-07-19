@@ -26,7 +26,7 @@ int __clock_gettime(clockid_t clk, struct timespec* ts) {
         return -1;
     }
     zx_time_t now;
-    zx_status_t status = _zx_clock_get_new(zx_clock, &now);
+    zx_status_t status = _zx_clock_get(zx_clock, &now);
     if (status != ZX_OK) {
         __builtin_trap();
     }

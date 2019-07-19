@@ -291,7 +291,7 @@ public:
 
     template <zx_clock_t kClockId>
     static zx_status_t get(basic_time<kClockId>* result) {
-        return zx_clock_get_new(kClockId, result->get_address());
+        return zx_clock_get(kClockId, result->get_address());
     }
 
     static time get_monotonic() {

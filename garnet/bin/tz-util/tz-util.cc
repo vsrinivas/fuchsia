@@ -57,7 +57,7 @@ class TzUtil {
     if (command_line.HasOption(kGetOffsetCmd)) {
       int32_t local_offset, dst_offset;
       zx_time_t milliseconds_since_epoch = 0;
-      zx_clock_get_new(ZX_CLOCK_UTC, &milliseconds_since_epoch);
+      zx_clock_get(ZX_CLOCK_UTC, &milliseconds_since_epoch);
       milliseconds_since_epoch /= ZX_MSEC(1);
       if (timezone_->GetTimezoneOffsetMinutes(
               milliseconds_since_epoch, &local_offset, &dst_offset) == ZX_OK) {

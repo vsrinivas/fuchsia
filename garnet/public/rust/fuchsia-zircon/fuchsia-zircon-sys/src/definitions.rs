@@ -4,10 +4,6 @@
 #[link(name = "zircon")]
 extern {
     pub fn zx_clock_get(
-        clock_id: zx_clock_t
-        ) -> zx_time_t;
-
-    pub fn zx_clock_get_new(
         clock_id: zx_clock_t,
         out: *mut zx_time_t
         ) -> zx_status_t;

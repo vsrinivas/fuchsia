@@ -116,7 +116,7 @@ bool ShouldRestartModuleForNewIntent(const fuchsia::modular::Intent& old_intent,
 
 zx_time_t GetNowUTC() {
   zx_time_t now = 0u;
-  zx_clock_get_new(ZX_CLOCK_UTC, &now);
+  zx_clock_get(ZX_CLOCK_UTC, &now);
   return now;
 }
 
@@ -239,7 +239,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     }
 
     zx_time_t now = 0;
-    zx_clock_get_new(ZX_CLOCK_UTC, &now);
+    zx_clock_get(ZX_CLOCK_UTC, &now);
     ReportModuleLaunchTime(module_data_.module_url, zx::duration(now - start_time_));
   }
 

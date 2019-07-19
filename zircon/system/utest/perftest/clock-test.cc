@@ -18,13 +18,13 @@ bool ClockGetMonotonicTest() {
 
 bool ClockGetUtcTest() {
     zx_time_t now = 0;
-    zx_clock_get_new(ZX_CLOCK_UTC, &now);
+    zx_clock_get(ZX_CLOCK_UTC, &now);
     return true;
 }
 
 bool ClockGetThreadTest() {
     zx_time_t now = 0;
-    zx_clock_get_new(ZX_CLOCK_THREAD, &now);
+    zx_clock_get(ZX_CLOCK_THREAD, &now);
     return true;
 }
 

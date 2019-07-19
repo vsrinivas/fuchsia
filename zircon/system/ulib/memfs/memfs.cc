@@ -123,7 +123,7 @@ std::atomic<uint64_t> VnodeMemfs::deleted_ino_ctr_ = 0;
 VnodeMemfs::VnodeMemfs(Vfs* vfs) : dnode_(nullptr), link_count_(0), vfs_(vfs),
     ino_(ino_ctr_.fetch_add(1, std::memory_order_relaxed)) {
     zx_time_t now = 0;
-    zx_clock_get_new(ZX_CLOCK_UTC, &now);
+    zx_clock_get(ZX_CLOCK_UTC, &now);
     create_time_ = modify_time_ = now;
 }
 
