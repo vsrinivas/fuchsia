@@ -6,6 +6,7 @@
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDERER_H_
 
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/debug/debug_rects.h"
 #include "src/ui/lib/escher/paper/paper_draw_call_factory.h"
 #include "src/ui/lib/escher/paper/paper_drawable.h"
 #include "src/ui/lib/escher/paper/paper_light.h"
@@ -141,8 +142,16 @@ class PaperRenderer final : public Renderer {
   // renderer - it should be completely opaque.
   PaperDrawCallFactory* draw_call_factory() { return &draw_call_factory_; }
 
-  // Draws debug text on top of output image
+  // Draws debug text on top of output image.
   void DrawDebugText(std::string text, vk::Offset2D offset, int32_t scale);
+
+  // Draws vertical line to the output image. The entire line will be to the right of |x_coord|.
+  void DrawVLine(DebugRects::Color kColor, uint32_t x_coord, int32_t y_start, uint32_t y_end,
+                 uint32_t thickness);
+
+  // Draws horizontal line to the output image. The entire line will be below |y_coord|.
+  void DrawHLine(DebugRects::Color kColor, int32_t y_coord, int32_t x_start, uint32_t x_end,
+                 int32_t thickness);
 
  private:
   explicit PaperRenderer(EscherWeakPtr escher, const PaperRendererConfig& config);
@@ -156,11 +165,17 @@ class PaperRenderer final : public Renderer {
     uint32_t eye_index;  // For PaperShaderPushConstants.
   };
 
-  // Stores relevant info about the text the user wants to draw on scene
+  // Store relevant info about text to draw to the output image.
   struct TextData {
     std::string text;
     vk::Offset2D offset;
     int32_t scale;
+  };
+
+  // Store relevant info about lines to draw to the output image.
+  struct LineData {
+    DebugRects::Color kColor;
+    vk::Rect2D rect;
   };
 
   // Stores all per-frame data in one place.
@@ -180,6 +195,7 @@ class PaperRenderer final : public Renderer {
     std::vector<CameraData> cameras;
 
     std::vector<TextData> texts;
+    std::vector<LineData> lines;
 
     // UniformBindings returned by PaperDrawCallFactory::BeginFrame().  These
     // contain camera and lighting parameters that are shared between draw
@@ -231,6 +247,7 @@ class PaperRenderer final : public Renderer {
   ShaderProgramPtr shadow_volume_lighting_program_;
 
   std::unique_ptr<DebugFont> debug_font_;
+  std::unique_ptr<DebugRects> debug_lines;
 };
 
 }  // namespace escher

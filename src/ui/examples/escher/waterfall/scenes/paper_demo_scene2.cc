@@ -4,6 +4,7 @@
 
 #include "src/ui/examples/escher/waterfall/scenes/paper_demo_scene2.h"
 
+#include "src/ui/lib/escher/debug/debug_rects.h"
 #include "src/ui/lib/escher/geometry/plane_ops.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/material/material.h"
@@ -54,6 +55,10 @@ void PaperDemoScene2::Update(const escher::Stopwatch& stopwatch, uint64_t frame_
   // Draws text to the screen
   renderer->DrawDebugText("ABC", {50, 50}, 20);
   renderer->DrawDebugText("CBZ", {800, 800}, 10);
+
+  // Draws lines on the screen
+  renderer->DrawVLine(escher::DebugRects::kPurple, 500, 100, 500, 20);
+  renderer->DrawHLine(escher::DebugRects::kBrown, 700, 100, 500, 20);
 }
 
 float PaperDemoScene2::AnimatedState::Update(float current_time_sec) {

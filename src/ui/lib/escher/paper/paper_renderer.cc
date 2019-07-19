@@ -9,6 +9,7 @@
 
 // TODO(ES-153): possibly delete.  See comment below about NUM_CLIP_PLANES.
 #include "src/ui/lib/escher/debug/debug_font.h"
+#include "src/ui/lib/escher/debug/debug_rects.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/geometry/tessellation.h"
 #include "src/ui/lib/escher/paper/paper_render_queue_context.h"
@@ -247,6 +248,9 @@ void PaperRenderer::EndFrame() {
 
   // We may need to lazily instantiate |debug_font|, or delete it. If the former, this needs to be
   // done before we submit the GPU uploader's tasks.
+
+  // TODO(ES-224): Clean up lazy instantiation. Right now, DebugFont and DebugRects are
+  // created/destroyed from frame-to-frame.
   if (config_.debug_frame_number) {
     DrawDebugText(std::to_string(frame_data_->frame->frame_number()), {10, 10}, 4);
   }
@@ -256,6 +260,14 @@ void PaperRenderer::EndFrame() {
     }
   } else {
     debug_font_.reset();
+  }
+
+  if (!frame_data_->lines.empty()) {
+    if (!debug_lines) {
+      debug_lines = DebugRects::New(frame_data_->gpu_uploader.get(), escher()->image_cache());
+    }
+  } else {
+    debug_lines.reset();
   }
 
   // TODO(ES-206): obtain a semaphore here that will be signalled by the
@@ -291,6 +303,30 @@ void PaperRenderer::EndFrame() {
 void PaperRenderer::DrawDebugText(std::string text, vk::Offset2D offset, int32_t scale) {
   FXL_DCHECK(frame_data_);
   frame_data_->texts.push_back({text, offset, scale});
+}
+
+void PaperRenderer::DrawVLine(escher::DebugRects::Color kColor, uint32_t x_coord, int32_t y_start,
+                              uint32_t y_end, uint32_t thickness) {
+  vk::Rect2D rect;
+  vk::Offset2D offset = {static_cast<int32_t>(x_coord), y_start};
+  vk::Extent2D extent = {static_cast<uint32_t>(x_coord + thickness), y_end};
+
+  rect.offset = offset;
+  rect.extent = extent;
+
+  frame_data_->lines.push_back({kColor, rect});
+}
+
+void PaperRenderer::DrawHLine(escher::DebugRects::Color kColor, int32_t y_coord, int32_t x_start,
+                              uint32_t x_end, int32_t thickness) {
+  vk::Rect2D rect;
+  vk::Offset2D offset = {x_start, static_cast<int32_t>(y_coord)};
+  vk::Extent2D extent = {x_end, static_cast<uint32_t>(y_coord + thickness)};
+
+  rect.offset = offset;
+  rect.extent = extent;
+
+  frame_data_->lines.push_back({kColor, rect});
 }
 
 void PaperRenderer::BindSceneAndCameraUniforms(uint32_t camera_index) {
@@ -629,16 +665,15 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
 
   cmd_buf->EndRenderPass();
   frame->AddTimestamp("finished shadow_volume render pass");
+
+  GenerateDebugCommands(cmd_buf);
 }
 
 void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
-  if (frame_data_->texts.empty()) {
-    return;
-  }
   TRACE_DURATION("gfx", "PaperRenderer::GenerateDebugCommands");
 
   const FramePtr& frame = frame_data_->frame;
-  frame->AddTimestamp("started text render pass");
+  frame->AddTimestamp("started debug render pass");
 
   auto& output_image = frame_data_->output_image;
   auto layout = output_image->swapchain_layout();
@@ -659,13 +694,18 @@ void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
     debug_font_->Blit(cmd_buf, td.text, output_image, td.offset, td.scale);
   }
 
+  for (std::size_t i = 0; i < frame_data_->lines.size(); i++) {
+    const LineData& ld = frame_data_->lines[i];
+    debug_lines->Blit(cmd_buf, ld.kColor, output_image, ld.rect);
+  }
+
   cmd_buf->ImageBarrier(
       output_image, vk::ImageLayout::eTransferDstOptimal, layout,
       vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferWrite,
       vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer,
       vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite);
 
-  frame->AddTimestamp("finished text render pass");
+  frame->AddTimestamp("finished debug render pass");
 }
 
 std::pair<TexturePtr, TexturePtr> PaperRenderer::ObtainDepthAndMsaaTextures(const FramePtr& frame,

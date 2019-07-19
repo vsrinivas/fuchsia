@@ -26,8 +26,13 @@ void ReadbackTest::SetUp() {
 
   // Create 1-pixel black image that will be used for clearing the framebuffer.
   // See NewFrame() for details.
-  uint8_t kBlack[] = {0, 0, 0, 255};
-  black_ = escher()->NewRgbaImage(1, 1, kBlack);
+  {
+    auto uploader = BatchGpuUploader::New(escher_);
+    uint8_t kBlack[] = {0, 0, 0, 255};
+    black_ = image_utils::NewRgbaImage(&image_factory, uploader.get(), 1, 1, kBlack,
+                                       vk::ImageLayout::eTransferSrcOptimal);
+    uploader->Submit();
+  }
 
   // |readback_buffer_| contains the data that is read back from
   // |color_attachment_| to verify the correctness of its contents.
