@@ -228,7 +228,7 @@ void Reader::InnerParseNumericProperty(ParsedNode* parent, const Block* block) {
       return;
     case BlockType::kUintValue:
       parent_props.emplace_back(
-          PropertyValue(std::move(name), UIntPropertyValue(block->payload.u64)));
+          PropertyValue(std::move(name), UintPropertyValue(block->payload.u64)));
       return;
     case BlockType::kDoubleValue:
       parent_props.emplace_back(
@@ -256,7 +256,7 @@ void Reader::InnerParseNumericProperty(ParsedNode* parent, const Block* block) {
         std::copy(GetArraySlot<const uint64_t>(block, 0),
                   GetArraySlot<const uint64_t>(block, count), std::back_inserter(values));
         parent_props.emplace_back(
-            PropertyValue(std::move(name), UIntArrayValue(std::move(values), array_format)));
+            PropertyValue(std::move(name), UintArrayValue(std::move(values), array_format)));
       } else if (entry_type == BlockType::kDoubleValue) {
         std::vector<double> values;
         std::copy(GetArraySlot<const double>(block, 0), GetArraySlot<const double>(block, count),

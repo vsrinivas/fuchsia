@@ -105,12 +105,12 @@ ObjectHierarchy FromNewHierarchy(const ::inspect::Hierarchy& hierarchy) {
   ret.node().name() = hierarchy.node().name();
   for (const auto& property : hierarchy.node().properties()) {
     CONVERT_METRIC(IntMetric, IntPropertyValue);
-    CONVERT_METRIC(UIntMetric, UIntPropertyValue);
+    CONVERT_METRIC(UIntMetric, UintPropertyValue);
     CONVERT_METRIC(DoubleMetric, DoublePropertyValue);
     CONVERT_PROPERTY(StringProperty, StringPropertyValue);
     CONVERT_PROPERTY(ByteVectorProperty, ByteVectorPropertyValue);
     CONVERT_ARRAY(IntArray, IntArrayValue);
-    CONVERT_ARRAY(UIntArray, UIntArrayValue);
+    CONVERT_ARRAY(UIntArray, UintArrayValue);
     CONVERT_ARRAY(DoubleArray, DoubleArrayValue);
   }
 

@@ -90,8 +90,8 @@ class PropertyListMatcher : public ::testing::MatcherInterface<const NodeValue&>
 // Matches a particular IntProperty with the given name and value.
 ::testing::Matcher<const PropertyValue&> IntIs(const std::string& name, int64_t value);
 
-// Matches a particular UIntProperty with the given name and value.
-::testing::Matcher<const PropertyValue&> UIntIs(const std::string& name, uint64_t value);
+// Matches a particular UintProperty with the given name and value.
+::testing::Matcher<const PropertyValue&> UintIs(const std::string& name, uint64_t value);
 
 // Matches a particular DoubleProperty with the given name and value.
 ::testing::Matcher<const PropertyValue&> DoubleIs(const std::string& name, double value);
@@ -101,7 +101,7 @@ class PropertyListMatcher : public ::testing::MatcherInterface<const NodeValue&>
                                                     ::testing::Matcher<std::vector<int64_t>>);
 
 // Matches the values of an unsigned integer array.
-::testing::Matcher<const PropertyValue&> UIntArrayIs(const std::string& name,
+::testing::Matcher<const PropertyValue&> UintArrayIs(const std::string& name,
                                                      ::testing::Matcher<std::vector<uint64_t>>);
 
 // Matches the values of a double width floating point number array.

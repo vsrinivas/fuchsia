@@ -205,10 +205,10 @@ enum class PropertyFormat {
 };
 
 using IntPropertyValue = internal::Value<int64_t, static_cast<size_t>(PropertyFormat::INT)>;
-using UIntPropertyValue = internal::Value<uint64_t, static_cast<size_t>(PropertyFormat::UINT)>;
+using UintPropertyValue = internal::Value<uint64_t, static_cast<size_t>(PropertyFormat::UINT)>;
 using DoublePropertyValue = internal::Value<double, static_cast<size_t>(PropertyFormat::DOUBLE)>;
 using IntArrayValue = internal::Array<int64_t, static_cast<size_t>(PropertyFormat::INT_ARRAY)>;
-using UIntArrayValue = internal::Array<uint64_t, static_cast<size_t>(PropertyFormat::UINT_ARRAY)>;
+using UintArrayValue = internal::Array<uint64_t, static_cast<size_t>(PropertyFormat::UINT_ARRAY)>;
 using DoubleArrayValue = internal::Array<double, static_cast<size_t>(PropertyFormat::DOUBLE_ARRAY)>;
 using StringPropertyValue =
     internal::Value<std::string, static_cast<size_t>(PropertyFormat::STRING)>;
@@ -217,8 +217,8 @@ using ByteVectorPropertyValue =
 
 // Property consists of a name and a value corresponding to one PropertyFormat.
 using PropertyValue = internal::NamedValue<
-    fit::internal::variant<fit::internal::monostate, IntPropertyValue, UIntPropertyValue,
-                           DoublePropertyValue, IntArrayValue, UIntArrayValue, DoubleArrayValue,
+    fit::internal::variant<fit::internal::monostate, IntPropertyValue, UintPropertyValue,
+                           DoublePropertyValue, IntArrayValue, UintArrayValue, DoubleArrayValue,
                            StringPropertyValue, ByteVectorPropertyValue>,
     PropertyFormat>;
 
