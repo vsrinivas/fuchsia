@@ -30,12 +30,10 @@ class ModuleResolverApp {
   ModuleResolverApp(sys::ComponentContext* const context) {
     resolver_impl_ = std::make_unique<LocalModuleResolver>();
     // Set up |resolver_impl_|.
-    resolver_impl_->AddSource("module_package",
-                              std::make_unique<ModulePackageSource>(context));
+    resolver_impl_->AddSource("module_package", std::make_unique<ModulePackageSource>(context));
 
     context->outgoing()->AddPublicService<fuchsia::modular::ModuleResolver>(
-        [this](
-            fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request) {
+        [this](fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request) {
           resolver_impl_->Connect(std::move(request));
         });
   }
@@ -62,8 +60,7 @@ int main(int argc, const char** argv) {
   }
   auto context = sys::ComponentContext::Create();
   modular::AppDriver<modular::ModuleResolverApp> driver(
-      context->outgoing(),
-      std::make_unique<modular::ModuleResolverApp>(context.get()),
+      context->outgoing(), std::make_unique<modular::ModuleResolverApp>(context.get()),
       [&loop] { loop.Quit(); });
   loop.Run();
   return 0;

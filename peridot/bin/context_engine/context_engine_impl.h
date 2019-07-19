@@ -24,25 +24,21 @@ class ContextEngineImpl : fuchsia::modular::ContextEngine {
   ContextEngineImpl(fuchsia::modular::EntityResolver* entity_resolver);
   ~ContextEngineImpl() override;
 
-  void AddBinding(
-      fidl::InterfaceRequest<fuchsia::modular::ContextEngine> request);
+  void AddBinding(fidl::InterfaceRequest<fuchsia::modular::ContextEngine> request);
 
   fxl::WeakPtr<ContextDebugImpl> debug();
 
  private:
   // |fuchsia::modular::ContextEngine|
-  void GetWriter(
-      fuchsia::modular::ComponentScope client_info,
-      fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) override;
+  void GetWriter(fuchsia::modular::ComponentScope client_info,
+                 fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) override;
 
   // |fuchsia::modular::ContextEngine|
-  void GetReader(
-      fuchsia::modular::ComponentScope client_info,
-      fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) override;
+  void GetReader(fuchsia::modular::ComponentScope client_info,
+                 fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) override;
 
   // |fuchsia::modular::ContextEngine|
-  void GetContextDebug(
-      fidl::InterfaceRequest<fuchsia::modular::ContextDebug> request) override;
+  void GetContextDebug(fidl::InterfaceRequest<fuchsia::modular::ContextDebug> request) override;
 
   fuchsia::modular::EntityResolver* const entity_resolver_;
 

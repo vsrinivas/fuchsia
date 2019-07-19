@@ -14,6 +14,7 @@
 #include <lib/async/cpp/task.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/strings/string_printf.h>
+
 #include "peridot/lib/rapidjson/rapidjson.h"
 
 namespace modular {
@@ -24,29 +25,25 @@ class Logger {
 
   void LogError(const std::string& command, const std::string& error) const;
 
-  void Log(const std::string& command,
-           const std::vector<std::string>& params) const;
+  void Log(const std::string& command, const std::vector<std::string>& params) const;
 
-  void Log(const std::string& command,
-           const std::map<std::string, std::string>& params) const;
+  void Log(const std::string& command, const std::map<std::string, std::string>& params) const;
 
  private:
   // Returns a JSON formatted string of the executed |command| with respective
   // |params| to be logged.
-  std::string GenerateJsonLogString(
-      const std::string& command, const std::vector<std::string>& params) const;
+  std::string GenerateJsonLogString(const std::string& command,
+                                    const std::vector<std::string>& params) const;
 
-  std::string GenerateJsonLogString(
-      const std::string& command,
-      const std::map<std::string, std::string>& params) const;
+  std::string GenerateJsonLogString(const std::string& command,
+                                    const std::map<std::string, std::string>& params) const;
 
   rapidjson::Document GetDocument(const std::string& command) const;
 
   // Returns a string of the executed |command| with respective |params| to be
   // logged.
-  std::string GenerateLogString(
-      const std::string& command,
-      const std::map<std::string, std::string>& params) const;
+  std::string GenerateLogString(const std::string& command,
+                                const std::map<std::string, std::string>& params) const;
   bool json_out_;
 };
 

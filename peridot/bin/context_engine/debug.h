@@ -28,28 +28,23 @@ class ContextDebugImpl : public fuchsia::modular::ContextDebug {
                       const fuchsia::modular::ContextValue& value);
   void OnValueRemoved(const Id& id);
 
-  void OnSubscriptionAdded(
-      const Id& id, const fuchsia::modular::ContextQuery& query,
-      const fuchsia::modular::SubscriptionDebugInfo& debug_info);
+  void OnSubscriptionAdded(const Id& id, const fuchsia::modular::ContextQuery& query,
+                           const fuchsia::modular::SubscriptionDebugInfo& debug_info);
   void OnSubscriptionRemoved(const Id& id);
 
   util::IdleWaiter* GetIdleWaiter();
 
  private:
   // |fuchsia::modular::ContextDebug|
-  void Watch(fidl::InterfaceHandle<fuchsia::modular::ContextDebugListener>
-                 listener) override;
+  void Watch(fidl::InterfaceHandle<fuchsia::modular::ContextDebugListener> listener) override;
   // |fuchsia::modular::ContextDebug|
   void WaitUntilIdle(WaitUntilIdleCallback callback) override;
 
   void DispatchOneValue(fuchsia::modular::ContextDebugValue value);
-  void DispatchValues(
-      fidl::VectorPtr<fuchsia::modular::ContextDebugValue> values);
-  void DispatchOneSubscription(
-      fuchsia::modular::ContextDebugSubscription value);
+  void DispatchValues(fidl::VectorPtr<fuchsia::modular::ContextDebugValue> values);
+  void DispatchOneSubscription(fuchsia::modular::ContextDebugSubscription value);
   void DispatchSubscriptions(
-      fidl::VectorPtr<fuchsia::modular::ContextDebugSubscription>
-          subscriptions);
+      fidl::VectorPtr<fuchsia::modular::ContextDebugSubscription> subscriptions);
 
   // Used in order to get a complete state snapshot when Watch() is called.
   const ContextRepository* const repository_;

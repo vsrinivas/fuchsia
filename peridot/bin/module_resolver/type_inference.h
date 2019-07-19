@@ -15,15 +15,13 @@ namespace modular {
 
 class ParameterTypeInferenceHelper {
  public:
-  ParameterTypeInferenceHelper(
-      fuchsia::modular::EntityResolverPtr entity_resolver);
+  ParameterTypeInferenceHelper(fuchsia::modular::EntityResolverPtr entity_resolver);
   ~ParameterTypeInferenceHelper();
 
   // Returns a list of types represented in |parameter_constraint|. Chooses the
   // correct process for type extraction based on the type of Parameter.
-  void GetParameterTypes(
-      const fuchsia::modular::ResolverParameterConstraint& parameter_constraint,
-      fit::function<void(std::vector<std::string>)> result_callback);
+  void GetParameterTypes(const fuchsia::modular::ResolverParameterConstraint& parameter_constraint,
+                         fit::function<void(std::vector<std::string>)> result_callback);
 
  private:
   class GetParameterTypesCall;

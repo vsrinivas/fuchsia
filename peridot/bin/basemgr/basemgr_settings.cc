@@ -4,11 +4,11 @@
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
 
+#include <string>
+
 #include <lib/fidl/cpp/string.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
-
-#include <string>
 
 #include "peridot/lib/modular_config/modular_config_constants.h"
 #include "src/lib/files/file.h"
@@ -16,20 +16,19 @@
 namespace modular {
 
 BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
-  base_shell.set_url(command_line.GetOptionValueWithDefault(
-      modular_config::kBaseShell, modular_config::kDefaultBaseShellUrl));
+  base_shell.set_url(command_line.GetOptionValueWithDefault(modular_config::kBaseShell,
+                                                            modular_config::kDefaultBaseShellUrl));
   story_shell.set_url(command_line.GetOptionValueWithDefault(
       modular_config::kStoryShell, modular_config::kDefaultStoryShellUrl));
-  sessionmgr.set_url(command_line.GetOptionValueWithDefault(
-      modular_config::kSessionmgrConfigName, modular_config::kSessionmgrUrl));
+  sessionmgr.set_url(command_line.GetOptionValueWithDefault(modular_config::kSessionmgrConfigName,
+                                                            modular_config::kSessionmgrUrl));
   session_shell.set_url(command_line.GetOptionValueWithDefault(
       modular_config::kSessionShell, modular_config::kDefaultSessionShellUrl));
 
-  use_session_shell_for_story_shell_factory = command_line.HasOption(
-      modular_config::kUseSessionShellForStoryShellFactory);
+  use_session_shell_for_story_shell_factory =
+      command_line.HasOption(modular_config::kUseSessionShellForStoryShellFactory);
 
-  disable_statistics =
-      command_line.HasOption(modular_config::kDisableStatistics);
+  disable_statistics = command_line.HasOption(modular_config::kDisableStatistics);
   no_minfs = command_line.HasOption(modular_config::kNoMinfs);
   test = command_line.HasOption(modular_config::kTest);
 
@@ -40,27 +39,22 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
   keep_base_shell_alive_after_login = test;
 
   run_base_shell_with_test_runner =
-      command_line.GetOptionValueWithDefault(
-          modular_config::kRunBaseShellWithTestRunner, modular_config::kTrue) ==
-              modular_config::kTrue
+      command_line.GetOptionValueWithDefault(modular_config::kRunBaseShellWithTestRunner,
+                                             modular_config::kTrue) == modular_config::kTrue
           ? true
           : false;
   enable_presenter = command_line.HasOption(modular_config::kEnablePresenter);
 
-  ParseShellArgs(command_line.GetOptionValueWithDefault(
-                     modular_config::kBaseShellArgs, ""),
+  ParseShellArgs(command_line.GetOptionValueWithDefault(modular_config::kBaseShellArgs, ""),
                  base_shell.mutable_args());
 
-  ParseShellArgs(command_line.GetOptionValueWithDefault(
-                     modular_config::kStoryShellArgs, ""),
+  ParseShellArgs(command_line.GetOptionValueWithDefault(modular_config::kStoryShellArgs, ""),
                  story_shell.mutable_args());
 
-  ParseShellArgs(command_line.GetOptionValueWithDefault(
-                     modular_config::kSessionmgrArgs, ""),
+  ParseShellArgs(command_line.GetOptionValueWithDefault(modular_config::kSessionmgrArgs, ""),
                  sessionmgr.mutable_args());
 
-  ParseShellArgs(command_line.GetOptionValueWithDefault(
-                     modular_config::kSessionShellArgs, ""),
+  ParseShellArgs(command_line.GetOptionValueWithDefault(modular_config::kSessionShellArgs, ""),
                  session_shell.mutable_args());
 
   if (test) {
@@ -83,26 +77,22 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
 }
 
 // Temporary way to transform commandline args into FIDL table
-fuchsia::modular::session::BasemgrConfig
-BasemgrSettings::CreateBasemgrConfig() {
+fuchsia::modular::session::BasemgrConfig BasemgrSettings::CreateBasemgrConfig() {
   fuchsia::modular::session::BasemgrConfig config;
 
   config.set_enable_cobalt(!disable_statistics);
   config.set_enable_presenter(enable_presenter);
   config.set_use_minfs(!no_minfs);
-  config.set_use_session_shell_for_story_shell_factory(
-      use_session_shell_for_story_shell_factory);
+  config.set_use_session_shell_for_story_shell_factory(use_session_shell_for_story_shell_factory);
   config.set_test(test);
   config.set_test_name(test_name);
 
   config.mutable_base_shell()->set_app_config(std::move(base_shell));
-  config.mutable_base_shell()->set_keep_alive_after_login(
-      keep_base_shell_alive_after_login);
+  config.mutable_base_shell()->set_keep_alive_after_login(keep_base_shell_alive_after_login);
 
   fuchsia::modular::session::SessionShellMapEntry session_shell_entry;
   session_shell_entry.set_name(session_shell.url());
-  session_shell_entry.mutable_config()->set_app_config(
-      std::move(session_shell));
+  session_shell_entry.mutable_config()->set_app_config(std::move(session_shell));
   // Set default presenter settings
   session_shell_entry.mutable_config()->set_display_usage(
       fuchsia::ui::policy::DisplayUsage::kUnknown);
@@ -151,8 +141,7 @@ std::string BasemgrSettings::GetUsage() {
                 flags are ignored.)USAGE";
 }
 
-void BasemgrSettings::ParseShellArgs(const std::string& value,
-                                     std::vector<std::string>* args) {
+void BasemgrSettings::ParseShellArgs(const std::string& value, std::vector<std::string>* args) {
   bool escape = false;
   std::string arg;
   for (char i : value) {
@@ -181,9 +170,8 @@ void BasemgrSettings::ParseShellArgs(const std::string& value,
   }
 }
 
-std::string BasemgrSettings::FindTestName(
-    const std::string& session_shell,
-    const std::vector<std::string>* session_shell_args) {
+std::string BasemgrSettings::FindTestName(const std::string& session_shell,
+                                          const std::vector<std::string>* session_shell_args) {
   const std::string kRootModule = "--root_module";
   std::string result = session_shell;
 

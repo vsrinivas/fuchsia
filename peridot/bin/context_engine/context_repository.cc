@@ -46,8 +46,7 @@ std::set<ContextGraph::Id> ContextGraph::GetParents(const Id& id) const {
   return it->second;
 }
 
-std::set<ContextGraph::Id> ContextGraph::GetChildrenRecursive(
-    const Id& id) const {
+std::set<ContextGraph::Id> ContextGraph::GetChildrenRecursive(const Id& id) const {
   std::set<Id> children;
   std::list<Id> to_visit{id};
 
@@ -102,10 +101,8 @@ ContextRepository::Id CreateSubscriptionId() {
 }
 
 void LogInvalidAncestorMetadata(const fuchsia::modular::ContextMetadata& from,
-                                fuchsia::modular::ContextMetadata* to,
-                                const char* type) {
-  FXL_LOG(WARNING) << "Context value and ancestor both have metadata type ("
-                   << type
+                                fuchsia::modular::ContextMetadata* to, const char* type) {
+  FXL_LOG(WARNING) << "Context value and ancestor both have metadata type (" << type
                    << "), which is not allowed. Ignoring value metadata.";
   FXL_LOG(WARNING) << "Value metadata: " << *to;
   FXL_LOG(WARNING) << "Ancestor metadata: " << from;
@@ -137,23 +134,19 @@ void MergeMetadata(const fuchsia::modular::ContextMetadata& from,
 ContextRepository::ContextRepository() : debug_(new ContextDebugImpl(this)) {}
 ContextRepository::~ContextRepository() = default;
 
-bool ContextRepository::Contains(const Id& id) const {
-  return values_.find(id) != values_.end();
-}
+bool ContextRepository::Contains(const Id& id) const { return values_.find(id) != values_.end(); }
 
-ContextRepository::Id ContextRepository::Add(
-    const Id& parent_id, fuchsia::modular::ContextValue value) {
+ContextRepository::Id ContextRepository::Add(const Id& parent_id,
+                                             fuchsia::modular::ContextValue value) {
   FXL_DCHECK(values_.find(parent_id) != values_.end()) << parent_id;
   return AddInternal(parent_id, std::move(value));
 }
 
-ContextRepository::Id ContextRepository::Add(
-    fuchsia::modular::ContextValue value) {
+ContextRepository::Id ContextRepository::Add(fuchsia::modular::ContextValue value) {
   return AddInternal("", std::move(value));
 }
 
-void ContextRepository::Update(const Id& id,
-                               fuchsia::modular::ContextValue value) {
+void ContextRepository::Update(const Id& id, fuchsia::modular::ContextValue value) {
   // TODO(thatguy): Short-circuit if |value| isn't changing anything to avoid
   // spurious update computation.
 
@@ -176,8 +169,8 @@ void ContextRepository::Update(const Id& id,
   debug_->OnValueChanged(graph_.GetParents(id), id, it->second.value);
 }
 
-ContextRepository::Id ContextRepository::AddInternal(
-    const Id& parent_id, fuchsia::modular::ContextValue value) {
+ContextRepository::Id ContextRepository::AddInternal(const Id& parent_id,
+                                                     fuchsia::modular::ContextValue value) {
   const auto new_id = CreateValueId();
 
   // Add the new value to |values_|.
@@ -238,8 +231,7 @@ fuchsia::modular::ContextValuePtr ContextRepository::Get(const Id& id) const {
   return fidl::MakeOptional(std::move(value));
 }
 
-fuchsia::modular::ContextValuePtr ContextRepository::GetMerged(
-    const Id& id) const {
+fuchsia::modular::ContextValuePtr ContextRepository::GetMerged(const Id& id) const {
   auto it = values_.find(id);
   if (it == values_.end())
     return fuchsia::modular::ContextValuePtr();
@@ -257,8 +249,7 @@ fuchsia::modular::ContextUpdate ContextRepository::Query(
 }
 
 ContextRepository::Id ContextRepository::AddSubscription(
-    fuchsia::modular::ContextQuery query,
-    fuchsia::modular::ContextListener* const listener,
+    fuchsia::modular::ContextQuery query, fuchsia::modular::ContextListener* const listener,
     fuchsia::modular::SubscriptionDebugInfo debug_info) {
   // Add the subscription to our list.
   Subscription subscription;
@@ -273,19 +264,15 @@ ContextRepository::Id ContextRepository::AddSubscription(
   QueryAndMaybeNotify(&it.first->second, true /* force */);
 
   // TODO(thatguy): Add a client identifier parameter to AddSubscription().
-  debug_->OnSubscriptionAdded(id, it.first->second.query,
-                              it.first->second.debug_info);
+  debug_->OnSubscriptionAdded(id, it.first->second.query, it.first->second.debug_info);
   return id;
 }
 
-void ContextRepository::AddSubscription(
-    fuchsia::modular::ContextQuery query,
-    fuchsia::modular::ContextListenerPtr listener,
-    fuchsia::modular::SubscriptionDebugInfo debug_info) {
-  auto id =
-      AddSubscription(std::move(query), listener.get(), std::move(debug_info));
-  listener.set_error_handler(
-      [this, id](zx_status_t status) { RemoveSubscription(id); });
+void ContextRepository::AddSubscription(fuchsia::modular::ContextQuery query,
+                                        fuchsia::modular::ContextListenerPtr listener,
+                                        fuchsia::modular::SubscriptionDebugInfo debug_info) {
+  auto id = AddSubscription(std::move(query), listener.get(), std::move(debug_info));
+  listener.set_error_handler([this, id](zx_status_t status) { RemoveSubscription(id); });
   // RemoveSubscription() above is responsible for freeing this memory.
   subscriptions_[id].listener_storage = std::move(listener);
 }
@@ -333,17 +320,15 @@ ContextRepository::QueryInternal(const fuchsia::modular::ContextQuery& query) {
   return std::make_pair(std::move(update), std::move(matching_id_version));
 }
 
-void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription,
-                                            bool force) {
+void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription, bool force) {
   std::pair<fuchsia::modular::ContextUpdate, IdAndVersionSet> result =
       QueryInternal(subscription->query);
   if (!force) {
     // Check if this update contains any new values.
     IdAndVersionSet diff;
-    std::set_symmetric_difference(result.second.begin(), result.second.end(),
-                                  subscription->last_update.begin(),
-                                  subscription->last_update.end(),
-                                  std::inserter(diff, diff.begin()));
+    std::set_symmetric_difference(
+        result.second.begin(), result.second.end(), subscription->last_update.begin(),
+        subscription->last_update.end(), std::inserter(diff, diff.begin()));
     if (diff.empty()) {
       return;
     }
@@ -353,8 +338,7 @@ void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription,
   subscription->listener->OnContextUpdate(std::move(result.first));
 }
 
-void ContextRepository::ReindexAndNotify(
-    ContextRepository::InProgressUpdate update) {
+void ContextRepository::ReindexAndNotify(ContextRepository::InProgressUpdate update) {
   for (auto& value : update.removed_values) {
     index_.Remove(value.id, value.value.type, value.merged_metadata);
   }

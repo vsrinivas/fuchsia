@@ -9,8 +9,8 @@
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/vector.h>
-#include <src/lib/fxl/logging.h>
 #include <openssl/sha.h>
+#include <src/lib/fxl/logging.h>
 
 namespace maxwell {
 
@@ -26,8 +26,7 @@ fuchsia::modular::ContextSelectorPtr ComponentScopeToContextSelector(
     selector->meta->story = fuchsia::modular::StoryMetadata::New();
     selector->meta->story->id = scope->module_scope().story_id;
     selector->meta->mod = fuchsia::modular::ModuleMetadata::New();
-    selector->meta->mod->path =
-        fidl::VectorPtr(scope->module_scope().module_path);
+    selector->meta->mod->path = fidl::VectorPtr(scope->module_scope().module_path);
   } else if (scope->is_agent_scope()) {
     // TODO(thatguy): do.
   } else if (scope->is_story_scope()) {

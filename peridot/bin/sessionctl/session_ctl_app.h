@@ -5,6 +5,9 @@
 #ifndef PERIDOT_BIN_SESSIONCTL_SESSION_CTL_APP_H_
 #define PERIDOT_BIN_SESSIONCTL_SESSION_CTL_APP_H_
 
+#include <iostream>
+#include <string>
+
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -12,9 +15,6 @@
 #include <lib/async/cpp/task.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/strings/string_printf.h>
-
-#include <iostream>
-#include <string>
 
 #include "peridot/bin/sessionctl/logger.h"
 

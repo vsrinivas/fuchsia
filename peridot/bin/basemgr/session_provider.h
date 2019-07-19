@@ -43,8 +43,7 @@ class SessionProvider {
                   const std::shared_ptr<sys::ServiceDirectory>& incoming_services,
                   fuchsia::sys::Launcher* const launcher,
                   fuchsia::device::manager::AdministratorPtr administrator,
-                  fuchsia::modular::AppConfig sessionmgr,
-                  fuchsia::modular::AppConfig session_shell,
+                  fuchsia::modular::AppConfig sessionmgr, fuchsia::modular::AppConfig session_shell,
                   fuchsia::modular::AppConfig story_shell,
                   bool use_session_shell_for_story_shell_factory,
                   fit::function<void()> on_zero_sessions);
@@ -54,15 +53,13 @@ class SessionProvider {
   // |on_zero_sessions| is invoked when all sessions have been deleted. This is
   // meant to be a callback for BasemgrImpl to either display a base shell or
   // start a new session.
-  SessionProvider(
-      Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
-      fuchsia::device::manager::AdministratorPtr administrator,
-      fuchsia::modular::AppConfig sessionmgr,
-      fuchsia::modular::AppConfig session_shell,
-      fuchsia::modular::AppConfig story_shell,
-      bool use_session_shell_for_story_shell_factory,
-      std::unique_ptr<IntlPropertyProviderImpl> intl_property_provider,
-      fit::function<void()> on_zero_sessions);
+  SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
+                  fuchsia::device::manager::AdministratorPtr administrator,
+                  fuchsia::modular::AppConfig sessionmgr, fuchsia::modular::AppConfig session_shell,
+                  fuchsia::modular::AppConfig story_shell,
+                  bool use_session_shell_for_story_shell_factory,
+                  std::unique_ptr<IntlPropertyProviderImpl> intl_property_provider,
+                  fit::function<void()> on_zero_sessions);
 
   // Starts a new sessionmgr process if there isn't one already. Returns false
   // if there is an existing sessionmgr process, and does not start a new
@@ -78,14 +75,12 @@ class SessionProvider {
 
   // Callback function for session_provider to invoke when there is no active
   // session
-  void OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason,
-                         bool logout_users);
+  void OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason, bool logout_users);
 
   // Stops the active session shell, and starts the session shell specified in
   // |session_shell_config|. If no session shells are running, this has no
   // effect, and will return an immediately-completed future.
-  FuturePtr<> SwapSessionShell(
-      fuchsia::modular::AppConfig session_shell_config);
+  FuturePtr<> SwapSessionShell(fuchsia::modular::AppConfig session_shell_config);
 
   // Shuts down the running session without logging any users out, which will
   // effectively restart a new session with the same users.

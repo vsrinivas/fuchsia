@@ -13,6 +13,7 @@
 #include <lib/fidl/cpp/string.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
+
 #include "src/lib/files/file.h"
 
 namespace modular {
@@ -47,9 +48,8 @@ class BasemgrSettings {
 
   // Extract the test name using knowledge of how Modular structures its
   // command lines for testing.
-  static std::string FindTestName(
-      const std::string& session_shell,
-      const std::vector<std::string>* session_shell_args);
+  static std::string FindTestName(const std::string& session_shell,
+                                  const std::vector<std::string>* session_shell_args);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BasemgrSettings);
 };

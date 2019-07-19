@@ -21,12 +21,9 @@ ClipboardImpl::~ClipboardImpl() = default;
 
 void ClipboardImpl::Push(std::string text) { storage_.Push(text); }
 
-void ClipboardImpl::Peek(PeekCallback callback) {
-  storage_.Peek(std::move(callback));
-}
+void ClipboardImpl::Peek(PeekCallback callback) { storage_.Peek(std::move(callback)); }
 
-void ClipboardImpl::Connect(
-    fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
+void ClipboardImpl::Connect(fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 

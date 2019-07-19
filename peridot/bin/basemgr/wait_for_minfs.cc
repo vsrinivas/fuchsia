@@ -5,23 +5,25 @@
 #include "peridot/bin/basemgr/wait_for_minfs.h"
 
 #include <fcntl.h>
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/device/vfs.h>
+#include <zircon/syscalls.h>
+
 #include <memory>
 #include <utility>
 
 #include <fbl/unique_fd.h>
-#include <fuchsia/io/c/fidl.h>
-#include "src/lib/files/file.h"
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/strings/string_printf.h>
 #include <src/lib/fxl/strings/string_view.h>
-#include <lib/fzl/fdio.h>
-#include <lib/zx/clock.h>
-#include <lib/zx/time.h>
-#include <zircon/device/vfs.h>
-#include <zircon/syscalls.h>
+
+#include "src/lib/files/file.h"
 
 namespace modular {
 
@@ -39,12 +41,10 @@ void WaitForMinfs() {
       fuchsia_io_FilesystemInfo info;
       zx_status_t status, io_status;
       fzl::FdioCaller caller{std::move(fd)};
-      io_status = fuchsia_io_DirectoryAdminQueryFilesystem(
-          caller.borrow_channel(), &status, &info);
+      io_status = fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info);
       if (io_status == ZX_OK && status == ZX_OK) {
         const char* name = reinterpret_cast<const char*>(info.name);
-        fxl::StringView fs_name(name,
-                                strnlen(name, fuchsia_io_MAX_FS_NAME_BUFFER));
+        fxl::StringView fs_name(name, strnlen(name, fuchsia_io_MAX_FS_NAME_BUFFER));
         if (fs_name == kMinFsName) {
           return;
         }

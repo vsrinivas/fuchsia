@@ -15,42 +15,38 @@ namespace modular {
 
 const int kMaxCrashRecoveryLimit = 3;
 
-const zx::duration kMaxCrashRecoveryDuration =
-    zx::msec(3600 * 1000);  // 1 hour in milliseconds
+const zx::duration kMaxCrashRecoveryDuration = zx::msec(3600 * 1000);  // 1 hour in milliseconds
 
-SessionProvider::SessionProvider(
-    Delegate* const delegate, const std::shared_ptr<sys::ServiceDirectory>& incoming_services,
-    fuchsia::sys::Launcher* const launcher,
-    fuchsia::device::manager::AdministratorPtr administrator,
-    fuchsia::modular::AppConfig sessionmgr,
-    fuchsia::modular::AppConfig session_shell,
-    fuchsia::modular::AppConfig story_shell,
-    bool use_session_shell_for_story_shell_factory,
-    fit::function<void()> on_zero_sessions)
-    : SessionProvider(delegate, launcher, std::move(administrator),
-                      std::move(sessionmgr), std::move(session_shell),
-                      std::move(story_shell),
+SessionProvider::SessionProvider(Delegate* const delegate,
+                                 const std::shared_ptr<sys::ServiceDirectory>& incoming_services,
+                                 fuchsia::sys::Launcher* const launcher,
+                                 fuchsia::device::manager::AdministratorPtr administrator,
+                                 fuchsia::modular::AppConfig sessionmgr,
+                                 fuchsia::modular::AppConfig session_shell,
+                                 fuchsia::modular::AppConfig story_shell,
+                                 bool use_session_shell_for_story_shell_factory,
+                                 fit::function<void()> on_zero_sessions)
+    : SessionProvider(delegate, launcher, std::move(administrator), std::move(sessionmgr),
+                      std::move(session_shell), std::move(story_shell),
                       use_session_shell_for_story_shell_factory,
                       IntlPropertyProviderImpl::Create(incoming_services),
                       std::move(on_zero_sessions)) {}
 
-SessionProvider::SessionProvider(
-    Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
-    fuchsia::device::manager::AdministratorPtr administrator,
-    fuchsia::modular::AppConfig sessionmgr,
-    fuchsia::modular::AppConfig session_shell,
-    fuchsia::modular::AppConfig story_shell,
-    bool use_session_shell_for_story_shell_factory,
-    std::unique_ptr<IntlPropertyProviderImpl> intl_property_provider,
-    fit::function<void()> on_zero_sessions)
+SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
+                                 fuchsia::device::manager::AdministratorPtr administrator,
+                                 fuchsia::modular::AppConfig sessionmgr,
+                                 fuchsia::modular::AppConfig session_shell,
+                                 fuchsia::modular::AppConfig story_shell,
+                                 bool use_session_shell_for_story_shell_factory,
+                                 std::unique_ptr<IntlPropertyProviderImpl> intl_property_provider,
+                                 fit::function<void()> on_zero_sessions)
     : delegate_(delegate),
       launcher_(launcher),
       administrator_(std::move(administrator)),
       sessionmgr_(std::move(sessionmgr)),
       session_shell_(std::move(session_shell)),
       story_shell_(std::move(story_shell)),
-      use_session_shell_for_story_shell_factory_(
-          use_session_shell_for_story_shell_factory),
+      use_session_shell_for_story_shell_factory_(use_session_shell_for_story_shell_factory),
       on_zero_sessions_(std::move(on_zero_sessions)),
       intl_property_provider_(std::move(intl_property_provider)) {
   last_crash_time_ = zx::clock::get_monotonic();
@@ -61,11 +57,10 @@ SessionProvider::SessionProvider(
       std::make_unique<vfs::Service>(intl_property_provider_->GetHandler()));
 }
 
-bool SessionProvider::StartSession(
-    fuchsia::ui::views::ViewToken view_token,
-    fuchsia::modular::auth::AccountPtr account,
-    fuchsia::auth::TokenManagerPtr ledger_token_manager,
-    fuchsia::auth::TokenManagerPtr agent_token_manager) {
+bool SessionProvider::StartSession(fuchsia::ui::views::ViewToken view_token,
+                                   fuchsia::modular::auth::AccountPtr account,
+                                   fuchsia::auth::TokenManagerPtr ledger_token_manager,
+                                   fuchsia::auth::TokenManagerPtr agent_token_manager) {
   if (session_context_) {
     FXL_LOG(WARNING) << "StartSession() called when session context already "
                         "exists. Try calling SessionProvider::Teardown()";
@@ -88,28 +83,24 @@ bool SessionProvider::StartSession(
   // Set up a service directory for serving `fuchsia.intl.PropertyProvider` to
   // the `Sessionmgr`.
   fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
-  sessionmgr_service_dir_.Serve(
-      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-      dir_handle.NewRequest().TakeChannel());
+  sessionmgr_service_dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                                dir_handle.NewRequest().TakeChannel());
   auto services = fuchsia::sys::ServiceList::New();
   services->names.push_back(fuchsia::intl::PropertyProvider::Name_);
   services->host_directory = dir_handle.TakeChannel();
 
-  auto done = [this](SessionContextImpl::ShutDownReason shutdown_reason,
-                     bool logout_users) {
+  auto done = [this](SessionContextImpl::ShutDownReason shutdown_reason, bool logout_users) {
     OnSessionShutdown(shutdown_reason, logout_users);
   };
 
   // Session context initializes and holds the sessionmgr process.
   session_context_ = std::make_unique<SessionContextImpl>(
-      launcher_, session_id, CloneStruct(sessionmgr_),
-      CloneStruct(session_shell_), CloneStruct(story_shell_),
-      use_session_shell_for_story_shell_factory_,
-      std::move(ledger_token_manager), std::move(agent_token_manager),
-      std::move(account), std::move(view_token), std::move(services),
+      launcher_, session_id, CloneStruct(sessionmgr_), CloneStruct(session_shell_),
+      CloneStruct(story_shell_), use_session_shell_for_story_shell_factory_,
+      std::move(ledger_token_manager), std::move(agent_token_manager), std::move(account),
+      std::move(view_token), std::move(services),
       /* get_presentation= */
-      [this](
-          fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
+      [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
         delegate_->GetPresentation(std::move(request));
       },
       done);
@@ -129,8 +120,7 @@ void SessionProvider::Teardown(fit::function<void()> callback) {
   session_context_->Shutdown(/* logout_users= */ false, std::move(callback));
 }
 
-FuturePtr<> SessionProvider::SwapSessionShell(
-    fuchsia::modular::AppConfig session_shell_config) {
+FuturePtr<> SessionProvider::SwapSessionShell(fuchsia::modular::AppConfig session_shell_config) {
   if (!session_context_) {
     return Future<>::CreateCompleted("SwapSessionShell(Completed)");
   }
@@ -138,20 +128,18 @@ FuturePtr<> SessionProvider::SwapSessionShell(
   return session_context_->SwapSessionShell(std::move(session_shell_config));
 }
 
-void SessionProvider::RestartSession(
-    fit::function<void()> on_restart_complete) {
+void SessionProvider::RestartSession(fit::function<void()> on_restart_complete) {
   if (!session_context_) {
     return;
   }
 
   // Shutting down a session and preserving the users effectively restarts the
   // session.
-  session_context_->Shutdown(/* logout_users= */ false,
-                             std::move(on_restart_complete));
+  session_context_->Shutdown(/* logout_users= */ false, std::move(on_restart_complete));
 }
 
-void SessionProvider::OnSessionShutdown(
-    SessionContextImpl::ShutDownReason shutdown_reason, bool logout_users) {
+void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason,
+                                        bool logout_users) {
   if (shutdown_reason == SessionContextImpl::ShutDownReason::CRASHED) {
     if (session_crash_recovery_counter_ != 0) {
       zx::duration duration = zx::clock::get_monotonic() - last_crash_time_;
@@ -165,14 +153,12 @@ void SessionProvider::OnSessionShutdown(
     if (session_crash_recovery_counter_ == kMaxCrashRecoveryLimit) {
       FXL_LOG(ERROR) << "Sessionmgr restart limit reached. Considering "
                         "this an unrecoverable failure.";
-      administrator_->Suspend(fuchsia::device::manager::SUSPEND_FLAG_REBOOT,
-                              [](zx_status_t status) {
-                                if (status != ZX_OK) {
-                                  FXL_LOG(ERROR)
-                                      << "Failed to reboot: "
-                                      << zx_status_get_string(status);
-                                }
-                              });
+      administrator_->Suspend(
+          fuchsia::device::manager::SUSPEND_FLAG_REBOOT, [](zx_status_t status) {
+            if (status != ZX_OK) {
+              FXL_LOG(ERROR) << "Failed to reboot: " << zx_status_get_string(status);
+            }
+          });
       return;
     }
     session_crash_recovery_counter_ += 1;
@@ -185,8 +171,7 @@ void SessionProvider::OnSessionShutdown(
   };
 
   if (logout_users) {
-    delegate_->LogoutUsers(
-        [delete_session_context]() { delete_session_context(); });
+    delegate_->LogoutUsers([delete_session_context]() { delete_session_context(); });
   } else {
     delete_session_context();
   }

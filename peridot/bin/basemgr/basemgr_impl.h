@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_BASEMGR_BASEMGR_IMPL_H_
 #define PERIDOT_BIN_BASEMGR_BASEMGR_IMPL_H_
 
+#include <memory>
+
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/devicesettings/cpp/fidl.h>
@@ -23,8 +25,6 @@
 #include <lib/svc/cpp/service_namespace.h>
 #include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/macros.h>
-
-#include <memory>
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
@@ -58,21 +58,19 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |device_settings_manager| Service to look-up whether device needs factory
   // reset.
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
-  explicit BasemgrImpl(
-      fuchsia::modular::session::BasemgrConfig config,
-      const std::shared_ptr<sys::ServiceDirectory> incoming_services,
-      fuchsia::sys::LauncherPtr launcher,
-      fuchsia::ui::policy::PresenterPtr presenter,
-      fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
-      fuchsia::wlan::service::WlanPtr wlan,
-      fuchsia::auth::account::AccountManagerPtr account_manager,
-      fuchsia::device::manager::AdministratorPtr device_administrator,
-      fit::function<void()> on_shutdown);
+  explicit BasemgrImpl(fuchsia::modular::session::BasemgrConfig config,
+                       const std::shared_ptr<sys::ServiceDirectory> incoming_services,
+                       fuchsia::sys::LauncherPtr launcher,
+                       fuchsia::ui::policy::PresenterPtr presenter,
+                       fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
+                       fuchsia::wlan::service::WlanPtr wlan,
+                       fuchsia::auth::account::AccountManagerPtr account_manager,
+                       fuchsia::device::manager::AdministratorPtr device_administrator,
+                       fit::function<void()> on_shutdown);
 
   ~BasemgrImpl() override;
 
-  void Connect(
-      fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request);
+  void Connect(fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request);
 
  private:
   void StartBaseShell();
@@ -94,16 +92,14 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   void InitializeUserProvider();
 
   // |fuchsia::modular::BaseShellContext|
-  void GetUserProvider(
-      fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) override;
+  void GetUserProvider(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) override;
 
   // |fuchsia::modular::BaseShellContext|
   void Shutdown() override;
 
   // |fuchsia::auth::AuthenticationContextProvider|
   void GetAuthenticationUIContext(
-      fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request)
-      override;
+      fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request) override;
 
   // |fuchsia::modular::internal::BasemgrDebug|
   // Toggles to the next session shell in basemgr.config if one exists.
@@ -136,8 +132,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   void LogoutUsers(fit::function<void()> callback) override;
 
   // |SessionProvider::Delegate| and |fuchsia::modular::BaseShellContext|
-  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                           request) override;
+  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
 
   fuchsia::modular::session::BasemgrConfig config_;
 
@@ -177,8 +172,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
       authentication_context_provider_binding_;
 
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>>
-      token_manager_factory_app_;
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> token_manager_factory_app_;
   fuchsia::auth::TokenManagerFactoryPtr token_manager_factory_;
 
   bool base_shell_running_{};

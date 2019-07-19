@@ -28,12 +28,10 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver {
   // AddSource() after Connect(). |name| must be unique.
   void AddSource(std::string name, std::unique_ptr<ModuleManifestSource> repo);
 
-  void Connect(
-      fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request);
+  void Connect(fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request);
 
   // |ModuleResolver|
-  void FindModules(fuchsia::modular::FindModulesQuery query,
-                   FindModulesCallback callback) override;
+  void FindModules(fuchsia::modular::FindModulesQuery query, FindModulesCallback callback) override;
 
  private:
   class FindModulesCall;
@@ -56,9 +54,7 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver {
 
   void PeriodicCheckIfSourcesAreReady();
 
-  bool AllSourcesAreReady() const {
-    return ready_sources_.size() == sources_.size();
-  }
+  bool AllSourcesAreReady() const { return ready_sources_.size() == sources_.size(); }
 
   // TODO(thatguy): At some point, factor the index functions out of
   // LocalModuleResolver so that they can be re-used by the general all-modules
@@ -81,8 +77,7 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver {
 
   fidl::BindingSet<fuchsia::modular::ModuleResolver> bindings_;
   // These are buffered until AllSourcesAreReady() == true.
-  std::vector<fidl::InterfaceRequest<fuchsia::modular::ModuleResolver>>
-      pending_bindings_;
+  std::vector<fidl::InterfaceRequest<fuchsia::modular::ModuleResolver>> pending_bindings_;
 
   bool already_checking_if_sources_are_ready_;
 

@@ -24,8 +24,7 @@ std::string ToString(fuchsia::mem::Buffer value) {
     return "";
   }
   if (!fsl::StringFromVmo(vmo, &parsed_string)) {
-    FXL_LOG(ERROR)
-        << "fuchsia::modular::Clipboard vmo could not be decoded to string.";
+    FXL_LOG(ERROR) << "fuchsia::modular::Clipboard vmo could not be decoded to string.";
     return "";
   }
   return parsed_string;
@@ -39,9 +38,7 @@ constexpr char kCurrentValueKey[] = "current_value";
 class ClipboardStorage::PushCall : public Operation<> {
  public:
   PushCall(ClipboardStorage* const impl, const fidl::StringPtr& text)
-      : Operation("ClipboardStorage::PushCall", [] {}),
-        impl_(impl),
-        text_(text) {}
+      : Operation("ClipboardStorage::PushCall", [] {}), impl_(impl), text_(text) {}
 
  private:
   void Run() override {
@@ -55,10 +52,8 @@ class ClipboardStorage::PushCall : public Operation<> {
 
 class ClipboardStorage::PeekCall : public Operation<fidl::StringPtr> {
  public:
-  PeekCall(ClipboardStorage* const impl,
-           fit::function<void(fidl::StringPtr)> result)
-      : Operation("ClipboardStorage::PeekCall", std::move(result)),
-        impl_(impl) {
+  PeekCall(ClipboardStorage* const impl, fit::function<void(fidl::StringPtr)> result)
+      : Operation("ClipboardStorage::PeekCall", std::move(result)), impl_(impl) {
     // No error checking: Absent ledger value yields "", not
     // null. TODO(mesch): Once we support types, distinction of
     // null may make sense.
@@ -68,15 +63,13 @@ class ClipboardStorage::PeekCall : public Operation<fidl::StringPtr> {
  private:
   void Run() override {
     FlowToken flow{this, &text_};
-    impl_->page()->GetSnapshot(snapshot_.NewRequest(),
-                               fidl::VectorPtr<uint8_t>::New(0), nullptr);
-    snapshot_->Get(
-        ToArray(kCurrentValueKey),
-        [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
-          if (result.is_response()) {
-            text_ = ToString(std::move(result.response().buffer));
-          }
-        });
+    impl_->page()->GetSnapshot(snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
+    snapshot_->Get(ToArray(kCurrentValueKey),
+                   [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
+                     if (result.is_response()) {
+                       text_ = ToString(std::move(result.response().buffer));
+                     }
+                   });
   }
 
   ClipboardStorage* const impl_;  // not owned
@@ -84,8 +77,7 @@ class ClipboardStorage::PeekCall : public Operation<fidl::StringPtr> {
   fidl::StringPtr text_;
 };
 
-ClipboardStorage::ClipboardStorage(LedgerClient* ledger_client,
-                                   LedgerPageId page_id)
+ClipboardStorage::ClipboardStorage(LedgerClient* ledger_client, LedgerPageId page_id)
     : PageClient("ClipboardStorage", ledger_client, std::move(page_id)) {}
 
 ClipboardStorage::~ClipboardStorage() = default;

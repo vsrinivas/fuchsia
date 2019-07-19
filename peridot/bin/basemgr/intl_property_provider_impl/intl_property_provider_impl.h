@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_BASEMGR_INTL_PROPERTY_PROVIDER_IMPL_INTL_PROPERTY_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_BASEMGR_INTL_PROPERTY_PROVIDER_IMPL_INTL_PROPERTY_PROVIDER_IMPL_H_
 
+#include <queue>
+
 #include <fuchsia/deprecatedtimezone/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/modular/intl/internal/cpp/fidl.h>
@@ -12,8 +14,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/result.h>
 #include <sdk/lib/sys/cpp/component_context.h>
-
-#include <queue>
 
 namespace modular {
 

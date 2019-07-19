@@ -17,12 +17,11 @@ namespace modular {
 
 // Cobalt initialization. When cobalt is not needed, the returned object must be
 // deleted. This method must not be called again until then.
-fit::deferred_action<fit::closure> InitializeCobalt(
-    async_dispatcher_t* dispatcher, sys::ComponentContext* context);
+fit::deferred_action<fit::closure> InitializeCobalt(async_dispatcher_t* dispatcher,
+                                                    sys::ComponentContext* context);
 
 // Report a modular event to Cobalt.
-void ReportEvent(
-    cobalt_registry::ModularLifetimeEventsMetricDimensionEventType event);
+void ReportEvent(cobalt_registry::ModularLifetimeEventsMetricDimensionEventType event);
 
 // Report a module launch time duration to Cobalt.
 void ReportModuleLaunchTime(std::string module_url, zx::duration time);
@@ -30,9 +29,8 @@ void ReportModuleLaunchTime(std::string module_url, zx::duration time);
 // Report a story launch time duration to Cobalt.
 void ReportStoryLaunchTime(zx::duration time);
 
-void ReportSessionAgentEvent(
-    const std::string& url,
-    cobalt_registry::SessionAgentEventsMetricDimensionEventType event);
+void ReportSessionAgentEvent(const std::string& url,
+                             cobalt_registry::SessionAgentEventsMetricDimensionEventType event);
 
 }  // namespace modular
 

@@ -5,12 +5,13 @@
 #include "peridot/bin/basemgr/session_context_impl.h"
 
 #include <fcntl.h>
-#include <lib/fidl/cpp/synchronous_interface_ptr.h>
-#include <lib/fsl/io/fd.h>
 
 #include <memory>
 #include <string>
 #include <utility>
+
+#include <lib/fidl/cpp/synchronous_interface_ptr.h>
+#include <lib/fsl/io/fd.h>
 
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/common/teardown.h"
@@ -23,16 +24,12 @@ namespace modular {
 
 SessionContextImpl::SessionContextImpl(
     fuchsia::sys::Launcher* const launcher, std::string session_id,
-    fuchsia::modular::AppConfig sessionmgr_config,
-    fuchsia::modular::AppConfig session_shell_config,
-    fuchsia::modular::AppConfig story_shell_config,
-    bool use_session_shell_for_story_shell_factory,
+    fuchsia::modular::AppConfig sessionmgr_config, fuchsia::modular::AppConfig session_shell_config,
+    fuchsia::modular::AppConfig story_shell_config, bool use_session_shell_for_story_shell_factory,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
-    fuchsia::modular::auth::AccountPtr account,
-    fuchsia::ui::views::ViewToken view_token,
-    fuchsia::sys::ServiceListPtr additional_services,
-    GetPresentationCallback get_presentation,
+    fuchsia::modular::auth::AccountPtr account, fuchsia::ui::views::ViewToken view_token,
+    fuchsia::sys::ServiceListPtr additional_services, GetPresentationCallback get_presentation,
     OnSessionShutdownCallback on_session_shutdown)
     : session_context_binding_(this),
       get_presentation_(std::move(get_presentation)),
@@ -54,16 +51,15 @@ SessionContextImpl::SessionContextImpl(
 
   // 2. Launch Sessionmgr in the current environment.
   sessionmgr_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher, std::move(sessionmgr_config), data_origin,
-      std::move(additional_services), std::move(flat_namespace));
+      launcher, std::move(sessionmgr_config), data_origin, std::move(additional_services),
+      std::move(flat_namespace));
 
   // 3. Initialize the Sessionmgr service.
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
-  sessionmgr_->Initialize(
-      session_id, std::move(account), std::move(session_shell_config),
-      std::move(story_shell_config), use_session_shell_for_story_shell_factory,
-      std::move(ledger_token_manager), std::move(agent_token_manager),
-      session_context_binding_.NewBinding(), std::move(view_token));
+  sessionmgr_->Initialize(session_id, std::move(account), std::move(session_shell_config),
+                          std::move(story_shell_config), use_session_shell_for_story_shell_factory,
+                          std::move(ledger_token_manager), std::move(agent_token_manager),
+                          session_context_binding_.NewBinding(), std::move(view_token));
 
   sessionmgr_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "
@@ -91,20 +87,17 @@ fuchsia::sys::FlatNamespacePtr SessionContextImpl::MakeConfigNamespace() {
   fxl::UniqueFD dir(open(config_dir.c_str(), O_DIRECTORY | O_RDONLY));
   auto flat_namespace = fuchsia::sys::FlatNamespace::New();
   flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
-  flat_namespace->directories.push_back(
-      fsl::CloneChannelFromFileDescriptor(dir.get()));
+  flat_namespace->directories.push_back(fsl::CloneChannelFromFileDescriptor(dir.get()));
   return flat_namespace;
 }
 
 // TODO(MF-120): Replace method in favor of letting sessionmgr launch base
 // shell via SessionUserProvider.
-void SessionContextImpl::Shutdown(bool logout_users,
-                                  fit::function<void()> callback) {
+void SessionContextImpl::Shutdown(bool logout_users, fit::function<void()> callback) {
   shutdown_callbacks_.push_back(std::move(callback));
   if (shutdown_callbacks_.size() > 1) {
-    FXL_LOG(INFO)
-        << "fuchsia::modular::internal::SessionContext::Shutdown() "
-           "already called, queuing callback while shutdown is in progress.";
+    FXL_LOG(INFO) << "fuchsia::modular::internal::SessionContext::Shutdown() "
+                     "already called, queuing callback while shutdown is in progress.";
     return;
   }
 
@@ -126,11 +119,9 @@ void SessionContextImpl::GetPresentation(
   get_presentation_(std::move(request));
 }
 
-FuturePtr<> SessionContextImpl::SwapSessionShell(
-    fuchsia::modular::AppConfig session_shell_config) {
+FuturePtr<> SessionContextImpl::SwapSessionShell(fuchsia::modular::AppConfig session_shell_config) {
   auto future = Future<>::Create("SwapSessionShell");
-  sessionmgr_->SwapSessionShell(std::move(session_shell_config),
-                                future->Completer());
+  sessionmgr_->SwapSessionShell(std::move(session_shell_config), future->Completer());
   return future;
 }
 

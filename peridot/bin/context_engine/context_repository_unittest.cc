@@ -60,17 +60,17 @@ class TestListener : public fuchsia::modular::ContextListener {
   void reset() { last_update.reset(); }
 };
 
-fuchsia::modular::ContextValue CreateValue(
-    fuchsia::modular::ContextValueType type, const std::string& content) {
+fuchsia::modular::ContextValue CreateValue(fuchsia::modular::ContextValueType type,
+                                           const std::string& content) {
   fuchsia::modular::ContextValue value;
   value.type = type;
   value.content = content;
   return value;
 }
 
-fuchsia::modular::ContextValue CreateValue(
-    fuchsia::modular::ContextValueType type, const std::string& content,
-    fuchsia::modular::ContextMetadata meta) {
+fuchsia::modular::ContextValue CreateValue(fuchsia::modular::ContextValueType type,
+                                           const std::string& content,
+                                           fuchsia::modular::ContextMetadata meta) {
   fuchsia::modular::ContextValue value;
   value.type = type;
   value.content = content;
@@ -85,16 +85,14 @@ TEST_F(ContextRepositoryTest, GetAddUpdateRemove) {
   // operations.
 
   // Show that when we set values, we can get them back.
-  auto id1 = repository_.Add(
-      CreateValue(fuchsia::modular::ContextValueType::ENTITY, "content"));
+  auto id1 = repository_.Add(CreateValue(fuchsia::modular::ContextValueType::ENTITY, "content"));
   auto value1 = repository_.Get(id1);
   ASSERT_TRUE(value1);
   EXPECT_EQ(fuchsia::modular::ContextValueType::ENTITY, value1->type);
   EXPECT_EQ("content", value1->content);
 
   // Setting another value doesn't affect the original value.
-  auto id2 = repository_.Add(
-      CreateValue(fuchsia::modular::ContextValueType::ENTITY, "content2"));
+  auto id2 = repository_.Add(CreateValue(fuchsia::modular::ContextValueType::ENTITY, "content2"));
   auto value2 = repository_.Get(id2);
   ASSERT_TRUE(value2);
   EXPECT_EQ("content2", value2->content);
@@ -104,9 +102,8 @@ TEST_F(ContextRepositoryTest, GetAddUpdateRemove) {
   EXPECT_EQ("content", value1->content);
 
   // Let's create metadata.
-  auto id3 = repository_.Add(
-      CreateValue(fuchsia::modular::ContextValueType::ENTITY, "content3",
-                  ContextMetadataBuilder().SetStoryId("id3story").Build()));
+  auto id3 = repository_.Add(CreateValue(fuchsia::modular::ContextValueType::ENTITY, "content3",
+                                         ContextMetadataBuilder().SetStoryId("id3story").Build()));
   auto value3 = repository_.Get(id3);
   ASSERT_TRUE(value3);
   EXPECT_EQ("content3", value3->content);
@@ -114,10 +111,8 @@ TEST_F(ContextRepositoryTest, GetAddUpdateRemove) {
   EXPECT_EQ("id3story", value3->meta.story->id);
 
   // Update one of the previous values.
-  repository_.Update(
-      id2,
-      CreateValue(fuchsia::modular::ContextValueType::ENTITY, "new content2",
-                  ContextMetadataBuilder().SetStoryId("id2story").Build()));
+  repository_.Update(id2, CreateValue(fuchsia::modular::ContextValueType::ENTITY, "new content2",
+                                      ContextMetadataBuilder().SetStoryId("id2story").Build()));
   value2 = repository_.Get(id2);
   ASSERT_TRUE(value2);
   ASSERT_TRUE(value2->meta.story);
@@ -141,13 +136,12 @@ TEST_F(ContextRepositoryTest, ValuesInheritMetadata) {
   // When a value is added as a child of another value, the child inherits the
   // metadata of its parent.
   auto meta1 = ContextMetadataBuilder().SetStoryId("id").Build();
-  auto id1 = repository_.Add(CreateValue(
-      fuchsia::modular::ContextValueType::STORY, "s", std::move(meta1)));
+  auto id1 = repository_.Add(
+      CreateValue(fuchsia::modular::ContextValueType::STORY, "s", std::move(meta1)));
 
   auto meta2 = ContextMetadataBuilder().SetModuleUrl("url").Build();
   auto id2 = repository_.Add(
-      id1, CreateValue(fuchsia::modular::ContextValueType::MODULE, "m",
-                       std::move(meta2)));
+      id1, CreateValue(fuchsia::modular::ContextValueType::MODULE, "m", std::move(meta2)));
 
   auto value1 = repository_.GetMerged(id1);
   ASSERT_TRUE(value1);
@@ -169,8 +163,8 @@ TEST_F(ContextRepositoryTest, ValuesInheritMetadata) {
   meta1 = fuchsia::modular::ContextMetadata();
   meta1.story = fuchsia::modular::StoryMetadata::New();
   meta1.story->id = "newid";
-  repository_.Update(id1, CreateValue(fuchsia::modular::ContextValueType::STORY,
-                                      "s", std::move(meta1)));
+  repository_.Update(id1,
+                     CreateValue(fuchsia::modular::ContextValueType::STORY, "s", std::move(meta1)));
   value2 = repository_.GetMerged(id2);
   ASSERT_TRUE(value2);
   ASSERT_TRUE(value2->meta.story);
@@ -181,10 +175,9 @@ TEST_F(ContextRepositoryTest, ValuesInheritMetadata) {
 
   // If a parent contains metadata that the child also contains (they both have
   // 'mod' metadata), the parent's takes precendence.
-  meta1 =
-      ContextMetadataBuilder(std::move(meta1)).SetModuleUrl("override").Build();
-  repository_.Update(id1, CreateValue(fuchsia::modular::ContextValueType::STORY,
-                                      "s", std::move(meta1)));
+  meta1 = ContextMetadataBuilder(std::move(meta1)).SetModuleUrl("override").Build();
+  repository_.Update(id1,
+                     CreateValue(fuchsia::modular::ContextValueType::STORY, "s", std::move(meta1)));
   value2 = repository_.GetMerged(id2);
   ASSERT_TRUE(value2);
   ASSERT_FALSE(value2->meta.story);

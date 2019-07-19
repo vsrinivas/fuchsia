@@ -19,20 +19,16 @@ TEST_F(ModularTestHarnessTest, SimpleSuccess) {
   shell_intercept_spec.set_component_url(kFakeBaseShellUrl);
 
   fuchsia::modular::testing::TestHarnessSpec spec;
-  spec.mutable_basemgr_config()
-      ->mutable_base_shell()
-      ->mutable_app_config()
-      ->set_url(kFakeBaseShellUrl);
-  spec.mutable_components_to_intercept()->push_back(
-      std::move(shell_intercept_spec));
+  spec.mutable_basemgr_config()->mutable_base_shell()->mutable_app_config()->set_url(
+      kFakeBaseShellUrl);
+  spec.mutable_components_to_intercept()->push_back(std::move(shell_intercept_spec));
 
   // Listen for base shell interception.
   bool intercepted = false;
 
   test_harness().events().OnNewComponent =
       [&](fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              component) {
+          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
         ASSERT_EQ(kFakeBaseShellUrl, startup_info.launch_info.url);
         intercepted = true;
       };

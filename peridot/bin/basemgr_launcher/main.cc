@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iostream>
+#include <string>
+#include <vector>
+
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -13,13 +17,8 @@
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
-#include <iostream>
-#include <string>
-#include <vector>
-
 constexpr char kConfigFilename[] = "startup.config";
-constexpr char kBasemgrUrl[] =
-    "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
+constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 constexpr char kBasemgrHubGlob[] = "/hub/c/basemgr.cmx/*";
 
 std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir() {
@@ -33,11 +32,9 @@ std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir() {
   auto dir = std::make_unique<vfs::PseudoDir>();
   dir->AddEntry(kConfigFilename,
                 std::make_unique<vfs::PseudoFile>(
-                    config_str.length(),
-                    [config_str = std::move(config_str)](
-                        std::vector<uint8_t>* out, size_t /*unused*/) {
-                      std::copy(config_str.begin(), config_str.end(),
-                                std::back_inserter(*out));
+                    config_str.length(), [config_str = std::move(config_str)](
+                                             std::vector<uint8_t>* out, size_t /*unused*/) {
+                      std::copy(config_str.begin(), config_str.end(), std::back_inserter(*out));
                       return ZX_OK;
                     }));
   return dir;
@@ -72,8 +69,7 @@ int main(int argc, const char** argv) {
   // kConfigFilename.
   auto config_dir = CreateConfigPseudoDir();
   fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
-  config_dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE,
-                    dir_handle.NewRequest().TakeChannel());
+  config_dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE, dir_handle.NewRequest().TakeChannel());
 
   // Build a LaunchInfo with the config directory above mapped to
   // /config_override/data.
@@ -84,8 +80,7 @@ int main(int argc, const char** argv) {
   launch_info.flat_namespace->directories.push_back(dir_handle.TakeChannel());
 
   // Launch a basemgr instance with the custom namespace we created above.
-  std::unique_ptr<sys::ComponentContext> context =
-      sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());
   fidl::InterfacePtr<fuchsia::sys::ComponentController> controller;

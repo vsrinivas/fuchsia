@@ -4,10 +4,10 @@
 
 #include "peridot/bin/basemgr/session_user_provider_impl.h"
 
+#include <utility>
+
 #include <lib/fit/function.h>
 #include <zircon/status.h>
-
-#include <utility>
 
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/json_xdr.h"
@@ -76,13 +76,11 @@ std::vector<fuchsia::auth::AuthProviderConfig> GetAuthProviderConfigs() {
 SessionUserProviderImpl::SessionUserProviderImpl(
     fuchsia::auth::account::AccountManager* const account_manager,
     fuchsia::auth::TokenManagerFactory* const token_manager_factory,
-    fuchsia::auth::AuthenticationContextProviderPtr
-        authentication_context_provider,
+    fuchsia::auth::AuthenticationContextProviderPtr authentication_context_provider,
     OnInitializeCallback on_initialize, OnLoginCallback on_login)
     : account_manager_(account_manager),
       token_manager_factory_(token_manager_factory),
-      authentication_context_provider_(
-          std::move(authentication_context_provider)),
+      authentication_context_provider_(std::move(authentication_context_provider)),
       authentication_context_provider_binding_(this),
       account_listener_binding_(this),
       on_initialize_(std::move(on_initialize)),
@@ -93,17 +91,15 @@ SessionUserProviderImpl::SessionUserProviderImpl(
   FXL_CHECK(on_initialize_);
   FXL_CHECK(on_login_);
 
-  authentication_context_provider_binding_.set_error_handler(
-      [this](zx_status_t status) {
-        FXL_LOG(WARNING) << "AuthenticationContextProvider disconnected.";
-        authentication_context_provider_binding_.Unbind();
-      });
+  authentication_context_provider_binding_.set_error_handler([this](zx_status_t status) {
+    FXL_LOG(WARNING) << "AuthenticationContextProvider disconnected.";
+    authentication_context_provider_binding_.Unbind();
+  });
 
   // Register SessionUserProvider as an AccountListener. All added accounts will
   // be logged in to a session.
   account_listener_binding_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(FATAL) << "AccountListener disconnected with status: "
-                   << zx_status_get_string(status);
+    FXL_LOG(FATAL) << "AccountListener disconnected with status: " << zx_status_get_string(status);
   });
 
   fuchsia::auth::account::AccountListenerOptions options;
@@ -115,8 +111,7 @@ SessionUserProviderImpl::SessionUserProviderImpl(
         if (status == fuchsia::auth::account::Status::OK) {
           FXL_LOG(INFO) << "AccountListener registered.";
         } else {
-          FXL_LOG(FATAL) << "AccountListener registration failed with status: "
-                         << (uint32_t)status;
+          FXL_LOG(FATAL) << "AccountListener registration failed with status: " << (uint32_t)status;
         }
       });
 }
@@ -126,23 +121,20 @@ void SessionUserProviderImpl::Connect(
   bindings_.AddBinding(this, std::move(request));
 }
 
-void SessionUserProviderImpl::AddUser(
-    fuchsia::modular::auth::IdentityProvider identity_provider,
-    AddUserCallback callback) {
+void SessionUserProviderImpl::AddUser(fuchsia::modular::auth::IdentityProvider identity_provider,
+                                      AddUserCallback callback) {
   account_manager_->ProvisionFromAuthProvider(
       authentication_context_provider_binding_.NewBinding(),
       MapIdentityProviderToAuthProviderType(identity_provider),
       fuchsia::auth::account::Lifetime::PERSISTENT,
       [callback = std::move(callback)](
           fuchsia::auth::account::Status status,
-          std::unique_ptr<fuchsia::auth::account::LocalAccountId>
-              account_id) mutable {
+          std::unique_ptr<fuchsia::auth::account::LocalAccountId> account_id) mutable {
         if (status != fuchsia::auth::account::Status::OK || !account_id) {
           FXL_LOG(ERROR) << "Failed to provision new account from wuth "
                             "provider with status: "
                          << (uint32_t)status;
-          callback(nullptr,
-                   "Failed to provision new account from auth provider.");
+          callback(nullptr, "Failed to provision new account from auth provider.");
           return;
         }
 
@@ -174,10 +166,8 @@ void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) 
     // runners with all auth provider configurations, send two
     // |fuchsia::auth::TokenManager| handles, one for ledger and one for
     // agents for the given user account |account_id|.
-    fuchsia::auth::TokenManagerPtr ledger_token_manager =
-        CreateTokenManager(account_id);
-    fuchsia::auth::TokenManagerPtr agent_token_manager =
-        CreateTokenManager(account_id);
+    fuchsia::auth::TokenManagerPtr ledger_token_manager = CreateTokenManager(account_id);
+    fuchsia::auth::TokenManagerPtr agent_token_manager = CreateTokenManager(account_id);
 
     on_login_(/* account= */ nullptr, std::move(ledger_token_manager),
               std::move(agent_token_manager));
@@ -188,36 +178,31 @@ void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) 
     account_id.id = std::atoll(params.account_id->c_str());
 
     fuchsia::auth::account::AccountPtr account;
-    account_manager_->GetAccount(
-        account_id, authentication_context_provider_binding_.NewBinding(),
-        account.NewRequest(), [](fuchsia::auth::account::Status status) {
-          FXL_LOG(INFO) << "Got account with status: " << (uint32_t)status;
-        });
+    account_manager_->GetAccount(account_id, authentication_context_provider_binding_.NewBinding(),
+                                 account.NewRequest(), [](fuchsia::auth::account::Status status) {
+                                   FXL_LOG(INFO) << "Got account with status: " << (uint32_t)status;
+                                 });
 
     fuchsia::auth::account::PersonaPtr persona;
     account->GetDefaultPersona(
-        persona.NewRequest(),
-        [](fuchsia::auth::account::Status status,
-           std::unique_ptr<fuchsia::auth::account::LocalPersonaId>) {
-          FXL_LOG(INFO) << "Got default persona with status: "
-                        << (uint32_t)status;
+        persona.NewRequest(), [](fuchsia::auth::account::Status status,
+                                 std::unique_ptr<fuchsia::auth::account::LocalPersonaId>) {
+          FXL_LOG(INFO) << "Got default persona with status: " << (uint32_t)status;
         });
 
     fuchsia::auth::TokenManagerPtr ledger_token_manager;
-    persona->GetTokenManager(
-        kSessionUserProviderAppUrl, ledger_token_manager.NewRequest(),
-        [](fuchsia::auth::account::Status status) {
-          FXL_LOG(INFO) << "Got token manager with status: "
-                        << (uint32_t)status;
-        });
+    persona->GetTokenManager(kSessionUserProviderAppUrl, ledger_token_manager.NewRequest(),
+                             [](fuchsia::auth::account::Status status) {
+                               FXL_LOG(INFO)
+                                   << "Got token manager with status: " << (uint32_t)status;
+                             });
 
     fuchsia::auth::TokenManagerPtr agent_token_manager;
-    persona->GetTokenManager(
-        kSessionUserProviderAppUrl, agent_token_manager.NewRequest(),
-        [](fuchsia::auth::account::Status status) {
-          FXL_LOG(INFO) << "Got token manager with status: "
-                        << (uint32_t)status;
-        });
+    persona->GetTokenManager(kSessionUserProviderAppUrl, agent_token_manager.NewRequest(),
+                             [](fuchsia::auth::account::Status status) {
+                               FXL_LOG(INFO)
+                                   << "Got token manager with status: " << (uint32_t)status;
+                             });
 
     auto account_deprecated = fuchsia::modular::auth::Account::New();
     account_deprecated->id = params.account_id->c_str();
@@ -237,8 +222,7 @@ void SessionUserProviderImpl::RemoveAllUsers(fit::function<void()> callback) {
   joined_personas_.clear();
   account_manager_->GetAccountIds(
       [this, callback = std::move(callback)](
-          std::vector<fuchsia::auth::account::LocalAccountId>
-              account_ids) mutable {
+          std::vector<fuchsia::auth::account::LocalAccountId> account_ids) mutable {
         if (account_ids.empty()) {
           callback();
           return;
@@ -246,16 +230,12 @@ void SessionUserProviderImpl::RemoveAllUsers(fit::function<void()> callback) {
 
         // We only expect there to be one account at most.
         account_manager_->RemoveAccount(
-            account_ids.at(0),
-            true, /* Force account removal */
-            [callback = std::move(callback)](fuchsia::auth::account::Status) {
-              callback();
-            });
+            account_ids.at(0), true, /* Force account removal */
+            [callback = std::move(callback)](fuchsia::auth::account::Status) { callback(); });
       });
 }
 
-void SessionUserProviderImpl::RemoveUser(std::string account_id,
-                                         RemoveUserCallback callback) {
+void SessionUserProviderImpl::RemoveUser(std::string account_id, RemoveUserCallback callback) {
   FXL_LOG(INFO) << "RemoveUser() is not implemented yet.";
   callback("");
 }
@@ -268,38 +248,32 @@ void SessionUserProviderImpl::PreviousUsers(PreviousUsersCallback callback) {
 
 void SessionUserProviderImpl::GetAuthenticationUIContext(
     fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request) {
-  authentication_context_provider_->GetAuthenticationUIContext(
-      std::move(request));
+  authentication_context_provider_->GetAuthenticationUIContext(std::move(request));
 }
 
-fuchsia::auth::TokenManagerPtr SessionUserProviderImpl::CreateTokenManager(
-    std::string account_id) {
+fuchsia::auth::TokenManagerPtr SessionUserProviderImpl::CreateTokenManager(std::string account_id) {
   FXL_CHECK(token_manager_factory_);
 
   fuchsia::auth::TokenManagerPtr token_mgr;
   token_manager_factory_->GetTokenManager(
       account_id, kSessionUserProviderAppUrl, GetAuthProviderConfigs(),
-      authentication_context_provider_binding_.NewBinding(),
-      token_mgr.NewRequest());
+      authentication_context_provider_binding_.NewBinding(), token_mgr.NewRequest());
 
   token_mgr.set_error_handler([account_id](zx_status_t status) {
-    FXL_LOG(INFO) << "Token Manager for account:" << account_id
-                  << " disconnected";
+    FXL_LOG(INFO) << "Token Manager for account:" << account_id << " disconnected";
   });
 
   return token_mgr;
 }
 
-void SessionUserProviderImpl::OnInitialize(
-    std::vector<fuchsia::auth::account::AccountAuthState>,
-    OnInitializeCallback callback) {
+void SessionUserProviderImpl::OnInitialize(std::vector<fuchsia::auth::account::AccountAuthState>,
+                                           OnInitializeCallback callback) {
   callback();
   on_initialize_();
 }
 
-void SessionUserProviderImpl::OnAccountAdded(
-    fuchsia::auth::account::LocalAccountId account_id,
-    OnAccountAddedCallback callback) {
+void SessionUserProviderImpl::OnAccountAdded(fuchsia::auth::account::LocalAccountId account_id,
+                                             OnAccountAddedCallback callback) {
   // TODO(MF-311): Get rid of this once clients of UserProvider interface start
   // using AccountManager.
   fuchsia::modular::UserLoginParams params;
@@ -310,14 +284,13 @@ void SessionUserProviderImpl::OnAccountAdded(
   callback();
 }
 
-void SessionUserProviderImpl::OnAccountRemoved(
-    fuchsia::auth::account::LocalAccountId, OnAccountRemovedCallback callback) {
+void SessionUserProviderImpl::OnAccountRemoved(fuchsia::auth::account::LocalAccountId,
+                                               OnAccountRemovedCallback callback) {
   callback();
 }
 
-void SessionUserProviderImpl::OnAuthStateChanged(
-    fuchsia::auth::account::AccountAuthState,
-    OnAuthStateChangedCallback callback) {
+void SessionUserProviderImpl::OnAuthStateChanged(fuchsia::auth::account::AccountAuthState,
+                                                 OnAuthStateChangedCallback callback) {
   callback();
 }
 

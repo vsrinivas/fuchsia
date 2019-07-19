@@ -34,17 +34,14 @@ const char kEntityTypeKey[] = "ey";
 // Key for fuchsia::modular::ContextValueType.
 const char kContextValueTypeKey[] = "t";
 
-std::set<std::string> EncodeMetadataAndType(
-    fuchsia::modular::ContextValueType node_type,
-    const fuchsia::modular::ContextMetadata& metadata) {
+std::set<std::string> EncodeMetadataAndType(fuchsia::modular::ContextValueType node_type,
+                                            const fuchsia::modular::ContextMetadata& metadata) {
   fuchsia::modular::ContextMetadata meta_clone;
   fidl::Clone(metadata, &meta_clone);
-  return EncodeMetadataAndType(node_type,
-                               fidl::MakeOptional(std::move(meta_clone)));
+  return EncodeMetadataAndType(node_type, fidl::MakeOptional(std::move(meta_clone)));
 }
 
-std::string EncodeFocus(const std::string& key,
-                        fuchsia::modular::FocusedStateState focused_state) {
+std::string EncodeFocus(const std::string& key, fuchsia::modular::FocusedStateState focused_state) {
   std::ostringstream str;
   str << key;
   if (focused_state == fuchsia::modular::FocusedStateState::FOCUSED) {
@@ -55,9 +52,8 @@ std::string EncodeFocus(const std::string& key,
   return str.str();
 }
 
-std::set<std::string> EncodeMetadataAndType(
-    fuchsia::modular::ContextValueType node_type,
-    const fuchsia::modular::ContextMetadataPtr& metadata) {
+std::set<std::string> EncodeMetadataAndType(fuchsia::modular::ContextValueType node_type,
+                                            const fuchsia::modular::ContextMetadataPtr& metadata) {
   std::set<std::string> ret;
 
   if (metadata) {
@@ -68,8 +64,7 @@ std::set<std::string> EncodeMetadataAndType(
         ret.insert(str.str());
       }
       if (metadata->story->focused) {
-        ret.insert(
-            EncodeFocus(kStoryFocusedKey, metadata->story->focused->state));
+        ret.insert(EncodeFocus(kStoryFocusedKey, metadata->story->focused->state));
       }
     }
 
@@ -88,8 +83,7 @@ std::set<std::string> EncodeMetadataAndType(
         ret.insert(str.str());
       }
       if (metadata->mod->focused) {
-        ret.insert(
-            EncodeFocus(kModuleFocusedKey, metadata->mod->focused->state));
+        ret.insert(EncodeFocus(kModuleFocusedKey, metadata->mod->focused->state));
       }
     }
 
@@ -150,8 +144,7 @@ void ContextIndex::Query(fuchsia::modular::ContextValueType type,
   for (const auto& key : keys) {
     std::set<ContextIndex::Id> intersection;
     const auto& posting_list = index_[key];
-    std::set_intersection(ret.begin(), ret.end(), posting_list.begin(),
-                          posting_list.end(),
+    std::set_intersection(ret.begin(), ret.end(), posting_list.begin(), posting_list.end(),
                           std::inserter(intersection, intersection.begin()));
     ret.swap(intersection);
   }

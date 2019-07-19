@@ -23,24 +23,21 @@ class PresentationContainer : fuchsia::ui::policy::KeyboardCaptureListenerHACK {
   // |shell_config| and connects it to the presenter service. Attaches
   // the given |on_swap_session_shell| to a reserved keyboard binding
   // (this is a hack to keep SwapSessionShell working).
-  explicit PresentationContainer(
-      fuchsia::ui::policy::Presenter* const presenter,
-      fuchsia::ui::views::ViewHolderToken view_holder_token,
-      fuchsia::modular::session::SessionShellConfig shell_config,
-      fit::function<void()> on_swap_session_shell);
+  explicit PresentationContainer(fuchsia::ui::policy::Presenter* const presenter,
+                                 fuchsia::ui::views::ViewHolderToken view_holder_token,
+                                 fuchsia::modular::session::SessionShellConfig shell_config,
+                                 fit::function<void()> on_swap_session_shell);
 
   ~PresentationContainer() override;
 
   // Connects the given |request| to the presentation service. NOTE that the
   // presentation needs to be connected to the presenter service in order for
   // this presentation to display on UI.
-  void GetPresentation(
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request);
+  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request);
 
  private:
   // Adds global keyboard shortcuts, including a reserved keyboard binding.
-  void AddGlobalKeyboardShortcuts(
-      fuchsia::ui::policy::PresentationPtr& presentation);
+  void AddGlobalKeyboardShortcuts(fuchsia::ui::policy::PresentationPtr& presentation);
 
   // |fuchsia::ui::policy::KeyboardCaptureListenerHACK|
   void OnEvent(fuchsia::ui::input::KeyboardEvent event) override;

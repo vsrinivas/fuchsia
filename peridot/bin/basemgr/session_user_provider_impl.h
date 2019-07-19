@@ -30,10 +30,9 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   using OnInitializeCallback = fit::function<void()>;
 
   // Called after SessionUserProviderImpl successfully logs in a user.
-  using OnLoginCallback =
-      fit::function<void(fuchsia::modular::auth::AccountPtr account,
-                         fuchsia::auth::TokenManagerPtr ledger_token_manager,
-                         fuchsia::auth::TokenManagerPtr agent_token_manager)>;
+  using OnLoginCallback = fit::function<void(fuchsia::modular::auth::AccountPtr account,
+                                             fuchsia::auth::TokenManagerPtr ledger_token_manager,
+                                             fuchsia::auth::TokenManagerPtr agent_token_manager)>;
 
   // |account_manager| Used to register SessionUserProviderImpl as an
   // |AccountListener| to receive updates on newly added/removed accounts. Must
@@ -51,11 +50,10 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   //
   // |on_login| Callback  invoked when a persona is ready to be logged into a
   // new session. Must be present.
-  SessionUserProviderImpl(
-      fuchsia::auth::account::AccountManager* const account_manager,
-      fuchsia::auth::TokenManagerFactory* const token_manager_factory,
-      fuchsia::auth::AuthenticationContextProviderPtr auth_context_provider,
-      OnInitializeCallback on_initialize, OnLoginCallback on_login);
+  SessionUserProviderImpl(fuchsia::auth::account::AccountManager* const account_manager,
+                          fuchsia::auth::TokenManagerFactory* const token_manager_factory,
+                          fuchsia::auth::AuthenticationContextProviderPtr auth_context_provider,
+                          OnInitializeCallback on_initialize, OnLoginCallback on_login);
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request);
 
@@ -80,8 +78,7 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
   // |fuchsia::auth::AuthenticationContextProvider|
   void GetAuthenticationUIContext(
-      fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request)
-      override;
+      fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request) override;
 
   // Returns a new |fuchsia::auth::TokenManager| handle for the given user
   // account |account_id|.
@@ -94,28 +91,22 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   void OnInitialize(std::vector<fuchsia::auth::account::AccountAuthState>,
                     OnInitializeCallback) override;
   // |fuchsia::auth::account::AccountListner|
-  void OnAccountAdded(fuchsia::auth::account::LocalAccountId,
-                      OnAccountAddedCallback) override;
+  void OnAccountAdded(fuchsia::auth::account::LocalAccountId, OnAccountAddedCallback) override;
   // |fuchsia::auth::account::AccountListner|
-  void OnAccountRemoved(fuchsia::auth::account::LocalAccountId,
-                        OnAccountRemovedCallback) override;
+  void OnAccountRemoved(fuchsia::auth::account::LocalAccountId, OnAccountRemovedCallback) override;
   // |fuchsia::auth::account::AccountListner|
   void OnAuthStateChanged(fuchsia::auth::account::AccountAuthState,
                           OnAuthStateChangedCallback) override;
 
   fidl::BindingSet<fuchsia::modular::UserProvider> bindings_;
 
-  fuchsia::auth::account::AccountManager* const
-      account_manager_;  // Neither owned nor copied.
-  fuchsia::auth::TokenManagerFactory* const
-      token_manager_factory_;  // Neither owned nor copied.
-  fuchsia::auth::AuthenticationContextProviderPtr
-      authentication_context_provider_;
+  fuchsia::auth::account::AccountManager* const account_manager_;    // Neither owned nor copied.
+  fuchsia::auth::TokenManagerFactory* const token_manager_factory_;  // Neither owned nor copied.
+  fuchsia::auth::AuthenticationContextProviderPtr authentication_context_provider_;
 
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
       authentication_context_provider_binding_;
-  fidl::Binding<fuchsia::auth::account::AccountListener>
-      account_listener_binding_;
+  fidl::Binding<fuchsia::auth::account::AccountListener> account_listener_binding_;
 
   // The personas that are currently, or should be, joined on the session that's
   // started in modular framework.

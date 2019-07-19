@@ -5,12 +5,12 @@
 // This component provides the |fuchsia.modular.testing.TestHarness| fidl
 // service. This component will exit if the test harness becomes unavailable.
 
+#include <memory>
+
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/modular_test_harness/cpp/test_harness_impl.h>
 #include <sdk/lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/logging.h>
-
-#include <memory>
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
@@ -20,9 +20,8 @@ int main(int argc, const char** argv) {
   auto context = sys::ComponentContext::Create();
   auto env = context->svc()->Connect<fuchsia::sys::Environment>();
   context->outgoing()->AddPublicService<fuchsia::modular::testing::TestHarness>(
-      [&loop, &env, &test_harness_impl](
-          fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness>
-              request) {
+      [&loop, &env,
+       &test_harness_impl](fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness> request) {
         test_harness_impl = std::make_unique<modular::testing::TestHarnessImpl>(
             env, std::move(request), [&loop] { loop.Quit(); });
       });

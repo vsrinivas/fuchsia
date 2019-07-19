@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+#include <utility>
+
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
@@ -10,9 +13,6 @@
 #include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/logging.h>
 
-#include <memory>
-#include <utility>
-
 #include "peridot/lib/fidl/single_service_app.h"
 
 namespace modular {
@@ -20,8 +20,7 @@ namespace {
 
 // Implementation of a minimal base shell that will auto-login for testing
 // purposes.
-class TestBaseShellApp
-    : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
+class TestBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
  public:
   explicit TestBaseShellApp(sys::ComponentContext* const component_context)
       : SingleServiceApp(component_context) {}
@@ -39,18 +38,15 @@ class TestBaseShellApp
   // |SingleServiceApp|
   void CreateView(
       zx::eventpair view_token,
-      fidl::InterfaceRequest<
-          fuchsia::sys::ServiceProvider> /*incoming_services*/,
-      fidl::InterfaceHandle<
-          fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*incoming_services*/,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
     view_token_.value = std::move(view_token);
 
     LoginIfReady();
   }
 
   // |fuchsia::modular::BaseShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::BaseShellContext>
-                      base_shell_context,
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::BaseShellContext> base_shell_context,
                   fuchsia::modular::BaseShellParams) override {
     base_shell_context_.Bind(std::move(base_shell_context));
     base_shell_context_->GetUserProvider(user_provider_.NewRequest());
@@ -60,11 +56,9 @@ class TestBaseShellApp
 
   // |fuchsia::modular::BaseShell|
   void GetAuthenticationUIContext(
-      fidl::InterfaceRequest<
-          fuchsia::auth::AuthenticationUIContext> /*request*/) override {
-    FXL_LOG(INFO)
-        << "fuchsia::modular::BaseShell::GetAuthenticationUIContext() is"
-           " unimplemented.";
+      fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> /*request*/) override {
+    FXL_LOG(INFO) << "fuchsia::modular::BaseShell::GetAuthenticationUIContext() is"
+                     " unimplemented.";
   }
 
   // We get here from both Initialize() or CreateView().
@@ -92,8 +86,7 @@ int main(int argc, const char** argv) {
   auto context = sys::ComponentContext::Create();
 
   modular::AppDriver<modular::TestBaseShellApp> driver(
-      context->outgoing(),
-      std::make_unique<modular::TestBaseShellApp>(context.get()),
+      context->outgoing(), std::make_unique<modular::TestBaseShellApp>(context.get()),
       [&loop] { loop.Quit(); });
 
   loop.Run();

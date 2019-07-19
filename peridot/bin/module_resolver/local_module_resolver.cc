@@ -19,8 +19,7 @@ namespace modular {
 namespace {
 
 // << operator for LocalModuleResolver::ManifestId.
-std::ostream& operator<<(std::ostream& o,
-                         const std::pair<std::string, std::string>& id) {
+std::ostream& operator<<(std::ostream& o, const std::pair<std::string, std::string>& id) {
   return o << id.first << ":" << id.second;
 }
 
@@ -31,8 +30,7 @@ LocalModuleResolver::LocalModuleResolver()
 
 LocalModuleResolver::~LocalModuleResolver() = default;
 
-std::set<LocalModuleResolver::ManifestId> LocalModuleResolver::FindHandlers(
-    ModuleUri handler) {
+std::set<LocalModuleResolver::ManifestId> LocalModuleResolver::FindHandlers(ModuleUri handler) {
   // Search through each known repository source for |handler|, and return a
   // set<ManifestId> containing them.
   std::set<ManifestId> manifests;
@@ -45,18 +43,16 @@ std::set<LocalModuleResolver::ManifestId> LocalModuleResolver::FindHandlers(
   return manifests;
 }
 
-void LocalModuleResolver::AddSource(
-    std::string source_name, std::unique_ptr<ModuleManifestSource> repo) {
+void LocalModuleResolver::AddSource(std::string source_name,
+                                    std::unique_ptr<ModuleManifestSource> repo) {
   FXL_CHECK(bindings_.size() == 0);
 
   auto ptr = repo.get();
   sources_.emplace(source_name, std::move(repo));
 
   ptr->Watch(
-      async_get_default_dispatcher(),
-      [this, source_name]() { OnSourceIdle(source_name); },
-      [this, source_name](std::string module_uri,
-                          fuchsia::modular::ModuleManifest manifest) {
+      async_get_default_dispatcher(), [this, source_name]() { OnSourceIdle(source_name); },
+      [this, source_name](std::string module_uri, fuchsia::modular::ModuleManifest manifest) {
         OnNewManifestEntry(source_name, module_uri, std::move(manifest));
       },
       [this, source_name](std::string module_uri) {
@@ -78,10 +74,8 @@ class LocalModuleResolver::FindModulesCall
     : public Operation<fuchsia::modular::FindModulesResponse> {
  public:
   FindModulesCall(LocalModuleResolver* local_module_resolver,
-                  fuchsia::modular::FindModulesQuery query,
-                  ResultCall result_call)
-      : Operation("LocalModuleResolver::FindModulesCall",
-                  std::move(result_call)),
+                  fuchsia::modular::FindModulesQuery query, ResultCall result_call)
+      : Operation("LocalModuleResolver::FindModulesCall", std::move(result_call)),
         local_module_resolver_(local_module_resolver),
         query_(std::move(query)) {}
 
@@ -96,11 +90,10 @@ class LocalModuleResolver::FindModulesCall
 
     // 1. If a handler is specified, use only that for |candidates_|.
     if (!query_.handler.is_null()) {
-      auto found_handlers =
-          local_module_resolver_->FindHandlers(query_.handler);
+      auto found_handlers = local_module_resolver_->FindHandlers(query_.handler);
       if (found_handlers.empty()) {
-        response_ = CreateEmptyResponseWithStatus(
-            fuchsia::modular::FindModulesStatus::UNKNOWN_HANDLER);
+        response_ =
+            CreateEmptyResponseWithStatus(fuchsia::modular::FindModulesStatus::UNKNOWN_HANDLER);
         return;
       }
 
@@ -109,17 +102,15 @@ class LocalModuleResolver::FindModulesCall
 
     // 2. Find all modules that can handle the action and then take an
     // intersection |candidates_| if its non-empty.
-    auto action_it =
-        local_module_resolver_->action_to_manifests_.find(query_.action);
+    auto action_it = local_module_resolver_->action_to_manifests_.find(query_.action);
     if (action_it != local_module_resolver_->action_to_manifests_.end()) {
       if (!candidates_.empty()) {
         std::set<ManifestId> new_candidates;
         if (action_it != local_module_resolver_->action_to_manifests_.end()) {
           candidates_ = action_it->second;
-          std::set_intersection(
-              candidates_.begin(), candidates_.end(), action_it->second.begin(),
-              action_it->second.end(),
-              std::inserter(new_candidates, new_candidates.begin()));
+          std::set_intersection(candidates_.begin(), candidates_.end(), action_it->second.begin(),
+                                action_it->second.end(),
+                                std::inserter(new_candidates, new_candidates.begin()));
           candidates_ = new_candidates;
         }
       } else {
@@ -132,8 +123,7 @@ class LocalModuleResolver::FindModulesCall
     // parameter constraints.
     if (!candidates_.empty()) {
       for (const auto& parameter_entry : query_.parameter_constraints) {
-        ProcessParameterTypes(parameter_entry.param_name,
-                              parameter_entry.param_types);
+        ProcessParameterTypes(parameter_entry.param_name, parameter_entry.param_types);
       }
     }
 
@@ -155,10 +145,9 @@ class LocalModuleResolver::FindModulesCall
     // All parameters in the query must be handled by the candidates. For each
     // parameter that is processed, filter out any existing results that can't
     // also handle the new parameter type.
-    std::set_intersection(
-        candidates_.begin(), candidates_.end(), parameter_type_entries.begin(),
-        parameter_type_entries.end(),
-        std::inserter(new_result_entries, new_result_entries.begin()));
+    std::set_intersection(candidates_.begin(), candidates_.end(), parameter_type_entries.begin(),
+                          parameter_type_entries.end(),
+                          std::inserter(new_result_entries, new_result_entries.begin()));
 
     candidates_.swap(new_result_entries);
   }
@@ -168,13 +157,10 @@ class LocalModuleResolver::FindModulesCall
   std::set<ManifestId> GetManifestsMatchingParameterByTypeAndName(
       const std::string& parameter_type, const std::string& parameter_name) {
     std::set<ManifestId> found_entries;
-    auto found_manifests_it =
-        local_module_resolver_->parameter_type_and_name_to_manifests_.find(
-            std::make_pair(parameter_type, parameter_name));
-    if (found_manifests_it !=
-        local_module_resolver_->parameter_type_and_name_to_manifests_.end()) {
-      found_entries.insert(found_manifests_it->second.begin(),
-                           found_manifests_it->second.end());
+    auto found_manifests_it = local_module_resolver_->parameter_type_and_name_to_manifests_.find(
+        std::make_pair(parameter_type, parameter_name));
+    if (found_manifests_it != local_module_resolver_->parameter_type_and_name_to_manifests_.end()) {
+      found_entries.insert(found_manifests_it->second.begin(), found_manifests_it->second.end());
     }
     return found_entries;
   }
@@ -183,16 +169,14 @@ class LocalModuleResolver::FindModulesCall
   // query. The purpose of this method is to create a response using these
   // candidates.
   void FinalizeResponse(FlowToken flow) {
-    response_ = CreateEmptyResponseWithStatus(
-        fuchsia::modular::FindModulesStatus::SUCCESS);
+    response_ = CreateEmptyResponseWithStatus(fuchsia::modular::FindModulesStatus::SUCCESS);
     if (candidates_.empty()) {
       return;
     }
 
     for (auto manifest_id : candidates_) {
       auto entry_it = local_module_resolver_->manifests_.find(manifest_id);
-      FXL_CHECK(entry_it != local_module_resolver_->manifests_.end())
-          << manifest_id;
+      FXL_CHECK(entry_it != local_module_resolver_->manifests_.end()) << manifest_id;
 
       const auto& manifest = entry_it->second;
       fuchsia::modular::FindModulesResult result;
@@ -222,8 +206,7 @@ class LocalModuleResolver::FindModulesCall
 
 void LocalModuleResolver::FindModules(fuchsia::modular::FindModulesQuery query,
                                       FindModulesCallback callback) {
-  operations_.Add(std::make_unique<FindModulesCall>(this, std::move(query),
-                                                    std::move(callback)));
+  operations_.Add(std::make_unique<FindModulesCall>(this, std::move(query), std::move(callback)));
 }
 
 void LocalModuleResolver::OnSourceIdle(const std::string& source_name) {
@@ -244,9 +227,8 @@ void LocalModuleResolver::OnSourceIdle(const std::string& source_name) {
   }
 }
 
-void LocalModuleResolver::OnNewManifestEntry(
-    const std::string& source_name, std::string module_uri,
-    fuchsia::modular::ModuleManifest new_manifest) {
+void LocalModuleResolver::OnNewManifestEntry(const std::string& source_name, std::string module_uri,
+                                             fuchsia::modular::ModuleManifest new_manifest) {
   FXL_LOG(INFO) << "New Module manifest for binary " << module_uri << " with "
                 << new_manifest.intent_filters->size() << " intent filters.";
   auto manifest_id = ManifestId(source_name, module_uri);
@@ -265,8 +247,7 @@ void LocalModuleResolver::OnNewManifestEntry(
     action_to_manifests_[intent_filter.action].insert(manifest_id);
 
     for (const auto& constraint : intent_filter.parameter_constraints) {
-      parameter_type_and_name_to_manifests_[std::make_pair(constraint.type,
-                                                           constraint.name)]
+      parameter_type_and_name_to_manifests_[std::make_pair(constraint.type, constraint.name)]
           .insert(manifest_id);
       parameter_type_to_manifests_[constraint.type].insert(manifest_id);
     }
@@ -278,8 +259,7 @@ void LocalModuleResolver::OnRemoveManifestEntry(const std::string& source_name,
   ManifestId manifest_id(source_name, module_uri);
   auto it = manifests_.find(manifest_id);
   if (it == manifests_.end()) {
-    FXL_LOG(WARNING) << "Asked to remove non-existent manifest: "
-                     << manifest_id;
+    FXL_LOG(WARNING) << "Asked to remove non-existent manifest: " << manifest_id;
     return;
   }
 
@@ -288,9 +268,8 @@ void LocalModuleResolver::OnRemoveManifestEntry(const std::string& source_name,
     action_to_manifests_[intent_filter.action].erase(manifest_id);
 
     for (const auto& constraint : intent_filter.parameter_constraints) {
-      parameter_type_and_name_to_manifests_[std::make_pair(constraint.type,
-                                                           constraint.name)]
-          .erase(manifest_id);
+      parameter_type_and_name_to_manifests_[std::make_pair(constraint.type, constraint.name)].erase(
+          manifest_id);
       parameter_type_to_manifests_[constraint.type].erase(manifest_id);
     }
   }

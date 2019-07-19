@@ -7,17 +7,16 @@
 #include <lib/entity/cpp/json.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include "src/lib/files/file.h"
 
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
+#include "src/lib/files/file.h"
 
 namespace modular {
 namespace {
 
 fuchsia::modular::IntentFilter MakeIntentFilter(
-    std::string action,
-    std::vector<fuchsia::modular::ParameterConstraint> param_constraints) {
+    std::string action, std::vector<fuchsia::modular::ParameterConstraint> param_constraints) {
   fuchsia::modular::IntentFilter f;
   f.action = action;
   f.parameter_constraints = param_constraints;
@@ -46,8 +45,7 @@ class FindModulesTest : public gtest::TestLoopFixture {
     // entity references.
     impl_ = std::make_unique<LocalModuleResolver>();
     for (auto entry : test_sources_) {
-      impl_->AddSource(entry.first,
-                       std::unique_ptr<ModuleManifestSource>(entry.second));
+      impl_->AddSource(entry.first, std::unique_ptr<ModuleManifestSource>(entry.second));
     }
     test_sources_.clear();
     impl_->Connect(resolver_.NewRequest());
@@ -62,12 +60,11 @@ class FindModulesTest : public gtest::TestLoopFixture {
 
   void FindModules(fuchsia::modular::FindModulesQuery query) {
     bool got_response = false;
-    resolver_->FindModules(
-        std::move(query),
-        [this, &got_response](fuchsia::modular::FindModulesResponse response) {
-          got_response = true;
-          response.Clone(&response_);
-        });
+    resolver_->FindModules(std::move(query),
+                           [this, &got_response](fuchsia::modular::FindModulesResponse response) {
+                             got_response = true;
+                             response.Clone(&response_);
+                           });
     RunLoopUntilIdle();
     ASSERT_TRUE(got_response);
   }
@@ -80,16 +77,14 @@ class FindModulesTest : public gtest::TestLoopFixture {
    public:
     QueryBuilder() = delete;
 
-    QueryBuilder(std::string action)
-        : query(fuchsia::modular::FindModulesQuery()) {
+    QueryBuilder(std::string action) : query(fuchsia::modular::FindModulesQuery()) {
       query.action = action;
       query.parameter_constraints.resize(0);
     }
 
     fuchsia::modular::FindModulesQuery build() { return std::move(query); }
 
-    QueryBuilder& AddParameter(std::string name,
-                               std::vector<std::string> types) {
+    QueryBuilder& AddParameter(std::string name, std::vector<std::string> types) {
       fuchsia::modular::FindModulesParameterConstraint constraint;
       constraint.param_name = name;
       constraint.param_types = types;
@@ -134,22 +129,19 @@ TEST_F(FindModulesTest, Simpleaction) {
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
-    entry.intent_filters.push_back(
-        MakeIntentFilter("com.google.fuchsia.navigate.v1", {}));
+    entry.intent_filters.push_back(MakeIntentFilter("com.google.fuchsia.navigate.v1", {}));
     source1->add("module1", std::move(entry));
   }
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module2";
-    entry.intent_filters.push_back(
-        MakeIntentFilter("com.google.fuchsia.navigate.v1", {}));
+    entry.intent_filters.push_back(MakeIntentFilter("com.google.fuchsia.navigate.v1", {}));
     source2->add("module2", std::move(entry));
   }
   {
     fuchsia::modular::ModuleManifest entry;
     entry.binary = "module3";
-    entry.intent_filters.push_back(
-        MakeIntentFilter("com.google.fuchsia.exist.vinfinity", {}));
+    entry.intent_filters.push_back(MakeIntentFilter("com.google.fuchsia.exist.vinfinity", {}));
     source1->add("module3", std::move(entry));
   }
 
@@ -160,12 +152,11 @@ TEST_F(FindModulesTest, Simpleaction) {
   // above.  It's copied here so that we can call source2->idle() before
   // RunLoopUntilIdle() for this case only.
   bool got_response = false;
-  resolver_->FindModules(
-      QueryBuilder("com.google.fuchsia.navigate.v1").build(),
-      [this, &got_response](fuchsia::modular::FindModulesResponse response) {
-        got_response = true;
-        response.Clone(&response_);
-      });
+  resolver_->FindModules(QueryBuilder("com.google.fuchsia.navigate.v1").build(),
+                         [this, &got_response](fuchsia::modular::FindModulesResponse response) {
+                           got_response = true;
+                           response.Clone(&response_);
+                         });
 
   // Waiting until here to set |source2| as idle shows that FindModules() is
   // effectively delayed until all sources have indicated idle ("module2" is in
@@ -201,9 +192,8 @@ TEST_F(FindModulesTest, SimpleParameterTypes) {
     fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "destination";
     parameter2.type = "baz";
-    entry.intent_filters.push_back(
-        MakeIntentFilter("com.google.fuchsia.navigate.v1",
-                         {std::move(parameter1), std::move(parameter2)}));
+    entry.intent_filters.push_back(MakeIntentFilter(
+        "com.google.fuchsia.navigate.v1", {std::move(parameter1), std::move(parameter2)}));
     source->add("1", std::move(entry));
   }
   {
@@ -215,9 +205,8 @@ TEST_F(FindModulesTest, SimpleParameterTypes) {
     fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "destination";
     parameter2.type = "froozle";
-    entry.intent_filters.push_back(
-        MakeIntentFilter("com.google.fuchsia.navigate.v1",
-                         {std::move(parameter1), std::move(parameter2)}));
+    entry.intent_filters.push_back(MakeIntentFilter(
+        "com.google.fuchsia.navigate.v1", {std::move(parameter1), std::move(parameter2)}));
     source->add("2", std::move(entry));
   }
   {
@@ -226,8 +215,8 @@ TEST_F(FindModulesTest, SimpleParameterTypes) {
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "with";
     parameter.type = "compantionCube";
-    entry.intent_filters.push_back(MakeIntentFilter(
-        "com.google.fuchsia.exist.vinfinity", {std::move(parameter)}));
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.exist.vinfinity", {std::move(parameter)}));
     source->add("3", std::move(entry));
   }
   source->idle();
@@ -250,9 +239,8 @@ TEST_F(FindModulesTest, SimpleParameterTypes) {
 
   // Given parameter of type "frob", find a module with action
   // com.google.fuchsia.navigate.v1.
-  FindModules(QueryBuilder("com.google.fuchsia.navigate.v1")
-                  .AddParameter("start", {"frob"})
-                  .build());
+  FindModules(
+      QueryBuilder("com.google.fuchsia.navigate.v1").AddParameter("start", {"frob"}).build());
   ASSERT_EQ(1u, results().size());
   auto& res = results().at(0);
   EXPECT_EQ("module2", res.module_id);
@@ -297,16 +285,15 @@ TEST_F(FindModulesTest, QueryWithActionMatchesBothParameterNamesAndTypes) {
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "end";
     parameter.type = "foo";
-    entry.intent_filters.push_back(MakeIntentFilter(
-        "com.google.fuchsia.navigate.v1", {std::move(parameter)}));
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.navigate.v1", {std::move(parameter)}));
     source->add("1", std::move(entry));
   }
 
   source->idle();
 
-  FindModules(QueryBuilder("com.google.fuchsia.navigate.v1")
-                  .AddParameter("start", {"foo", "baz"})
-                  .build());
+  FindModules(
+      QueryBuilder("com.google.fuchsia.navigate.v1").AddParameter("start", {"foo", "baz"}).build());
 
   EXPECT_EQ(0lu, results().size());
 }
@@ -321,31 +308,25 @@ TEST_F(FindModulesTest, MultipleIntentFilters) {
     fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "end";
     parameter.type = "foo";
-    entry.intent_filters.push_back(MakeIntentFilter(
-        "com.google.fuchsia.navigate.v1", {modular::CloneStruct(parameter)}));
-    entry.intent_filters.push_back(MakeIntentFilter(
-        "com.google.fuchsia.navigate.v2", {modular::CloneStruct(parameter)}));
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.navigate.v1", {modular::CloneStruct(parameter)}));
+    entry.intent_filters.push_back(
+        MakeIntentFilter("com.google.fuchsia.navigate.v2", {modular::CloneStruct(parameter)}));
 
     source->add("1", std::move(entry));
   }
 
   source->idle();
 
-  FindModules(QueryBuilder("com.google.fuchsia.navigate.v1")
-                  .AddParameter("end", {"foo"})
-                  .build());
+  FindModules(QueryBuilder("com.google.fuchsia.navigate.v1").AddParameter("end", {"foo"}).build());
   ASSERT_EQ(1lu, results().size());
   EXPECT_EQ("module1", results().at(0).module_id);
 
-  FindModules(QueryBuilder("com.google.fuchsia.navigate.v2")
-                  .AddParameter("end", {"foo"})
-                  .build());
+  FindModules(QueryBuilder("com.google.fuchsia.navigate.v2").AddParameter("end", {"foo"}).build());
   ASSERT_EQ(1lu, results().size());
   EXPECT_EQ("module1", results().at(0).module_id);
 
-  FindModules(QueryBuilder("com.google.fuchsia.navigate.v3")
-                  .AddParameter("end", {"foo"})
-                  .build());
+  FindModules(QueryBuilder("com.google.fuchsia.navigate.v3").AddParameter("end", {"foo"}).build());
   ASSERT_EQ(0lu, results().size());
 }
 

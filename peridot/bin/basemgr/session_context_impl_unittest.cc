@@ -29,9 +29,8 @@ TEST_F(SessionContextImplTest, StartSessionmgrWithTokenManagers) {
 
   bool callback_called = false;
   launcher.RegisterComponent(
-      url, [&callback_called](
-               fuchsia::sys::LaunchInfo launch_info,
-               fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+      url, [&callback_called](fuchsia::sys::LaunchInfo launch_info,
+                              fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         callback_called = true;
       });
 
@@ -42,12 +41,10 @@ TEST_F(SessionContextImplTest, StartSessionmgrWithTokenManagers) {
       &launcher, kSessionId, CloneStruct(app_config) /* sessionmgr_config */,
       CloneStruct(app_config) /* session_shell_config */,
       CloneStruct(app_config) /* story_shell_config */,
-      false /* use_session_shell_for_story_shell_factory */,
-      std::move(ledger_token_manager), std::move(agent_token_manager),
-      nullptr /* account */, fuchsia::ui::views::ViewToken(),
+      false /* use_session_shell_for_story_shell_factory */, std::move(ledger_token_manager),
+      std::move(agent_token_manager), nullptr /* account */, fuchsia::ui::views::ViewToken(),
       nullptr /* additional_services */,
-      [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {
-      } /* get_presentation */,
+      [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {} /* get_presentation */,
       [](SessionContextImpl::ShutDownReason, bool) {} /* done_callback */);
 
   EXPECT_TRUE(callback_called);
@@ -64,9 +61,7 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
 
   launcher.RegisterComponent(
       url, [](fuchsia::sys::LaunchInfo launch_info,
-              fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
-        return;
-      });
+              fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) { return; });
 
   fuchsia::auth::TokenManagerPtr ledger_token_manager;
   fuchsia::auth::TokenManagerPtr agent_token_manager;
@@ -76,8 +71,8 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
       &launcher, kSessionId, /* sessionmgr_config= */ CloneStruct(app_config),
       /* session_shell_config= */ CloneStruct(app_config),
       /* story_shell_config= */ CloneStruct(app_config),
-      /* use_session_shell_for_story_shell_factory= */ false,
-      std::move(ledger_token_manager), std::move(agent_token_manager),
+      /* use_session_shell_for_story_shell_factory= */ false, std::move(ledger_token_manager),
+      std::move(agent_token_manager),
       /* account= */ nullptr, fuchsia::ui::views::ViewToken(),
       /* additional_services */ nullptr,
       /* get_presentation= */

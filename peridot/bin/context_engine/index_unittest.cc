@@ -18,9 +18,8 @@ TEST(IndexTest, Encode_Basic) {
   //  * values are indexed along with their key
   auto type = fuchsia::modular::ContextValueType::ENTITY;
   EXPECT_EQ(1lu, internal::EncodeMetadataAndType(type, nullptr).size());
-  EXPECT_EQ(1lu, internal::EncodeMetadataAndType(
-                     type, fuchsia::modular::ContextMetadata::New())
-                     .size());
+  EXPECT_EQ(1lu,
+            internal::EncodeMetadataAndType(type, fuchsia::modular::ContextMetadata::New()).size());
 
   auto meta = fuchsia::modular::ContextMetadata::New();
   meta->story = fuchsia::modular::StoryMetadata::New();
@@ -65,8 +64,7 @@ TEST(IndexTest, Encode_Differences) {
   meta2->story = fuchsia::modular::StoryMetadata::New();
   meta2->story->id = "story2";
   meta2->story->focused = fuchsia::modular::FocusedState::New();
-  meta2->story->focused->state =
-      fuchsia::modular::FocusedStateState::NOT_FOCUSED;
+  meta2->story->focused->state = fuchsia::modular::FocusedStateState::NOT_FOCUSED;
   meta2->mod = fuchsia::modular::ModuleMetadata::New();
   meta2->mod->url = "url2";
   meta2->mod->path = fidl::VectorPtr<std::string>::New(0);
@@ -89,8 +87,7 @@ TEST(IndexTest, Encode_Differences) {
   EXPECT_EQ(10lu, encoded2.size());
 
   std::set<std::string> intersection;
-  std::set_intersection(encoded1.begin(), encoded1.end(), encoded2.begin(),
-                        encoded2.end(),
+  std::set_intersection(encoded1.begin(), encoded1.end(), encoded2.begin(), encoded2.end(),
                         std::inserter(intersection, intersection.begin()));
   EXPECT_TRUE(intersection.empty());
 
@@ -102,8 +99,7 @@ TEST(IndexTest, Encode_Differences) {
   encoded1 = internal::EncodeMetadataAndType(kEntity, meta1);
   encoded2 = internal::EncodeMetadataAndType(kEntity, meta2);
   intersection.clear();
-  std::set_intersection(encoded1.begin(), encoded1.end(), encoded2.begin(),
-                        encoded2.end(),
+  std::set_intersection(encoded1.begin(), encoded1.end(), encoded2.begin(), encoded2.end(),
                         std::inserter(intersection, intersection.begin()));
   EXPECT_EQ(3lu, intersection.size());
 }

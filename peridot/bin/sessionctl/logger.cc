@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/sessionctl/logger.h"
+
 #include "peridot/bin/sessionctl/session_ctl_constants.h"
 
 namespace modular {
@@ -16,8 +17,7 @@ const char kStoriesKeyString[] = "stories";
 
 Logger::Logger(bool json_out) : json_out_(json_out) {}
 
-void Logger::LogError(const std::string& command,
-                      const std::string& error) const {
+void Logger::LogError(const std::string& command, const std::string& error) const {
   if (json_out_) {
     rapidjson::Document document;
     document.SetObject();
@@ -32,8 +32,7 @@ void Logger::LogError(const std::string& command,
   }
 }
 
-void Logger::Log(const std::string& command,
-                 const std::vector<std::string>& params) const {
+void Logger::Log(const std::string& command, const std::vector<std::string>& params) const {
   if (json_out_) {
     std::cout << GenerateJsonLogString(command, params) << std::endl;
   } else {
@@ -62,8 +61,8 @@ void Logger::Log(const std::string& command,
   }
 }
 
-std::string Logger::GenerateJsonLogString(
-    const std::string& command, const std::vector<std::string>& params) const {
+std::string Logger::GenerateJsonLogString(const std::string& command,
+                                          const std::vector<std::string>& params) const {
   rapidjson::Document document = GetDocument(command);
 
   // Generate array of |params| strings.
@@ -77,8 +76,7 @@ std::string Logger::GenerateJsonLogString(
 
   // Determine what the strings in |params| represent.
   rapidjson::Value key;
-  if (command == kListStoriesCommandString ||
-      command == kDeleteAllStoriesCommandString) {
+  if (command == kListStoriesCommandString || command == kDeleteAllStoriesCommandString) {
     key.SetString(kStoriesKeyString);
   } else {
     key.SetString(kParamsKeyString);
@@ -88,9 +86,8 @@ std::string Logger::GenerateJsonLogString(
   return JsonValueToPrettyString(document);
 }
 
-std::string Logger::GenerateJsonLogString(
-    const std::string& command,
-    const std::map<std::string, std::string>& params) const {
+std::string Logger::GenerateJsonLogString(const std::string& command,
+                                          const std::map<std::string, std::string>& params) const {
   rapidjson::Document document = GetDocument(command);
 
   // Generate a document containing |params| keys and values.
@@ -117,9 +114,8 @@ rapidjson::Document Logger::GetDocument(const std::string& command) const {
   return document;
 }
 
-std::string Logger::GenerateLogString(
-    const std::string& command,
-    const std::map<std::string, std::string>& params) const {
+std::string Logger::GenerateLogString(const std::string& command,
+                                      const std::map<std::string, std::string>& params) const {
   std::stringstream output;
 
   if (command == kDeleteStoryCommandString) {

@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_BASEMGR_INTL_PROPERTY_PROVIDER_IMPL_LOCALE_UTIL_H_
 #define PERIDOT_BIN_BASEMGR_INTL_PROPERTY_PROVIDER_IMPL_LOCALE_UTIL_H_
 
+#include <string>
+
 #include <fuchsia/intl/cpp/fidl.h>
 #include <lib/fit/result.h>
-
-#include <string>
 
 #include "third_party/icu/source/common/unicode/locid.h"
 #include "third_party/icu/source/i18n/unicode/ucal.h"

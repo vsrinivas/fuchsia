@@ -23,11 +23,10 @@ class EntityResolver;
 
 class ContextWriterImpl : fuchsia::modular::ContextWriter {
  public:
-  ContextWriterImpl(
-      const fuchsia::modular::ComponentScope& client_info,
-      ContextRepository* repository,
-      fuchsia::modular::EntityResolver* entity_resolver,
-      fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request);
+  ContextWriterImpl(const fuchsia::modular::ComponentScope& client_info,
+                    ContextRepository* repository,
+                    fuchsia::modular::EntityResolver* entity_resolver,
+                    fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request);
   ~ContextWriterImpl() override;
 
   // Takes ownership of |ptr|. Used by ContextWriterImpl and
@@ -42,15 +41,13 @@ class ContextWriterImpl : fuchsia::modular::ContextWriter {
   ContextRepository* repository() const { return repository_; }
 
   // Used by ContextValueWriterImpl.
-  void GetEntityTypesFromEntityReference(
-      const fidl::StringPtr& reference,
-      fit::function<void(const std::vector<std::string>&)> done);
+  void GetEntityTypesFromEntityReference(const fidl::StringPtr& reference,
+                                         fit::function<void(const std::vector<std::string>&)> done);
 
  private:
   // |fuchsia::modular::ContextWriter|
-  void CreateValue(
-      fidl::InterfaceRequest<fuchsia::modular::ContextValueWriter> request,
-      fuchsia::modular::ContextValueType type) override;
+  void CreateValue(fidl::InterfaceRequest<fuchsia::modular::ContextValueWriter> request,
+                   fuchsia::modular::ContextValueType type) override;
 
   // |fuchsia::modular::ContextWriter|
   void WriteEntityTopic(std::string topic, fidl::StringPtr value) override;
@@ -87,21 +84,18 @@ class ContextValueWriterImpl : fuchsia::modular::ContextValueWriter {
   // parent value.
   //
   // Does not take ownership of |writer|.
-  ContextValueWriterImpl(
-      ContextWriterImpl* writer, const ContextRepository::Id& parent_id,
-      fuchsia::modular::ContextValueType type,
-      fidl::InterfaceRequest<fuchsia::modular::ContextValueWriter> request);
+  ContextValueWriterImpl(ContextWriterImpl* writer, const ContextRepository::Id& parent_id,
+                         fuchsia::modular::ContextValueType type,
+                         fidl::InterfaceRequest<fuchsia::modular::ContextValueWriter> request);
   ~ContextValueWriterImpl() override;
 
  private:
   // |fuchsia::modular::ContextValueWriter|
-  void CreateChildValue(
-      fidl::InterfaceRequest<fuchsia::modular::ContextValueWriter> request,
-      fuchsia::modular::ContextValueType type) override;
+  void CreateChildValue(fidl::InterfaceRequest<fuchsia::modular::ContextValueWriter> request,
+                        fuchsia::modular::ContextValueType type) override;
 
   // |fuchsia::modular::ContextValueWriter|
-  void Set(fidl::StringPtr content,
-           fuchsia::modular::ContextMetadataPtr metadata) override;
+  void Set(fidl::StringPtr content, fuchsia::modular::ContextMetadataPtr metadata) override;
 
   fidl::Binding<fuchsia::modular::ContextValueWriter> binding_;
 

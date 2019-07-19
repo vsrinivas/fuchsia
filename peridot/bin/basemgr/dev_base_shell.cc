@@ -6,6 +6,9 @@
 // command line configurable user name to its fuchsia::modular::UserProvider,
 // and is able to run a story with a single module through its life cycle.
 
+#include <memory>
+#include <utility>
+
 #include <fuchsia/auth/account/cpp/fidl.h>
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
@@ -20,9 +23,6 @@
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
-
-#include <memory>
-#include <utility>
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
@@ -47,10 +47,9 @@ class Settings {
     if (command_line.HasOption("test_timeout_ms")) {
       std::string test_timeout_ms_string;
       command_line.GetOptionValue("test_timeout_ms", &test_timeout_ms_string);
-      if (!fxl::StringToNumberWithError<uint64_t>(test_timeout_ms_string,
-                                                  &test_timeout_ms)) {
-        FXL_LOG(WARNING) << "Unable to parse timeout from '"
-                         << test_timeout_ms_string << "'. Setting to default.";
+      if (!fxl::StringToNumberWithError<uint64_t>(test_timeout_ms_string, &test_timeout_ms)) {
+        FXL_LOG(WARNING) << "Unable to parse timeout from '" << test_timeout_ms_string
+                         << "'. Setting to default.";
       }
     }
   }
@@ -63,28 +62,25 @@ class Settings {
 
 class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
  public:
-  explicit DevBaseShellApp(sys::ComponentContext* const component_context,
-                           Settings settings)
+  explicit DevBaseShellApp(sys::ComponentContext* const component_context, Settings settings)
       : SingleServiceApp(component_context),
         settings_(std::move(settings)),
         weak_ptr_factory_(this) {
     this->component_context()->svc()->Connect(account_manager_.NewRequest());
     if (settings_.use_test_runner) {
       testing::Init(this->component_context(), __FILE__);
-      testing::Await(testing::kTestShutdown,
-                     [this] { base_shell_context_->Shutdown(); });
+      testing::Await(testing::kTestShutdown, [this] { base_shell_context_->Shutdown(); });
 
       // Start a timer to quit in case a test component misbehaves and hangs. If
       // we hit the timeout, this is a test failure.
-      async::PostDelayedTask(
-          async_get_default_dispatcher(),
-          callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                               [this] {
-                                 FXL_LOG(WARNING) << "DevBaseShell timed out";
-                                 testing::Fail("DevBaseShell timed out");
-                                 base_shell_context_->Shutdown();
-                               }),
-          zx::msec(settings_.test_timeout_ms));
+      async::PostDelayedTask(async_get_default_dispatcher(),
+                             callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
+                                                  [this] {
+                                                    FXL_LOG(WARNING) << "DevBaseShell timed out";
+                                                    testing::Fail("DevBaseShell timed out");
+                                                    base_shell_context_->Shutdown();
+                                                  }),
+                             zx::msec(settings_.test_timeout_ms));
     }
   }
 
@@ -103,18 +99,15 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
   // |SingleServiceApp|
   void CreateView(
       zx::eventpair view_token,
-      fidl::InterfaceRequest<
-          fuchsia::sys::ServiceProvider> /*incoming_services*/,
-      fidl::InterfaceHandle<
-          fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*incoming_services*/,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
     view_token_.value = std::move(view_token);
 
     Connect();
   }
 
   // |fuchsia::modular::BaseShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::BaseShellContext>
-                      base_shell_context,
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::BaseShellContext> base_shell_context,
                   fuchsia::modular::BaseShellParams) override {
     base_shell_context_.Bind(std::move(base_shell_context));
     base_shell_context_->GetUserProvider(user_provider_.NewRequest());
@@ -124,11 +117,9 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
 
   // |fuchsia::modular::BaseShell|
   void GetAuthenticationUIContext(
-      fidl::InterfaceRequest<
-          fuchsia::auth::AuthenticationUIContext> /*request*/) override {
-    FXL_LOG(INFO)
-        << "fuchsia::modular::BaseShell::GetAuthenticationUIContext() is"
-           " unimplemented.";
+      fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> /*request*/) override {
+    FXL_LOG(INFO) << "fuchsia::modular::BaseShell::GetAuthenticationUIContext() is"
+                     " unimplemented.";
   }
 
   void Login(const std::string& account_id) {
@@ -187,8 +178,7 @@ int main(int argc, const char** argv) {
 
   auto context = sys::ComponentContext::Create();
   modular::AppDriver<modular::DevBaseShellApp> driver(
-      context->outgoing(),
-      std::make_unique<modular::DevBaseShellApp>(context.get(), settings),
+      context->outgoing(), std::make_unique<modular::DevBaseShellApp>(context.get(), settings),
       [&loop] { loop.Quit(); });
 
   loop.Run();

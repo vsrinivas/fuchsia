@@ -12,8 +12,7 @@
 
 namespace modular {
 
-ContextEngineImpl::ContextEngineImpl(
-    fuchsia::modular::EntityResolver* const entity_resolver)
+ContextEngineImpl::ContextEngineImpl(fuchsia::modular::EntityResolver* const entity_resolver)
     : entity_resolver_(entity_resolver) {}
 ContextEngineImpl::~ContextEngineImpl() = default;
 
@@ -26,19 +25,16 @@ void ContextEngineImpl::AddBinding(
   bindings_.AddBinding(this, std::move(request));
 }
 
-void ContextEngineImpl::GetWriter(
-    fuchsia::modular::ComponentScope client_info,
-    fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
-  writers_.emplace_back(std::make_unique<ContextWriterImpl>(
-      std::move(client_info), &repository_, entity_resolver_,
-      std::move(request)));
+void ContextEngineImpl::GetWriter(fuchsia::modular::ComponentScope client_info,
+                                  fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
+  writers_.emplace_back(std::make_unique<ContextWriterImpl>(std::move(client_info), &repository_,
+                                                            entity_resolver_, std::move(request)));
 }
 
-void ContextEngineImpl::GetReader(
-    fuchsia::modular::ComponentScope client_info,
-    fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) {
-  readers_.emplace_back(std::make_unique<ContextReaderImpl>(
-      std::move(client_info), &repository_, std::move(request)));
+void ContextEngineImpl::GetReader(fuchsia::modular::ComponentScope client_info,
+                                  fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) {
+  readers_.emplace_back(std::make_unique<ContextReaderImpl>(std::move(client_info), &repository_,
+                                                            std::move(request)));
 }
 
 void ContextEngineImpl::GetContextDebug(

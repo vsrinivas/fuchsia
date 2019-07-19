@@ -25,12 +25,10 @@ template <>
 // fidl::TypeConverter specialization for fuchsia::modular::session::AppConfig
 // TODO(MF-277) Convert all usages of fuchsia::modular::AppConfig to
 // fuchsia::modular::session::AppConfig and remove this converter.
-struct TypeConverter<fuchsia::modular::AppConfig,
-                     fuchsia::modular::session::AppConfig> {
+struct TypeConverter<fuchsia::modular::AppConfig, fuchsia::modular::session::AppConfig> {
   // Converts fuchsia::modular::session::AppConfig to
   // fuchsia::modular::AppConfig
-  static fuchsia::modular::AppConfig Convert(
-      const fuchsia::modular::session::AppConfig& config) {
+  static fuchsia::modular::AppConfig Convert(const fuchsia::modular::session::AppConfig& config) {
     fuchsia::modular::AppConfig app_config;
     app_config.url = config.url().c_str();
 
@@ -61,16 +59,15 @@ constexpr char kTokenManagerFactoryUrl[] =
 
 }  // namespace
 
-BasemgrImpl::BasemgrImpl(
-    fuchsia::modular::session::BasemgrConfig config,
-    const std::shared_ptr<sys::ServiceDirectory> incoming_services,
-    fuchsia::sys::LauncherPtr launcher,
-    fuchsia::ui::policy::PresenterPtr presenter,
-    fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
-    fuchsia::wlan::service::WlanPtr wlan,
-    fuchsia::auth::account::AccountManagerPtr account_manager,
-    fuchsia::device::manager::AdministratorPtr device_administrator,
-    fit::function<void()> on_shutdown)
+BasemgrImpl::BasemgrImpl(fuchsia::modular::session::BasemgrConfig config,
+                         const std::shared_ptr<sys::ServiceDirectory> incoming_services,
+                         fuchsia::sys::LauncherPtr launcher,
+                         fuchsia::ui::policy::PresenterPtr presenter,
+                         fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
+                         fuchsia::wlan::service::WlanPtr wlan,
+                         fuchsia::auth::account::AccountManagerPtr account_manager,
+                         fuchsia::device::manager::AdministratorPtr device_administrator,
+                         fit::function<void()> on_shutdown)
     : config_(std::move(config)),
       component_context_services_(std::move(incoming_services)),
       launcher_(std::move(launcher)),
@@ -102,8 +99,7 @@ void BasemgrImpl::StartBaseShell() {
     return;
   }
 
-  auto base_shell_config =
-      fidl::To<fuchsia::modular::AppConfig>(config_.base_shell().app_config());
+  auto base_shell_config = fidl::To<fuchsia::modular::AppConfig>(config_.base_shell().app_config());
 
   fuchsia::sys::ServiceProviderPtr service_provider;
   services_.AddBinding(service_provider.NewRequest());
@@ -123,17 +119,13 @@ void BasemgrImpl::StartBaseShell() {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   fuchsia::ui::app::ViewProviderPtr base_shell_view_provider;
-  base_shell_app_->services().ConnectToService(
-      base_shell_view_provider.NewRequest());
-  base_shell_view_provider->CreateView(std::move(view_token.value), nullptr,
-                                       nullptr);
+  base_shell_app_->services().ConnectToService(base_shell_view_provider.NewRequest());
+  base_shell_view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
 
   presentation_container_ = std::make_unique<PresentationContainer>(
       presenter_.get(), std::move(view_holder_token),
       /* shell_config= */ GetActiveSessionShellConfig(),
-      /* on_swap_session_shell= */ [this] {
-        SelectNextSessionShell(/* callback= */ [] {});
-      });
+      /* on_swap_session_shell= */ [this] { SelectNextSessionShell(/* callback= */ [] {}); });
 
   // TODO(alexmin): Remove BaseShellParams.
   fuchsia::modular::BaseShellParams params;
@@ -165,8 +157,7 @@ FuturePtr<> BasemgrImpl::StopBaseShell() {
 
 FuturePtr<> BasemgrImpl::StopTokenManagerFactoryApp() {
   if (!token_manager_factory_app_) {
-    FXL_DLOG(INFO)
-        << "StopTokenManagerFactoryApp() called when already stopped";
+    FXL_DLOG(INFO) << "StopTokenManagerFactoryApp() called when already stopped";
 
     return Future<>::CreateCompleted("StopTokenManagerFactoryApp::Completed");
   }
@@ -186,13 +177,11 @@ FuturePtr<> BasemgrImpl::StopTokenManagerFactoryApp() {
 void BasemgrImpl::Start() {
   if (config_.test()) {
     // Print test banner.
-    FXL_LOG(INFO)
-        << std::endl
-        << std::endl
-        << "======================== Starting Test [" << config_.test_name()
-        << "]" << std::endl
-        << "============================================================"
-        << std::endl;
+    FXL_LOG(INFO) << std::endl
+                  << std::endl
+                  << "======================== Starting Test [" << config_.test_name() << "]"
+                  << std::endl
+                  << "============================================================" << std::endl;
   }
 
   // Wait for persistent data to come up.
@@ -200,8 +189,7 @@ void BasemgrImpl::Start() {
     WaitForMinfs();
   }
 
-  auto sessionmgr_config =
-      fidl::To<fuchsia::modular::AppConfig>(config_.sessionmgr());
+  auto sessionmgr_config = fidl::To<fuchsia::modular::AppConfig>(config_.sessionmgr());
   auto story_shell_config =
       fidl::To<fuchsia::modular::AppConfig>(config_.story_shell().app_config());
   session_provider_.reset(new SessionProvider(
@@ -234,11 +222,9 @@ void BasemgrImpl::InitializeUserProvider() {
   token_manager_factory_app_.release();
   fuchsia::modular::AppConfig token_manager_config;
   token_manager_config.url = kTokenManagerFactoryUrl;
-  token_manager_factory_app_ =
-      std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-          launcher_.get(), CloneStruct(token_manager_config));
-  token_manager_factory_app_->services().ConnectToService(
-      token_manager_factory_.NewRequest());
+  token_manager_factory_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+      launcher_.get(), CloneStruct(token_manager_config));
+  token_manager_factory_app_->services().ConnectToService(token_manager_factory_.NewRequest());
 
   session_user_provider_impl_ = std::make_unique<SessionUserProviderImpl>(
       account_manager_.get(), token_manager_factory_.get(),
@@ -254,8 +240,7 @@ void BasemgrImpl::InitializeUserProvider() {
       });
 }
 
-void BasemgrImpl::GetUserProvider(
-    fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) {
+void BasemgrImpl::GetUserProvider(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) {
   session_user_provider_impl_->Connect(std::move(request));
 }
 
@@ -270,11 +255,9 @@ void BasemgrImpl::Shutdown() {
   FXL_DLOG(INFO) << "fuchsia::modular::BaseShellContext::Shutdown()";
 
   if (config_.test()) {
-    FXL_LOG(INFO)
-        << std::endl
-        << "============================================================"
-        << std::endl
-        << "======================== [" << config_.test_name() << "] Done";
+    FXL_LOG(INFO) << std::endl
+                  << "============================================================" << std::endl
+                  << "======================== [" << config_.test_name() << "] Done";
   }
 
   // |session_provider_| teardown is asynchronous because it holds the
@@ -308,8 +291,8 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   auto did_start_session = session_provider_->StartSession(
-      std::move(view_token), std::move(account),
-      std::move(ledger_token_manager), std::move(agent_token_manager));
+      std::move(view_token), std::move(account), std::move(ledger_token_manager),
+      std::move(agent_token_manager));
   if (!did_start_session) {
     FXL_LOG(WARNING) << "Session was already started and the logged in user "
                         "could not join the session.";
@@ -330,17 +313,13 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
     presentation_container_ = std::make_unique<PresentationContainer>(
         presenter_.get(), std::move(view_holder_token),
         /* shell_config= */ GetActiveSessionShellConfig(),
-        /* on_swap_session_shell= */ [this] {
-          SelectNextSessionShell(/* callback= */ [] {});
-        });
+        /* on_swap_session_shell= */ [this] { SelectNextSessionShell(/* callback= */ [] {}); });
   }
 }
 
-void BasemgrImpl::SelectNextSessionShell(
-    SelectNextSessionShellCallback callback) {
+void BasemgrImpl::SelectNextSessionShell(SelectNextSessionShellCallback callback) {
   if (state_ == State::SHUTTING_DOWN) {
-    FXL_DLOG(INFO)
-        << "SelectNextSessionShell() not supported while shutting down";
+    FXL_DLOG(INFO) << "SelectNextSessionShell() not supported while shutting down";
     callback();
     return;
   }
@@ -352,14 +331,12 @@ void BasemgrImpl::SelectNextSessionShell(
   }
   auto shell_count = config_.session_shell_map().size();
   if (shell_count <= 1) {
-    FXL_DLOG(INFO)
-        << "Only one session shell has been defined so switch is disabled";
+    FXL_DLOG(INFO) << "Only one session shell has been defined so switch is disabled";
     callback();
     return;
   }
 
-  active_session_shell_configs_index_ =
-      (active_session_shell_configs_index_ + 1) % shell_count;
+  active_session_shell_configs_index_ = (active_session_shell_configs_index_ + 1) % shell_count;
 
   UpdateSessionShellConfig();
 
@@ -370,27 +347,21 @@ void BasemgrImpl::SelectNextSessionShell(
       });
 }
 
-fuchsia::modular::session::SessionShellConfig
-BasemgrImpl::GetActiveSessionShellConfig() {
-  return CloneStruct(config_.session_shell_map()
-                         .at(active_session_shell_configs_index_)
-                         .config());
+fuchsia::modular::session::SessionShellConfig BasemgrImpl::GetActiveSessionShellConfig() {
+  return CloneStruct(config_.session_shell_map().at(active_session_shell_configs_index_).config());
 }
 
 void BasemgrImpl::UpdateSessionShellConfig() {
   session_shell_config_ = CloneStruct(fidl::To<fuchsia::modular::AppConfig>(
-      config_.session_shell_map()
-          .at(active_session_shell_configs_index_)
-          .config()
-          .app_config()));
+      config_.session_shell_map().at(active_session_shell_configs_index_).config().app_config()));
 }
 
 void BasemgrImpl::ShowSetupOrLogin() {
   auto show_setup_or_login = [this] {
     // If there are no session shell settings specified, default to showing
     // setup.
-    if (!config_.test() && active_session_shell_configs_index_ >=
-                               config_.session_shell_map().size()) {
+    if (!config_.test() &&
+        active_session_shell_configs_index_ >= config_.session_shell_map().size()) {
       StartBaseShell();
       return;
     }
@@ -399,8 +370,7 @@ void BasemgrImpl::ShowSetupOrLogin() {
     // 1) Basemgr has exclusive access to AccountManager.
     // 2) There are only 0 or 1 authenticated accounts ever.
     account_manager_->GetAccountIds(
-        [this](
-            std::vector<fuchsia::auth::account::LocalAccountId> account_ids) {
+        [this](std::vector<fuchsia::auth::account::LocalAccountId> account_ids) {
           if (account_ids.empty()) {
             StartBaseShell();
           } else {
@@ -420,22 +390,18 @@ void BasemgrImpl::ShowSetupOrLogin() {
       [show_setup_or_login](zx_status_t status) { show_setup_or_login(); });
   device_settings_manager_->GetInteger(
       kFactoryResetKey,
-      [this, show_setup_or_login](int factory_reset_value,
-                                  fuchsia::devicesettings::Status status) {
-        if (status == fuchsia::devicesettings::Status::ok &&
-            factory_reset_value > 0) {
+      [this, show_setup_or_login](int factory_reset_value, fuchsia::devicesettings::Status status) {
+        if (status == fuchsia::devicesettings::Status::ok && factory_reset_value > 0) {
           FXL_LOG(INFO) << "Factory reset initiated";
           // Unset the factory reset flag.
-          device_settings_manager_->SetInteger(
-              kFactoryResetKey, 0, [](bool result) {
-                if (!result) {
-                  FXL_LOG(WARNING) << "Factory reset flag was not updated.";
-                }
-              });
-
-          session_user_provider_impl_->RemoveAllUsers([this] {
-            wlan_->ClearSavedNetworks([this] { StartBaseShell(); });
+          device_settings_manager_->SetInteger(kFactoryResetKey, 0, [](bool result) {
+            if (!result) {
+              FXL_LOG(WARNING) << "Factory reset flag was not updated.";
+            }
           });
+
+          session_user_provider_impl_->RemoveAllUsers(
+              [this] { wlan_->ClearSavedNetworks([this] { StartBaseShell(); }); });
         } else {
           show_setup_or_login();
         }

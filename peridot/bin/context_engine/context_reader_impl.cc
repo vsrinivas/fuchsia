@@ -25,12 +25,10 @@ void ContextReaderImpl::Subscribe(
   auto listener_ptr = listener.Bind();
   fuchsia::modular::SubscriptionDebugInfo debug_info;
   fidl::Clone(debug_, &debug_info);
-  repository_->AddSubscription(std::move(query), std::move(listener_ptr),
-                               std::move(debug_info));
+  repository_->AddSubscription(std::move(query), std::move(listener_ptr), std::move(debug_info));
 }
 
-void ContextReaderImpl::Get(fuchsia::modular::ContextQuery query,
-                            GetCallback callback) {
+void ContextReaderImpl::Get(fuchsia::modular::ContextQuery query, GetCallback callback) {
   callback(repository_->Query(query));
 }
 

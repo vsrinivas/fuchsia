@@ -5,21 +5,22 @@
 #include <dirent.h>
 #include <glob.h>
 #include <sys/types.h>
+
 #include <iostream>
 #include <string>
 #include <vector>
 
 #include <fuchsia/maxwell/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <src/lib/fxl/command_line.h>
-#include "src/lib/files/file.h"
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
 #include "peridot/lib/module_manifest_source/package_util.h"
+#include "src/lib/files/file.h"
 
 using ::fuchsia::maxwell::internal::ModulePackageIndexer;
 using ::fuchsia::maxwell::internal::ModulePackageIndexerPtr;
@@ -30,9 +31,8 @@ std::string FindModulePackageIndexerService() {
   // The ModulePackageIndexer service is run by the module_resolver component
   // under current sys realm. The structured path of to this service is:
   // /hub//r/user-<userid>/<koid>/c/module_resolver/<koid>/out/debug
-  auto glob_str =
-      fxl::StringPrintf("/hub/r/user-*/*/c/module_resolver/*/out/debug/%s",
-                        ModulePackageIndexer::Name_);
+  auto glob_str = fxl::StringPrintf("/hub/r/user-*/*/c/module_resolver/*/out/debug/%s",
+                                    ModulePackageIndexer::Name_);
 
   glob_t globbuf;
   std::string service_path;
@@ -54,8 +54,7 @@ int main(int argc, const char** argv) {
   fxl::SetLogSettingsFromCommandLine(command_line);
 
   if (command_line.positional_args().size() != 2) {
-    std::cerr << "Usage:  " << command_line.argv0()
-              << " <package name> <version>";
+    std::cerr << "Usage:  " << command_line.argv0() << " <package name> <version>";
     return 1;
   }
 
@@ -72,9 +71,8 @@ int main(int argc, const char** argv) {
 
   const auto& package_name = command_line.positional_args()[0];
   const auto& package_version = command_line.positional_args()[1];
-  indexer->IndexManifest(
-      package_name,
-      modular::GetModuleManifestPathFromPackage(package_name, package_version));
+  indexer->IndexManifest(package_name,
+                         modular::GetModuleManifestPathFromPackage(package_name, package_version));
 
   return 0;
 }

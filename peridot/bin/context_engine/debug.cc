@@ -19,9 +19,8 @@ fxl::WeakPtr<ContextDebugImpl> ContextDebugImpl::GetWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
 
-void ContextDebugImpl::OnValueChanged(
-    const std::set<Id>& parent_ids, const Id& id,
-    const fuchsia::modular::ContextValue& value) {
+void ContextDebugImpl::OnValueChanged(const std::set<Id>& parent_ids, const Id& id,
+                                      const fuchsia::modular::ContextValue& value) {
   fuchsia::modular::ContextDebugValue update;
   update.parent_ids.resize(0);
   for (const auto& it : parent_ids) {
@@ -91,15 +90,13 @@ void ContextDebugImpl::WaitUntilIdle(WaitUntilIdleCallback callback) {
   idle_waiter_.WaitUntilIdle(std::move(callback));
 }
 
-void ContextDebugImpl::DispatchOneValue(
-    fuchsia::modular::ContextDebugValue value) {
+void ContextDebugImpl::DispatchOneValue(fuchsia::modular::ContextDebugValue value) {
   fidl::VectorPtr<fuchsia::modular::ContextDebugValue> values;
   values.push_back(std::move(value));
   DispatchValues(std::move(values));
 }
 
-void ContextDebugImpl::DispatchValues(
-    fidl::VectorPtr<fuchsia::modular::ContextDebugValue> values) {
+void ContextDebugImpl::DispatchValues(fidl::VectorPtr<fuchsia::modular::ContextDebugValue> values) {
   for (const auto& listener : listeners_.ptrs()) {
     fidl::VectorPtr<fuchsia::modular::ContextDebugValue> values_clone;
     fidl::Clone(values, &values_clone);
@@ -107,8 +104,7 @@ void ContextDebugImpl::DispatchValues(
   }
 }
 
-void ContextDebugImpl::DispatchOneSubscription(
-    fuchsia::modular::ContextDebugSubscription value) {
+void ContextDebugImpl::DispatchOneSubscription(fuchsia::modular::ContextDebugSubscription value) {
   fidl::VectorPtr<fuchsia::modular::ContextDebugSubscription> values;
   values.push_back(std::move(value));
   DispatchSubscriptions(std::move(values));
@@ -117,8 +113,7 @@ void ContextDebugImpl::DispatchOneSubscription(
 void ContextDebugImpl::DispatchSubscriptions(
     fidl::VectorPtr<fuchsia::modular::ContextDebugSubscription> subscriptions) {
   for (const auto& listener : listeners_.ptrs()) {
-    fidl::VectorPtr<fuchsia::modular::ContextDebugSubscription>
-        subscriptions_clone;
+    fidl::VectorPtr<fuchsia::modular::ContextDebugSubscription> subscriptions_clone;
     fidl::Clone(subscriptions, &subscriptions_clone);
     (*listener)->OnSubscriptionsChanged(subscriptions_clone.take());
   }

@@ -16,17 +16,14 @@ namespace modular {
 
 class ContextReaderImpl : fuchsia::modular::ContextReader {
  public:
-  ContextReaderImpl(
-      fuchsia::modular::ComponentScope client_info,
-      ContextRepository* repository,
-      fidl::InterfaceRequest<fuchsia::modular::ContextReader> request);
+  ContextReaderImpl(fuchsia::modular::ComponentScope client_info, ContextRepository* repository,
+                    fidl::InterfaceRequest<fuchsia::modular::ContextReader> request);
   ~ContextReaderImpl() override;
 
  private:
   // |fuchsia::modular::ContextReader|
   void Subscribe(fuchsia::modular::ContextQuery query,
-                 fidl::InterfaceHandle<fuchsia::modular::ContextListener>
-                     listener) override;
+                 fidl::InterfaceHandle<fuchsia::modular::ContextListener> listener) override;
 
   // |fuchsia::modular::ContextReader|
   void Get(fuchsia::modular::ContextQuery query,

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iostream>
+#include <memory>
+
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
@@ -14,9 +17,6 @@
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
 #include <trace-provider/provider.h>
-
-#include <iostream>
-#include <memory>
 
 #include "peridot/bin/basemgr/basemgr_impl.h"
 #include "peridot/bin/basemgr/basemgr_settings.h"
@@ -42,9 +42,8 @@ constexpr char kSingleUserBaseShellUrl[] =
     "single_user_base_shell.cmx";
 }  // namespace
 
-fit::deferred_action<fit::closure> SetupCobalt(
-    bool enable_cobalt, async_dispatcher_t* dispatcher,
-    sys::ComponentContext* component_context) {
+fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatcher_t* dispatcher,
+                                               sys::ComponentContext* component_context) {
   if (!enable_cobalt) {
     return fit::defer<fit::closure>([] {});
   }
@@ -57,11 +56,9 @@ fuchsia::modular::session::BasemgrConfig CreateBasemgrConfigFromCommandLine(
   return settings.CreateBasemgrConfig();
 }
 
-bool LoginModeOverrideIsSpecified(
-    const fuchsia::setui::SettingsObject& settings_obj,
-    fuchsia::setui::LoginOverride login_override) {
-  return settings_obj.data.is_account() &&
-         settings_obj.data.account().has_mode() &&
+bool LoginModeOverrideIsSpecified(const fuchsia::setui::SettingsObject& settings_obj,
+                                  fuchsia::setui::LoginOverride login_override) {
+  return settings_obj.data.is_account() && settings_obj.data.account().has_mode() &&
          settings_obj.data.account().mode() == login_override;
 }
 
@@ -77,10 +74,10 @@ void ConfigureLoginOverride(fuchsia::modular::session::BasemgrConfig& config,
                             fuchsia::setui::SetUiService* setui) {
   // Get the login override settings. There is no scenario where both will be
   // true.
-  bool auth_provider_mode_requested = LoginModeOverrideIsSpecified(
-      settings_obj, fuchsia::setui::LoginOverride::AUTH_PROVIDER);
-  bool guest_mode_requested = LoginModeOverrideIsSpecified(
-      settings_obj, fuchsia::setui::LoginOverride::AUTOLOGIN_GUEST);
+  bool auth_provider_mode_requested =
+      LoginModeOverrideIsSpecified(settings_obj, fuchsia::setui::LoginOverride::AUTH_PROVIDER);
+  bool guest_mode_requested =
+      LoginModeOverrideIsSpecified(settings_obj, fuchsia::setui::LoginOverride::AUTOLOGIN_GUEST);
 
   // Any value of LoginOverride will override the build flag
   // |auto_login_to_guest|.
@@ -111,25 +108,19 @@ void ConfigureLoginOverride(fuchsia::modular::session::BasemgrConfig& config,
   } else {
     // In the case no login mode is specified, propagate the default login mode
     // to setui service so that other components are aware of this state.
-    if (settings_obj.data.is_account() &&
-        settings_obj.data.account().has_mode() &&
-        settings_obj.data.account().mode() !=
-            fuchsia::setui::LoginOverride::NONE) {
+    if (settings_obj.data.is_account() && settings_obj.data.account().has_mode() &&
+        settings_obj.data.account().mode() != fuchsia::setui::LoginOverride::NONE) {
       return;
     }
 
     // Determine the default login mode by looking at which base shell is being
     // used for this product configuration.
     fuchsia::setui::AccountMutation account_mutation;
-    account_mutation.set_operation(
-        fuchsia::setui::AccountOperation::SET_LOGIN_OVERRIDE);
+    account_mutation.set_operation(fuchsia::setui::AccountOperation::SET_LOGIN_OVERRIDE);
     if (config.base_shell().app_config().url() == kAutoLoginBaseShellUrl) {
-      account_mutation.set_login_override(
-          fuchsia::setui::LoginOverride::AUTOLOGIN_GUEST);
-    } else if (config.base_shell().app_config().url() ==
-               kSingleUserBaseShellUrl) {
-      account_mutation.set_login_override(
-          fuchsia::setui::LoginOverride::AUTH_PROVIDER);
+      account_mutation.set_login_override(fuchsia::setui::LoginOverride::AUTOLOGIN_GUEST);
+    } else if (config.base_shell().app_config().url() == kSingleUserBaseShellUrl) {
+      account_mutation.set_login_override(fuchsia::setui::LoginOverride::AUTH_PROVIDER);
     } else {
       return;
     }
@@ -139,22 +130,21 @@ void ConfigureLoginOverride(fuchsia::modular::session::BasemgrConfig& config,
 
     // There is no need to wait for this callback as the result does not
     // affect basemgr.
-    setui->Mutate(
-        fuchsia::setui::SettingType::ACCOUNT, std::move(mutation),
-        [](fuchsia::setui::MutationResponse response) {
-          if (response.return_code != fuchsia::setui::ReturnCode::OK) {
-            FXL_LOG(ERROR) << "Failed to persist login type";
-          }
-        });
+    setui->Mutate(fuchsia::setui::SettingType::ACCOUNT, std::move(mutation),
+                  [](fuchsia::setui::MutationResponse response) {
+                    if (response.return_code != fuchsia::setui::ReturnCode::OK) {
+                      FXL_LOG(ERROR) << "Failed to persist login type";
+                    }
+                  });
   }
 }
 
 // Configures Basemgr by passing in connected services.
 std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
-    fuchsia::modular::session::BasemgrConfig& config,
-    sys::ComponentContext* component_context, async::Loop* loop) {
-  fit::deferred_action<fit::closure> cobalt_cleanup = SetupCobalt(
-      config.enable_cobalt(), loop->dispatcher(), component_context);
+    fuchsia::modular::session::BasemgrConfig& config, sys::ComponentContext* component_context,
+    async::Loop* loop) {
+  fit::deferred_action<fit::closure> cobalt_cleanup =
+      SetupCobalt(config.enable_cobalt(), loop->dispatcher(), component_context);
 
   fuchsia::ui::policy::PresenterPtr presenter;
   component_context->svc()->Connect(presenter.NewRequest());
@@ -169,13 +159,11 @@ std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
 
   return std::make_unique<modular::BasemgrImpl>(
       std::move(config), component_context->svc(),
-      component_context->svc()->Connect<fuchsia::sys::Launcher>(),
-      std::move(presenter), std::move(device_settings_manager), std::move(wlan),
-      std::move(account_manager), std::move(administrator),
-      [&loop, &cobalt_cleanup, component_context] {
+      component_context->svc()->Connect<fuchsia::sys::Launcher>(), std::move(presenter),
+      std::move(device_settings_manager), std::move(wlan), std::move(account_manager),
+      std::move(administrator), [&loop, &cobalt_cleanup, component_context] {
         cobalt_cleanup.call();
-        component_context->outgoing()->debug_dir()->RemoveEntry(
-            modular_config::kBasemgrConfigName);
+        component_context->outgoing()->debug_dir()->RemoveEntry(modular_config::kBasemgrConfigName);
         loop->Quit();
       });
 }
@@ -205,14 +193,12 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<sys::ComponentContext> component_context(
-      sys::ComponentContext::Create());
+  std::unique_ptr<sys::ComponentContext> component_context(sys::ComponentContext::Create());
 
   fuchsia::setui::SetUiServicePtr setui;
   std::unique_ptr<modular::BasemgrImpl> basemgr_impl;
-  auto initialize_basemgr = [&config, &loop, &component_context, &basemgr_impl,
-                             &setui, ran = false](fuchsia::setui::SettingsObject
-                                                      settings_obj) mutable {
+  auto initialize_basemgr = [&config, &loop, &component_context, &basemgr_impl, &setui,
+                             ran = false](fuchsia::setui::SettingsObject settings_obj) mutable {
     if (ran) {
       return;
     }
@@ -228,12 +214,10 @@ int main(int argc, const char** argv) {
 
     component_context->outgoing()->debug_dir()->AddEntry(
         modular_config::kBasemgrConfigName,
-        std::make_unique<vfs::Service>([basemgr_impl = basemgr_impl.get()](
-                                           zx::channel request,
-                                           async_dispatcher_t*) {
+        std::make_unique<vfs::Service>([basemgr_impl = basemgr_impl.get()](zx::channel request,
+                                                                           async_dispatcher_t*) {
           basemgr_impl->Connect(
-              fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug>(
-                  std::move(request)));
+              fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug>(std::move(request)));
         }));
   };
 
@@ -246,8 +230,7 @@ int main(int argc, const char** argv) {
     default_account_settings.set_mode(fuchsia::setui::LoginOverride::NONE);
     fuchsia::setui::SettingsObject default_settings_object;
     default_settings_object.setting_type = fuchsia::setui::SettingType::ACCOUNT;
-    default_settings_object.data.set_account(
-        std::move(default_account_settings));
+    default_settings_object.data.set_account(std::move(default_account_settings));
 
     initialize_basemgr(std::move(default_settings_object));
   });

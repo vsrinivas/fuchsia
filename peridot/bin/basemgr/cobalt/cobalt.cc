@@ -17,22 +17,19 @@ cobalt::CobaltLogger* g_cobalt_logger = nullptr;
 
 }  // namespace
 
-fit::deferred_action<fit::closure> InitializeCobalt(
-    async_dispatcher_t* dispatcher, sys::ComponentContext* context) {
+fit::deferred_action<fit::closure> InitializeCobalt(async_dispatcher_t* dispatcher,
+                                                    sys::ComponentContext* context) {
   FXL_DCHECK(!g_cobalt_logger) << "Cobalt has already been initialized.";
 
   std::unique_ptr<cobalt::CobaltLogger> cobalt_logger =
-      cobalt::NewCobaltLoggerFromProjectName(dispatcher, context,
-                                             cobalt_registry::kProjectName);
+      cobalt::NewCobaltLoggerFromProjectName(dispatcher, context, cobalt_registry::kProjectName);
 
   g_cobalt_logger = cobalt_logger.get();
-  return fit::defer<fit::closure>([cobalt_logger = std::move(cobalt_logger)] {
-    g_cobalt_logger = nullptr;
-  });
+  return fit::defer<fit::closure>(
+      [cobalt_logger = std::move(cobalt_logger)] { g_cobalt_logger = nullptr; });
 }
 
-void ReportEvent(
-    cobalt_registry::ModularLifetimeEventsMetricDimensionEventType event) {
+void ReportEvent(cobalt_registry::ModularLifetimeEventsMetricDimensionEventType event) {
   if (g_cobalt_logger) {
     g_cobalt_logger->LogEvent(
         static_cast<uint32_t>(cobalt_registry::kModularLifetimeEventsMetricId),
@@ -43,22 +40,19 @@ void ReportEvent(
 void ReportModuleLaunchTime(std::string module_url, zx::duration time) {
   if (g_cobalt_logger) {
     g_cobalt_logger->LogElapsedTime(
-        static_cast<uint32_t>(cobalt_registry::kModuleLaunchTimeMetricId), 0,
-        module_url, time);
+        static_cast<uint32_t>(cobalt_registry::kModuleLaunchTimeMetricId), 0, module_url, time);
   }
 }
 
 void ReportStoryLaunchTime(zx::duration time) {
   if (g_cobalt_logger) {
     g_cobalt_logger->LogElapsedTime(
-        static_cast<uint32_t>(cobalt_registry::kStoryLaunchTimeMetricId), 0, "",
-        time);
+        static_cast<uint32_t>(cobalt_registry::kStoryLaunchTimeMetricId), 0, "", time);
   }
 }
 
-void ReportSessionAgentEvent(
-    const std::string& url,
-    cobalt_registry::SessionAgentEventsMetricDimensionEventType event) {
+void ReportSessionAgentEvent(const std::string& url,
+                             cobalt_registry::SessionAgentEventsMetricDimensionEventType event) {
   if (g_cobalt_logger) {
     g_cobalt_logger->LogEventCount(
         static_cast<uint32_t>(cobalt_registry::kSessionAgentEventsMetricId),

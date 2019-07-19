@@ -95,8 +95,7 @@ class ContextRepository {
 
   // Returns the current requested values for the given query as a context
   // update.
-  fuchsia::modular::ContextUpdate Query(
-      const fuchsia::modular::ContextQuery& query);
+  fuchsia::modular::ContextUpdate Query(const fuchsia::modular::ContextQuery& query);
 
   // Does not take ownership of |listener|. |listener| must remain valid until
   // RemoveSubscription() is called with the returned Id.
@@ -113,8 +112,7 @@ class ContextRepository {
                        fuchsia::modular::SubscriptionDebugInfo debug_info);
 
   ContextDebugImpl* debug();
-  void AddDebugBinding(
-      fidl::InterfaceRequest<fuchsia::modular::ContextDebug> request);
+  void AddDebugBinding(fidl::InterfaceRequest<fuchsia::modular::ContextDebug> request);
 
  private:
   Id AddInternal(const Id& parent_id, fuchsia::modular::ContextValue value);
@@ -151,8 +149,7 @@ struct ContextRepository::ValueInternal {
 
 struct ContextRepository::Subscription {
   fuchsia::modular::ContextQuery query;
-  fuchsia::modular::ContextListener*
-      listener;  // Optionally owned by |listener_storage|.
+  fuchsia::modular::ContextListener* listener;  // Optionally owned by |listener_storage|.
   fuchsia::modular::ContextListenerPtr listener_storage;
   fuchsia::modular::SubscriptionDebugInfo debug_info;
   // The set of value id and version we sent the last time we notified

@@ -18,26 +18,21 @@ class ClipboardAgent {
  public:
   ClipboardAgent(AgentHost* const agent_host) {
     fuchsia::modular::ComponentContextPtr component_context;
-    agent_host->agent_context()->GetComponentContext(
-        component_context.NewRequest());
+    agent_host->agent_context()->GetComponentContext(component_context.NewRequest());
 
     fuchsia::ledger::LedgerPtr ledger;
     component_context->GetLedger(ledger.NewRequest());
 
-    ledger_client_ = std::make_unique<LedgerClient>(
-        std::move(ledger), [](zx_status_t status) {
-          FXL_LOG(ERROR) << "Ledger connection died: " << status;
-        });
+    ledger_client_ = std::make_unique<LedgerClient>(std::move(ledger), [](zx_status_t status) {
+      FXL_LOG(ERROR) << "Ledger connection died: " << status;
+    });
 
     clipboard_ = std::make_unique<ClipboardImpl>(ledger_client_.get());
 
-    agent_host->component_context()
-        ->outgoing()
-        ->AddPublicService<fuchsia::modular::Clipboard>(
-            [this](
-                fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
-              clipboard_->Connect(std::move(request));
-            });
+    agent_host->component_context()->outgoing()->AddPublicService<fuchsia::modular::Clipboard>(
+        [this](fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
+          clipboard_->Connect(std::move(request));
+        });
 
     services_.AddService<fuchsia::modular::Clipboard>(
         [this](fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
@@ -45,14 +40,11 @@ class ClipboardAgent {
         });
   }
 
-  void Connect(
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) {
+  void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) {
     services_.AddBinding(std::move(outgoing_services));
   }
 
-  void RunTask(const fidl::StringPtr& task_id, fit::function<void()> done) {
-    done();
-  }
+  void RunTask(const fidl::StringPtr& task_id, fit::function<void()> done) { done(); }
 
   void Terminate(fit::function<void()> done) { done(); }
 
@@ -73,8 +65,7 @@ class ClipboardAgent {
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = sys::ComponentContext::Create();
-  modular::AgentDriver<modular::ClipboardAgent> driver(
-      context.get(), [&loop] { loop.Quit(); });
+  modular::AgentDriver<modular::ClipboardAgent> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

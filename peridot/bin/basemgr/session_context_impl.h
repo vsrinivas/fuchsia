@@ -47,8 +47,8 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
       fit::function<void(ShutDownReason shutdown_reason, bool logout_users)>;
 
   // Called when sessionmgr requests to acquire the presentation.
-  using GetPresentationCallback = fit::function<void(
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request)>;
+  using GetPresentationCallback =
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request)>;
 
   // |session_id| is the device-local unique identifier for this session. Caller
   // must ensure its uniqueness. sessionmgr creates an Environment namespace
@@ -58,19 +58,18 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // |additional_services| are services that will be installed into the
   // Sessionmgr's namespace, including an implementation of
   // `fuchsia.intl.PropertyProvider`.
-  SessionContextImpl(
-      fuchsia::sys::Launcher* const launcher, std::string session_id,
-      fuchsia::modular::AppConfig sessionmgr_config,
-      fuchsia::modular::AppConfig session_shell_config,
-      fuchsia::modular::AppConfig story_shell_config,
-      bool use_session_shell_for_story_shell_factory,
-      fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
-      fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
-      fuchsia::modular::auth::AccountPtr account,
-      fuchsia::ui::views::ViewToken view_token,
-      fuchsia::sys::ServiceListPtr additional_services,
-      GetPresentationCallback get_presentation,
-      OnSessionShutdownCallback on_session_shutdown);
+  SessionContextImpl(fuchsia::sys::Launcher* const launcher, std::string session_id,
+                     fuchsia::modular::AppConfig sessionmgr_config,
+                     fuchsia::modular::AppConfig session_shell_config,
+                     fuchsia::modular::AppConfig story_shell_config,
+                     bool use_session_shell_for_story_shell_factory,
+                     fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
+                     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
+                     fuchsia::modular::auth::AccountPtr account,
+                     fuchsia::ui::views::ViewToken view_token,
+                     fuchsia::sys::ServiceListPtr additional_services,
+                     GetPresentationCallback get_presentation,
+                     OnSessionShutdownCallback on_session_shutdown);
 
   // This will effectively tear down the entire instance by calling
   // |on_session_shutdown_|. If |logout_users| is true, all the users will be
@@ -80,8 +79,7 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
 
   // Stops the active session shell, and starts the session shell specified in
   // |session_shell_config|.
-  FuturePtr<> SwapSessionShell(
-      fuchsia::modular::AppConfig session_shell_config);
+  FuturePtr<> SwapSessionShell(fuchsia::modular::AppConfig session_shell_config);
 
  private:
   // Determines where current configurations are being read from, and forwards
@@ -96,15 +94,13 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   void Shutdown() override;
 
   // |fuchsia::modular::internal::SessionContext|
-  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                           request) override;
+  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
 
   std::unique_ptr<Environment> sessionmgr_environment_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> sessionmgr_app_;
   fuchsia::modular::internal::SessionmgrPtr sessionmgr_;
 
-  fidl::Binding<fuchsia::modular::internal::SessionContext>
-      session_context_binding_;
+  fidl::Binding<fuchsia::modular::internal::SessionContext> session_context_binding_;
 
   std::vector<fit::function<void()>> shutdown_callbacks_;
 

@@ -6,6 +6,9 @@
 // command line configurable user name to its fuchsia::modular::UserProvider,
 // and is able to run a story with a single module through its life cycle.
 
+#include <memory>
+#include <utility>
+
 #include <fuchsia/auth/account/cpp/fidl.h>
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
@@ -18,9 +21,6 @@
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
-
-#include <memory>
-#include <utility>
 
 #include "peridot/lib/fidl/single_service_app.h"
 
@@ -36,11 +36,9 @@ class Settings {
   bool persist_user;
 };
 
-class AutoLoginBaseShellApp
-    : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
+class AutoLoginBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
  public:
-  explicit AutoLoginBaseShellApp(sys::ComponentContext* const component_context,
-                                 Settings settings)
+  explicit AutoLoginBaseShellApp(sys::ComponentContext* const component_context, Settings settings)
       : SingleServiceApp(component_context),
         settings_(std::move(settings)),
         weak_ptr_factory_(this) {
@@ -56,18 +54,15 @@ class AutoLoginBaseShellApp
   // |SingleServiceApp|
   void CreateView(
       zx::eventpair view_token,
-      fidl::InterfaceRequest<
-          fuchsia::sys::ServiceProvider> /*incoming_services*/,
-      fidl::InterfaceHandle<
-          fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*incoming_services*/,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
     view_token_.value = std::move(view_token);
 
     Connect();
   }
 
   // |fuchsia::modular::BaseShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::BaseShellContext>
-                      base_shell_context,
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::BaseShellContext> base_shell_context,
                   fuchsia::modular::BaseShellParams) override {
     base_shell_context_.Bind(std::move(base_shell_context));
     base_shell_context_->GetUserProvider(user_provider_.NewRequest());
@@ -77,11 +72,9 @@ class AutoLoginBaseShellApp
 
   // |fuchsia::modular::BaseShell|
   void GetAuthenticationUIContext(
-      fidl::InterfaceRequest<
-          fuchsia::auth::AuthenticationUIContext> /*request*/) override {
-    FXL_LOG(INFO)
-        << "fuchsia::modular::BaseShell::GetAuthenticationUIContext() is"
-           " unimplemented.";
+      fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> /*request*/) override {
+    FXL_LOG(INFO) << "fuchsia::modular::BaseShell::GetAuthenticationUIContext() is"
+                     " unimplemented.";
   }
 
   void Login(const std::string& account_id) {

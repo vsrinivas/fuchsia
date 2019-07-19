@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
-
-#include <memory>
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
@@ -18,8 +18,7 @@ namespace {
 
 // Implementation of the Story Shell that just collects all surfaces and holds
 // them.
-class TestStoryShellApp
-    : public modular::SingleServiceApp<fuchsia::modular::StoryShell> {
+class TestStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::StoryShell> {
  public:
   TestStoryShellApp(sys::ComponentContext* const component_context)
       : SingleServiceApp(component_context) {
@@ -36,18 +35,16 @@ class TestStoryShellApp
   // |SingleServiceApp|
   void CreateView(
       zx::eventpair view_token,
-      fidl::InterfaceRequest<
-          fuchsia::sys::ServiceProvider> /*incoming_services*/,
-      fidl::InterfaceHandle<
-          fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*incoming_services*/,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
     view_token_.value = std::move(view_token);
 
     Connect();
   }
 
   // |fuchsia::modular::StoryShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::StoryShellContext>
-                      story_shell_context) override {
+  void Initialize(
+      fidl::InterfaceHandle<fuchsia::modular::StoryShellContext> story_shell_context) override {
     story_shell_context_.Bind(std::move(story_shell_context));
 
     Connect();
@@ -59,8 +56,7 @@ class TestStoryShellApp
     if (view_) {
       view_->ConnectView(std::move(view_connection.view_holder_token));
     } else {
-      child_view_holder_tokens_.push_back(
-          std::move(view_connection.view_holder_token));
+      child_view_holder_tokens_.push_back(std::move(view_connection.view_holder_token));
     }
   }
 
@@ -79,25 +75,22 @@ class TestStoryShellApp
   void FocusSurface(std::string /*surface_id*/) override {}
 
   // |fuchsia::modular::StoryShell|
-  void DefocusSurface(std::string /*surface_id*/,
-                      DefocusSurfaceCallback callback) override {
+  void DefocusSurface(std::string /*surface_id*/, DefocusSurfaceCallback callback) override {
     callback();
   }
 
   // |fuchsia::modular::StoryShell|
-  void AddContainer(
-      std::string /*container_name*/, fidl::StringPtr /*parent_id*/,
-      fuchsia::modular::SurfaceRelation /* relation */,
-      std::vector<fuchsia::modular::ContainerLayout> /*layout*/,
-      std::vector<fuchsia::modular::ContainerRelationEntry> /* relationships */,
-      std::vector<fuchsia::modular::ContainerView> /* views */) override {}
+  void AddContainer(std::string /*container_name*/, fidl::StringPtr /*parent_id*/,
+                    fuchsia::modular::SurfaceRelation /* relation */,
+                    std::vector<fuchsia::modular::ContainerLayout> /*layout*/,
+                    std::vector<fuchsia::modular::ContainerRelationEntry> /* relationships */,
+                    std::vector<fuchsia::modular::ContainerView> /* views */) override {}
 
   // |fuchsia::modular::StoryShell|
   void RemoveSurface(std::string /*surface_id*/) override {}
 
   // |fuchsia::modular::StoryShell|
-  void ReconnectView(
-      fuchsia::modular::ViewConnection /*view_connection*/) override {}
+  void ReconnectView(fuchsia::modular::ViewConnection /*view_connection*/) override {}
 
   // |fuchsia::modular::StoryShell|
   void UpdateSurface(fuchsia::modular::ViewConnection /*view_connection*/,
@@ -105,8 +98,7 @@ class TestStoryShellApp
 
   void Connect() {
     if (story_shell_context_.is_bound() && view_token_.value) {
-      auto scenic =
-          component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+      auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
       scenic::ViewContext view_context = {
           .session_and_listener_request =
               scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
@@ -138,9 +130,9 @@ int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   auto context = sys::ComponentContext::Create();
-  modular::AppDriver<TestStoryShellApp> driver(
-      context->outgoing(), std::make_unique<TestStoryShellApp>(context.get()),
-      [&loop] { loop.Quit(); });
+  modular::AppDriver<TestStoryShellApp> driver(context->outgoing(),
+                                               std::make_unique<TestStoryShellApp>(context.get()),
+                                               [&loop] { loop.Quit(); });
 
   loop.Run();
   return 0;
