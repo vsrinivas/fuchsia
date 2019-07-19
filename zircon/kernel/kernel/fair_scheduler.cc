@@ -27,6 +27,7 @@
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <ktl/move.h>
+#include <lib/counters.h>
 #include <lib/ktrace.h>
 #include <vm/vm.h>
 #include <zircon/types.h>
@@ -59,6 +60,12 @@ using LocalTraceDuration =
 
 #define SCHED_LTRACEF(str, args...) LTRACEF("[%u] " str, arch_curr_cpu_num(), ##args)
 #define SCHED_TRACEF(str, args...) TRACEF("[%u] " str, arch_curr_cpu_num(), ##args)
+
+// Counters to track system load metrics.
+KCOUNTER(demand_counter, "thread.demand_accum")
+KCOUNTER(latency_counter, "thread.latency_accum")
+KCOUNTER(runnable_counter, "thread.runnable_accum")
+KCOUNTER(samples_counter, "thread.samples_accum")
 
 namespace {
 
@@ -175,6 +182,15 @@ void FairScheduler::InitializeThread(thread_t* thread, int priority) {
 
 thread_t* FairScheduler::DequeueThread() { return run_queue_.pop_front(); }
 
+// Updates the system load metrics. Updates happen only when the active thread
+// changes or the time slice expires.
+void FairScheduler::UpdateCounters(SchedDuration queue_time_ns) {
+  demand_counter.Add(weight_total_.raw_value());
+  runnable_counter.Add(runnable_task_count_);
+  latency_counter.Add(queue_time_ns.raw_value());
+  samples_counter.Add(1);
+}
+
 // Selects a thread to run. Performs any necessary maintenanace if the current
 // thread is changing, depending on the reason for the change.
 thread_t* FairScheduler::EvaluateNextThread(SchedTime now, thread_t* current_thread,
@@ -201,7 +217,7 @@ thread_t* FairScheduler::EvaluateNextThread(SchedTime now, thread_t* current_thr
     // otherwise continue to run it.
     if (timeslice_expired) {
       UpdateThreadTimeline(current_thread, Placement::Insertion);
-      QueueThread(current_thread, Placement::Insertion);
+      QueueThread(current_thread, Placement::Insertion, now);
     } else {
       return current_thread;
     }
@@ -373,10 +389,11 @@ void FairScheduler::RescheduleCommon(SchedTime now, void* outer_trace) {
     percpu::Get(current_cpu).stats.idle_time += actual_runtime_ns;
   }
 
-  if (thread_is_idle(next_thread) /*|| runnable_task_count_ == 1*/) {
+  if (thread_is_idle(next_thread)) {
     LocalTraceDuration trace_stop_preemption{"stop_preemption"_stringref};
     SCHED_LTRACEF("Stop preemption timer: current=%s next=%s\n", current_thread->name,
                   next_thread->name);
+    UpdateCounters(SchedDuration{0});
     next_thread->last_started_running = now.raw_value();
     timer_preempt_cancel();
   } else if (timeslice_expired || next_thread != current_thread) {
@@ -388,6 +405,14 @@ void FairScheduler::RescheduleCommon(SchedTime now, void* outer_trace) {
     // Update the preemption time based on the time slice.
     FairTaskState* const next_state = &next_thread->fair_task_state;
     const SchedTime absolute_deadline_ns = now + next_state->time_slice_ns_;
+
+    // Compute the time the next thread spent in the run queue. The value of
+    // last_started_running for the current thread is updated at the top of
+    // this method: when the current and next thread are the same, the queue
+    // time is zero. Otherwise, last_started_running is the time the next thread
+    // entered the run queue.
+    const SchedDuration queue_time_ns = now - next_thread->last_started_running;
+    UpdateCounters(queue_time_ns);
 
     next_thread->last_started_running = now.raw_value();
     start_of_current_time_slice_ns_ = now;
@@ -530,18 +555,24 @@ void FairScheduler::UpdateThreadTimeline(thread_t* thread, Placement placement) 
             Round<uint64_t>(state->virtual_finish_time_));
 }
 
-void FairScheduler::QueueThread(thread_t* thread, Placement placement) {
+void FairScheduler::QueueThread(thread_t* thread, Placement placement, SchedTime now) {
   LocalTraceDuration trace{"queue_thread"_stringref};
 
   DEBUG_ASSERT(thread->state == THREAD_READY);
   DEBUG_ASSERT(!thread_is_idle(thread));
+  DEBUG_ASSERT(placement == Placement::Adjustment || now != SchedTime{0});
   SCHED_LTRACEF("QueueThread: thread=%s\n", thread->name);
 
-  // Only update the generation and emit a flow event if this is an insertion.
-  // In constrast, an adjustment only changes the queue position due to a
-  // weight change and should not perform these actions.
+  // Only update the generation, enqueue time, and emit a flow event if this
+  // is an insertion. In constrast, an adjustment only changes the queue
+  // position due to a weight change and should not perform these actions.
   if (placement == Placement::Insertion) {
     thread->fair_task_state.generation_ = ++generation_count_;
+
+    // Reuse this member to track the time the thread enters the run queue.
+    // It is not read outside of the scheduler unless the thread state is
+    // THREAD_RUNNING.
+    thread->last_started_running = now.raw_value();
   }
 
   run_queue_.insert(thread);
@@ -577,7 +608,7 @@ void FairScheduler::Insert(SchedTime now, thread_t* thread) {
     DEBUG_ASSERT(weight_total_ > SchedWeight{0});
 
     UpdateThreadTimeline(thread, Placement::Insertion);
-    QueueThread(thread, Placement::Insertion);
+    QueueThread(thread, Placement::Insertion, now);
   }
 }
 

@@ -119,6 +119,9 @@ class FairScheduler {
   // Returns a CPU to run the given thread on.
   static cpu_num_t FindTargetCpu(thread_t* thread) TA_REQ(thread_lock);
 
+  // Updates the system load metrics.
+  void UpdateCounters(SchedDuration queue_time_ns) TA_REQ(thread_lock);
+
   // Updates the thread's weight and updates state-dependent bookkeeping.
   static void UpdateWeightCommon(thread_t*, int original_priority, SchedWeight weight,
                                  cpu_mask_t* cpus_to_reschedule_mask, PropagatePI propagate)
@@ -134,7 +137,8 @@ class FairScheduler {
 
   // Adds a thread to the runqueue tree. The thread must be active on this
   // CPU.
-  void QueueThread(thread_t* thread, Placement placement) TA_REQ(thread_lock);
+  void QueueThread(thread_t* thread, Placement placement, SchedTime now = SchedTime{0})
+      TA_REQ(thread_lock);
 
   // Removes the thread at the head of the runqueue and returns it.
   thread_t* DequeueThread() TA_REQ(thread_lock);

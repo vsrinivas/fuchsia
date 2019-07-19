@@ -4,23 +4,25 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+
 #include "kernel/sched.h"
 
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/mp.h>
-#include <kernel/percpu.h>
-#include <kernel/thread.h>
-#include <lib/counters.h>
-#include <lib/ktrace.h>
 #include <list.h>
 #include <platform.h>
 #include <printf.h>
 #include <string.h>
 #include <target.h>
 #include <trace.h>
+
+#include <kernel/mp.h>
+#include <kernel/percpu.h>
+#include <kernel/thread.h>
+#include <lib/counters.h>
+#include <lib/ktrace.h>
 #include <vm/vm.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
@@ -56,6 +58,15 @@
 KCOUNTER(boost_promotions, "kernel.thread.boost.promotions")
 KCOUNTER(boost_demotions, "kernel.thread.boost.demotions")
 KCOUNTER(boost_wq_recalcs, "kernel.thread.boost.wait_queue_recalcs")
+
+// counters to track system latency
+KCOUNTER(latency_counter, "thread.latency_accum")
+KCOUNTER(samples_counter, "thread.samples_accum")
+
+static void update_counters(zx_duration_t queue_time_ns) {
+  latency_counter.Add(queue_time_ns);
+  samples_counter.Add(1);
+}
 
 static bool local_migrate_if_needed(thread_t* curr_thread);
 
@@ -343,6 +354,8 @@ static void find_cpu_and_insert(thread_t* t, bool* local_resched, cpu_mask_t* ac
     *accum_cpu_mask |= cpu_num_to_mask(cpu_num);
   }
 
+  // reuse this member to track the enqueue time for latency tracking
+  t->last_started_running = current_time();
   t->curr_cpu = cpu_num;
   if (t->remaining_time_slice > 0) {
     insert_in_run_queue_head(cpu_num, t);
@@ -839,6 +852,11 @@ void sched_resched_internal() {
   if (newthread->remaining_time_slice == 0) {
     newthread->remaining_time_slice = THREAD_INITIAL_TIME_SLICE;
   }
+
+  // update system latency metrics.
+  zx_duration_t queue_time_ns =
+      thread_is_idle(newthread) ? 0 : zx_time_sub_time(now, newthread->last_started_running);
+  update_counters(queue_time_ns);
 
   newthread->last_started_running = now;
 
