@@ -8,9 +8,6 @@
 # within an area is allowed to depend on any target whose label starts with a
 # prefix in that area's list.
 exceptions = {
-    '': [
-        '//src/testing/qemu',
-    ],
     '//src/camera': [
         '//garnet/tests/zircon/',
         '//src/ui/lib/glm_workaround',
@@ -89,9 +86,6 @@ exceptions = {
         '//peridot/bin',
         '//peridot/lib',
         '//peridot/public',
-    ],
-    '//src/recovery': [
-        '//src/testing/qemu',
     ],
     '//src/stories/bin/discovermgr': [
         '//src/sys/component_index/fidl',

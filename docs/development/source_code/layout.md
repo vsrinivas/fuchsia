@@ -86,6 +86,10 @@ pattern:
       to add OWNERS files for different test directories to clarify ownership.
     * Unit tests that cover a single binary or library are better placed
       alongside the code they test
+ * `testing/` (optional)
+    * This directory contains utilities and libraries useful for writing tests
+      in this area and subareas.
+    * Targets in this directory can only be depended on by testonly targets.
  * `third_party/` (optional)
     * Most third_party dependencies should be in separate repositories
     * Include third_party dependencies in an area only if all of the following:
@@ -138,6 +142,11 @@ of its ancestors:
  * `//sdk`
  * `//third_party`
  * `(../)+lib/`
+
+Targets in an area that are marked testonly in the build system may
+additionally depend on the `testing` directory in that area and ancestors:
+
+ * `(../)+testing/` (testonly=true targets only)
 
 ### Canonical targets
 
@@ -219,6 +228,7 @@ separate repositories that are mapped into the directory structure using `jiri`
     * `media/`
     * `modular/`
     * `storage/`
+    * `testing/`
     * `updater/`
     * `virtualization/`
     * `zircon/docs/`

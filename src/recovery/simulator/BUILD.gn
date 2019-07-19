@@ -17,6 +17,8 @@ group("tests") {
 
 if (is_linux) {
   go_library("lib") {
+    testonly = true
+
     name = "fuchsia.googlesource.com/recovery/simulator"
 
     deps = [

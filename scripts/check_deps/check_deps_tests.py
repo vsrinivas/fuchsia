@@ -31,13 +31,14 @@ area_for_label_cases = [
     ['//something/public/lib/fxl:fxl', ''],
 ]
 
-# Test case format: [ label, dependency ]
+# Test case format: [ label, dependency, testonly ]
 # Allowable dependency patterns from layout.md:
 #   //build
 #   //buildtools
 #   //sdk
 #   //third_party
-#   (../)+lib
+#   (../)+lib/
+#   (../)+testing/ for testonly targets
 allowable_dep_cases = [
     ['//src/rockets/nozzles', '//build/toolchain:something'],
     ['//src/rockets/nozzles', '//buildtools/fuel_meter'],
@@ -76,27 +77,56 @@ class TestCheckdepsMethods(unittest.TestCase):
 
     def test_dep_allowed(self):
         ignore_exclusions = False
+        testonly = False
         for case in allowable_dep_cases:
             label = case[0]
             label_area = check_deps.area_for_label(self.test_dir, label)
             dep = case[1]
             dep_area = check_deps.area_for_label(self.test_dir, dep)
-            msg = '%s should be allowed to depend on %s' % (label, dep)
-            allowed = check_deps.dep_allowed(label, label_area, dep,
-                                             dep_area, ignore_exclusions)
+            msg = '%s (area %s) should be allowed to depend on %s (area %s)' % (
+                label, label_area, dep, dep_area)
+            allowed = check_deps.dep_allowed(
+                label, label_area, dep, dep_area, testonly, ignore_exclusions)
             self.assertTrue(allowed, msg=msg)
 
     def test_dep_disallowed(self):
         ignore_exclusions = False
+        testonly = False
         for case in disallowed_dep_cases:
             label = case[0]
             label_area = check_deps.area_for_label(self.test_dir, label)
             dep = case[1]
             dep_area = check_deps.area_for_label(self.test_dir, dep)
             msg = '%s should not be allowed to depend on %s' % (label, dep)
-            allowed = check_deps.dep_allowed(label, label_area, dep,
-                                             dep_area, ignore_exclusions)
+            allowed = check_deps.dep_allowed(
+                label, label_area, dep, dep_area, testonly, ignore_exclusions)
             self.assertFalse(allowed, msg=msg)
+
+    def test_testonly_deps(self):
+        ignore_exceptions = False
+        testonly_label = "//src/rockets/nozzles/tests:flange_test"
+        testonly_area = check_deps.area_for_label(
+            self.test_dir, testonly_label)
+        prod_label = "//src/rockets/nozzles/flange"
+        prod_area = check_deps.area_for_label(self.test_dir, prod_label)
+        dep_label = "//src/rockets/testing:surrogate_oxidizer"
+        dep_area = check_deps.area_for_label(self.test_dir, dep_label)
+
+        msg = "%s (area %s) is testonly and should be allowed to depend on %s (area %s)" % (testonly_label,
+                                                                                            testonly_area, dep_label, dep_area)
+        self.assertTrue(
+            check_deps.dep_allowed(
+                testonly_label, testonly_area, dep_label, dep_area,
+                True, ignore_exceptions),
+            msg=msg)
+
+        msg = "%s in area %s is not testonly and should not be allowed to depend on %s in area %s" % (
+            prod_label, prod_area, dep_label, dep_area)
+        self.assertFalse(
+            check_deps.dep_allowed(
+                prod_label, prod_area, dep_label, dep_area,
+                False, ignore_exceptions),
+            msg=msg)
 
 
 if __name__ == '__main__':
