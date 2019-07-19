@@ -217,6 +217,12 @@ bool GfxCommandApplier::ApplyCommand(Session* session, CommandContext* command_c
                                                std::move(command.set_display_color_conversion()));
     case fuchsia::ui::gfx::Command::Tag::kSetDisplayRotation:
       return ApplySetDisplayRotationCmd(session, std::move(command.set_display_rotation()));
+    case fuchsia::ui::gfx::Command::Tag::kSetEnableViewDebugBounds:
+      return ApplySetEnableViewDebugBounds(session,
+                                           std::move(command.set_enable_view_debug_bounds()));
+    case fuchsia::ui::gfx::Command::Tag::kSetViewHolderBoundsColor:
+      return ApplySetViewHolderBoundsColor(session,
+                                           std::move(command.set_view_holder_bounds_color()));
     case fuchsia::ui::gfx::Command::Tag::Invalid:
       // FIDL validation should make this impossible.
       FXL_CHECK(false);
@@ -452,6 +458,29 @@ bool GfxCommandApplier::ApplySetDisplayRotationCmd(
   }
   return false;
 }
+
+bool GfxCommandApplier::ApplySetEnableViewDebugBounds(
+    Session* session, fuchsia::ui::gfx::SetEnableDebugViewBoundsCmd command) {
+  if (auto view = session->resources()->FindResource<View>(command.view_id)) {
+    view->set_should_render_bounding_box(command.enable);
+    return true;
+  }
+  return false;
+}
+
+bool GfxCommandApplier::ApplySetViewHolderBoundsColor(
+    Session* session, fuchsia::ui::gfx::SetViewHolderBoundsColorCmd command) {
+  auto& color = command.color.value;
+  float red = static_cast<float>(color.red) / 255.f;
+  float green = static_cast<float>(color.green) / 255.f;
+  float blue = static_cast<float>(color.blue) / 255.f;
+
+  if (auto view_holder = session->resources()->FindResource<ViewHolder>(command.view_holder_id)) {
+    view_holder->set_bounds_color(glm::vec4(red, green, blue, 1));
+    return true;
+  }
+  return false;
+};
 
 bool GfxCommandApplier::ApplyDetachCmd(Session* session, fuchsia::ui::gfx::DetachCmd command) {
   if (auto resource = session->resources()->FindResource<Resource>(command.id)) {

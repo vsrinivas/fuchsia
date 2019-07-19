@@ -207,6 +207,12 @@ class GfxCommandApplier {
   static bool ApplySetDisplayRotationCmd(Session* session,
                                          fuchsia::ui::gfx::SetDisplayRotationCmdHACK command);
 
+  static bool ApplySetEnableViewDebugBounds(Session* session,
+                                            fuchsia::ui::gfx::SetEnableDebugViewBoundsCmd command);
+
+  static bool ApplySetViewHolderBoundsColor(Session* sesion,
+                                            fuchsia::ui::gfx::SetViewHolderBoundsColorCmd command);
+
   // Actually create resources.
   static ResourcePtr CreateMemory(Session* session, ResourceId id,
                                   fuchsia::ui::gfx::MemoryArgs args);

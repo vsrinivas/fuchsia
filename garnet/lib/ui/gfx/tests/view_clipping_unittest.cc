@@ -58,6 +58,28 @@ static constexpr float kFar = -200.f;
 static constexpr float kWidth = 1024;
 static constexpr float kHeight = 768;
 
+// Simple unit test to check that view bound colors
+// for debug wireframe rendering are being set properly.
+VK_TEST_F(ViewClippingTest, SetBoundsRenderingTest) {
+  uint32_t scene_id = 5;
+  uint32_t view_id = 15;
+  uint32_t view_holder_id = 30;
+
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  Apply(scenic::NewCreateSceneCmd(scene_id));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token), "ViewHolder"));
+  Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "View"));
+
+  Apply(scenic::NewSetViewHolderBoundsColorCmd(view_holder_id, 255, 0, 255));
+
+  ViewHolder* view_holder = FindResource<ViewHolder>(view_holder_id).get();
+  EXPECT_TRUE(view_holder);
+
+  glm::vec4 color = view_holder->bounds_color() * 255.f;
+  EXPECT_EQ(color, glm::vec4(255, 0, 255, 255));
+}
+
 // This first unit test checks to see if a view holder
 // is properly having its bounds set by the
 // "SetViewPropertiesCmd" and if the correct clipping

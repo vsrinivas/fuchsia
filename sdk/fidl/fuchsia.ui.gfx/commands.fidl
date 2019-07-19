@@ -92,6 +92,9 @@ union Command {
     SetDisplayColorConversionCmdHACK set_display_color_conversion;
 
     SetDisplayRotationCmdHACK set_display_rotation;
+
+    SetEnableDebugViewBoundsCmd set_enable_view_debug_bounds;
+    SetViewHolderBoundsColorCmd set_view_holder_bounds_color;
 };
 
 /// Instructs the compositor to create the specified `Resource`, and to register
@@ -821,4 +824,19 @@ struct SetDisplayColorConversionCmdHACK {
 struct SetDisplayRotationCmdHACK {
     uint32 compositor_id;
     uint32 rotation_degrees;
+};
+
+// Enable (or disable) debug wireframe rendering for the specified
+// view and its immediately embedded views (i.e. any view whose
+// nearest ancestor view is this one).
+struct SetEnableDebugViewBoundsCmd {
+    uint32 view_id;
+    bool enable;
+};
+
+// This command determines the color to be set on a view holders
+// debug wireframe bounding box.
+struct SetViewHolderBoundsColorCmd {
+    uint32 view_holder_id;
+    ColorRgbValue color;
 };

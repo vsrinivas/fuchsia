@@ -1,8 +1,8 @@
 {
-  "pkg/scenic_cpp/include/lib/ui/scenic/cpp/commands.h": "fda39cfde85474d9574fe77290f38f98",
+  "pkg/scenic_cpp/include/lib/ui/scenic/cpp/commands.h": "ca187a70f4ba230f6945c4268d19573a",
   "pkg/scenic_cpp/include/lib/ui/scenic/cpp/host_memory.h": "119bcbb0c2bcbed3743af9bc9621fa4a",
   "pkg/scenic_cpp/include/lib/ui/scenic/cpp/id.h": "4442d6e024bba018b7a8038d0a069713",
-  "pkg/scenic_cpp/include/lib/ui/scenic/cpp/resources.h": "85ef02ea92fd1e2489914513642bb5a7",
+  "pkg/scenic_cpp/include/lib/ui/scenic/cpp/resources.h": "d981f804357cbfca73a6ce30fc166b62",
   "pkg/scenic_cpp/include/lib/ui/scenic/cpp/session.h": "4421fad81efa9807f292a8fb4b1e9648",
   "pkg/scenic_cpp/include/lib/ui/scenic/cpp/util/mesh_utils.h": "b8ad4d6edbebda3636741ce4f6fd1af5",
   "pkg/scenic_cpp/include/lib/ui/scenic/cpp/view_ref_pair.h": "649d2d31100232dd82c59715be5f9e78",

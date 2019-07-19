@@ -71,6 +71,11 @@ class EngineRendererVisitor : public ResourceVisitor {
   // Number of times that PaperRenderer::Draw*() methods were invoked.
   size_t draw_call_count_ = 0;
 
+  // If set to true by a view, this will cause the visitor to render the
+  // bounds of the view itself as well as the bounds of all of its immediately
+  // embedded views.
+  bool should_render_debug_bounds_ = false;
+
   escher::PaperRenderer* const renderer_;
   escher::BatchGpuUploader* const gpu_uploader_;
 };

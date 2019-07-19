@@ -878,6 +878,135 @@ TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
   EXPECT_EQ(black_color, scenic::Color(0, 0, 0, 0));
 }
 
+// Creates three views and renders their wireframe bounds.
+// Looks like this:
+//
+// aaaaaaaaaabbbbbbbbbb
+// a        ab        b
+// a        ab        b
+// a        abbbbbbbbbb
+// a        acccccccccc
+// a        ac        c
+// a        ac        c
+// aaaaaaaaaacccccccccc
+//
+// Where a,b, and c represent the bounds for views 1,2, and
+// 3 respectively.
+TEST_F(ScenicPixelTest, ViewBoundWireframeRendering) {
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+  scenic::EntityNode* root_node = &test_session->root_node;
+  test_session->SetUpCamera().SetProjection(0);
+
+  // Initialize session 2.
+  auto unique_session2 = std::make_unique<scenic::Session>(scenic_.get());
+  auto session2 = unique_session2.get();
+  session2->set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Session terminated.";
+    QuitLoop();
+  });
+
+  // Initialize session 3.
+  auto unique_session3 = std::make_unique<scenic::Session>(scenic_.get());
+  auto session3 = unique_session3.get();
+  session3->set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Session terminated.";
+    QuitLoop();
+  });
+
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  auto [view_token2, view_holder_token2] = scenic::ViewTokenPair::New();
+  auto [view_token3, view_holder_token3] = scenic::ViewTokenPair::New();
+
+  scenic::View view(session, std::move(view_token), "ClipView");
+  scenic::ViewHolder view_holder(session, std::move(view_holder_token), "ClipViewHolder");
+
+  // View 2 is embedded by view 1.
+  scenic::View view2(session2, std::move(view_token2), "ClipView2");
+  scenic::ViewHolder view_holder2(session, std::move(view_holder_token2), "ClipViewHolder2");
+
+  // View 3 is embedded by view 2 and thus doubly embedded within view 1.
+  scenic::View view3(session3, std::move(view_token3), "ClipView3");
+  scenic::ViewHolder view_holder3(session2, std::move(view_holder_token3), "ClipViewHolder3");
+
+  const float bmin[3] = {0.f, 0.f, -2.f};
+  const float bmax[3] = {display_width / 2, display_height, 1.f};
+  const float imin[3] = {1, 1, 0};
+  const float imax[3] = {1, 1, 0};
+  view_holder.SetViewProperties(bmin, bmax, imin, imax);
+
+  const float bmin2[3] = {0, 0, -2.f};
+  const float bmax2[3] = {display_width / 2, display_height / 2, 1.f};
+  view_holder2.SetViewProperties(bmin2, bmax2, imin, imax);
+  view_holder3.SetViewProperties(bmin2, bmax2, imin, imax);
+
+  // Set the debug bounds colors.
+  view_holder.SetDebugBoundsColor(0, 255, 255);
+  view_holder2.SetDebugBoundsColor(255, 0, 255);
+  view_holder3.SetDebugBoundsColor(255, 255, 0);
+
+  // Set bounds rendering on just the first view. This should turn on debug
+  // wireframe for itself and view2, since view2 is a direct embedding. View3
+  // should still be off.
+  view.enableDebugBounds(true);
+
+  root_node->Attach(view_holder);
+
+  // Transform and embed view holder 2 in first view.
+  scenic::EntityNode transform_node(session);
+  transform_node.SetTranslation(display_width / 2, 0, 0);
+  view.AddChild(transform_node);
+  transform_node.Attach(view_holder2);
+
+  // Transform and embed view holder 3 in view 2.
+  scenic::EntityNode transform_node2(session2);
+  transform_node2.SetTranslation(0, display_height / 2, 0);
+  view2.AddChild(transform_node2);
+  transform_node2.Attach(view_holder3);
+
+  Present(session);
+  Present(session2);
+  Present(session3);
+
+  // Take screenshot.
+  scenic::Screenshot screenshot = TakeScreenshot();
+  ASSERT_FALSE(screenshot.empty());
+  auto histogram = screenshot.Histogram();
+
+  histogram.erase({0, 0, 0, 0});
+  scenic::Color expected_colors[2] = {{0, 255, 255, 255},   // First ViewHolder
+                                      {255, 0, 255, 255}};  // Second ViewHolder
+  for (uint32_t i = 0; i < 2; i++) {
+    EXPECT_GT(histogram[expected_colors[i]], 0u);
+    histogram.erase(expected_colors[i]);
+  }
+  EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
+
+  // Now toggle debug rendering for view 2. This should tirgger view3's bounds to
+  // display as view3 is directly embedded by view2.
+  view2.enableDebugBounds(true);
+
+  Present(session);
+  Present(session2);
+  Present(session3);
+
+  // Take screenshot.
+  scenic::Screenshot screenshot2 = TakeScreenshot();
+  ASSERT_FALSE(screenshot2.empty());
+  histogram = screenshot2.Histogram();
+
+  histogram.erase({0, 0, 0, 0});
+  scenic::Color expected_colors_2[3] = {{0, 255, 255, 255},   // First ViewHolder
+                                        {255, 0, 255, 255},   // Second ViewHolder
+                                        {255, 255, 0, 255}};  // Third ViewHolder
+  for (uint32_t i = 0; i < 3; i++) {
+    EXPECT_GT(histogram[expected_colors_2[i]], 0u);
+    histogram.erase(expected_colors_2[i]);
+  }
+  EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
+}
+
 // TODO(SCN-1375): Blocked against hardware inability
 // to provide accurate screenshots from the physical
 // display. Our "TakeScreenshot()" method only grabs

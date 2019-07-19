@@ -57,6 +57,9 @@ class ViewHolder final : public Node {
   // rest of the code.
   escher::BoundingBox GetWorldBoundingBox() const;
 
+  void set_bounds_color(glm::vec4 bounds_color) { bounds_color_ = bounds_color; }
+  glm::vec4 bounds_color() const { return bounds_color_; }
+
  protected:
   // |Node|
   bool CanAddChild(NodePtr child_node) override;
@@ -84,6 +87,9 @@ class ViewHolder final : public Node {
 
   fuchsia::ui::gfx::ViewProperties view_properties_;
   fuchsia::ui::gfx::ViewState view_state_;
+  bool should_render_bounding_box_ = false;
+  glm::vec4 bounds_color_ = glm::vec4(1, 1, 1, 1);
+
   // Event that is signaled when the corresponding View's children are rendered
   // by scenic.
   zx::event render_event_;

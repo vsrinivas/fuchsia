@@ -5,13 +5,13 @@
 #ifndef LIB_UI_SCENIC_CPP_RESOURCES_H_
 #define LIB_UI_SCENIC_CPP_RESOURCES_H_
 
+#include <array>
+
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <zircon/assert.h>
-
-#include <array>
 
 namespace scenic {
 
@@ -342,6 +342,8 @@ class ViewHolder final : public Resource {
   void SetViewProperties(const float bounding_box_min[3], const float bounding_box_max[3],
                          const float inset_from_min[3], const float inset_from_max[3]);
   void SetViewProperties(const fuchsia::ui::gfx::ViewProperties& props);
+
+  void SetDebugBoundsColor(uint8_t red, uint8_t green, uint8_t blue);
 };
 
 // Represents the root of a subgraph within a larger scene graph.  |Node|s can
@@ -362,6 +364,8 @@ class View final : public Resource {
 
   void AddChild(const Node& child) const;
   void DetachChild(const Node& child) const;
+
+  void enableDebugBounds(bool enable);
 };
 
 // Creates a node that clips the contents of its hierarchy to the specified clip

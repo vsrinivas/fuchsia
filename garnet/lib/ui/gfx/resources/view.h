@@ -79,6 +79,11 @@ class View final : public Resource {
   // as part of a render frame.
   void SignalRender();
 
+  void set_should_render_bounding_box(bool render_bounding_box) {
+    should_render_bounding_box_ = render_bounding_box;
+  }
+  bool should_render_bounding_box() const { return should_render_bounding_box_; }
+
   // Accessor to this View's canonical ViewRef. Used to generate a FocusChain.
   const fuchsia::ui::views::ViewRef& view_ref() const { return view_ref_; }
 
@@ -109,6 +114,10 @@ class View final : public Resource {
   // the cloneable handle to the other peer.
   fuchsia::ui::views::ViewRefControl control_ref_;
   fuchsia::ui::views::ViewRef view_ref_;
+
+  // Determines if view should render its bounding box and those of its embedded
+  // view/view holders.
+  bool should_render_bounding_box_ = false;
 
   fxl::WeakPtrFactory<View> weak_factory_;  // must be last
 };

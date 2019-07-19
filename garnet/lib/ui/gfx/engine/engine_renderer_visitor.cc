@@ -43,7 +43,10 @@ void EngineRendererVisitor::Visit(View* r) { FXL_CHECK(false); }
 
 void EngineRendererVisitor::Visit(ViewNode* r) {
   const size_t previous_count = draw_call_count_;
-
+  const bool previous_should_render_debug_bounds = should_render_debug_bounds_;
+  if (auto view = r->GetView()) {
+    should_render_debug_bounds_ = view->should_render_bounding_box();
+  }
   VisitNode(r);
 
   bool view_is_rendering_element = draw_call_count_ > previous_count;
@@ -52,9 +55,30 @@ void EngineRendererVisitor::Visit(ViewNode* r) {
     // view is not rendering.
     r->GetView()->SignalRender();
   }
+
+  should_render_debug_bounds_ = previous_should_render_debug_bounds;
 }
 
-void EngineRendererVisitor::Visit(ViewHolder* r) { VisitNode(r); }
+void EngineRendererVisitor::Visit(ViewHolder* r) {
+  escher::PaperTransformStack* transform_stack = renderer_->transform_stack();
+  transform_stack->PushTransform(static_cast<escher::mat4>(r->transform()));
+  transform_stack->AddClipPlanes(r->clip_planes());
+
+  // A view holder should render its bounds if either its embedding view has
+  // debug rendering turned on (which will mean should_render_debug_bounds_=true)
+  // or if its own view specifies that debug bounds should be rendered.
+  if (should_render_debug_bounds_ || (r->view() && r->view()->should_render_bounding_box())) {
+    auto bbox = r->GetLocalBoundingBox();
+    // Create material and submit draw call.
+    escher::PaperMaterialPtr escher_material = escher::Material::New(r->bounds_color());
+    escher_material->set_type(escher::Material::Type::kWireframe);
+    renderer_->DrawBoundingBox(bbox, escher_material, escher::PaperDrawableFlags());
+    ++draw_call_count_;
+  }
+
+  ForEachDirectDescendantFrontToBack(*r, [this](Node* node) { node->Accept(this); });
+  transform_stack->Pop();
+}
 
 void EngineRendererVisitor::Visit(EntityNode* r) { VisitNode(r); }
 

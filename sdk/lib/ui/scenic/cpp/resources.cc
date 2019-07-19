@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
+
 #include <lib/images/cpp/images.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-
-#include <algorithm>
 
 namespace scenic {
 namespace {
@@ -310,6 +310,10 @@ void ViewHolder::SetViewProperties(const fuchsia::ui::gfx::ViewProperties& props
   session()->Enqueue(NewSetViewPropertiesCmd(id(), props));
 }
 
+void ViewHolder::SetDebugBoundsColor(uint8_t red, uint8_t green, uint8_t blue) {
+  session()->Enqueue(NewSetViewHolderBoundsColorCmd(id(), red, green, blue));
+}
+
 View::View(Session* session, zx::eventpair token, const std::string& debug_name)
     : Resource(session) {
   session->Enqueue(NewCreateViewCmd(id(), scenic::ToViewToken(std::move(token)), debug_name));
@@ -340,6 +344,10 @@ void View::AddChild(const Node& child) const {
 void View::DetachChild(const Node& child) const {
   ZX_DEBUG_ASSERT(session() == child.session());
   session()->Enqueue(NewDetachCmd(child.id()));
+}
+
+void View::enableDebugBounds(bool enable) {
+  session()->Enqueue(NewSetEnableDebugViewBoundsCmd(id(), enable));
 }
 
 ClipNode::ClipNode(Session* session) : ContainerNode(session) {

@@ -5,13 +5,13 @@
 #ifndef LIB_UI_SCENIC_CPP_COMMANDS_H_
 #define LIB_UI_SCENIC_CPP_COMMANDS_H_
 
+#include <string>
+
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/zx/eventpair.h>
-
-#include <string>
 
 namespace scenic {
 
@@ -154,6 +154,9 @@ fuchsia::ui::gfx::Command NewTakeSnapshotCmdHACK(
     uint32_t id, fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback);
 
 // Display Commands.
+fuchsia::ui::gfx::Command NewSetEnableDebugViewBoundsCmd(uint32_t view_id, bool enable);
+fuchsia::ui::gfx::Command NewSetViewHolderBoundsColorCmd(uint32_t view_holder_id, uint8_t red,
+                                                         uint8_t green, uint8_t blue);
 
 fuchsia::ui::gfx::Command NewSetDisplayColorConversionCmdHACK(
     uint32_t compositor_id, const std::array<float, 3>& preoffsets,

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <array>
+
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <zircon/assert.h>
-
-#include <array>
 
 namespace scenic {
 
@@ -716,6 +716,32 @@ fuchsia::ui::gfx::Command NewSetOpacityCmd(uint32_t node_id, float opacity) {
   fuchsia::ui::gfx::Command command;
   command.set_set_opacity(std::move(set_opacity));
 
+  return command;
+}
+
+fuchsia::ui::gfx::Command NewSetEnableDebugViewBoundsCmd(uint32_t view_id, bool enable) {
+  fuchsia::ui::gfx::SetEnableDebugViewBoundsCmd enable_cmd;
+  enable_cmd.view_id = view_id;
+  enable_cmd.enable = enable;
+
+  fuchsia::ui::gfx::Command command;
+  command.set_set_enable_view_debug_bounds(std::move(enable_cmd));
+  return command;
+}
+
+fuchsia::ui::gfx::Command NewSetViewHolderBoundsColorCmd(uint32_t view_holder_id, uint8_t red,
+                                                         uint8_t green, uint8_t blue) {
+  fuchsia::ui::gfx::ColorRgbValue color;
+  color.value.red = red;
+  color.value.green = green;
+  color.value.blue = blue;
+
+  fuchsia::ui::gfx::SetViewHolderBoundsColorCmd bounds_color_cmd;
+  bounds_color_cmd.view_holder_id = view_holder_id;
+  bounds_color_cmd.color = std::move(color);
+
+  fuchsia::ui::gfx::Command command;
+  command.set_set_view_holder_bounds_color(std::move(bounds_color_cmd));
   return command;
 }
 
