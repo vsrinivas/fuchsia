@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/sessionctl_test"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-shell"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

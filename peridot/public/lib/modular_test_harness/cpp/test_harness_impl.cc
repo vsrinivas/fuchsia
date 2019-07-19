@@ -144,12 +144,19 @@ bool TestHarnessImpl::CloseBindingIfError(zx_status_t status) {
   return false;
 }
 
-std::string MakeTestHarnessEnvironmentName() {
+std::string MakeTestHarnessEnvironmentName(std::string user_env_suffix) {
   // Apply a random suffix to the environment name so that multiple hermetic
   // test harness environments may coexist under the same parent env.
+  // If user_env_suffix is provided, the suffix is concatenated to 22 chars
+  // such that "mth_#####_{user_env_suffix}" is 32 chars or less.
   uint32_t random_env_suffix = 0;
-  zx_cprng_draw(&random_env_suffix, sizeof random_env_suffix);
-  return fxl::Substitute("modular_test_harness_$0", std::to_string(random_env_suffix));
+  // Limit suffix to 5 digits because of 32 char max on the entire name.
+  zx_cprng_draw(&random_env_suffix, 5);
+  std::string env_name = fxl::Substitute("mth_$0", std::to_string(random_env_suffix));
+  if (!user_env_suffix.empty()) {
+    env_name.append("_" + user_env_suffix);
+  }
+  return env_name;
 }
 
 zx_status_t TestHarnessImpl::PopulateEnvServices(sys::testing::EnvironmentServices* env_services) {
@@ -310,8 +317,14 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
   fuchsia::sys::EnvironmentOptions env_options;
   env_options.delete_storage_on_death = true;
 
-  enclosing_env_ = sys::testing::EnclosingEnvironment::Create(
-      MakeTestHarnessEnvironmentName(), parent_env_, std::move(env_services), env_options);
+  std::string user_env_suffix = "";
+  if (spec_.has_environment_suffix()) {
+    user_env_suffix = spec_.environment_suffix();
+  }
+
+  enclosing_env_ =
+      sys::testing::EnclosingEnvironment::Create(MakeTestHarnessEnvironmentName(user_env_suffix),
+                                                 parent_env_, std::move(env_services), env_options);
 
   zx::channel client;
   zx::channel request;
