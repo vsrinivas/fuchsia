@@ -45,8 +45,8 @@ declare_args() {
   zircon_extra_args = {
   }
 
-  # Additional targets to pass to the Zircon Ninja build.
-  zircon_extra_ninja_targets = []
+  # Additional Zircon GN labels to include in the Zircon build.
+  zircon_extra_deps = []
 
   # Whether to include various features (non-shipping, insecure, etc.) in the
   # kernel or netsvc builds.
@@ -61,8 +61,6 @@ declare_args() {
   # Default is $target_cpu.
   zircon_compdb_filter = target_cpu
 }
-
-zircon_ninja_targets = [ "legacy-$target_cpu" ] + zircon_extra_ninja_targets
 
 zircon_variants = []
 foreach(selector, select_variant) {
@@ -93,10 +91,7 @@ declare_args() {
       clang_tool_dir = clang_prefix
     }
     variants = zircon_variants
-    default_deps = []
-    foreach(target, zircon_ninja_targets) {
-      default_deps += [ ":$target" ]
-    }
+    default_deps = [ "//:legacy-$target_cpu" ] + zircon_extra_deps
     enable_kernel_debugging_features = zircon_enable_kernel_debugging_features
     enable_netsvc_debugging_features = zircon_enable_netsvc_debugging_features
     forward_variables_from(zircon_extra_args, "*")
@@ -136,7 +131,7 @@ if (current_toolchain == default_toolchain) {
   write_file("$root_build_dir/zircon.json",
              {
                dir = rebase_path(zircon_root_build_dir, root_build_dir)
-               targets = zircon_ninja_targets
+               targets = [ "default" ]
              },
              "json")
 }
