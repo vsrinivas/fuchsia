@@ -17,7 +17,6 @@
 #include <wlan/common/element.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/phy.h>
-#include <wlan/protocol/ioctl.h>
 #include <zircon/status.h>
 
 #include "driver.h"

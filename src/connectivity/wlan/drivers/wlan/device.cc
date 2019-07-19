@@ -28,7 +28,6 @@
 #include <wlan/mlme/timer_manager.h>
 #include <wlan/mlme/validate_frame.h>
 #include <wlan/mlme/wlan.h>
-#include <wlan/protocol/ioctl.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/status.h>

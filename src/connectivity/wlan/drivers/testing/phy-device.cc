@@ -11,7 +11,6 @@
 #include <ddk/protocol/wlanphy.h>
 #include <wlan/common/element.h>
 #include <wlan/common/phy.h>
-#include <wlan/protocol/ioctl.h>
 
 #include <fuchsia/wlan/device/c/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>

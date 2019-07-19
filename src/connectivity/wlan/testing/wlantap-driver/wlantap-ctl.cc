@@ -13,8 +13,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/dispatcher.h>
 #include <wlan/common/channel.h>
-#include <wlan/protocol/ioctl.h>
-#include <wlan/protocol/wlantap.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
 

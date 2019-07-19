@@ -8,7 +8,6 @@ config("wlan_protocol_config") {
 
 source_set("protocol") {
   sources = [
-    "include/wlan/protocol/ioctl.h",
     "include/wlan/protocol/mac.h",
   ]
 

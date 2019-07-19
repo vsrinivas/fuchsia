@@ -9,7 +9,6 @@
 #include <fuchsia/wlan/tap/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
-#include <wlan/protocol/wlantap.h>
 
 namespace wlan {
 

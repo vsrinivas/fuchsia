@@ -11,7 +11,6 @@
 #include <fuchsia/wlan/mlme/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <wlan/common/logging.h>
-#include <wlan/protocol/ioctl.h>
 #include <zircon/status.h>
 
 #include "convert.h"
