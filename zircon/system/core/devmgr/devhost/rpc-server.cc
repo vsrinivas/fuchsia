@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
-#include <zircon/device/ioctl.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -504,40 +503,7 @@ static zx_status_t fidl_node_setattr(void* ctx, uint32_t flags,
 static zx_status_t fidl_node_ioctl(void* ctx, uint32_t opcode, uint64_t max_out,
                                    const zx_handle_t* handles_data, size_t handles_count,
                                    const uint8_t* in_data, size_t in_count, fidl_txn_t* txn) {
-  auto conn = static_cast<DevfsConnection*>(ctx);
-  char in_buf[FDIO_IOCTL_MAX_INPUT];
-  size_t hsize = handles_count * sizeof(zx_handle_t);
-  if ((in_count > FDIO_IOCTL_MAX_INPUT) || (max_out > ZXFIDL_MAX_MSG_BYTES)) {
-    zx_handle_close_many(handles_data, handles_count);
-    return fuchsia_io_NodeIoctl_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0, nullptr, 0);
-  }
-  memcpy(in_buf, in_data, in_count);
-  memcpy(in_buf, handles_data, hsize);
-
-  uint8_t out[max_out];
-  zx_handle_t* out_handles = (zx_handle_t*)out;
-  size_t out_count = 0;
-  ssize_t r = conn->dev->IoctlOp(opcode, in_buf, in_count, out, max_out, &out_count);
-  size_t out_hcount = 0;
-  if (r >= 0) {
-    switch (IOCTL_KIND(opcode)) {
-      case IOCTL_KIND_GET_HANDLE:
-        out_hcount = 1;
-        break;
-      case IOCTL_KIND_GET_TWO_HANDLES:
-        out_hcount = 2;
-        break;
-      case IOCTL_KIND_GET_THREE_HANDLES:
-        out_hcount = 3;
-        break;
-      default:
-        out_hcount = 0;
-        break;
-    }
-  }
-
-  auto status = static_cast<zx_status_t>(r);
-  return fuchsia_io_NodeIoctl_reply(txn, status, out_handles, out_hcount, out, out_count);
+  return fuchsia_io_NodeIoctl_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr, 0, nullptr, 0);
 }
 
 static const fuchsia_io_Node_ops_t kNodeOps = {

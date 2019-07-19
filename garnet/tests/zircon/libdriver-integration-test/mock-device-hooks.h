@@ -74,11 +74,6 @@ public:
         Fail(__FUNCTION__);
     }
 
-    void Ioctl(HookInvocation record, uint32_t op, std::vector<uint8_t> in,
-                   uint64_t out_count, IoctlCallback callback) override {
-        Fail(__FUNCTION__);
-    }
-
     void Message(HookInvocation record, MessageCallback callback) override {
         Fail(__FUNCTION__);
     }
@@ -227,8 +222,6 @@ public:
     void GetSize(HookInvocation record, GetSizeCallback callback) override;
     void Suspend(HookInvocation record, uint32_t flags, SuspendCallback callback) override;
     void Resume(HookInvocation record, uint32_t flags, ResumeCallback callback) override;
-    void Ioctl(HookInvocation record, uint32_t op, std::vector<uint8_t> in,
-                   uint64_t out_count, IoctlCallback callback) override;
     void Message(HookInvocation record, MessageCallback callback) override;
     void Rxrpc(HookInvocation record, RxrpcCallback callback) override;
 private:
@@ -248,7 +241,6 @@ private:
     fit::function<ActionList(HookInvocation)> get_size_;
     fit::function<ActionList(HookInvocation, uint32_t)> suspend_;
     fit::function<ActionList(HookInvocation, uint32_t)> resume_;
-    fit::function<ActionList(HookInvocation, uint32_t, std::vector<uint8_t>, uint64_t)> ioctl_;
     fit::function<ActionList(HookInvocation)> message_;
     fit::function<ActionList(HookInvocation)> rxrpc_;
 public:
@@ -264,7 +256,6 @@ public:
     void set_get_size(decltype(get_size_) hook) { get_size_ = std::move(hook); }
     void set_suspend(decltype(suspend_) hook) { suspend_ = std::move(hook); }
     void set_resume(decltype(resume_) hook) { resume_ = std::move(hook); }
-    void set_ioctl(decltype(ioctl_) hook) { ioctl_ = std::move(hook); }
     void set_message(decltype(message_) hook) { message_ = std::move(hook); }
     void set_rxrpc(decltype(rxrpc_) hook) { rxrpc_ = std::move(hook); }
 };

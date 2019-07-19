@@ -69,13 +69,6 @@ zx_off_t DdkGetSize() {
 }
 END_SUCCESS_CASE
 
-BEGIN_SUCCESS_CASE(Ioctlable)
-zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                     size_t out_len, size_t* out_actual) {
-    return ZX_OK;
-}
-END_SUCCESS_CASE
-
 BEGIN_SUCCESS_CASE(Messageable)
 zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return ZX_OK;
@@ -158,12 +151,6 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
         return 0;
     }
 
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                         size_t out_len, size_t* out_actual) {
-        ioctl_called = true;
-        return ZX_OK;
-    }
-
     zx_status_t DdkSuspend(uint32_t flags) {
         suspend_called = true;
         return ZX_OK;
@@ -187,7 +174,6 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
     bool read_called = false;
     bool write_called = false;
     bool get_size_called = false;
-    bool ioctl_called = false;
     bool suspend_called = false;
     bool resume_called = false;
     bool rxrpc_called = false;
@@ -212,7 +198,6 @@ static bool test_dispatch() {
     EXPECT_EQ(ZX_OK, ops->read(ctx, nullptr, 0, 0, nullptr), "");
     EXPECT_EQ(ZX_OK, ops->write(ctx, nullptr, 0, 0, nullptr), "");
     EXPECT_EQ(0, ops->get_size(ctx), "");
-    EXPECT_EQ(ZX_OK, ops->ioctl(ctx, 0, nullptr, 0, nullptr, 0, nullptr), "");
     EXPECT_EQ(ZX_OK, ops->suspend(ctx, 0), "");
     EXPECT_EQ(ZX_OK, ops->resume(ctx, 0), "");
     EXPECT_EQ(ZX_OK, ops->rxrpc(ctx, 0), "");
@@ -225,7 +210,6 @@ static bool test_dispatch() {
     EXPECT_TRUE(dev->read_called, "");
     EXPECT_TRUE(dev->write_called, "");
     EXPECT_TRUE(dev->get_size_called, "");
-    EXPECT_TRUE(dev->ioctl_called, "");
     EXPECT_TRUE(dev->suspend_called, "");
     EXPECT_TRUE(dev->resume_called, "");
     EXPECT_TRUE(dev->rxrpc_called, "");
@@ -256,7 +240,6 @@ DEFINE_FAIL_CASE(Readable)
 DEFINE_FAIL_CASE(Writable)
 DEFINE_FAIL_CASE(IotxnQueueable)
 DEFINE_FAIL_CASE(GetSizable)
-DEFINE_FAIL_CASE(Ioctlable)
 DEFINE_FAIL_CASE(Suspendable)
 DEFINE_FAIL_CASE(Resumable)
 DEFINE_FAIL_CASE(Rxrpcable)
@@ -327,7 +310,6 @@ RUN_NAMED_TEST("ddk::Unbindable", do_test<TestUnbindable>);
 RUN_NAMED_TEST("ddk::Readable", do_test<TestReadable>);
 RUN_NAMED_TEST("ddk::Writable", do_test<TestWritable>);
 RUN_NAMED_TEST("ddk::GetSizable", do_test<TestGetSizable>);
-RUN_NAMED_TEST("ddk::Ioctlable", do_test<TestIoctlable>);
 RUN_NAMED_TEST("ddk::Suspendable", do_test<TestSuspendable>);
 RUN_NAMED_TEST("ddk::Resumable", do_test<TestResumable>);
 RUN_NAMED_TEST("ddk::Rxrpcable", do_test<TestRxrpcable>);
@@ -344,7 +326,6 @@ RUN_NAMED_TEST("FailNoDdkRead", do_test<TestNotReadable>);
 RUN_NAMED_TEST("FailNoDdkWrite", do_test<TestNotWritable>);
 RUN_NAMED_TEST("FailNoDdkIotxnQueue", do_test<TestNotIotxnQueueable>);
 RUN_NAMED_TEST("FailNoDdkGetSize", do_test<TestNotGetSizable>);
-RUN_NAMED_TEST("FailNoDdkIoctl", do_test<TestNotIoctlable>);
 RUN_NAMED_TEST("FailNoDdkSuspend", do_test<TestNotSuspendable>);
 RUN_NAMED_TEST("FailNoDdkResume", do_test<TestNotResumable>);
 RUN_NAMED_TEST("FailNoDdkRxrpc", do_test<TestNotRxrpcable>);

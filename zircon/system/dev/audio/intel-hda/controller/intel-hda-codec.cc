@@ -49,7 +49,6 @@ zx_protocol_device_t IntelHDACodec::CODEC_DEVICE_THUNKS = {
     .read = nullptr,
     .write = nullptr,
     .get_size = nullptr,
-    .ioctl = nullptr,
     .suspend = nullptr,
     .resume = nullptr,
     .rxrpc = nullptr,

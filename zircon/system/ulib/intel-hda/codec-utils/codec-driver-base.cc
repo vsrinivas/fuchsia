@@ -41,7 +41,6 @@ zx_protocol_device_t IntelHDACodecDriverBase::CODEC_DEVICE_THUNKS = {
     .read = nullptr,
     .write = nullptr,
     .get_size = nullptr,
-    .ioctl = nullptr,
     .suspend = [](void* ctx, uint32_t flags) -> zx_status_t { return DEV(ctx)->Suspend(flags); },
     .resume = nullptr,
     .rxrpc = nullptr,

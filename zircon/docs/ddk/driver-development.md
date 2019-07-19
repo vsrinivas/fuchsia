@@ -158,7 +158,6 @@ directly with hardware (for example, via MMIO) or by communicating with its
 parent device (for example, queuing a USB transaction).
 
 External client requests from processes outside the devhost are fulfilled by
-the device ops `message()`, `read()`, `write()`, and `ioctl()`. Requests from
 children drivers, generally in the same process, are fulfilled by device
 protocols corresponding to the device class. Driver-to-driver requests should
 use device protocols instead of device ops.
@@ -197,20 +196,6 @@ Messages for each device class are defined in the
 Each device implements zero or more FIDL protocols, multiplexed over a single
 channel per client.  The driver is given the opportunity to interpret FIDL
 messages via the `message()` hook.
-
-## Ioctl
-
-Ioctls are deprecated in favor of messages.  No new ioctls should be implemented.
-
-Ioctls for each device class are defined in
-[zircon/device/](../../system/public/zircon/device). Ioctls may accept or
-return handles. The `IOCTL_KIND_*` defines in
-[zircon/device/ioctl.h](../../system/public/zircon/device/ioctl.h), used in
-the ioctl declaration, defines whether the ioctl accepts or returns handles
-and how many. The driver owns the handles passed in and should close the
-handles when they're no longer needed, unless it returns
-`ZX_ERR_NOT_SUPPORTED` in which case the devhost RPC layer will close the
-handles.
 
 ## Protocol ops vs. FIDL messages
 
@@ -288,9 +273,9 @@ under test can bind to, and it should implement the protocol functions the
 driver under test invokes in normal operation. This helper driver should be
 declared with `BI_ABORT_IF_AUTOBIND` in the bindings.
 
-The test harness calls `fuchsia.device.test.RootDevice.CreateDevice()` on
+The test harness calls `fuchsia.device.test.RootDevice/CreateDevice` on
 `/dev/test/test`, which will create a `ZX_PROTOCOL_TEST` device and return
-its path. Then it calls `ioctl_device_bind()` with the helper driver on the
+its path. Then it calls `fuchsia.device.Controller/Bind` with the helper driver on the
 newly created device.  This approach generally works better for mid-layer
 protocol drivers. It's possible to emulate real hardware with the same
 approach but it may not be as useful.

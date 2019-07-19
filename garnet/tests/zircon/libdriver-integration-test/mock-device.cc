@@ -62,11 +62,6 @@ void MockDevice::Resume(HookInvocation record, uint32_t flags, ResumeCallback ca
     hooks_->Resume(record, flags, std::move(callback));
 }
 
-void MockDevice::Ioctl(HookInvocation record, uint32_t op, std::vector<uint8_t> in,
-                       uint64_t out_count, IoctlCallback callback)  {
-    hooks_->Ioctl(record, op, std::move(in), out_count, std::move(callback));
-}
-
 void MockDevice::Message(HookInvocation record, MessageCallback callback)  {
     hooks_->Message(record, std::move(callback));
 }

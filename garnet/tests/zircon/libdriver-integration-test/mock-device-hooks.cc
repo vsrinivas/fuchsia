@@ -112,16 +112,6 @@ void UnorderedHooks::Resume(HookInvocation record, uint32_t flags, ResumeCallbac
     TryFinish();
 }
 
-void UnorderedHooks::Ioctl(HookInvocation record, uint32_t op, std::vector<uint8_t> in,
-                           uint64_t out_count, IoctlCallback callback) {
-    if (!ioctl_) {
-        return Fail(__FUNCTION__);
-    }
-    callback(action_list_finalizer_(ioctl_(record, op, std::move(in), out_count)));
-    ioctl_ = nullptr;
-    TryFinish();
-}
-
 void UnorderedHooks::Message(HookInvocation record, MessageCallback callback) {
     if (!message_) {
         return Fail(__FUNCTION__);
@@ -142,7 +132,7 @@ void UnorderedHooks::Rxrpc(HookInvocation record, RxrpcCallback callback) {
 
 void UnorderedHooks::TryFinish() {
     if (bind_ || release_ || get_protocol_ || open_ || open_at_ || close_ || unbind_ ||
-        read_ || write_ || get_size_ || suspend_ || resume_ || ioctl_ || message_ ||
+        read_ || write_ || get_size_ || suspend_ || resume_ || message_ ||
         rxrpc_) {
 
         return;

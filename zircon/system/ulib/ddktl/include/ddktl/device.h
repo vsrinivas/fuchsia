@@ -51,12 +51,6 @@
 // |                      |                                                    |
 // | ddk::GetSizable      | zx_off_t DdkGetSize()                              |
 // |                      |                                                    |
-// | ddk::Ioctlable       | zx_status_t DdkIoctl(uint32_t op,                  |
-// |                      |                      const void* in_buf,           |
-// |                      |                      size_t in_len, void* out_buf, |
-// |                      |                      size_t out_len,               |
-// |                      |                      size_t* actual)               |
-// |                      |                                                    |
 // | ddk::Messageable     | zx_status_t DdkMessage(fidl_msg_t* msg,            |
 // |                      |                        fidl_txn_t* txn)            |
 // |                      |                                                    |
@@ -221,21 +215,6 @@ protected:
 private:
     static zx_off_t GetSize(void* ctx) {
         return static_cast<D*>(ctx)->DdkGetSize();
-    }
-};
-
-template <typename D>
-class Ioctlable : public base_mixin {
-protected:
-    static constexpr void InitOp(zx_protocol_device_t* proto) {
-        internal::CheckIoctlable<D>();
-        proto->ioctl = Ioctl;
-    }
-
-private:
-    static zx_status_t Ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                             void* out_buf, size_t out_len, size_t* out_actual) {
-        return static_cast<D*>(ctx)->DdkIoctl(op, in_buf, in_len, out_buf, out_len, out_actual);
     }
 };
 
@@ -430,7 +409,6 @@ using FullDevice = Device<D,
                           Readable,
                           Writable,
                           GetSizable,
-                          Ioctlable,
                           Suspendable,
                           Resumable,
                           Rxrpcable>;

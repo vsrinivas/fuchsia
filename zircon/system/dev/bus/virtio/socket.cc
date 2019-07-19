@@ -114,7 +114,6 @@ static zx_protocol_device_t kDeviceOps = {
     nullptr,            // read
     nullptr,            // write
     nullptr,            // get_size
-    nullptr,            // ioctl
     nullptr,            // suspend
     nullptr,            // resume
     nullptr,            // rxrpc

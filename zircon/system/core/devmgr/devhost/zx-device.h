@@ -68,12 +68,6 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   zx_off_t GetSizeOp() { return Dispatch(ops->get_size, 0lu); }
 
-  zx_status_t IoctlOp(uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len,
-                      size_t* out_actual) {
-    return Dispatch(ops->ioctl, ZX_ERR_NOT_SUPPORTED, op, in_buf, in_len, out_buf, out_len,
-                    out_actual);
-  }
-
   zx_status_t MessageOp(fidl_msg_t* msg, fidl_txn_t* txn) {
     return Dispatch(ops->message, ZX_ERR_NOT_SUPPORTED, msg, txn);
   }

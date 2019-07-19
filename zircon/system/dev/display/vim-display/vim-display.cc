@@ -716,7 +716,6 @@ static zx_protocol_device_t main_device_proto = {
     .read = nullptr,
     .write = nullptr,
     .get_size = nullptr,
-    .ioctl = nullptr,
     .suspend = nullptr,
     .resume = nullptr,
     .rxrpc = nullptr,

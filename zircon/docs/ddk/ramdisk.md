@@ -148,7 +148,7 @@ optional "protocol specific" one:
 ```c
 static zx_protocol_device_t ramdisk_proto = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = ramdisk_ioctl,
+    .message = ramdisk_message,
     .get_size = ramdisk_getsize,
     .unbind = ramdisk_unbind,
     .release = ramdisk_release,
@@ -160,7 +160,7 @@ static block_protocol_ops_t block_ops = {
 };
 ```
 
-The `zx_protocol_device_t` one handles control ops (**ramdisk_ioctl()**), device size
+The `zx_protocol_device_t` one handles control messages (**ramdisk_message()**), device size
 queries (**ramdisk_getsize()**), and device cleanups (**ramdisk_unbind()** and
 **ramdisk_release()**).
 

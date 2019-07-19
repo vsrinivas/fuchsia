@@ -457,7 +457,6 @@ zx_protocol_device_t intel_serialio_i2c_slave_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .read = intel_serialio_i2c_slave_read,
     .write = intel_serialio_i2c_slave_write,
-    .ioctl = NULL,
     .message = intel_serialio_i2c_message,
     .release = intel_serialio_i2c_slave_release,
 };

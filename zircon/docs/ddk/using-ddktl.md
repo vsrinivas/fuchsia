@@ -28,7 +28,6 @@ Mixin class            | Function             | Purpose
 `ddk::Readable`        | **DdkRead()**        | client's **read()**
 `ddk::Writable`        | **DdkWrite()**       | client's **write()**
 `ddk::GetSizable`      | **DdkGetSize()**     | returns size of device
-`ddk::Ioctlable`       | **DdkIoctl()**       | client's **ioctl()**
 `ddk::Messageable`     | **DdkMessage()**     | for FIDL IPC messages
 `ddk::Suspendable`     | **DdkSuspend()**     | to suspend device
 `ddk::Resumable`       | **DdkResume()**      | to resume device

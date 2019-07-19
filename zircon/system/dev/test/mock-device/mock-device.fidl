@@ -87,7 +87,6 @@ protocol MockDevice {
     Suspend(HookInvocation record, uint32 flags) -> (vector<Action>:MAX_ACTIONS actions);
     Resume(HookInvocation record, uint32 flags) -> (vector<Action>:MAX_ACTIONS actions);
 
-    Ioctl(HookInvocation record, uint32 op, vector<uint8>:MAX_WRITE_BYTES in, uint64 out_count) -> (vector<Action>:MAX_ACTIONS actions);
     Message(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
     Rxrpc(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
 

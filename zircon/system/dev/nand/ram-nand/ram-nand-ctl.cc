@@ -30,8 +30,6 @@ class RamNandCtl : public RamNandCtlDeviceType {
     void DdkRelease() { delete this; }
 
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
 
     zx_status_t CreateDevice(const fuchsia_hardware_nand_RamNandInfo* info, const char** name);
 

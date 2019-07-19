@@ -78,11 +78,6 @@ static zx_status_t default_write(void* ctx, const void* buf, size_t count, zx_of
 
 static zx_off_t default_get_size(void* ctx) { return 0; }
 
-static zx_status_t default_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                 void* out_buf, size_t out_len, size_t* out_actual) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 static zx_status_t default_suspend(void* ctx, uint32_t flags) { return ZX_ERR_NOT_SUPPORTED; }
 
 static zx_status_t default_resume(void* ctx, uint32_t flags) { return ZX_ERR_NOT_SUPPORTED; }
@@ -105,7 +100,6 @@ zx_protocol_device_t device_default_ops = []() {
   ops.read = default_read;
   ops.write = default_write;
   ops.get_size = default_get_size;
-  ops.ioctl = default_ioctl;
   ops.suspend = default_suspend;
   ops.resume = default_resume;
   ops.rxrpc = default_rxrpc;
@@ -130,9 +124,6 @@ static zx_protocol_device_t device_invalid_ops = []() {
     device_invalid_fatal(ctx);
   };
   ops.get_size = +[](void* ctx) -> zx_off_t { device_invalid_fatal(ctx); };
-  ops.ioctl = +[](void* ctx, uint32_t, const void*, size_t, void*, size_t, size_t*) -> zx_status_t {
-    device_invalid_fatal(ctx);
-  };
   ops.suspend = +[](void* ctx, uint32_t) -> zx_status_t { device_invalid_fatal(ctx); };
   ops.resume = +[](void* ctx, uint32_t) -> zx_status_t { device_invalid_fatal(ctx); };
   ops.rxrpc = +[](void* ctx, zx_handle_t) -> zx_status_t { device_invalid_fatal(ctx); };

@@ -197,38 +197,7 @@ static zx_status_t fdio_zxio_remote_open(fdio_t* io, const char* path,
 static zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf,
                               size_t in_len, void* out_buf, size_t out_len,
                               size_t* out_actual) {
-    size_t in_handle_count = 0;
-    size_t out_handle_count = 0;
-    switch (IOCTL_KIND(op)) {
-    case IOCTL_KIND_GET_HANDLE:
-        out_handle_count = 1;
-        break;
-    case IOCTL_KIND_GET_TWO_HANDLES:
-        out_handle_count = 2;
-        break;
-    case IOCTL_KIND_GET_THREE_HANDLES:
-        out_handle_count = 3;
-        break;
-    case IOCTL_KIND_SET_HANDLE:
-        in_handle_count = 1;
-        break;
-    case IOCTL_KIND_SET_TWO_HANDLES:
-        in_handle_count = 2;
-        break;
-    }
-
-    if (in_len < in_handle_count * sizeof(zx_handle_t)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    if (out_len < out_handle_count * sizeof(zx_handle_t)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
     uint8_t request_buffer[fidl::MaxSizeInChannel<fio::Node::IoctlRequest>()];
-    zx::handle in_handle_buf[in_handle_count];
-    for (size_t i = 0; i < in_handle_count; i++) {
-        in_handle_buf[i] = zx::handle(static_cast<const zx_handle_t*>(in_buf)[i]);
-    }
     uint8_t response_buffer[fidl::MaxSizeInChannel<fio::Node::IoctlResponse>()];
     zx_status_t status;
     fidl::VectorView<::zx::handle> handles;
@@ -238,7 +207,7 @@ static zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf,
         fidl::BytePart::WrapEmpty(request_buffer),
         op,
         out_len,
-        fidl::VectorView(in_handle_count, in_handle_buf),
+        fidl::VectorView<zx::handle>(),
         fidl::VectorView(in_len, const_cast<uint8_t*>(static_cast<const uint8_t*>(in_buf))),
         fidl::BytePart::WrapEmpty(response_buffer),
         &status,
@@ -250,21 +219,14 @@ static zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf,
     if (status != ZX_OK) {
         return status;
     }
-    if (handles.count() != out_handle_count) {
+    if (handles.count() != 0) {
         return ZX_ERR_IO;
     }
     if (out.count() != out_len) {
         return ZX_ERR_IO;
     }
 
-    if (out_handle_count) {
-        zx_handle_t* out_handle_buf = static_cast<zx_handle_t*>(out_buf);
-        for (zx::handle& handle : handles) {
-            *out_handle_buf++ = handle.release();
-        }
-    } else {
-        memcpy(out_buf, out.data(), out.count());
-    }
+    memcpy(out_buf, out.data(), out.count());
     *out_actual = out.count();
 
     return ZX_OK;

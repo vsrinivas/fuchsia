@@ -49,8 +49,6 @@ public:
     void GetSize(HookInvocation record, GetSizeCallback callback) override;
     void Suspend(HookInvocation record, uint32_t flags, SuspendCallback callback) override;
     void Resume(HookInvocation record, uint32_t flags, ResumeCallback callback) override;
-    void Ioctl(HookInvocation record, uint32_t op, std::vector<uint8_t> in,
-                   uint64_t out_count, IoctlCallback callback) override;
     void Message(HookInvocation record, MessageCallback callback) override;
     void Rxrpc(HookInvocation record, RxrpcCallback callback) override;
 

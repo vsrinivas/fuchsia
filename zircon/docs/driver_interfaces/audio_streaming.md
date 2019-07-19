@@ -40,7 +40,7 @@ Client or User or Application | These terms are used interchangeably in this doc
 
 Communication with an audio stream device is performed using messages sent over
 a [channel](../objects/channel.md).  Applications open the device node for a
-stream and obtain a channel by issuing an ioctl.  After obtaining the channel,
+stream and obtain a channel by issuing a FIDL request.  After obtaining the channel,
 the device node may be closed.  All subsequent communication with the stream
 will occur using channels.
 
@@ -102,28 +102,31 @@ Output | `ZX_PROTOCOL_AUDIO_OUTPUT` | /dev/class/audio-output
 ### Establishing the stream channel
 
 After opening the device node, client applications may obtain a stream channel
-for subsequent communication using the `AUDIO_IOCTL_GET_CHANNEL` ioctl.  For
-example...
+for subsequent communication using the `fuchsia.hardware.audio.Device/GetChannel`
+FIDL message.  For example...
 
 ```C
 zx_handle_t OpenStream(const char* dev_node_path) {
-    zx_handle_t ret = ZX_HANDLE_INVALID;
-    int fd = open(dev_node_path, O_RDONLY);
-
-    if (fd < 0) {
-        LOG("Failed to open \"%s\" (res %d)\n", dev_node_path, fd);
-        return ret;
+    zx_handle_t local, remote;
+    zx_status_t status = zx_channel_create(0, &local, &remote);
+    if (status != ZX_OK) {
+      return ZX_HANDLE_INVALID;
+    }
+    status = fdio_service_connect(dev_node_path, remote);
+    if (status != ZX_OK) {
+      LOG("Failed to open \"%s\" (res %d)\n", dev_node_path, status);
+      zx_handle_close(local);
+      return ZX_HANDLE_INVALID;
     }
 
-    ssize_t res = fdio_ioctl(fd, AUDIO_IOCTL_GET_CHANNEL,
-                             nullptr, 0,
-                             &ret, sizeof(ret));
-    close(fd);
-
-    if (res != ZX_OK)
-        printf("Failed to obtain channel (res %zd)\n", res);
-
-    return ret;
+    zx_handle_t audio_channel;
+    status = fuchsia_hardware_audio_DeviceGetChannel(local, &audio_channel);
+    if (status != ZX_OK) {
+      printf("Failed to obtain channel (res %d)\n", status);
+      return ZX_HANDLE_INVALID;
+    }
+    zx_handle_close(local);
+    return audio_channel;
 }
 ```
 

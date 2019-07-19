@@ -136,22 +136,6 @@ The default implementation returns 0.
 zx_off_t (*get_size)(void* ctx);
 ```
 
-## ioctl
-The ioctl hook allows support for device-specific operations.
-
-These, like read and write, must not block.
-
-On success, **ZX_OK** must be returned and *out_actual* must be set
-to the number of output bytes provided (0 if none).
-
-The default ioctl implementation returns **ZX_ERR_NOT_SUPPORTED**.
-
-```
-zx_status_t (*ioctl)(void* ctx, uint32_t op,
-                     const void* in_buf, size_t in_len,
-                     void* out_buf, size_t out_len, size_t* out_actual);
-```
-
 ## rxrpc
 Only called for bus devices.
 When the "shadow" of a busdev sends an rpc message, the
@@ -173,7 +157,7 @@ zx_status_t (*rxrpc)(void* ctx, zx_handle_t channel);
 ## message
 Process a FIDL rpc message.  This is used to handle class or
 device specific messaging.  fuchsia.io.{Node,File,Device} are
-handles by the devhost itself.
+handled by the devhost itself.
 
 The entire message becomes the responsibility of the driver,
 including the handles.

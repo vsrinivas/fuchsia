@@ -1,7 +1,7 @@
 {
   "pkg/ddk/include/ddk/binding.h": "8a3132cf4f2bd6bbf0a9c692c64430d3",
   "pkg/ddk/include/ddk/debug.h": "31fdd1dc41d88a528939b2427713873f",
-  "pkg/ddk/include/ddk/device.h": "5711aac291d5befa9c30748d8a2abedf",
+  "pkg/ddk/include/ddk/device.h": "73e4ee83946f4cc572d77ec27a189d69",
   "pkg/ddk/include/ddk/driver.h": "8fc1d669d05c3d07ddd863cb850cabb2",
   "pkg/ddk/include/ddk/io-buffer.h": "2d07a2b21ad99b857e232fb6ba49cb29",
   "pkg/ddk/include/ddk/metadata.h": "a8af9ba831eaab0562ed51fa88ff4cf1",

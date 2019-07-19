@@ -44,8 +44,6 @@ public:
     zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
     zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual);
     zx_off_t DdkGetSize();
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                         size_t out_len, size_t* actual);
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     zx_status_t DdkSuspend(uint32_t flags);
     zx_status_t DdkResume(uint32_t flags);
@@ -281,22 +279,6 @@ zx_off_t MockDevice::DdkGetSize() {
 
     ZX_ASSERT_MSG(false, "need to plumb returning values in\n");
     return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t MockDevice::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                                 size_t out_len, size_t* actual) {
-    fbl::Array<const fuchsia_device_mock_Action> actions;
-    zx_status_t status = IoctlHook(controller_, ConstructHookInvocation(), op,
-                                   static_cast<const uint8_t*>(in_buf), in_len,
-                                   out_len, &actions);
-    ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(controller_, true, this, zxdev());
-    ctx.associated_buf = out_buf;
-    ctx.associated_buf_count = out_len;
-    status = ProcessActions(std::move(actions), &ctx);
-    ZX_ASSERT(status == ZX_OK);
-    *actual = ctx.associated_buf_actual;
-    return ctx.hook_status;
 }
 
 zx_status_t MockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {

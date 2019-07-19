@@ -24,15 +24,11 @@ typedef struct fidl_txn fidl_txn_t;
 // Max device name length, not including a null-terminator
 #define ZX_DEVICE_NAME_MAX 31
 
-// echo -n "mx_device_ops_v0.5" | sha256sum | cut -c1-16
-#define DEVICE_OPS_VERSION_0_50 0xc9410d2a24f57424
-
-// echo -n "zx_device_ops_v0.51" | sha256sum | cut -c1-16
-#define DEVICE_OPS_VERSION_0_51 0xc4640f7115d2ee49
+// echo -n "zx_device_ops_v0.52" | sha256sum | cut -c1-16
+#define DEVICE_OPS_VERSION_0_52 0xb834fdab33623bb4
 
 // Current Version
-#define DEVICE_OPS_VERSION DEVICE_OPS_VERSION_0_51
-
+#define DEVICE_OPS_VERSION DEVICE_OPS_VERSION_0_52
 
 // TODO: temporary flags used by devcoord to communicate
 // with the system bus device.
@@ -167,19 +163,6 @@ typedef struct zx_protocol_device {
     //
     // The default implementation returns 0.
     zx_off_t (*get_size)(void* ctx);
-
-    //@ ## ioctl
-    // The ioctl hook allows support for device-specific operations.
-    //
-    // These, like read and write, must not block.
-    //
-    // On success, **ZX_OK** must be returned and *out_actual* must be set
-    // to the number of output bytes provided (0 if none).
-    //
-    // The default ioctl implementation returns **ZX_ERR_NOT_SUPPORTED**.
-    zx_status_t (*ioctl)(void* ctx, uint32_t op,
-                         const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
 
     // Stops the device and puts it in a low power mode
     zx_status_t (*suspend)(void* ctx, uint32_t flags);

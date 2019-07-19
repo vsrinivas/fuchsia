@@ -81,11 +81,6 @@ void Alc5514Device::DumpRegs() {
     }
 }
 
-zx_status_t Alc5514Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                                    void* out_buf, size_t out_len, size_t* actual) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 void Alc5514Device::DdkUnbind() {
 }
 

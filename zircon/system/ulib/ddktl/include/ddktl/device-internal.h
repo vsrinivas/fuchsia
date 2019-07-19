@@ -238,19 +238,6 @@ constexpr void CheckGetSizable() {
                   "'zx_off_t DdkGetSize()'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_ioctl, DdkIoctl);
-
-template <typename D>
-constexpr void CheckIoctlable() {
-    static_assert(has_ddk_ioctl<D>::value,
-                  "Ioctlable classes must implement DdkIoctl");
-    static_assert(std::is_same<decltype(&D::DdkIoctl),
-                               zx_status_t (D::*)(uint32_t, const void*, size_t,
-                                                  void*, size_t, size_t*)>::value,
-                  "DdkIoctl must be a public non-static member function with signature "
-                  "'zx_status_t DdkIoctl(uint32_t, const void*, size_t, void*, size_t, size_t*)'.");
-}
-
 DECLARE_HAS_MEMBER_FN(has_ddk_message, DdkMessage);
 
 template <typename D>
