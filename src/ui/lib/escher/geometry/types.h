@@ -66,7 +66,7 @@ struct planeN {
 
   // |direction| must be normalized.
   planeN(VecT direction, float distance) : dir_(direction), dist_(distance) {
-    FXL_DCHECK(std::abs(glm::dot(direction, direction) - 1.f) < kEpsilon);
+    FXL_DCHECK(std::abs(glm::dot(direction, direction) - 1.f) < kEpsilon) << direction;
   }
 
   planeN(VecT point_on_plane, VecT direction)

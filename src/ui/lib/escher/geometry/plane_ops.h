@@ -52,7 +52,7 @@ PlaneT TranslatePlane(const typename PlaneT::VectorType& model_to_world_vec, con
 // multiplication.
 template <typename PlaneT>
 PlaneT ScalePlane(float model_to_world_scale, const PlaneT& plane) {
-  FXL_DCHECK(model_to_world_scale > kEpsilon);
+  FXL_DCHECK(model_to_world_scale > kEpsilon) << model_to_world_scale;
   return PlaneT(plane.dir(), plane.dist() / model_to_world_scale);
 }
 
