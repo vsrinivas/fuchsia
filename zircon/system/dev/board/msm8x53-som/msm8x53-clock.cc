@@ -24,30 +24,28 @@ constexpr pbus_mmio_t clock_mmios[] = {
 };
 
 constexpr pbus_dev_t clock_dev = []() {
-    pbus_dev_t result{};
+  pbus_dev_t result{};
 
-    result.name = "gcc-clock";
-    result.vid = PDEV_VID_QUALCOMM;
-    result.pid = PDEV_PID_QUALCOMM_MSM8X53;
-    result.did = PDEV_DID_QUALCOMM_CLOCK;
-    result.mmio_list = clock_mmios;
-    result.mmio_count = countof(clock_mmios);
+  result.name = "gcc-clock";
+  result.vid = PDEV_VID_QUALCOMM;
+  result.pid = PDEV_PID_QUALCOMM_MSM8X53;
+  result.did = PDEV_DID_QUALCOMM_CLOCK;
+  result.mmio_list = clock_mmios;
+  result.mmio_count = countof(clock_mmios);
 
-    return result;
+  return result;
 }();
-
 
 }  // namespace
 
 zx_status_t Msm8x53::ClockInit() {
+  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clock_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __func__, status);
+    return status;
+  }
 
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clock_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __func__, status);
-        return status;
-    }
-
-    return ZX_OK;
+  return ZX_OK;
 }
 
-} // namespace board_msm8x53
+}  // namespace board_msm8x53

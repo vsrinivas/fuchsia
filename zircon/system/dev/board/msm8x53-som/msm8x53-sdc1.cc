@@ -13,48 +13,36 @@
 namespace board_msm8x53 {
 
 zx_status_t Msm8x53::Sdc1Init() {
-    static const pbus_bti_t sdc1_btis[] = {
-        {
-            .iommu_index = 0,
-            .bti_id = BTI_SDC1
-        },
-    };
+  static const pbus_bti_t sdc1_btis[] = {
+      {.iommu_index = 0, .bti_id = BTI_SDC1},
+  };
 
-    const pbus_irq_t sdc1_irqs[] = {
-        {
-            .irq = msm8x53::kIrqSdc1,
-            .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
-        },
-    };
+  const pbus_irq_t sdc1_irqs[] = {
+      {.irq = msm8x53::kIrqSdc1, .mode = ZX_INTERRUPT_MODE_EDGE_HIGH},
+  };
 
-    const pbus_mmio_t sdc1_mmios[] = {
-        {
-            .base = msm8x53::kSdc1CoreBase,
-            .length = msm8x53::kSdc1CoreSize
-        },
-        {
-            .base = msm8x53::kSdc1HcBase,
-            .length = msm8x53::kSdc1HcSize
-        },
-    };
+  const pbus_mmio_t sdc1_mmios[] = {
+      {.base = msm8x53::kSdc1CoreBase, .length = msm8x53::kSdc1CoreSize},
+      {.base = msm8x53::kSdc1HcBase, .length = msm8x53::kSdc1HcSize},
+  };
 
-    pbus_dev_t sdc1_dev = {};
-    sdc1_dev.name = "emmc";
-    sdc1_dev.vid = PDEV_VID_QUALCOMM;
-    sdc1_dev.did = PDEV_DID_QUALCOMM_SDC1;
-    sdc1_dev.bti_list = sdc1_btis;
-    sdc1_dev.bti_count = countof(sdc1_btis);
-    sdc1_dev.irq_list = sdc1_irqs;
-    sdc1_dev.irq_count = countof(sdc1_irqs);
-    sdc1_dev.mmio_list = sdc1_mmios;
-    sdc1_dev.mmio_count = countof(sdc1_mmios);
+  pbus_dev_t sdc1_dev = {};
+  sdc1_dev.name = "emmc";
+  sdc1_dev.vid = PDEV_VID_QUALCOMM;
+  sdc1_dev.did = PDEV_DID_QUALCOMM_SDC1;
+  sdc1_dev.bti_list = sdc1_btis;
+  sdc1_dev.bti_count = countof(sdc1_btis);
+  sdc1_dev.irq_list = sdc1_irqs;
+  sdc1_dev.irq_count = countof(sdc1_irqs);
+  sdc1_dev.mmio_list = sdc1_mmios;
+  sdc1_dev.mmio_count = countof(sdc1_mmios);
 
-    zx_status_t status = pbus_.DeviceAdd(&sdc1_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
-    }
+  zx_status_t status = pbus_.DeviceAdd(&sdc1_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
+  }
 
-    return status;
+  return status;
 }
 
 }  // namespace board_msm8x53

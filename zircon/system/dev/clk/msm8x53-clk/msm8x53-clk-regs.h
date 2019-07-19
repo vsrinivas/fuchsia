@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_CLK_MSM8X53_CLK_MSM8X53_CLK_REGS_H_
+#define ZIRCON_SYSTEM_DEV_CLK_MSM8X53_CLK_MSM8X53_CLK_REGS_H_
 
 namespace msm8x53 {
 
@@ -242,100 +243,102 @@ constexpr uint32_t kDsi1PhypllMmSrcVal = 3;
 constexpr uint32_t kDsi0PhypllClkMmSrcVal = 3;
 constexpr uint32_t kDsi1PhypllClkMmSrcVal = 1;
 
-} // namespace msm8x53
+}  // namespace msm8x53
 
 namespace clk {
 
 typedef struct msm_clk_gate {
-    uint32_t reg;
-    uint32_t bit;
-    uint32_t delay_us;
+  uint32_t reg;
+  uint32_t bit;
+  uint32_t delay_us;
 } msm_clk_gate_t;
 
 struct msm_clk_branch {
-    uint32_t reg;
+  uint32_t reg;
 };
 
 struct msm_clk_voter {
-    uint32_t cbcr_reg;
-    uint32_t vote_reg;
-    uint32_t bit;
+  uint32_t cbcr_reg;
+  uint32_t vote_reg;
+  uint32_t bit;
 };
 
-enum class RcgDividerType {
-    HalfInteger,
-    Mnd
-};
+enum class RcgDividerType { HalfInteger, Mnd };
 
 class RcgFrequencyTable {
-    static constexpr uint32_t kPredivMask = 0x1f;
-    static constexpr uint32_t kSrcMask = 0x7;
-    static constexpr uint32_t kSrcShift = 8;
+  static constexpr uint32_t kPredivMask = 0x1f;
+  static constexpr uint32_t kSrcMask = 0x7;
+  static constexpr uint32_t kSrcShift = 8;
 
-public:
-    constexpr RcgFrequencyTable(uint64_t rate, uint32_t m, uint32_t n, uint32_t d2, uint32_t parent)
-        : rate_(rate), m_(m), n_(n == 0 ? 0 : ~(n - m)), d_(~n), predev_parent_(((d2 - 1) & kPredivMask) | ((parent & kSrcMask) << kSrcShift)) {}
+ public:
+  constexpr RcgFrequencyTable(uint64_t rate, uint32_t m, uint32_t n, uint32_t d2, uint32_t parent)
+      : rate_(rate),
+        m_(m),
+        n_(n == 0 ? 0 : ~(n - m)),
+        d_(~n),
+        predev_parent_(((d2 - 1) & kPredivMask) | ((parent & kSrcMask) << kSrcShift)) {}
 
-    uint64_t rate() const { return rate_; }
-    uint32_t m() const { return m_; }
-    uint32_t n() const { return n_; }
-    uint32_t d() const { return d_; }
-    uint32_t predev_parent() const { return predev_parent_; }
+  uint64_t rate() const { return rate_; }
+  uint32_t m() const { return m_; }
+  uint32_t n() const { return n_; }
+  uint32_t d() const { return d_; }
+  uint32_t predev_parent() const { return predev_parent_; }
 
-private:
-    const uint64_t rate_;
-    const uint32_t m_;
-    const uint32_t n_;
-    const uint32_t d_;
-    const uint32_t predev_parent_;
+ private:
+  const uint64_t rate_;
+  const uint32_t m_;
+  const uint32_t n_;
+  const uint32_t d_;
+  const uint32_t predev_parent_;
 };
 
 class MsmClkRcg {
-public:
-    constexpr MsmClkRcg(uint32_t reg, RcgDividerType type, const RcgFrequencyTable* table,
-                        size_t frequency_table_count, bool unsupported = false)
-        : cmd_rcgr_reg_(reg), type_(type), frequency_table_(table),
-          frequency_table_count_(frequency_table_count), unsupported_(unsupported) {}
+ public:
+  constexpr MsmClkRcg(uint32_t reg, RcgDividerType type, const RcgFrequencyTable* table,
+                      size_t frequency_table_count, bool unsupported = false)
+      : cmd_rcgr_reg_(reg),
+        type_(type),
+        frequency_table_(table),
+        frequency_table_count_(frequency_table_count),
+        unsupported_(unsupported) {}
 
-    static constexpr uint32_t kCmdOffset = 0x0;
-    uint32_t CmdReg() const { return cmd_rcgr_reg_ + kCmdOffset; }
+  static constexpr uint32_t kCmdOffset = 0x0;
+  uint32_t CmdReg() const { return cmd_rcgr_reg_ + kCmdOffset; }
 
-    static constexpr uint32_t kCfgOffset = 0x4;
-    uint32_t CfgReg() const { return cmd_rcgr_reg_ + kCfgOffset; }
+  static constexpr uint32_t kCfgOffset = 0x4;
+  uint32_t CfgReg() const { return cmd_rcgr_reg_ + kCfgOffset; }
 
-    static constexpr uint32_t kMOffset = 0x8;
-    uint32_t MReg() const { return cmd_rcgr_reg_ + kMOffset; }
+  static constexpr uint32_t kMOffset = 0x8;
+  uint32_t MReg() const { return cmd_rcgr_reg_ + kMOffset; }
 
-    static constexpr uint32_t kNOffset = 0xC;
-    uint32_t NReg() const { return cmd_rcgr_reg_ + kNOffset; }
+  static constexpr uint32_t kNOffset = 0xC;
+  uint32_t NReg() const { return cmd_rcgr_reg_ + kNOffset; }
 
-    static constexpr uint32_t KDOffset = 0x10;
-    uint32_t DReg() const { return cmd_rcgr_reg_ + KDOffset; }
+  static constexpr uint32_t KDOffset = 0x10;
+  uint32_t DReg() const { return cmd_rcgr_reg_ + KDOffset; }
 
-    RcgDividerType Type() const { return type_; }
-    const RcgFrequencyTable* Table() const { return frequency_table_; }
-    size_t TableCount() const { return frequency_table_count_; }
-    bool Unsupported() const { return unsupported_; }
+  RcgDividerType Type() const { return type_; }
+  const RcgFrequencyTable* Table() const { return frequency_table_; }
+  size_t TableCount() const { return frequency_table_count_; }
+  bool Unsupported() const { return unsupported_; }
 
-private:
-    const uint32_t cmd_rcgr_reg_;
-    const RcgDividerType type_;
-    const RcgFrequencyTable* frequency_table_;
-    const size_t frequency_table_count_;
-    const bool unsupported_;
+ private:
+  const uint32_t cmd_rcgr_reg_;
+  const RcgDividerType type_;
+  const RcgFrequencyTable* frequency_table_;
+  const size_t frequency_table_count_;
+  const bool unsupported_;
 };
 
 namespace {
 
 class RcgClkCmd : public hwreg::RegisterBase<RcgClkCmd, uint32_t> {
-public:
-    DEF_BIT(0, cfg_update);
-    DEF_BIT(1, root_enable);
-    DEF_BIT(31, root_status);
+ public:
+  DEF_BIT(0, cfg_update);
+  DEF_BIT(1, root_enable);
+  DEF_BIT(31, root_status);
 
-    static auto Read(uint32_t offset) {
-        return hwreg::RegisterAddr<RcgClkCmd>(offset);
-    }
+  static auto Read(uint32_t offset) { return hwreg::RegisterAddr<RcgClkCmd>(offset); }
 };
 
 constexpr msm_clk_gate_t kMsmClkGates[] = {
@@ -346,9 +349,12 @@ constexpr msm_clk_gate_t kMsmClkGates[] = {
 
 constexpr uint32_t kBranchEnable = (0x1u << 0);
 constexpr struct msm_clk_branch kMsmClkBranches[] = {
-    [msm8x53::MsmClkIndex(msm8x53::kApc0DroopDetectorGpll0Clk)] = {
-        .reg = msm8x53::kApc0VoltageDroopDetectorGpll0Cbcr},
-    [msm8x53::MsmClkIndex(msm8x53::kApc1DroopDetectorGpll0Clk)] = {.reg = msm8x53::kApc1VoltageDroopDetectorGpll0Cbcr},
+    [msm8x53::MsmClkIndex(
+        msm8x53::kApc0DroopDetectorGpll0Clk)] = {.reg =
+                                                     msm8x53::kApc0VoltageDroopDetectorGpll0Cbcr},
+    [msm8x53::MsmClkIndex(
+        msm8x53::kApc1DroopDetectorGpll0Clk)] = {.reg =
+                                                     msm8x53::kApc1VoltageDroopDetectorGpll0Cbcr},
     [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup1I2cAppsClk)] = {.reg = msm8x53::kBlsp1Qup1I2cAppsCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup1SpiAppsClk)] = {.reg = msm8x53::kBlsp1Qup1SpiAppsCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup2I2cAppsClk)] = {.reg = msm8x53::kBlsp1Qup2I2cAppsCbcr},
@@ -377,19 +383,22 @@ constexpr struct msm_clk_branch kMsmClkBranches[] = {
     [msm8x53::MsmClkIndex(msm8x53::kCamssCppClk)] = {.reg = msm8x53::kCamssCppCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi0AhbClk)] = {.reg = msm8x53::kCamssCsi0AhbCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi0Clk)] = {.reg = msm8x53::kCamssCsi0Cbcr},
-    [msm8x53::MsmClkIndex(msm8x53::kCamssCsi0Csiphy3pClk)] = {.reg = msm8x53::kCamssCsi0Csiphy3pCbcr},
+    [msm8x53::MsmClkIndex(msm8x53::kCamssCsi0Csiphy3pClk)] = {.reg =
+                                                                  msm8x53::kCamssCsi0Csiphy3pCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi0phyClk)] = {.reg = msm8x53::kCamssCsi0phyCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi0pixClk)] = {.reg = msm8x53::kCamssCsi0pixCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi0rdiClk)] = {.reg = msm8x53::kCamssCsi0rdiCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi1AhbClk)] = {.reg = msm8x53::kCamssCsi1AhbCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi1Clk)] = {.reg = msm8x53::kCamssCsi1Cbcr},
-    [msm8x53::MsmClkIndex(msm8x53::kCamssCsi1Csiphy3pClk)] = {.reg = msm8x53::kCamssCsi1Csiphy3pCbcr},
+    [msm8x53::MsmClkIndex(msm8x53::kCamssCsi1Csiphy3pClk)] = {.reg =
+                                                                  msm8x53::kCamssCsi1Csiphy3pCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi1phyClk)] = {.reg = msm8x53::kCamssCsi1phyCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi1pixClk)] = {.reg = msm8x53::kCamssCsi1pixCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi1rdiClk)] = {.reg = msm8x53::kCamssCsi1rdiCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi2AhbClk)] = {.reg = msm8x53::kCamssCsi2AhbCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi2Clk)] = {.reg = msm8x53::kCamssCsi2Cbcr},
-    [msm8x53::MsmClkIndex(msm8x53::kCamssCsi2Csiphy3pClk)] = {.reg = msm8x53::kCamssCsi2Csiphy3pCbcr},
+    [msm8x53::MsmClkIndex(msm8x53::kCamssCsi2Csiphy3pClk)] = {.reg =
+                                                                  msm8x53::kCamssCsi2Csiphy3pCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi2phyClk)] = {.reg = msm8x53::kCamssCsi2phyCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi2pixClk)] = {.reg = msm8x53::kCamssCsi2pixCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssCsi2rdiClk)] = {.reg = msm8x53::kCamssCsi2rdiCbcr},
@@ -406,9 +415,12 @@ constexpr struct msm_clk_branch kMsmClkBranches[] = {
     [msm8x53::MsmClkIndex(msm8x53::kCamssMclk2Clk)] = {.reg = msm8x53::kCamssMclk2Cbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssMclk3Clk)] = {.reg = msm8x53::kCamssMclk3Cbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssMicroAhbClk)] = {.reg = msm8x53::kCamssMicroAhbCbcr},
-    [msm8x53::MsmClkIndex(msm8x53::kCamssCsi0phytimerClk)] = {.reg = msm8x53::kCamssCsi0phytimerCbcr},
-    [msm8x53::MsmClkIndex(msm8x53::kCamssCsi1phytimerClk)] = {.reg = msm8x53::kCamssCsi1phytimerCbcr},
-    [msm8x53::MsmClkIndex(msm8x53::kCamssCsi2phytimerClk)] = {.reg = msm8x53::kCamssCsi2phytimerCbcr},
+    [msm8x53::MsmClkIndex(msm8x53::kCamssCsi0phytimerClk)] = {.reg =
+                                                                  msm8x53::kCamssCsi0phytimerCbcr},
+    [msm8x53::MsmClkIndex(msm8x53::kCamssCsi1phytimerClk)] = {.reg =
+                                                                  msm8x53::kCamssCsi1phytimerCbcr},
+    [msm8x53::MsmClkIndex(msm8x53::kCamssCsi2phytimerClk)] = {.reg =
+                                                                  msm8x53::kCamssCsi2phytimerCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssAhbClk)] = {.reg = msm8x53::kCamssAhbCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssTopAhbClk)] = {.reg = msm8x53::kCamssTopAhbCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kCamssVfe0Clk)] = {.reg = msm8x53::kCamssVfe0Cbcr},
@@ -454,7 +466,8 @@ constexpr struct msm_clk_branch kMsmClkBranches[] = {
     [msm8x53::MsmClkIndex(msm8x53::kUsbPhyCfgAhbClk)] = {.reg = msm8x53::kUsbPhyCfgAhbCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kVenus0AhbClk)] = {.reg = msm8x53::kVenus0AhbCbcr},
     [msm8x53::MsmClkIndex(msm8x53::kVenus0AxiClk)] = {.reg = msm8x53::kVenus0AxiCbcr},
-    [msm8x53::MsmClkIndex(msm8x53::kVenus0Core0Vcodec0Clk)] = {.reg = msm8x53::kVenus0Core0Vcodec0Cbcr},
+    [msm8x53::MsmClkIndex(
+        msm8x53::kVenus0Core0Vcodec0Clk)] = {.reg = msm8x53::kVenus0Core0Vcodec0Cbcr},
     [msm8x53::MsmClkIndex(msm8x53::kVenus0Vcodec0Clk)] = {.reg = msm8x53::kVenus0Vcodec0Cbcr},
 };
 
@@ -804,101 +817,261 @@ constexpr RcgFrequencyTable kFtblUsb3AuxClkSrc[] = {
 };
 
 constexpr MsmClkRcg kMsmClkRcgs[] = {
-    [msm8x53::MsmClkIndex(msm8x53::kCamssTopAhbClkSrc)] = MsmClkRcg(msm8x53::kCamssTopAhbCmdRcgr, RcgDividerType::Mnd, kFtblCamssTopAhbClkSrc, countof(kFtblCamssTopAhbClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kCsi0ClkSrc)] = MsmClkRcg(msm8x53::kCsi0CmdRcgr, RcgDividerType::HalfInteger, kFtblCsi0ClkSrc, countof(kFtblCsi0ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kApssAhbClkSrc)] = MsmClkRcg(msm8x53::kApssAhbCmdRcgr, RcgDividerType::HalfInteger, kFtblApssAhbClkSrc, countof(kFtblApssAhbClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kCsi1ClkSrc)] = MsmClkRcg(msm8x53::kCsi1CmdRcgr, RcgDividerType::HalfInteger, kFtblCsi1ClkSrc, countof(kFtblCsi1ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kCsi2ClkSrc)] = MsmClkRcg(msm8x53::kCsi2CmdRcgr, RcgDividerType::HalfInteger, kFtblCsi2ClkSrc, countof(kFtblCsi2ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kVfe0ClkSrc)] = MsmClkRcg(msm8x53::kVfe0CmdRcgr, RcgDividerType::HalfInteger, kFtblVfe0ClkSrc, countof(kFtblVfe0ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kGfx3dClkSrc)] = MsmClkRcg(msm8x53::kGfx3dCmdRcgr, RcgDividerType::HalfInteger, kFtblGfx3dClkSrc, countof(kFtblGfx3dClkSrc), true),
-    [msm8x53::MsmClkIndex(msm8x53::kVcodec0ClkSrc)] = MsmClkRcg(msm8x53::kVcodec0CmdRcgr, RcgDividerType::Mnd, kFtblVcodec0ClkSrc, countof(kFtblVcodec0ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kCppClkSrc)] = MsmClkRcg(msm8x53::kCppCmdRcgr, RcgDividerType::HalfInteger, kFtblCppClkSrc, countof(kFtblCppClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kJpeg0ClkSrc)] = MsmClkRcg(msm8x53::kJpeg0CmdRcgr, RcgDividerType::HalfInteger, kFtblJpeg0ClkSrc, countof(kFtblJpeg0ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kMdpClkSrc)] = MsmClkRcg(msm8x53::kMdpCmdRcgr, RcgDividerType::HalfInteger, kFtblMdpClkSrc, countof(kFtblMdpClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kPclk0ClkSrc)] = MsmClkRcg(msm8x53::kPclk0CmdRcgr, RcgDividerType::Mnd, kFtblPclk0ClkSrc, countof(kFtblPclk0ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kPclk1ClkSrc)] = MsmClkRcg(msm8x53::kPclk1CmdRcgr, RcgDividerType::Mnd, kFtblPclk1ClkSrc, countof(kFtblPclk1ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kUsb30MasterClkSrc)] = MsmClkRcg(msm8x53::kUsb30MasterCmdRcgr, RcgDividerType::Mnd, kFtblUsb30MasterClkSrc, countof(kFtblUsb30MasterClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kVfe1ClkSrc)] = MsmClkRcg(msm8x53::kVfe1CmdRcgr, RcgDividerType::HalfInteger, kFtblVfe1ClkSrc, countof(kFtblVfe1ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kApc0DroopDetectorClkSrc)] = MsmClkRcg(msm8x53::kApc0VoltageDroopDetectorCmdRcgr, RcgDividerType::HalfInteger, kFtblApc0DroopDetectorClkSrc, countof(kFtblApc0DroopDetectorClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kApc1DroopDetectorClkSrc)] = MsmClkRcg(msm8x53::kApc1VoltageDroopDetectorCmdRcgr, RcgDividerType::HalfInteger, kFtblApc1DroopDetectorClkSrc, countof(kFtblApc1DroopDetectorClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup1I2cAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp1Qup1I2cAppsCmdRcgr, RcgDividerType::HalfInteger, kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup1SpiAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp1Qup1SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc, countof(kFtblBlspSpiAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup2I2cAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp1Qup2I2cAppsCmdRcgr, RcgDividerType::HalfInteger, kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup2SpiAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp1Qup2SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc, countof(kFtblBlspSpiAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup3I2cAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp1Qup3I2cAppsCmdRcgr, RcgDividerType::HalfInteger, kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup3SpiAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp1Qup3SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc, countof(kFtblBlspSpiAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup4I2cAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp1Qup4I2cAppsCmdRcgr, RcgDividerType::HalfInteger, kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup4SpiAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp1Qup4SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc, countof(kFtblBlspSpiAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Uart1AppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp1Uart1AppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspUartAppsClkSrc, countof(kFtblBlspUartAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Uart2AppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp1Uart2AppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspUartAppsClkSrc, countof(kFtblBlspUartAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup1I2cAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp2Qup1I2cAppsCmdRcgr, RcgDividerType::HalfInteger, kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup1SpiAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp2Qup1SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc, countof(kFtblBlspSpiAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup2I2cAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp2Qup2I2cAppsCmdRcgr, RcgDividerType::HalfInteger, kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup2SpiAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp2Qup2SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc, countof(kFtblBlspSpiAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup3I2cAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp2Qup3I2cAppsCmdRcgr, RcgDividerType::HalfInteger, kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup3SpiAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp2Qup3SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc, countof(kFtblBlspSpiAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup4I2cAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp2Qup4I2cAppsCmdRcgr, RcgDividerType::HalfInteger, kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup4SpiAppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp2Qup4SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc, countof(kFtblBlspSpiAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Uart1AppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp2Uart1AppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspUartAppsClkSrc, countof(kFtblBlspUartAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Uart2AppsClkSrc)] = MsmClkRcg(msm8x53::kBlsp2Uart2AppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspUartAppsClkSrc, countof(kFtblBlspUartAppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kCciClkSrc)] = MsmClkRcg(msm8x53::kCciCmdRcgr, RcgDividerType::Mnd, kFtblCciClkSrc, countof(kFtblCciClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kCsi0pClkSrc)] = MsmClkRcg(msm8x53::kCsi0pCmdRcgr, RcgDividerType::HalfInteger, kFtblCsi0pClkSrc, countof(kFtblCsi0pClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kCsi1pClkSrc)] = MsmClkRcg(msm8x53::kCsi1pCmdRcgr, RcgDividerType::HalfInteger, kFtblCsi1pClkSrc, countof(kFtblCsi1pClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kCsi2pClkSrc)] = MsmClkRcg(msm8x53::kCsi2pCmdRcgr, RcgDividerType::HalfInteger, kFtblCsi2pClkSrc, countof(kFtblCsi2pClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kCamssGp0ClkSrc)] = MsmClkRcg(msm8x53::kCamssGp0CmdRcgr, RcgDividerType::Mnd, kFtblCamssGp0ClkSrc, countof(kFtblCamssGp0ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kCamssGp1ClkSrc)] = MsmClkRcg(msm8x53::kCamssGp1CmdRcgr, RcgDividerType::Mnd, kFtblCamssGp1ClkSrc, countof(kFtblCamssGp1ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kMclk0ClkSrc)] = MsmClkRcg(msm8x53::kMclk0CmdRcgr, RcgDividerType::Mnd, kFtblMclk0ClkSrc, countof(kFtblMclk0ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kMclk1ClkSrc)] = MsmClkRcg(msm8x53::kMclk1CmdRcgr, RcgDividerType::Mnd, kFtblMclk1ClkSrc, countof(kFtblMclk1ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kMclk2ClkSrc)] = MsmClkRcg(msm8x53::kMclk2CmdRcgr, RcgDividerType::Mnd, kFtblMclk2ClkSrc, countof(kFtblMclk2ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kMclk3ClkSrc)] = MsmClkRcg(msm8x53::kMclk3CmdRcgr, RcgDividerType::Mnd, kFtblMclk3ClkSrc, countof(kFtblMclk3ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kCsi0phytimerClkSrc)] = MsmClkRcg(msm8x53::kCsi0phytimerCmdRcgr, RcgDividerType::HalfInteger, kFtblCsi0phytimerClkSrc, countof(kFtblCsi0phytimerClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kCsi1phytimerClkSrc)] = MsmClkRcg(msm8x53::kCsi1phytimerCmdRcgr, RcgDividerType::HalfInteger, kFtblCsi1phytimerClkSrc, countof(kFtblCsi1phytimerClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kCsi2phytimerClkSrc)] = MsmClkRcg(msm8x53::kCsi2phytimerCmdRcgr, RcgDividerType::HalfInteger, kFtblCsi2phytimerClkSrc, countof(kFtblCsi2phytimerClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kCryptoClkSrc)] = MsmClkRcg(msm8x53::kCryptoCmdRcgr, RcgDividerType::HalfInteger, kFtblCryptoClkSrc, countof(kFtblCryptoClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kGp1ClkSrc)] = MsmClkRcg(msm8x53::kGp1CmdRcgr, RcgDividerType::Mnd, kFtblGp1ClkSrc, countof(kFtblGp1ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kGp2ClkSrc)] = MsmClkRcg(msm8x53::kGp2CmdRcgr, RcgDividerType::Mnd, kFtblGp2ClkSrc, countof(kFtblGp2ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kGp3ClkSrc)] = MsmClkRcg(msm8x53::kGp3CmdRcgr, RcgDividerType::Mnd, kFtblGp3ClkSrc, countof(kFtblGp3ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kByte0ClkSrc)] = MsmClkRcg(msm8x53::kByte0CmdRcgr, RcgDividerType::HalfInteger, kFtblByte0ClkSrc, countof(kFtblByte0ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kByte1ClkSrc)] = MsmClkRcg(msm8x53::kByte1CmdRcgr, RcgDividerType::HalfInteger, kFtblByte1ClkSrc, countof(kFtblByte1ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kEsc0ClkSrc)] = MsmClkRcg(msm8x53::kEsc0CmdRcgr, RcgDividerType::HalfInteger, kFtblEsc0ClkSrc, countof(kFtblEsc0ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kEsc1ClkSrc)] = MsmClkRcg(msm8x53::kEsc1CmdRcgr, RcgDividerType::HalfInteger, kFtblEsc1ClkSrc, countof(kFtblEsc1ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kVsyncClkSrc)] = MsmClkRcg(msm8x53::kVsyncCmdRcgr, RcgDividerType::HalfInteger, kFtblVsyncClkSrc, countof(kFtblVsyncClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kPdm2ClkSrc)] = MsmClkRcg(msm8x53::kPdm2CmdRcgr, RcgDividerType::HalfInteger, kFtblPdm2ClkSrc, countof(kFtblPdm2ClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kRbcprGfxClkSrc)] = MsmClkRcg(msm8x53::kRbcprGfxCmdRcgr, RcgDividerType::HalfInteger, kFtblRbcprGfxClkSrc, countof(kFtblRbcprGfxClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kSdcc1AppsClkSrc)] = MsmClkRcg(msm8x53::kSdcc1AppsCmdRcgr, RcgDividerType::Mnd, kFtblSdcc1AppsClkSrc, countof(kFtblSdcc1AppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kSdcc1IceCoreClkSrc)] = MsmClkRcg(msm8x53::kSdcc1IceCoreCmdRcgr, RcgDividerType::Mnd, kFtblSdcc1IceCoreClkSrc, countof(kFtblSdcc1IceCoreClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kSdcc2AppsClkSrc)] = MsmClkRcg(msm8x53::kSdcc2AppsCmdRcgr, RcgDividerType::Mnd, kFtblSdcc2AppsClkSrc, countof(kFtblSdcc2AppsClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kUsb30MockUtmiClkSrc)] = MsmClkRcg(msm8x53::kUsb30MockUtmiCmdRcgr, RcgDividerType::Mnd, kFtblUsb30MockUtmiClkSrc, countof(kFtblUsb30MockUtmiClkSrc)),
-    [msm8x53::MsmClkIndex(msm8x53::kUsb3AuxClkSrc)] = MsmClkRcg(msm8x53::kUsb3AuxCmdRcgr, RcgDividerType::Mnd, kFtblUsb3AuxClkSrc, countof(kFtblUsb3AuxClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCamssTopAhbClkSrc)] =
+        MsmClkRcg(msm8x53::kCamssTopAhbCmdRcgr, RcgDividerType::Mnd, kFtblCamssTopAhbClkSrc,
+                  countof(kFtblCamssTopAhbClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCsi0ClkSrc)] =
+        MsmClkRcg(msm8x53::kCsi0CmdRcgr, RcgDividerType::HalfInteger, kFtblCsi0ClkSrc,
+                  countof(kFtblCsi0ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kApssAhbClkSrc)] =
+        MsmClkRcg(msm8x53::kApssAhbCmdRcgr, RcgDividerType::HalfInteger, kFtblApssAhbClkSrc,
+                  countof(kFtblApssAhbClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCsi1ClkSrc)] =
+        MsmClkRcg(msm8x53::kCsi1CmdRcgr, RcgDividerType::HalfInteger, kFtblCsi1ClkSrc,
+                  countof(kFtblCsi1ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCsi2ClkSrc)] =
+        MsmClkRcg(msm8x53::kCsi2CmdRcgr, RcgDividerType::HalfInteger, kFtblCsi2ClkSrc,
+                  countof(kFtblCsi2ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kVfe0ClkSrc)] =
+        MsmClkRcg(msm8x53::kVfe0CmdRcgr, RcgDividerType::HalfInteger, kFtblVfe0ClkSrc,
+                  countof(kFtblVfe0ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kGfx3dClkSrc)] =
+        MsmClkRcg(msm8x53::kGfx3dCmdRcgr, RcgDividerType::HalfInteger, kFtblGfx3dClkSrc,
+                  countof(kFtblGfx3dClkSrc), true),
+    [msm8x53::MsmClkIndex(msm8x53::kVcodec0ClkSrc)] =
+        MsmClkRcg(msm8x53::kVcodec0CmdRcgr, RcgDividerType::Mnd, kFtblVcodec0ClkSrc,
+                  countof(kFtblVcodec0ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCppClkSrc)] = MsmClkRcg(
+        msm8x53::kCppCmdRcgr, RcgDividerType::HalfInteger, kFtblCppClkSrc, countof(kFtblCppClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kJpeg0ClkSrc)] =
+        MsmClkRcg(msm8x53::kJpeg0CmdRcgr, RcgDividerType::HalfInteger, kFtblJpeg0ClkSrc,
+                  countof(kFtblJpeg0ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kMdpClkSrc)] = MsmClkRcg(
+        msm8x53::kMdpCmdRcgr, RcgDividerType::HalfInteger, kFtblMdpClkSrc, countof(kFtblMdpClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kPclk0ClkSrc)] = MsmClkRcg(
+        msm8x53::kPclk0CmdRcgr, RcgDividerType::Mnd, kFtblPclk0ClkSrc, countof(kFtblPclk0ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kPclk1ClkSrc)] = MsmClkRcg(
+        msm8x53::kPclk1CmdRcgr, RcgDividerType::Mnd, kFtblPclk1ClkSrc, countof(kFtblPclk1ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kUsb30MasterClkSrc)] =
+        MsmClkRcg(msm8x53::kUsb30MasterCmdRcgr, RcgDividerType::Mnd, kFtblUsb30MasterClkSrc,
+                  countof(kFtblUsb30MasterClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kVfe1ClkSrc)] =
+        MsmClkRcg(msm8x53::kVfe1CmdRcgr, RcgDividerType::HalfInteger, kFtblVfe1ClkSrc,
+                  countof(kFtblVfe1ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kApc0DroopDetectorClkSrc)] =
+        MsmClkRcg(msm8x53::kApc0VoltageDroopDetectorCmdRcgr, RcgDividerType::HalfInteger,
+                  kFtblApc0DroopDetectorClkSrc, countof(kFtblApc0DroopDetectorClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kApc1DroopDetectorClkSrc)] =
+        MsmClkRcg(msm8x53::kApc1VoltageDroopDetectorCmdRcgr, RcgDividerType::HalfInteger,
+                  kFtblApc1DroopDetectorClkSrc, countof(kFtblApc1DroopDetectorClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup1I2cAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp1Qup1I2cAppsCmdRcgr, RcgDividerType::HalfInteger,
+                  kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup1SpiAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp1Qup1SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc,
+                  countof(kFtblBlspSpiAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup2I2cAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp1Qup2I2cAppsCmdRcgr, RcgDividerType::HalfInteger,
+                  kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup2SpiAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp1Qup2SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc,
+                  countof(kFtblBlspSpiAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup3I2cAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp1Qup3I2cAppsCmdRcgr, RcgDividerType::HalfInteger,
+                  kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup3SpiAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp1Qup3SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc,
+                  countof(kFtblBlspSpiAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup4I2cAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp1Qup4I2cAppsCmdRcgr, RcgDividerType::HalfInteger,
+                  kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Qup4SpiAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp1Qup4SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc,
+                  countof(kFtblBlspSpiAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Uart1AppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp1Uart1AppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspUartAppsClkSrc,
+                  countof(kFtblBlspUartAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp1Uart2AppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp1Uart2AppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspUartAppsClkSrc,
+                  countof(kFtblBlspUartAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup1I2cAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp2Qup1I2cAppsCmdRcgr, RcgDividerType::HalfInteger,
+                  kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup1SpiAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp2Qup1SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc,
+                  countof(kFtblBlspSpiAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup2I2cAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp2Qup2I2cAppsCmdRcgr, RcgDividerType::HalfInteger,
+                  kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup2SpiAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp2Qup2SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc,
+                  countof(kFtblBlspSpiAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup3I2cAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp2Qup3I2cAppsCmdRcgr, RcgDividerType::HalfInteger,
+                  kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup3SpiAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp2Qup3SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc,
+                  countof(kFtblBlspSpiAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup4I2cAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp2Qup4I2cAppsCmdRcgr, RcgDividerType::HalfInteger,
+                  kFtblBlspI2cAppsClkSrc, countof(kFtblBlspI2cAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Qup4SpiAppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp2Qup4SpiAppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspSpiAppsClkSrc,
+                  countof(kFtblBlspSpiAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Uart1AppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp2Uart1AppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspUartAppsClkSrc,
+                  countof(kFtblBlspUartAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp2Uart2AppsClkSrc)] =
+        MsmClkRcg(msm8x53::kBlsp2Uart2AppsCmdRcgr, RcgDividerType::Mnd, kFtblBlspUartAppsClkSrc,
+                  countof(kFtblBlspUartAppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCciClkSrc)] = MsmClkRcg(
+        msm8x53::kCciCmdRcgr, RcgDividerType::Mnd, kFtblCciClkSrc, countof(kFtblCciClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCsi0pClkSrc)] =
+        MsmClkRcg(msm8x53::kCsi0pCmdRcgr, RcgDividerType::HalfInteger, kFtblCsi0pClkSrc,
+                  countof(kFtblCsi0pClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCsi1pClkSrc)] =
+        MsmClkRcg(msm8x53::kCsi1pCmdRcgr, RcgDividerType::HalfInteger, kFtblCsi1pClkSrc,
+                  countof(kFtblCsi1pClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCsi2pClkSrc)] =
+        MsmClkRcg(msm8x53::kCsi2pCmdRcgr, RcgDividerType::HalfInteger, kFtblCsi2pClkSrc,
+                  countof(kFtblCsi2pClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCamssGp0ClkSrc)] =
+        MsmClkRcg(msm8x53::kCamssGp0CmdRcgr, RcgDividerType::Mnd, kFtblCamssGp0ClkSrc,
+                  countof(kFtblCamssGp0ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCamssGp1ClkSrc)] =
+        MsmClkRcg(msm8x53::kCamssGp1CmdRcgr, RcgDividerType::Mnd, kFtblCamssGp1ClkSrc,
+                  countof(kFtblCamssGp1ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kMclk0ClkSrc)] = MsmClkRcg(
+        msm8x53::kMclk0CmdRcgr, RcgDividerType::Mnd, kFtblMclk0ClkSrc, countof(kFtblMclk0ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kMclk1ClkSrc)] = MsmClkRcg(
+        msm8x53::kMclk1CmdRcgr, RcgDividerType::Mnd, kFtblMclk1ClkSrc, countof(kFtblMclk1ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kMclk2ClkSrc)] = MsmClkRcg(
+        msm8x53::kMclk2CmdRcgr, RcgDividerType::Mnd, kFtblMclk2ClkSrc, countof(kFtblMclk2ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kMclk3ClkSrc)] = MsmClkRcg(
+        msm8x53::kMclk3CmdRcgr, RcgDividerType::Mnd, kFtblMclk3ClkSrc, countof(kFtblMclk3ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCsi0phytimerClkSrc)] =
+        MsmClkRcg(msm8x53::kCsi0phytimerCmdRcgr, RcgDividerType::HalfInteger,
+                  kFtblCsi0phytimerClkSrc, countof(kFtblCsi0phytimerClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCsi1phytimerClkSrc)] =
+        MsmClkRcg(msm8x53::kCsi1phytimerCmdRcgr, RcgDividerType::HalfInteger,
+                  kFtblCsi1phytimerClkSrc, countof(kFtblCsi1phytimerClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCsi2phytimerClkSrc)] =
+        MsmClkRcg(msm8x53::kCsi2phytimerCmdRcgr, RcgDividerType::HalfInteger,
+                  kFtblCsi2phytimerClkSrc, countof(kFtblCsi2phytimerClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kCryptoClkSrc)] =
+        MsmClkRcg(msm8x53::kCryptoCmdRcgr, RcgDividerType::HalfInteger, kFtblCryptoClkSrc,
+                  countof(kFtblCryptoClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kGp1ClkSrc)] = MsmClkRcg(
+        msm8x53::kGp1CmdRcgr, RcgDividerType::Mnd, kFtblGp1ClkSrc, countof(kFtblGp1ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kGp2ClkSrc)] = MsmClkRcg(
+        msm8x53::kGp2CmdRcgr, RcgDividerType::Mnd, kFtblGp2ClkSrc, countof(kFtblGp2ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kGp3ClkSrc)] = MsmClkRcg(
+        msm8x53::kGp3CmdRcgr, RcgDividerType::Mnd, kFtblGp3ClkSrc, countof(kFtblGp3ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kByte0ClkSrc)] =
+        MsmClkRcg(msm8x53::kByte0CmdRcgr, RcgDividerType::HalfInteger, kFtblByte0ClkSrc,
+                  countof(kFtblByte0ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kByte1ClkSrc)] =
+        MsmClkRcg(msm8x53::kByte1CmdRcgr, RcgDividerType::HalfInteger, kFtblByte1ClkSrc,
+                  countof(kFtblByte1ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kEsc0ClkSrc)] =
+        MsmClkRcg(msm8x53::kEsc0CmdRcgr, RcgDividerType::HalfInteger, kFtblEsc0ClkSrc,
+                  countof(kFtblEsc0ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kEsc1ClkSrc)] =
+        MsmClkRcg(msm8x53::kEsc1CmdRcgr, RcgDividerType::HalfInteger, kFtblEsc1ClkSrc,
+                  countof(kFtblEsc1ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kVsyncClkSrc)] =
+        MsmClkRcg(msm8x53::kVsyncCmdRcgr, RcgDividerType::HalfInteger, kFtblVsyncClkSrc,
+                  countof(kFtblVsyncClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kPdm2ClkSrc)] =
+        MsmClkRcg(msm8x53::kPdm2CmdRcgr, RcgDividerType::HalfInteger, kFtblPdm2ClkSrc,
+                  countof(kFtblPdm2ClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kRbcprGfxClkSrc)] =
+        MsmClkRcg(msm8x53::kRbcprGfxCmdRcgr, RcgDividerType::HalfInteger, kFtblRbcprGfxClkSrc,
+                  countof(kFtblRbcprGfxClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kSdcc1AppsClkSrc)] =
+        MsmClkRcg(msm8x53::kSdcc1AppsCmdRcgr, RcgDividerType::Mnd, kFtblSdcc1AppsClkSrc,
+                  countof(kFtblSdcc1AppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kSdcc1IceCoreClkSrc)] =
+        MsmClkRcg(msm8x53::kSdcc1IceCoreCmdRcgr, RcgDividerType::Mnd, kFtblSdcc1IceCoreClkSrc,
+                  countof(kFtblSdcc1IceCoreClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kSdcc2AppsClkSrc)] =
+        MsmClkRcg(msm8x53::kSdcc2AppsCmdRcgr, RcgDividerType::Mnd, kFtblSdcc2AppsClkSrc,
+                  countof(kFtblSdcc2AppsClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kUsb30MockUtmiClkSrc)] =
+        MsmClkRcg(msm8x53::kUsb30MockUtmiCmdRcgr, RcgDividerType::Mnd, kFtblUsb30MockUtmiClkSrc,
+                  countof(kFtblUsb30MockUtmiClkSrc)),
+    [msm8x53::MsmClkIndex(msm8x53::kUsb3AuxClkSrc)] =
+        MsmClkRcg(msm8x53::kUsb3AuxCmdRcgr, RcgDividerType::Mnd, kFtblUsb3AuxClkSrc,
+                  countof(kFtblUsb3AuxClkSrc)),
 };
 
 static_assert(msm8x53::kRcgClkCount == countof(kMsmClkRcgs),
               "kRcgClkCount must match count of RCG clocks");
 
 constexpr struct msm_clk_voter kMsmClkVoters[] = {
-    [msm8x53::MsmClkIndex(msm8x53::kApssAhbClk)] = {
-        .cbcr_reg = msm8x53::kApssAhbCbcr,
-        .vote_reg = msm8x53::kApcsClockBranchEnaVote,
-        .bit = (1 << 14)},
-    [msm8x53::MsmClkIndex(msm8x53::kApssAxiClk)] = {.cbcr_reg = msm8x53::kApssAxiCbcr, .vote_reg = msm8x53::kApcsClockBranchEnaVote, .bit = (1 << 13)},
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp1AhbClk)] = {.cbcr_reg = msm8x53::kBlsp1AhbCbcr, .vote_reg = msm8x53::kApcsClockBranchEnaVote, .bit = (1 << 10)},
-    [msm8x53::MsmClkIndex(msm8x53::kBlsp2AhbClk)] = {.cbcr_reg = msm8x53::kBlsp2AhbCbcr, .vote_reg = msm8x53::kApcsClockBranchEnaVote, .bit = (1 << 20)},
-    [msm8x53::MsmClkIndex(msm8x53::kBootRomAhbClk)] = {.cbcr_reg = msm8x53::kBootRomAhbCbcr, .vote_reg = msm8x53::kApcsClockBranchEnaVote, .bit = (1 << 7)},
-    [msm8x53::MsmClkIndex(msm8x53::kCryptoAhbClk)] = {.cbcr_reg = msm8x53::kCryptoAhbCbcr, .vote_reg = msm8x53::kApcsClockBranchEnaVote, .bit = (1 << 0)},
-    [msm8x53::MsmClkIndex(msm8x53::kCryptoAxiClk)] = {.cbcr_reg = msm8x53::kCryptoAxiCbcr, .vote_reg = msm8x53::kApcsClockBranchEnaVote, .bit = (1 << 1)},
-    [msm8x53::MsmClkIndex(msm8x53::kCryptoClk)] = {.cbcr_reg = msm8x53::kCryptoCbcr, .vote_reg = msm8x53::kApcsClockBranchEnaVote, .bit = (1 << 2)},
-    [msm8x53::MsmClkIndex(msm8x53::kQdssDapClk)] = {.cbcr_reg = msm8x53::kQdssDapCbcr, .vote_reg = msm8x53::kApcsClockBranchEnaVote, .bit = (1 << 11)},
-    [msm8x53::MsmClkIndex(msm8x53::kPrngAhbClk)] = {.cbcr_reg = msm8x53::kPrngAhbCbcr, .vote_reg = msm8x53::kApcsClockBranchEnaVote, .bit = (1 << 8)},
-    [msm8x53::MsmClkIndex(msm8x53::kApssTcuAsyncClk)] = {.cbcr_reg = msm8x53::kApssTcuAsyncCbcr, .vote_reg = msm8x53::kApcsSmmuClockBranchEnaVote, .bit = (1 << 1)},
-    [msm8x53::MsmClkIndex(msm8x53::kCppTbuClk)] = {.cbcr_reg = msm8x53::kCppTbuCbcr, .vote_reg = msm8x53::kApcsSmmuClockBranchEnaVote, .bit = (1 << 14)},
-    [msm8x53::MsmClkIndex(msm8x53::kJpegTbuClk)] = {.cbcr_reg = msm8x53::kJpegTbuCbcr, .vote_reg = msm8x53::kApcsSmmuClockBranchEnaVote, .bit = (1 << 10)},
-    [msm8x53::MsmClkIndex(msm8x53::kMdpTbuClk)] = {.cbcr_reg = msm8x53::kMdpTbuCbcr, .vote_reg = msm8x53::kApcsSmmuClockBranchEnaVote, .bit = (1 << 4)},
-    [msm8x53::MsmClkIndex(msm8x53::kSmmuCfgClk)] = {.cbcr_reg = msm8x53::kSmmuCfgCbcr, .vote_reg = msm8x53::kApcsSmmuClockBranchEnaVote, .bit = (1 << 12)},
-    [msm8x53::MsmClkIndex(msm8x53::kVenusTbuClk)] = {.cbcr_reg = msm8x53::kVenusTbuCbcr, .vote_reg = msm8x53::kApcsSmmuClockBranchEnaVote, .bit = (1 << 5)},
-    [msm8x53::MsmClkIndex(msm8x53::kVfe1TbuClk)] = {.cbcr_reg = msm8x53::kVfe1TbuCbcr, .vote_reg = msm8x53::kApcsSmmuClockBranchEnaVote, .bit = (1 << 17)},
-    [msm8x53::MsmClkIndex(msm8x53::kVfeTbuClk)] = {.cbcr_reg = msm8x53::kVfeTbuCbcr, .vote_reg = msm8x53::kApcsSmmuClockBranchEnaVote, .bit = (1 << 9)},
+    [msm8x53::MsmClkIndex(msm8x53::kApssAhbClk)] = {.cbcr_reg = msm8x53::kApssAhbCbcr,
+                                                    .vote_reg = msm8x53::kApcsClockBranchEnaVote,
+                                                    .bit = (1 << 14)},
+    [msm8x53::MsmClkIndex(msm8x53::kApssAxiClk)] = {.cbcr_reg = msm8x53::kApssAxiCbcr,
+                                                    .vote_reg = msm8x53::kApcsClockBranchEnaVote,
+                                                    .bit = (1 << 13)},
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp1AhbClk)] = {.cbcr_reg = msm8x53::kBlsp1AhbCbcr,
+                                                     .vote_reg = msm8x53::kApcsClockBranchEnaVote,
+                                                     .bit = (1 << 10)},
+    [msm8x53::MsmClkIndex(msm8x53::kBlsp2AhbClk)] = {.cbcr_reg = msm8x53::kBlsp2AhbCbcr,
+                                                     .vote_reg = msm8x53::kApcsClockBranchEnaVote,
+                                                     .bit = (1 << 20)},
+    [msm8x53::MsmClkIndex(msm8x53::kBootRomAhbClk)] = {.cbcr_reg = msm8x53::kBootRomAhbCbcr,
+                                                       .vote_reg = msm8x53::kApcsClockBranchEnaVote,
+                                                       .bit = (1 << 7)},
+    [msm8x53::MsmClkIndex(msm8x53::kCryptoAhbClk)] = {.cbcr_reg = msm8x53::kCryptoAhbCbcr,
+                                                      .vote_reg = msm8x53::kApcsClockBranchEnaVote,
+                                                      .bit = (1 << 0)},
+    [msm8x53::MsmClkIndex(msm8x53::kCryptoAxiClk)] = {.cbcr_reg = msm8x53::kCryptoAxiCbcr,
+                                                      .vote_reg = msm8x53::kApcsClockBranchEnaVote,
+                                                      .bit = (1 << 1)},
+    [msm8x53::MsmClkIndex(msm8x53::kCryptoClk)] = {.cbcr_reg = msm8x53::kCryptoCbcr,
+                                                   .vote_reg = msm8x53::kApcsClockBranchEnaVote,
+                                                   .bit = (1 << 2)},
+    [msm8x53::MsmClkIndex(msm8x53::kQdssDapClk)] = {.cbcr_reg = msm8x53::kQdssDapCbcr,
+                                                    .vote_reg = msm8x53::kApcsClockBranchEnaVote,
+                                                    .bit = (1 << 11)},
+    [msm8x53::MsmClkIndex(msm8x53::kPrngAhbClk)] = {.cbcr_reg = msm8x53::kPrngAhbCbcr,
+                                                    .vote_reg = msm8x53::kApcsClockBranchEnaVote,
+                                                    .bit = (1 << 8)},
+    [msm8x53::MsmClkIndex(msm8x53::kApssTcuAsyncClk)] = {.cbcr_reg = msm8x53::kApssTcuAsyncCbcr,
+                                                         .vote_reg =
+                                                             msm8x53::kApcsSmmuClockBranchEnaVote,
+                                                         .bit = (1 << 1)},
+    [msm8x53::MsmClkIndex(msm8x53::kCppTbuClk)] = {.cbcr_reg = msm8x53::kCppTbuCbcr,
+                                                   .vote_reg = msm8x53::kApcsSmmuClockBranchEnaVote,
+                                                   .bit = (1 << 14)},
+    [msm8x53::MsmClkIndex(msm8x53::kJpegTbuClk)] = {.cbcr_reg = msm8x53::kJpegTbuCbcr,
+                                                    .vote_reg =
+                                                        msm8x53::kApcsSmmuClockBranchEnaVote,
+                                                    .bit = (1 << 10)},
+    [msm8x53::MsmClkIndex(msm8x53::kMdpTbuClk)] = {.cbcr_reg = msm8x53::kMdpTbuCbcr,
+                                                   .vote_reg = msm8x53::kApcsSmmuClockBranchEnaVote,
+                                                   .bit = (1 << 4)},
+    [msm8x53::MsmClkIndex(msm8x53::kSmmuCfgClk)] = {.cbcr_reg = msm8x53::kSmmuCfgCbcr,
+                                                    .vote_reg =
+                                                        msm8x53::kApcsSmmuClockBranchEnaVote,
+                                                    .bit = (1 << 12)},
+    [msm8x53::MsmClkIndex(msm8x53::kVenusTbuClk)] = {.cbcr_reg = msm8x53::kVenusTbuCbcr,
+                                                     .vote_reg =
+                                                         msm8x53::kApcsSmmuClockBranchEnaVote,
+                                                     .bit = (1 << 5)},
+    [msm8x53::MsmClkIndex(msm8x53::kVfe1TbuClk)] = {.cbcr_reg = msm8x53::kVfe1TbuCbcr,
+                                                    .vote_reg =
+                                                        msm8x53::kApcsSmmuClockBranchEnaVote,
+                                                    .bit = (1 << 17)},
+    [msm8x53::MsmClkIndex(msm8x53::kVfeTbuClk)] = {.cbcr_reg = msm8x53::kVfeTbuCbcr,
+                                                   .vote_reg = msm8x53::kApcsSmmuClockBranchEnaVote,
+                                                   .bit = (1 << 9)},
 };
 
 }  // namespace
 
 }  // namespace clk
+
+#endif  // ZIRCON_SYSTEM_DEV_CLK_MSM8X53_CLK_MSM8X53_CLK_REGS_H_
