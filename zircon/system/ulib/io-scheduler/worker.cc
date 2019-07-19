@@ -73,9 +73,8 @@ void Worker::WorkerLoop() {
 
         // Enqueue ops in the scheduler's priority queue.
 
-        size_t num_ready = 0;
         size_t num_error = 0;
-        sched_->Enqueue(uop_list, acquire_count, uop_list, &num_error, &num_ready);
+        sched_->Enqueue(uop_list, acquire_count, uop_list, &num_error);
         // Any ops remaining in the list have encountered an error and should be released.
         for (size_t i = 0; i < num_error; i++) {
             client->Release(uop_list[i].release());
@@ -104,9 +103,13 @@ void Worker::WorkerLoop() {
             // Execute it.
 
             status = client->Issue(op.get());
+
+            Stream* stream = op->stream();
+            ZX_DEBUG_ASSERT(stream != nullptr);
+
             if (status == ZX_OK) {
                 // Op completed successfully or encountered a synchronous error.
-                client->Release(op.release());
+                stream->ReleaseOp(std::move(op), client);
             } else if (status == ZX_ERR_ASYNC) {
                 // Op queued for async completion. Released when completed.
 
@@ -117,7 +120,7 @@ void Worker::WorkerLoop() {
                 fprintf(stderr, "Unexpected return status from Issue() %d\n", status);
                 // Mark op as failed.
                 op->set_result(ZX_ERR_IO);
-                client->Release(op.release());
+                stream->ReleaseOp(std::move(op), client);
             }
         }
     }

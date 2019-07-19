@@ -56,6 +56,7 @@ constexpr uint32_t kOpFlagGroupLeader = (1u << 8);
 
 constexpr uint32_t kOpGroupNone = 0;
 
+class Stream;
 class StreamOp;
 
 // UniqueOp is a wrapper around StreamOp designed to clarify the ownership of an op pointer.
@@ -118,7 +119,7 @@ private:
 // unit of IO that is meaningful to the client. StreamOps are allocated and freed by the client.
 // The Scheduler interacts with these via the SchedulerClient interface. A reference to each op
 // acquired through this interface is retained until the Release() method is called.
-class StreamOp : public fbl::DoublyLinkedListable<StreamOp*> {
+class StreamOp {
 public:
     StreamOp() {
         StreamOp(OpType::kOpTypeUnknown, 0, kOpGroupNone, 0, nullptr);
@@ -127,15 +128,16 @@ public:
     StreamOp(OpType type, uint32_t stream_id, uint32_t group_id, uint32_t group_members,
              void* cookie)
              : type_(type), stream_id_(stream_id), group_id_(group_id),
-               group_members_(group_members), result_(ZX_OK), cookie_(cookie) {}
+               group_members_(group_members), result_(ZX_OK), cookie_(cookie),
+               stream_(nullptr) {}
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(StreamOp);
 
     OpType type() { return type_; }
     void set_ype(OpType type) { type_ = type; }
 
-    uint32_t stream() { return stream_id_; }
-    void set_stream(uint32_t stream_id) { stream_id_ = stream_id; }
+    uint32_t stream_id() { return stream_id_; }
+    void set_stream_id(uint32_t stream_id) { stream_id_ = stream_id; }
 
     uint32_t group() { return group_id_; }
     void set_group(uint32_t gid) { group_id_ = gid; }
@@ -149,8 +151,29 @@ public:
     void* cookie() { return cookie_; }
     void set_cookie(void* cookie) { cookie_ = cookie; }
 
+    uint32_t flags() { return flags_; }
+    void set_flags(uint32_t flags) { flags_ = flags; }
+
+    Stream* stream() { return stream_; }
+    void set_stream(Stream* stream) { stream_ = stream; }
+
+
+    // List support.
+    using ActiveListNodeState = fbl::DoublyLinkedListNodeState<StreamOp*>;
+    struct ActiveListTraits {
+        static ActiveListNodeState& node_state(StreamOp& s) { return s.active_node_; }
+    };
+    using ActiveList = fbl::DoublyLinkedList<StreamOp*, ActiveListTraits>;
+
+    using RetainedListNodeState = fbl::DoublyLinkedListNodeState<StreamOp*>;
+    struct RetainedListTraits {
+        static RetainedListNodeState& node_state(StreamOp& s) { return s.retained_node_; }
+    };
+    using RetainedList = fbl::DoublyLinkedList<StreamOp*, RetainedListTraits>;
+
 private:
-    fbl::DoublyLinkedListNodeState<StreamOp*> node_state_;
+    ActiveListNodeState active_node_;
+    RetainedListNodeState retained_node_;
 
     OpType type_;               // Type of operation.
     uint32_t stream_id_;        // Stream into which this op is queued.
@@ -158,6 +181,12 @@ private:
     uint32_t group_members_;    // Number of members in the group.
     zx_status_t result_;        // Status code of the released operation.
     void* cookie_;              // User-defined per-op cookie.
+
+    uint32_t flags_;
+    // Pointer to stream containing this op.
+    // This pointer is valid as long as the op is retained by the stream, from insertion to release.
+    // Effectively this is the lifetime of the op inside the io scheduler.
+    Stream* stream_;
 };
 
 } // namespace ioscheduler

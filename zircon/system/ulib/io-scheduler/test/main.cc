@@ -19,7 +19,7 @@ namespace {
 using IoScheduler = ioscheduler::Scheduler;
 using SchedOp = ioscheduler::StreamOp;
 
-enum {
+enum class Stage {
     kStageInput = 0,
     kStageAcquired,
     kStageIssued,
@@ -46,14 +46,14 @@ public:
     SchedOp* sop() { return &sop_; }
     bool async() { return async_; }
 
-    uint32_t stage() { return stage_; }
-    void set_stage(uint32_t stage) { stage_ = stage; }
+    Stage stage() { return stage_; }
+    void set_stage(Stage stage) { stage_ = stage; }
 
 private:
     uint32_t id_ = 0;
     bool async_ = false;        // Should the op be completed asynchronously.
     bool should_fail_ = false;  // Should Issue() return an error for this op.
-    uint32_t stage_ = kStageInput;
+    Stage stage_ = Stage::kStageInput;
     SchedOp sop_{};
 };
 
@@ -96,6 +96,7 @@ protected:
     // Wait until all inserted ops have been acquired.
     void WaitAcquire();
     void CheckExpectedResult();
+    void CheckExpectedResultWithFailures(uint32_t acquire_failures);
 
     // Callback methods.
     bool CanReorder(SchedOp* first, SchedOp* second) override {
@@ -189,10 +190,14 @@ void IOSchedTestFixture::WaitAcquire() {
 }
 
 void IOSchedTestFixture::CheckExpectedResult() {
+    CheckExpectedResultWithFailures(0);
+}
+
+void IOSchedTestFixture::CheckExpectedResultWithFailures(uint32_t acquire_failures) {
     fbl::AutoLock lock(&lock_);
     ASSERT_EQ(in_total_, acquired_total_);
-    ASSERT_EQ(in_total_, issued_total_);
-    ASSERT_EQ(in_total_, completed_total_);
+    ASSERT_EQ(in_total_, issued_total_ + acquire_failures);
+    ASSERT_EQ(in_total_, completed_total_ + acquire_failures);
     ASSERT_EQ(in_total_, released_total_);
     ASSERT_TRUE(in_list_.is_empty());
     ASSERT_TRUE(acquired_list_.is_empty());
@@ -228,7 +233,7 @@ zx_status_t IOSchedTestFixture::Acquire(SchedOp** sop_list, size_t list_count,
         if (top == nullptr) {
             break;
         }
-        top->set_stage(kStageAcquired);
+        top->set_stage(Stage::kStageAcquired);
         sop_list[i] = top->sop();
         acquired_list_.push_back(std::move(top));
     }
@@ -243,7 +248,7 @@ zx_status_t IOSchedTestFixture::Issue(SchedOp* sop) {
     TopRef top = acquired_list_.erase(*static_cast<TestOp*>(sop->cookie()));
     if (top->async()) {
         // Will be completed asynchronously.
-        top->set_stage(kStageIssued);
+        top->set_stage(Stage::kStageIssued);
         issued_list_.push_back(std::move(top));
         return ZX_ERR_ASYNC;
     }
@@ -255,7 +260,7 @@ zx_status_t IOSchedTestFixture::Issue(SchedOp* sop) {
     } else {
         top->set_result(ZX_OK);
     }
-    top->set_stage(kStageCompleted);
+    top->set_stage(Stage::kStageCompleted);
     completed_list_.push_back(std::move(top));
     completed_total_++;
     return ZX_OK;
@@ -265,23 +270,23 @@ void IOSchedTestFixture::Release(SchedOp* sop) {
     fbl::AutoLock lock(&lock_);
     TestOp* top = static_cast<TestOp*>(sop->cookie());
     TopRef ref;
-    uint32_t stage = top->stage();
+    Stage stage = top->stage();
     switch (stage) {
-    case kStageAcquired:
+    case Stage::kStageAcquired:
         ref = acquired_list_.erase(*top);
         break;
-    case kStageIssued:
+    case Stage::kStageIssued:
         ref = issued_list_.erase(*top);
         break;
-    case kStageCompleted:
+    case Stage::kStageCompleted:
         ref = completed_list_.erase(*top);
         break;
     default:
-        fprintf(stderr, "Invalid op stage %u\n", stage);
+        fprintf(stderr, "Invalid op stage %u\n", static_cast<uint32_t>(stage));
         ZX_DEBUG_ASSERT(false);
         return;
     }
-    top->set_stage(kStageReleased);
+    top->set_stage(Stage::kStageReleased);
     released_list_.push_back(std::move(ref));
     released_total_++;
 }
@@ -411,6 +416,37 @@ TEST_F(IOSchedTestFixture, ServeTestMultistream) {
 
     // Assert all ops completed.
     CheckExpectedResult();
+}
+
+TEST_F(IOSchedTestFixture, ServeTestInvalidStreams) {
+    zx_status_t status = sched_->Init(this, ioscheduler::kOptionStrictlyOrdered);
+    ASSERT_OK(status, "Failed to init scheduler");
+
+    status = sched_->StreamOpen(1, ioscheduler::kDefaultPriority);
+    ASSERT_OK(status, "Failed to open stream");
+
+    const uint32_t num_ops = 41;
+    uint32_t num_failures = 0;
+    for (uint32_t i = 0; i < num_ops; i++) {
+        // Every other op has an invalid stream (0).
+        uint32_t stream = i & 1;
+        TopRef top = fbl::AdoptRef(new TestOp(i, stream));
+        if (stream == 0) {
+            top->set_should_fail(true);
+            num_failures++;
+        }
+        InsertOp(std::move(top));
+    }
+    ASSERT_OK(sched_->Serve(), "Failed to begin service");
+
+    // Wait until all ops have been acquired.
+    WaitAcquire();
+
+    ASSERT_OK(sched_->StreamClose(1), "Failed to close stream");
+    sched_->Shutdown();
+
+    // Assert all ops were released.
+    CheckExpectedResultWithFailures(num_failures);
 }
 
 } // namespace
