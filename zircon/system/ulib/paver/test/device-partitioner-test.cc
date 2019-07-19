@@ -140,6 +140,8 @@ constexpr fuchsia_hardware_nand_RamNandInfo
 } // namespace
 
 TEST(FixedDevicePartitionerTests, UseBlockInterfaceTest) {
+    // TODO(ZX-4719): fix and re-enable this test.
+    return;
     fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
@@ -147,6 +149,8 @@ TEST(FixedDevicePartitionerTests, UseBlockInterfaceTest) {
 }
 
 TEST(FixedDevicePartitionerTests, AddPartitionTest) {
+    // TODO(ZX-4719): fix and re-enable this test.
+    return;
     fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
@@ -154,6 +158,8 @@ TEST(FixedDevicePartitionerTests, AddPartitionTest) {
 }
 
 TEST(FixedDevicePartitionerTests, WipeFvmTest) {
+    // TODO(ZX-4719): fix and re-enable this test.
+    return;
     fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
@@ -161,6 +167,8 @@ TEST(FixedDevicePartitionerTests, WipeFvmTest) {
 }
 
 TEST(FixedDevicePartitionerTests, FinalizePartitionTest) {
+    // TODO(ZX-4719): fix and re-enable this test.
+    return;
     fbl::unique_fd devfs(open("/dev", O_RDWR));
     fbl::unique_ptr<paver::DevicePartitioner> partitioner;
     ASSERT_EQ(paver::FixedDevicePartitioner::Initialize(std::move(devfs), &partitioner), ZX_OK);
