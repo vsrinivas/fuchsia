@@ -353,14 +353,21 @@ pub fn set_ip_addr_subnet<D: EventDispatcher>(
     );
 }
 
-/// Add a route to send all packets addressed to a specific subnet to a specific device.
-pub fn add_device_route<D: EventDispatcher>(
+/// Adds a route to the forwarding table.
+pub fn add_route<D: EventDispatcher>(
     ctx: &mut Context<D>,
-    subnet: SubnetEither,
-    device: DeviceId,
+    entry: EntryEither,
 ) -> Result<(), error::NetstackError> {
-    map_addr_version!(SubnetEither, subnet, crate::ip::add_device_route(ctx, subnet, device))
-        .map_err(From::from)
+    let (subnet, dest) = entry.into_subnet_dest();
+    match dest {
+        EntryDest::Local { device } => map_addr_version!(
+            SubnetEither,
+            subnet,
+            crate::ip::add_device_route(ctx, subnet, device)
+        )
+        .map_err(From::from),
+        _ => unimplemented!("Non-local route destinations not supported yet."),
+    }
 }
 
 /// Delete a route from the forwarding table, returning `Err` if no

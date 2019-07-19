@@ -265,6 +265,20 @@ impl From<InvalidSubnetError> for ForwardingConversionError {
     }
 }
 
+impl From<ForwardingConversionError> for fidl_net_stack::Error {
+    fn from(fwd_error: ForwardingConversionError) -> Self {
+        fidl_net_stack::Error {
+            type_: match fwd_error {
+                ForwardingConversionError::DeviceNotFound => fidl_net_stack::ErrorType::NotFound,
+                ForwardingConversionError::TypeMismatch
+                | ForwardingConversionError::InvalidSubnet => {
+                    fidl_net_stack::ErrorType::InvalidArgs
+                }
+            },
+        }
+    }
+}
+
 impl ContextFidlCompatible<fidl_net_stack::ForwardingDestination> for EntryDestEither {
     type FromError = DeviceNotFoundError;
     type IntoError = DeviceNotFoundError;
@@ -519,7 +533,7 @@ mod tests {
         assert!(EntryDestEither::try_from_fidl_with_ctx(&EmptyFakeConversionContext, fidl).is_err());
         assert!(fidl_net_stack::ForwardingDestination::try_from_core_with_ctx(
             &EmptyFakeConversionContext,
-            core
+            core,
         )
         .is_err());
     }

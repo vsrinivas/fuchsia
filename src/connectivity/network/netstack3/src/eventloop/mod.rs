@@ -113,12 +113,14 @@ use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, AddrSubnetEither, Subnet, SubnetEither};
 use packet::{Buf, BufferMut, Serializer};
 use std::convert::TryInto;
-use util::{CoreCompatible, FidlCompatible};
+use util::{
+    ContextCoreCompatible, ContextFidlCompatible, ConversionContext, CoreCompatible, FidlCompatible,
+};
 
 use crate::devices::{BindingId, CommonInfo, DeviceInfo, Devices};
 
 use netstack3_core::{
-    add_device_route, del_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout,
+    add_route, del_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout,
     icmp as core_icmp, receive_frame, set_ip_addr_subnet, Context, DeviceId,
     DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IpLayerEventDispatcher,
     NetstackError, StackState, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
@@ -570,59 +572,14 @@ impl EventLoop {
         None
     }
 
-    // TODO(brunodalbo): make this &self once the split between dispatcher and
-    //  dispatcher_mut lands.
-    fn fidl_get_forwarding_table(&mut self) -> Vec<fidl_net_stack::ForwardingEntry> {
-        // TODO(brunodalbo): we don't need to copy the routes once the split
-        //  between dispatcher and dispatcher_mut lands.
-        let routes: Vec<_> = get_all_routes(&self.ctx).collect();
-        routes
-            .into_iter()
-            .map(|entry| match entry {
-                EntryEither::V4(v4_entry) => fidl_net_stack::ForwardingEntry {
-                    subnet: fidl_net::Subnet {
-                        addr: fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address {
-                            addr: v4_entry.subnet.network().ipv4_bytes(),
-                        }),
-                        prefix_len: v4_entry.subnet.prefix(),
-                    },
-                    destination: match v4_entry.dest {
-                        EntryDest::Local { device } => {
-                            fidl_net_stack::ForwardingDestination::DeviceId(
-                                self.ctx.dispatcher().devices.get_binding_id(device).unwrap(),
-                            )
-                        }
-                        EntryDest::Remote { next_hop } => {
-                            fidl_net_stack::ForwardingDestination::NextHop(
-                                fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address {
-                                    addr: next_hop.ipv4_bytes(),
-                                }),
-                            )
-                        }
-                    },
-                },
-                EntryEither::V6(v6_entry) => fidl_net_stack::ForwardingEntry {
-                    subnet: fidl_net::Subnet {
-                        addr: fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
-                            addr: v6_entry.subnet.network().ipv6_bytes(),
-                        }),
-                        prefix_len: v6_entry.subnet.prefix(),
-                    },
-                    destination: match v6_entry.dest {
-                        EntryDest::Local { device } => {
-                            fidl_net_stack::ForwardingDestination::DeviceId(
-                                self.ctx.dispatcher().devices.get_binding_id(device).unwrap(),
-                            )
-                        }
-                        EntryDest::Remote { next_hop } => {
-                            fidl_net_stack::ForwardingDestination::NextHop(
-                                fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
-                                    addr: next_hop.ipv6_bytes(),
-                                }),
-                            )
-                        }
-                    },
-                },
+    fn fidl_get_forwarding_table(&self) -> Vec<fidl_net_stack::ForwardingEntry> {
+        get_all_routes(&self.ctx)
+            .filter_map(|entry| match entry.try_into_fidl_with_ctx(self.ctx.dispatcher()) {
+                Ok(entry) => Some(entry),
+                Err(e) => {
+                    error!("Failed to map forwarding entry into FIDL");
+                    None
+                }
             })
             .collect()
     }
@@ -631,41 +588,17 @@ impl EventLoop {
         &mut self,
         entry: ForwardingEntry,
     ) -> Option<fidl_net_stack::Error> {
-        match entry.destination {
-            fidl_net_stack::ForwardingDestination::DeviceId(id) => {
-                let device_info =
-                    if let Some(device_info) = self.ctx.dispatcher().get_device_info(id) {
-                        device_info
-                    } else {
-                        // Invalid device ID
-                        return Some(stack_fidl_error!(NotFound));
-                    };
-                let subnet = if let Ok(subnet) = entry.subnet.try_into_core() {
-                    subnet
-                } else {
-                    // Invalid subnet
-                    return Some(stack_fidl_error!(InvalidArgs));
-                };
-
-                match device_info.core_id() {
-                    Some(device_id) => {
-                        match add_device_route(&mut self.ctx, subnet, device_id) {
-                            Ok(_) => None,
-                            Err(NetstackError::Exists) => {
-                                // Subnet already in routing table.
-                                Some(stack_fidl_error!(AlreadyExists))
-                            }
-                            Err(_) => unreachable!(),
-                        }
-                    }
-                    None => {
-                        // TODO(brunodalbo): We should probably allow adding routes
-                        //  to interfaces that are not installed, return BadState for now
-                        Some(stack_fidl_error!(BadState)) // Invalid device ID
-                    }
-                }
+        let entry = match EntryEither::try_from_fidl_with_ctx(self.ctx.dispatcher(), entry) {
+            Ok(entry) => entry,
+            Err(e) => return Some(e.into()),
+        };
+        match add_route(&mut self.ctx, entry) {
+            Ok(_) => None,
+            Err(NetstackError::Exists) => {
+                // Subnet already in routing table.
+                Some(fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::AlreadyExists })
             }
-            fidl_net_stack::ForwardingDestination::NextHop(x) => None,
+            Err(_) => unreachable!(),
         }
     }
 
@@ -713,6 +646,16 @@ impl EventLoopInner {
         if let Some(evt) = self.test_events.as_mut() {
             evt.unbounded_send(event).expect("Can't send test event data");
         }
+    }
+}
+
+impl ConversionContext for EventLoopInner {
+    fn get_core_id(&self, binding_id: u64) -> Option<DeviceId> {
+        self.devices.get_core_id(binding_id)
+    }
+
+    fn get_binding_id(&self, core_id: DeviceId) -> Option<u64> {
+        self.devices.get_binding_id(core_id)
     }
 }
 
