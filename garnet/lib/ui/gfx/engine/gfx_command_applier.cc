@@ -104,7 +104,7 @@ bool GfxCommandApplier::AssertValueIsOfType(const fuchsia::ui::gfx::Value& value
 
 bool GfxCommandApplier::ApplyCommand(Session* session, CommandContext* command_context,
                                      fuchsia::ui::gfx::Command command) {
-  TRACE_DURATION("gfx", "GfxCommandApplier::ApplyCommand");
+  TRACE_DURATION("gfx.debug", "GfxCommandApplier::ApplyCommand");
 
   switch (command.Which()) {
     case fuchsia::ui::gfx::Command::Tag::kCreateResource:

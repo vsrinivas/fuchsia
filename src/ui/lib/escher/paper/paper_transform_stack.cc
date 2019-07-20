@@ -11,7 +11,7 @@ namespace escher {
 PaperTransformStack::PaperTransformStack() = default;
 
 const PaperTransformStack::Item& PaperTransformStack::PushTransform(const mat4& transform) {
-  TRACE_DURATION("gfx", "PaperTransformStack::PushTransform", "stack_size", size(),
+  TRACE_DURATION("gfx.debug", "PaperTransformStack::PushTransform", "stack_size", size(),
                  "num_clip_planes", num_clip_planes());
 
   const auto& cur = Top();

@@ -9,7 +9,7 @@
 namespace escher {
 
 Transform::operator mat4() const {
-  TRACE_DURATION("gfx", "escher::Transform::operator mat4");
+  TRACE_DURATION("gfx.debug", "escher::Transform::operator mat4");
 
   // This sequence of operations is equivalent to
   // [translation + anchor] * rotation * scale * [-anchor].
