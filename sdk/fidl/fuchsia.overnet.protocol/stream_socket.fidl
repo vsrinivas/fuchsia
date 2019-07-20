@@ -4,12 +4,12 @@
 
 library fuchsia.overnet.protocol;
 
-// Introduction packet sent on stream oriented links between Overnet nodes
+/// Introduction packet sent on stream oriented links between Overnet nodes
 table StreamSocketGreeting {
-    // Protocol identification string; different kinds of streams might choose a different value here
+    /// Protocol identification string; different kinds of streams might choose a different value here
     1: string:32 magic_string;
-    // Overnet NodeId of the sender
+    /// Overnet NodeId of the sender
     2: NodeId node_id;
-    // Sender's LinkId for this link
+    /// Sender's LinkId for this link
     3: LinkId local_link_id;
 };
