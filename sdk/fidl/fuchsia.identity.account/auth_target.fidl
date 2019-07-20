@@ -5,163 +5,140 @@
 library fuchsia.identity.account;
 
 using fuchsia.auth;
+using fuchsia.sys;
 
-// An interface to receive events when the authentication state of an account
-// changes.
-//
-// AuthListeners may be registered through the `AuthTarget` interface and this
-// registration also defines the types of authentication state changes that
-// should be sent to the listener.
-//
-// All methods include an empty response to follow the "Throttle push using
-// acknowledgements" FIDL design pattern.
+/// A protocol to receive events when the authentication state of an account
+/// changes.
+///
+/// AuthListeners may be registered through the `AuthTarget` protocol and this
+/// registration also defines the types of authentication state changes that
+/// should be sent to the listener.
+///
+/// All methods include an empty response to follow the "Throttle push using
+/// acknowledgements" FIDL design pattern.
 protocol AuthListener {
-    // A method that is called when the AccountListener is first connected.
+    /// A method that is called when the AccountListener is first connected.
     OnInitialize(fuchsia.auth.AuthState auth_state) -> ();
 
-    // A method that is called when the authentication state of the account
-    // changes.
+    /// A method that is called when the authentication state of the account
+    /// changes.
     OnAuthStateChanged(fuchsia.auth.AuthState auth_state) -> ();
 };
 
-// An interface that is extended by other interfaces defining an entity
-// (referred to as the "target") with an authentication state, such as a
-// Fuchsia account or persona.
-//
-// AuthTarget defines a set of methods to monitor the current authentication
-// state of an entity and to request changes in that authentication state.
+/// A protocol that is extended by other protocols defining an entity
+/// (referred to as the "target") with an authentication state, such as a
+/// Fuchsia account or persona.
+///
+/// AuthTarget defines a set of methods to monitor the current authentication
+/// state of an entity and to request changes in that authentication state.
 [FragileBase]
 protocol AuthTarget {
-    // Returns the current `AuthState` of the target.
-    GetAuthState()
-        -> (Status status, fuchsia.auth.AuthState? auth_state);
+    /// Returns the current `AuthState` of the target.
+    GetAuthState() -> (fuchsia.auth.AuthState auth_state) error Error;
 
-    // Connects an interface that will receive changes in the authentication
-    // state of the target.
-    //
-    // `listener` The client end of an `AuthListener` channel
-    // `initial_state` If true, the listener will receive the initial auth state
-    //                 in addition to any changes.
-    // `granularity` An `AuthChangeGranularity` expressing the magnitude of
-    //               change in authentication state than should lead to a
-    //               callback
-    //
-    // Returns: `status` A `Status` indicating whether the operation was
-    //                   successful
+    /// Connects a channel that will receive changes in the authentication
+    /// state of the target.
+    ///
+    /// `listener` The client end of an `AuthListener` channel
+    /// `initial_state` If true, the listener will receive the initial auth
+    ///                 state in addition to any changes.
+    /// `granularity` An `AuthChangeGranularity` expressing the magnitude of
+    ///               change in authentication state than should lead to a
+    ///               callback
     RegisterAuthListener(
         AuthListener listener,
         bool initial_state,
         fuchsia.auth.AuthChangeGranularity granularity)
-        -> (Status status);
+        -> () error Error;
 
-    // TODO(jsankey): Add methods that request in increase in the
-    //                authentication state or authentication for a
-    //                particular event.
+    // TODO(AUTH-220): Add methods that request in increase in the authentication
+    //                 state or authentication for a particular event.
 };
 
-// An Account exposes information about the personae and recovery account for
-// a Fuchsia account, and provides methods to manipulate these.
-//
-// An Account provides access to sensitive long term identifiers and is only
-// intended only for use by a small number of trusted system components.
+/// A protocol that exposes information about the personae and recovery account
+/// for a Fuchsia account and provides methods to manipulate these.
+///
+/// An Account provides access to sensitive long term identifiers and is only
+/// intended only for use by a small number of trusted system components.
 protocol Account {
     compose AuthTarget;
 
-    // TODO(jsankey): Add account ID accessor if and when the first valid
-    // use case arrives.
+    // Note: a LocalAccountID accessor method may be added if and when the
+    // first valid use case arrives.
 
-    // Returns a human readable name for the account. Account names are set by
-    // a human and are not guaranteed to be meaningful or unique, even among the
-    // accounts on a single device.
+    /// Returns a human readable name for the account. Account names are set by
+    /// a human and are not guaranteed to be meaningful or unique, even among
+    /// the accounts on a single device.
     GetAccountName() -> (string:MAX_NAME_SIZE name);
 
-    // Returns the account's lifetime.
+    /// Returns the account's lifetime.
     GetLifetime() -> (Lifetime lifetime);
 
-    // Returns a vector of all the personae defined for the account.
-    // NOTE: Currently all Fuchsia accounts have exactly one persona.
-    GetPersonaIds()
-        -> (vector<LocalPersonaId>:MAX_PERSONAE_PER_ACCOUNT persona_ids);
+    /// Returns a vector of all the personae defined for the account.
+    /// NOTE: Currently all Fuchsia accounts have exactly one persona.
+    GetPersonaIds() -> (vector<LocalPersonaId>:MAX_PERSONAE_PER_ACCOUNT persona_ids);
 
-    // Connects an interface to read properties of and access tokens for
-    // the default persona for the account.
-    //
-    // `persona` The client end of a `Persona` channel
-    //
-    // Returns: `status` A `Status` indicating whether the operation was
-    //                   successful
-    //          `id` The identifier for the default persona if the operation
-    //               was successful
+    /// Connects a channel to read properties of and access tokens for
+    /// the default persona for the account.
+    ///
+    /// `persona` The client end of a `Persona` channel
+    ///
+    /// Returns: `id` The identifier for the default persona
     GetDefaultPersona(request<Persona> persona)
-        -> (Status status, LocalPersonaId? id);
+        -> (LocalPersonaId id) error Error;
 
-    // Connects an interface to read properties of and access tokens for
-    // one of the personae for the account.
-    //
-    // `id` The persona's identifier as returned by GetPersonaIds()
-    // `persona` The client end of a `Persona` channel
-    //
-    // Returns: `status` A `Status` indicating whether the operation was
-    //                   successful
-    GetPersona(LocalPersonaId id, request<Persona> persona)
-        -> (Status status);
+    /// Connects a channel to read properties of and access tokens for
+    /// one of the personae for the account.
+    ///
+    /// `id` The persona's identifier as returned by GetPersonaIds()
+    /// `persona` The client end of a `Persona` channel
+    GetPersona(LocalPersonaId id, request<Persona> persona) -> () error Error;
 
-    // TODO(jsankey): Add methods to create, delete, and manage personae.
+    // TODO(AUTH-221): Add methods to create, delete, and manage personae.
 
-    // Returns the service provider account that can be used to access the
-    // Fuchsia account if more direct methods of authentication are not
-    // available, provided such an account exists.
-    //
-    // Returns: `status` A `Status` indicating whether the operation was
-    //                   successful
-    //          The `ServiceProviderAccount` used for recovery if the operation
-    //          was successful and a recovery account exists.
+    /// Returns the service provider account that can be used to access the
+    /// Fuchsia account if more direct methods of authentication are not
+    /// available, provided such an account exists.
+    ///
+    /// Returns: The `ServiceProviderAccount` used for recovery if one exists
     GetRecoveryAccount()
-        -> (Status status, fuchsia.auth.ServiceProviderAccount? account);
+        -> (fuchsia.auth.ServiceProviderAccount? account) error Error;
 
-    // Sets the service provider account that can be used to access the Fuchsia
-    // account if more direct methods of authentication are not available.
-    //
-    // `account` The `ServiceProviderAccount` to use as the recovery account.
-    //           This must be an existing account that has already been
-    //           provisioned on the current device using TokenManager.
-    //
-    // Returns: `status` A `Status` indicating whether the operation was
-    //                   successful
+    /// Sets the service provider account that can be used to access the Fuchsia
+    /// account if more direct methods of authentication are not available.
+    ///
+    /// `account` The `ServiceProviderAccount` to use as the recovery account.
+    ///           This must be an existing account that has already been
+    ///           provisioned on the current device using TokenManager.
     SetRecoveryAccount(fuchsia.auth.ServiceProviderAccount account)
-        -> (Status status);
-
-    // TODO(jsankey): Add a method to remove the recovery account.
+        -> () error Error;
 };
 
-// A Persona exposes basic information about a Fuchsia persona and access to the
-// authentication tokens that are visible through it.
-//
-// Note a Persona purposefully does not provide access to a long term identifier
-// for the persona. This is to support components in the system that work with
-// short lived identifiers (e.g. SessionManager), but note that long term
-// identifiers can usually still be derived via the TokenManger interface.
+/// A protocol that exposes basic information about a Fuchsia persona and access
+/// to the authentication tokens that are visible through it.
+///
+/// Note a Persona purposefully does not provide access to a long term
+/// identifier for the persona. This is to support components in the system that
+/// work with short lived identifiers (e.g. SessionManager), but note that long
+/// term identifiers can usually still be derived via the TokenManger protocol.
 protocol Persona {
     compose AuthTarget;
 
-    // Returns the lifetime of this persona.
+    /// Returns the lifetime of this persona.
     GetLifetime() -> (Lifetime lifetime);
 
-    // Connects an interface to acquire and revoke authentication tokens for
-    // service provider (aka cloud service) accounts that are visible through
-    // this persona.
-    //
-    // `application_url` A url for the Fuchsia agent that this interface will be
-    //                   used by. Applications are only allowed to access tokens
-    //                   that they created.
-    // `token_manager` The client end of a `Persona` channel
-    //
-    // Returns: `status` A `Status` indicating whether the operation was
-    //                   successful
+    /// Connects a channel to acquire and revoke authentication tokens for
+    /// service provider (aka cloud service) accounts that are visible through
+    /// this persona.
+    ///
+    /// `application_url` A url for the Fuchsia agent that this channel will be
+    ///                   used by. Applications are only allowed to access
+    ///                   tokens that they created.
+    /// `token_manager` The client end of a `Persona` channel
     GetTokenManager(
-        // TODO(jsankey): Migrate token manager to a more appropriate form
+        // TODO(AUTH-218): Migrate token manager to a more appropriate form
         // of software identity.
-        string application_url,
+        fuchsia.sys.component_url application_url,
         request<fuchsia.auth.TokenManager> token_manager)
-        -> (Status status);
+        -> () error Error;
 };

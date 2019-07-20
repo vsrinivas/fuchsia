@@ -13,5 +13,6 @@ fidl("fuchsia.identity.account") {
 
   deps = [
     "//sdk/fidl/fuchsia.auth",
+    "//sdk/fidl/fuchsia.sys",
   ]
 }
