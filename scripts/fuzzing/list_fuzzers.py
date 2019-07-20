@@ -12,22 +12,22 @@ from lib.host import Host
 
 
 def main():
-  parser = Args.make_parser(
-      description='Lists fuzzers matching NAME if provided, or all fuzzers.',
-      name_required=False)
-  args = parser.parse_args()
+    parser = Args.make_parser(
+        description='Lists fuzzers matching NAME if provided, or all fuzzers.',
+        name_required=False)
+    args = parser.parse_args()
 
-  host = Host.from_build()
+    host = Host.from_build()
 
-  fuzzers = Fuzzer.filter(host.fuzzers, args.name)
-  if len(fuzzers) == 0:
-    print('No matching fuzzers.')
-    return 1
-  print('Found %d matching fuzzers:' % len(fuzzers))
-  for fuzzer in fuzzers:
-    print('  %s/%s' % fuzzer)
-  return 0
+    fuzzers = Fuzzer.filter(host.fuzzers, args.name)
+    if len(fuzzers) == 0:
+        print('No matching fuzzers.')
+        return 1
+    print('Found %d matching fuzzers:' % len(fuzzers))
+    for fuzzer in fuzzers:
+        print('  %s/%s' % fuzzer)
+    return 0
 
 
 if __name__ == '__main__':
-  sys.exit(main())
+    sys.exit(main())
