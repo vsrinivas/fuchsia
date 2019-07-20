@@ -277,7 +277,9 @@ fn handle_info_event(
             }
             // TODO(WLAN-1162) - Log health metrics
         }
-        InfoEvent::ConnectStats(..) | InfoEvent::ConnectionMilestone(..) => {
+        InfoEvent::ConnectStats(..)
+        | InfoEvent::ConnectionMilestone(..)
+        | InfoEvent::ConnectionLost(..) => {
             // TODO(WLAN-1162) - Log health metrics
         }
     }

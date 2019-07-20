@@ -23,37 +23,23 @@ pub enum InfoEvent {
     ConnectStarted,
     /// Sent when a connection attempt succeeds, fails, or gets canceled because another connection
     /// attempt comes
-    ConnectFinished {
-        result: ConnectResult,
-    },
+    ConnectFinished { result: ConnectResult },
     /// Sent when SME forwards a ScanRequest message to MLME. Note that this may happen
     /// some time after a scan request first arrives at SME as it may be queued. If a scan
     /// request is canceled before SME sends it to MLME, this event won't be sent out
-    MlmeScanStart {
-        txn_id: ScanTxnId,
-    },
+    MlmeScanStart { txn_id: ScanTxnId },
     /// Sent when SME receives a ScanEnd message from MLME (signaling that an existing scan
     /// attempt finishes)
-    MlmeScanEnd {
-        txn_id: ScanTxnId,
-    },
+    MlmeScanEnd { txn_id: ScanTxnId },
     /// Sent when SME finishes selecting a network and starts the Join step during a connection
     /// attempt.
-    JoinStarted {
-        att_id: ConnectionAttemptId,
-    },
+    JoinStarted { att_id: ConnectionAttemptId },
     /// Sent when SME finishes the association step during a connection attempt
-    AssociationSuccess {
-        att_id: ConnectionAttemptId,
-    },
+    AssociationSuccess { att_id: ConnectionAttemptId },
     /// Sent when SME starts the step of establishing security during a connection attempt
-    RsnaStarted {
-        att_id: ConnectionAttemptId,
-    },
+    RsnaStarted { att_id: ConnectionAttemptId },
     /// Sent when SME finishes the step of establishing security during a connection attempt
-    RsnaEstablished {
-        att_id: ConnectionAttemptId,
-    },
+    RsnaEstablished { att_id: ConnectionAttemptId },
     /// Event for the aggregated stats of a discovery scan. Sent when a discovery scan has
     /// finished, as signaled by a MlmeScanEnd event
     DiscoveryScanStats(ScanStats, Option<DiscoveryStats>),
@@ -63,6 +49,8 @@ pub enum InfoEvent {
     /// Event generated whenever the client first connects, or when the connection has reached
     /// a certain milestone (e.g. 1/10/30 minutes)
     ConnectionMilestone(ConnectionMilestoneInfo),
+    /// Event generated whenever SME receives a deauth or disassoc indication while connected
+    ConnectionLost(ConnectionLostInfo),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -235,6 +223,12 @@ impl ConnectionMilestone {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConnectionLostInfo {
+    pub connected_duration: zx::Duration,
+    pub last_rssi: i8,
+}
+
 macro_rules! warn_if_err {
     ($expr:expr) => {{
         if let Err(e) = &$expr {
@@ -345,6 +339,11 @@ impl InfoReporter {
 
     pub fn report_connection_milestone(&mut self, milestone: ConnectionMilestoneInfo) {
         self.info_sink.send(InfoEvent::ConnectionMilestone(milestone));
+    }
+
+    pub fn report_connection_lost(&mut self, connected_duration: zx::Duration, last_rssi: i8) {
+        self.info_sink
+            .send(InfoEvent::ConnectionLost(ConnectionLostInfo { connected_duration, last_rssi }));
     }
 }
 

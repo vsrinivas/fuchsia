@@ -100,7 +100,7 @@ pub enum State {
     Associated {
         cfg: ClientConfig,
         bss: Box<BssDescription>,
-        last_rssi: Option<i8>,
+        last_rssi: i8,
         link_state: LinkState,
         radio_cfg: RadioConfig,
     },
@@ -205,7 +205,11 @@ impl State {
             State::Associated { cfg, bss, last_rssi, link_state, radio_cfg } => match event {
                 MlmeEvent::DisassociateInd { .. } => {
                     let (responder, mut protection) = match link_state {
-                        LinkState::LinkUp { protection, .. } => (None, protection),
+                        LinkState::LinkUp { protection, since, .. } => {
+                            let connected_duration = now() - since;
+                            context.info.report_connection_lost(connected_duration, last_rssi);
+                            (None, protection)
+                        }
                         LinkState::EstablishingRsna { responder, rsna, .. } => {
                             (responder, Protection::Rsna(rsna))
                         }
@@ -221,9 +225,16 @@ impl State {
                     to_associating_state(cfg, cmd, &context.mlme_sink)
                 }
                 MlmeEvent::DeauthenticateInd { ind } => {
-                    if let LinkState::EstablishingRsna { responder, .. } = link_state {
-                        let connect_result = ConnectResult::Failed(ConnectFailure::EstablishRsna);
-                        report_connect_finished(responder, context, connect_result);
+                    match link_state {
+                        LinkState::EstablishingRsna { responder, .. } => {
+                            let connect_result =
+                                ConnectResult::Failed(ConnectFailure::EstablishRsna);
+                            report_connect_finished(responder, context, connect_result);
+                        }
+                        LinkState::LinkUp { since, .. } => {
+                            let connected_duration = now() - since;
+                            context.info.report_connection_lost(connected_duration, last_rssi);
+                        }
                     }
                     state_change_msg.replace(format!(
                         "received DeauthenticateInd msg; reason code {:?}",
@@ -231,13 +242,9 @@ impl State {
                     ));
                     State::Idle { cfg }
                 }
-                MlmeEvent::SignalReport { ind } => State::Associated {
-                    cfg,
-                    bss,
-                    last_rssi: Some(ind.rssi_dbm),
-                    link_state,
-                    radio_cfg,
-                },
+                MlmeEvent::SignalReport { ind } => {
+                    State::Associated { cfg, bss, last_rssi: ind.rssi_dbm, link_state, radio_cfg }
+                }
                 MlmeEvent::EapolInd { ref ind } if bss.rsn.is_some() => {
                     // Reject EAPOL frames from other BSS.
                     if ind.src_addr != bss.bssid {
@@ -603,10 +610,11 @@ fn handle_mlme_assoc_conf(
                         let rsna_timeout =
                             Some(context.timer.schedule(event::EstablishingRsnaTimeout));
                         state_change_msg.replace("successful association".to_string());
+                        let last_rssi = cmd.bss.rssi_dbm;
                         State::Associated {
                             cfg,
                             bss: cmd.bss,
-                            last_rssi: None,
+                            last_rssi,
                             link_state: LinkState::EstablishingRsna {
                                 responder: cmd.responder,
                                 rsna,
@@ -623,10 +631,11 @@ fn handle_mlme_assoc_conf(
                     let info = ConnectionMilestoneInfo::new(ConnectionMilestone::Connected, now);
                     let next_milestone = report_milestone(info, context);
                     state_change_msg.replace("successful association".to_string());
+                    let last_rssi = cmd.bss.rssi_dbm;
                     State::Associated {
                         cfg,
                         bss: cmd.bss,
-                        last_rssi: None,
+                        last_rssi,
                         link_state: LinkState::LinkUp {
                             protection: Protection::Open,
                             since: now,
@@ -1492,6 +1501,42 @@ mod tests {
         });
     }
 
+    #[test]
+    fn lost_connection_reported_on_deauth_ind() {
+        let mut h = TestHelper::new();
+        let state = link_up_state(Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])));
+
+        let deauth_ind = MlmeEvent::DeauthenticateInd {
+            ind: fidl_mlme::DeauthenticateIndication {
+                peer_sta_address: [0, 0, 0, 0, 0, 0],
+                reason_code: fidl_mlme::ReasonCode::UnspecifiedReason,
+            },
+        };
+
+        let _state = state.on_mlme_event(deauth_ind, &mut h.context);
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionLost(info))) => {
+            assert_eq!(info.last_rssi, 60);
+        });
+    }
+
+    #[test]
+    fn lost_connection_reported_on_disassoc_ind() {
+        let mut h = TestHelper::new();
+        let state = link_up_state(Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])));
+
+        let deauth_ind = MlmeEvent::DisassociateInd {
+            ind: fidl_mlme::DisassociateIndication {
+                peer_sta_address: [0, 0, 0, 0, 0, 0],
+                reason_code: 1,
+            },
+        };
+
+        let _state = state.on_mlme_event(deauth_ind, &mut h.context);
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionLost(info))) => {
+            assert_eq!(info.last_rssi, 60);
+        });
+    }
+
     struct TestHelper {
         mlme_stream: MlmeStream,
         info_stream: InfoStream,
@@ -1748,7 +1793,7 @@ mod tests {
         State::Associated {
             cfg: ClientConfig::default(),
             bss: cmd.bss,
-            last_rssi: None,
+            last_rssi: 60,
             link_state: LinkState::EstablishingRsna {
                 responder: cmd.responder,
                 rsna,
@@ -1763,7 +1808,7 @@ mod tests {
         State::Associated {
             cfg: ClientConfig::default(),
             bss,
-            last_rssi: None,
+            last_rssi: 60,
             link_state: LinkState::LinkUp {
                 protection: Protection::Open,
                 since: now(),
@@ -1784,7 +1829,7 @@ mod tests {
         State::Associated {
             cfg: ClientConfig::default(),
             bss: Box::new(bss),
-            last_rssi: None,
+            last_rssi: 60,
             link_state: LinkState::LinkUp {
                 protection: Protection::Rsna(rsna),
                 since: now(),
