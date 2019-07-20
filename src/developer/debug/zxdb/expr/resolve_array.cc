@@ -46,7 +46,7 @@ Err ResolveStaticArray(const ExprValue& array, const ArrayType* array_type, size
 // Handles the "Foo*" case.
 void ResolvePointerArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
                          const ModifiedType* ptr_type, size_t begin_index, size_t end_index,
-                         std::function<void(const Err&, std::vector<ExprValue>)> cb) {
+                         fit::callback<void(const Err&, std::vector<ExprValue>)> cb) {
   const Type* abstract_value_type = ptr_type->modified().Get()->AsType();
   if (!abstract_value_type) {
     cb(Err("Bad type information."), std::vector<ExprValue>());
@@ -69,7 +69,7 @@ void ResolvePointerArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue&
   eval_context->GetDataProvider()->GetMemoryAsync(
       begin_address, end_address - begin_address,
       [value_type, begin_address, count = end_index - begin_index, cb = std::move(cb)](
-          const Err& err, std::vector<uint8_t> data) {
+          const Err& err, std::vector<uint8_t> data) mutable {
         if (err.has_error()) {
           cb(err, std::vector<ExprValue>());
           return;
@@ -106,7 +106,7 @@ Err ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, 
 }
 
 void ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t begin_index,
-                  size_t end_index, std::function<void(const Err&, std::vector<ExprValue>)> cb) {
+                  size_t end_index, fit::callback<void(const Err&, std::vector<ExprValue>)> cb) {
   if (!array.type()) {
     cb(Err("No type information."), std::vector<ExprValue>());
     return;

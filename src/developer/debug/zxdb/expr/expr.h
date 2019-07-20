@@ -5,8 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_H_
 
-#include <functional>
-
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 
 namespace zxdb {
@@ -27,7 +26,7 @@ class EvalContext;
 // called synchronously in a reentrant fashion from this function.
 void EvalExpression(const std::string& input, fxl::RefPtr<EvalContext> context,
                     bool follow_references,
-                    std::function<void(const Err& err, ExprValue value)> cb);
+                    fit::callback<void(const Err& err, ExprValue value)> cb);
 
 }  // namespace zxdb
 

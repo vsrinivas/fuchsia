@@ -30,7 +30,7 @@ Err GetPointerValue(const ExprValue& value, TargetPointer* pointer_value) {
 }  // namespace
 
 void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, uint64_t address, fxl::RefPtr<Type> type,
-                    std::function<void(const Err&, ExprValue)> cb) {
+                    fit::callback<void(const Err&, ExprValue)> cb) {
   // We need to be careful to construct the return type with the original type given since it may
   // have const qualifiers, etc., but to use the concrete one (no const, with forward-definitions
   // resolved) for size computation.
@@ -43,8 +43,8 @@ void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, uint64_t address, fxl
   uint32_t type_size = concrete->byte_size();
   eval_context->GetDataProvider()->GetMemoryAsync(
       address, type_size,
-      [type = std::move(type), address, type_size, cb = std::move(cb)](const Err& err,
-                                                                       std::vector<uint8_t> data) {
+      [type = std::move(type), address, type_size, cb = std::move(cb)](
+          const Err& err, std::vector<uint8_t> data) mutable {
         // Watch out, "type" may be non-concrete (we need to preserve "const", etc.). Use
         // "type_size" for the concrete size.
         if (err.has_error()) {
@@ -59,7 +59,7 @@ void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, uint64_t address, fxl
 }
 
 void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, const ExprValue& pointer,
-                    std::function<void(const Err&, ExprValue)> cb) {
+                    fit::callback<void(const Err&, ExprValue)> cb) {
   fxl::RefPtr<Type> pointed_to;
   if (Err err = GetPointedToType(eval_context, pointer.type(), &pointed_to); err.has_error())
     return cb(err, ExprValue());
@@ -72,7 +72,7 @@ void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, const ExprValue& poin
 }
 
 void EnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, ExprValue value,
-                            std::function<void(const Err&, ExprValue)> cb) {
+                            fit::callback<void(const Err&, ExprValue)> cb) {
   Type* type = value.type();
   if (!type) {
     // Untyped input, pass the value forward and let the callback handle the

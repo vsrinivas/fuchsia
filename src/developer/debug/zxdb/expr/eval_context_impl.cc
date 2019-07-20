@@ -131,9 +131,10 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, ValueCal
   }
 
   // Fall back to matching registers when no symbol is found.
-  data_provider_->GetRegisterAsync(reg, [cb = std::move(cb)](const Err& err, uint64_t value) {
-    cb(err, fxl::RefPtr<zxdb::Symbol>(), ExprValue(value));
-  });
+  data_provider_->GetRegisterAsync(reg,
+                                   [cb = std::move(cb)](const Err& err, uint64_t value) mutable {
+                                     cb(err, fxl::RefPtr<zxdb::Symbol>(), ExprValue(value));
+                                   });
 }
 
 void EvalContextImpl::GetVariableValue(fxl::RefPtr<Variable> var, ValueCallback cb) const {
@@ -272,32 +273,33 @@ void EvalContextImpl::DoResolve(FoundName found, ValueCallback cb) const {
 
   // Object variable resolution: Get the value of of the |this| variable.
   FXL_DCHECK(found.kind() == FoundName::kMemberVariable);
-  GetVariableValue(found.object_ptr_ref(),
-                   [weak_this = weak_factory_.GetWeakPtr(), found, cb = std::move(cb)](
-                       const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) {
-                     if (!weak_this)
-                       return;  // Don't issue callbacks if we've been destroyed.
+  GetVariableValue(
+      found.object_ptr_ref(),
+      [weak_this = weak_factory_.GetWeakPtr(), found, cb = std::move(cb)](
+          const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) mutable {
+        if (!weak_this)
+          return;  // Don't issue callbacks if we've been destroyed.
 
-                     if (err.has_error()) {
-                       // |this| not available, probably optimized out.
-                       cb(err, symbol, ExprValue());
-                       return;
-                     }
+        if (err.has_error()) {
+          // |this| not available, probably optimized out.
+          cb(err, symbol, ExprValue());
+          return;
+        }
 
-                     // Got |this|, resolve |this-><DataMember>|.
-                     ResolveMemberByPointer(
-                         fxl::RefPtr<EvalContextImpl>(weak_this.get()), value, found.member(),
-                         [weak_this, found, cb = std::move(cb)](const Err& err, ExprValue value) {
-                           if (!weak_this)
-                             return;  // Don't issue callbacks if we've been destroyed.
-                           if (err.has_error()) {
-                             cb(err, found.member().data_member_ref(), ExprValue());
-                           } else {
-                             // Found |this->name|.
-                             cb(Err(), found.member().data_member_ref(), std::move(value));
-                           }
-                         });
-                   });
+        // Got |this|, resolve |this-><DataMember>|.
+        ResolveMemberByPointer(
+            fxl::RefPtr<EvalContextImpl>(weak_this.get()), value, found.member(),
+            [weak_this, found, cb = std::move(cb)](const Err& err, ExprValue value) mutable {
+              if (!weak_this)
+                return;  // Don't issue callbacks if we've been destroyed.
+              if (err.has_error()) {
+                cb(err, found.member().data_member_ref(), ExprValue());
+              } else {
+                // Found |this->name|.
+                cb(Err(), found.member().data_member_ref(), std::move(value));
+              }
+            });
+      });
 }
 
 void EvalContextImpl::OnDwarfEvalComplete(const Err& err,

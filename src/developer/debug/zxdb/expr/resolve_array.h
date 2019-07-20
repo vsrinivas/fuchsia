@@ -5,9 +5,9 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_RESOLVE_ARRAY_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_RESOLVE_ARRAY_H_
 
-#include <functional>
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
@@ -36,7 +36,7 @@ Err ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, 
 // The input will be clipped to the array size so the result may be empty
 // or smaller than requested.
 void ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t begin_index,
-                  size_t end_index, std::function<void(const Err&, std::vector<ExprValue>)> cb);
+                  size_t end_index, fit::callback<void(const Err&, std::vector<ExprValue>)> cb);
 
 }  // namespace zxdb
 

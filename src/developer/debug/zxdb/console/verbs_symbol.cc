@@ -399,6 +399,7 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
   if (cmd.frame()) {
     const Location& location = cmd.frame()->GetLocation();
     fxl::RefPtr<EvalContext> eval_context = cmd.frame()->GetEvalContext();
+
     eval_context->GetNamedValue(
         identifier, [location](const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) {
           // Expression evaluation could fail but there still could be a symbol.
@@ -414,7 +415,6 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
             out.Append("TODO: support this command for non-Variables.");
           }
           Console::get()->Output(out);
-          return Err();
         });
     return Err();  // Will complete asynchronously.
   }

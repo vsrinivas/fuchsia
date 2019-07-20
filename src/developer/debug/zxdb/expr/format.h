@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FORMAT_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FORMAT_H_
 
-#include <functional>
 #include <optional>
 
 #include "lib/fit/defer.h"

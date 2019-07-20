@@ -5,10 +5,10 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_RESOLVE_COLLECTION_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_RESOLVE_COLLECTION_H_
 
-#include <functional>
 #include <optional>
 #include <string>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/found_member.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
@@ -43,13 +43,13 @@ Err ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
 // memory it is asynchronous.
 void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
                             const FoundMember& found_member,
-                            std::function<void(const Err&, ExprValue)> cb);
+                            fit::callback<void(const Err&, ExprValue)> cb);
 
 // Same as previous version but takes the name of the member to find. The callback also provides the
 // DataMember corresponding to what the name matched.
 void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
                             const ParsedIdentifier& identifier,
-                            std::function<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb);
+                            fit::callback<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb);
 
 // Takes a Collection value and a base class inside of it, computes the value of the base class and
 // puts it in *out.

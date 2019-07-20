@@ -5,9 +5,9 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EVAL_OPERATORS_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EVAL_OPERATORS_H_
 
-#include <functional>
 #include <utility>
 
+#include "lib/fit/function.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
@@ -22,7 +22,7 @@ class Type;
 
 void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<ExprNode>& left,
                         const ExprToken& op, const fxl::RefPtr<ExprNode>& right,
-                        std::function<void(const Err& err, ExprValue value)> cb);
+                        fit::callback<void(const Err& err, ExprValue value)> cb);
 
 }  // namespace zxdb
 

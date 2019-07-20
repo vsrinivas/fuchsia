@@ -81,7 +81,7 @@ Err GetMemberType(const Collection* coll, const DataMember* member,
 
 void DoResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
                               const Collection* pointed_to_type, const FoundMember& member,
-                              std::function<void(const Err&, ExprValue)> cb) {
+                              fit::callback<void(const Err&, ExprValue)> cb) {
   Err err = base_ptr.EnsureSizeIs(kTargetPointerSize);
   if (err.has_error()) {
     cb(err, ExprValue());
@@ -157,7 +157,7 @@ Err ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
 
 void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
                             const FoundMember& found_member,
-                            std::function<void(const Err&, ExprValue)> cb) {
+                            fit::callback<void(const Err&, ExprValue)> cb) {
   fxl::RefPtr<Collection> pointed_to;
   Err err = GetConcretePointedToCollection(context, base_ptr.type(), &pointed_to);
   if (err.has_error())
@@ -168,7 +168,7 @@ void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& b
 
 void ResolveMemberByPointer(
     fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr, const ParsedIdentifier& identifier,
-    std::function<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb) {
+    fit::callback<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb) {
   fxl::RefPtr<Collection> coll;
   if (Err err = GetConcretePointedToCollection(context, base_ptr.type(), &coll); err.has_error())
     return cb(err, nullptr, ExprValue());
@@ -177,11 +177,11 @@ void ResolveMemberByPointer(
   if (Err err = FindMemberWithErr(coll.get(), identifier, &found_member); err.has_error())
     return cb(err, nullptr, ExprValue());
 
-  DoResolveMemberByPointer(
-      context, base_ptr, coll.get(), found_member,
-      [cb = std::move(cb),
-       member_ref = RefPtrTo(found_member.data_member())](
-          const Err& err, ExprValue value) { cb(err, std::move(member_ref), std::move(value)); });
+  DoResolveMemberByPointer(context, base_ptr, coll.get(), found_member,
+                           [cb = std::move(cb), member_ref = RefPtrTo(found_member.data_member())](
+                               const Err& err, ExprValue value) mutable {
+                             cb(err, std::move(member_ref), std::move(value));
+                           });
 }
 
 Err ResolveInherited(const ExprValue& value, const InheritedFrom* from, ExprValue* out) {

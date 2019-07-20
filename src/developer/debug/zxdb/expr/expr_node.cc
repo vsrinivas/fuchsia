@@ -97,7 +97,7 @@ void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value,
 }  // namespace
 
 void ExprNode::EvalFollowReferences(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  Eval(context, [context, cb = std::move(cb)](const Err& err, ExprValue value) {
+  Eval(context, [context, cb = std::move(cb)](const Err& err, ExprValue value) mutable {
     if (err.has_error())
       cb(err, ExprValue());
     else
@@ -106,7 +106,8 @@ void ExprNode::EvalFollowReferences(fxl::RefPtr<EvalContext> context, EvalCallba
 }
 
 void AddressOfExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  expr_->EvalFollowReferences(context, [cb = std::move(cb)](const Err& err, ExprValue value) {
+  expr_->EvalFollowReferences(context, [cb = std::move(cb)](const Err& err,
+                                                            ExprValue value) mutable {
     if (err.has_error()) {
       cb(err, ExprValue());
     } else if (value.source().type() != ExprValueSource::Type::kMemory) {
@@ -131,30 +132,30 @@ void AddressOfExprNode::Print(std::ostream& out, int indent) const {
 }
 
 void ArrayAccessExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  left_->EvalFollowReferences(
-      context, [inner = inner_, context, cb = std::move(cb)](const Err& err, ExprValue left_value) {
-        if (err.has_error()) {
-          cb(err, ExprValue());
-        } else {
-          // "left" has been evaluated, now do "inner".
-          inner->EvalFollowReferences(
-              context, [context, left_value = std::move(left_value), cb = std::move(cb)](
-                           const Err& err, ExprValue inner_value) {
-                if (err.has_error()) {
-                  cb(err, ExprValue());
-                } else {
-                  // Both "left" and "inner" has been evaluated.
-                  int64_t offset = 0;
-                  Err offset_err = InnerValueToOffset(context, inner_value, &offset);
-                  if (offset_err.has_error()) {
-                    cb(offset_err, ExprValue());
-                  } else {
-                    DoAccess(std::move(context), std::move(left_value), offset, std::move(cb));
-                  }
-                }
-              });
-        }
-      });
+  left_->EvalFollowReferences(context, [inner = inner_, context, cb = std::move(cb)](
+                                           const Err& err, ExprValue left_value) mutable {
+    if (err.has_error()) {
+      cb(err, ExprValue());
+    } else {
+      // "left" has been evaluated, now do "inner".
+      inner->EvalFollowReferences(
+          context, [context, left_value = std::move(left_value), cb = std::move(cb)](
+                       const Err& err, ExprValue inner_value) mutable {
+            if (err.has_error()) {
+              cb(err, ExprValue());
+            } else {
+              // Both "left" and "inner" has been evaluated.
+              int64_t offset = 0;
+              Err offset_err = InnerValueToOffset(context, inner_value, &offset);
+              if (offset_err.has_error()) {
+                cb(offset_err, ExprValue());
+              } else {
+                DoAccess(std::move(context), std::move(left_value), offset, std::move(cb));
+              }
+            }
+          });
+    }
+  });
 }
 
 // static
@@ -184,7 +185,7 @@ Err ArrayAccessExprNode::InnerValueToOffset(fxl::RefPtr<EvalContext> context,
 void ArrayAccessExprNode::DoAccess(fxl::RefPtr<EvalContext> context, ExprValue left, int64_t offset,
                                    EvalCallback cb) {
   ResolveArray(context, left, static_cast<size_t>(offset), static_cast<size_t>(offset) + 1,
-               [cb = std::move(cb)](const Err& err, std::vector<ExprValue> result) {
+               [cb = std::move(cb)](const Err& err, std::vector<ExprValue> result) mutable {
                  if (err.has_error()) {
                    cb(err, ExprValue());
                    return;
@@ -218,7 +219,7 @@ void BinaryOpExprNode::Print(std::ostream& out, int indent) const {
 void CastExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   // Callback that does the cast given the right type of value.
   auto exec_cast = [context, cast_type = cast_type_, to_type = to_type_->type(),
-                    cb = std::move(cb)](const Err& err, ExprValue value) {
+                    cb = std::move(cb)](const Err& err, ExprValue value) mutable {
     if (err.has_error()) {
       cb(err, value);
     } else {
@@ -232,7 +233,7 @@ void CastExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const
   };
 
   from_->Eval(context, [context, cast_type = cast_type_, to_type = to_type_->type(),
-                        exec_cast = std::move(exec_cast)](const Err& err, ExprValue value) {
+                        exec_cast = std::move(exec_cast)](const Err& err, ExprValue value) mutable {
     // This lambda optionally follows the reference on the value according to the requirements of
     // the cast.
     if (err.has_error() || !CastShouldFollowReferences(context.get(), cast_type, value, to_type)) {
@@ -250,10 +251,10 @@ void CastExprNode::Print(std::ostream& out, int indent) const {
 }
 
 void DereferenceExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  expr_->EvalFollowReferences(context,
-                              [context, cb = std::move(cb)](const Err& err, ExprValue value) {
-                                ResolvePointer(context, value, std::move(cb));
-                              });
+  expr_->EvalFollowReferences(
+      context, [context, cb = std::move(cb)](const Err& err, ExprValue value) mutable {
+        ResolvePointer(context, value, std::move(cb));
+      });
 }
 
 void DereferenceExprNode::Print(std::ostream& out, int indent) const {
@@ -273,7 +274,7 @@ void FunctionCallExprNode::Print(std::ostream& out, int indent) const {
 
 void IdentifierExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   context->GetNamedValue(
-      ident_, [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>, ExprValue value) {
+      ident_, [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>, ExprValue value) mutable {
         // Discard resolved symbol, we only need the value.
         cb(err, std::move(value));
       });
@@ -311,7 +312,7 @@ void LiteralExprNode::Print(std::ostream& out, int indent) const {
 void MemberAccessExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   bool is_arrow = accessor_.type() == ExprTokenType::kArrow;
   left_->EvalFollowReferences(context, [context, is_arrow, member = member_, cb = std::move(cb)](
-                                           const Err& err, ExprValue base) {
+                                           const Err& err, ExprValue base) mutable {
     if (!is_arrow) {
       // "." operator.
       ExprValue result;
@@ -323,7 +324,7 @@ void MemberAccessExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback c
     // Everything else should be a -> operator.
     ResolveMemberByPointer(
         context, base, member,
-        [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>, ExprValue result) {
+        [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>, ExprValue result) mutable {
           // Discard resolved symbol, we only need the value.
           cb(err, std::move(result));
         });
@@ -344,7 +345,7 @@ void SizeofExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) con
     // Everything else gets evaluated. Strictly C++ won't do this because it's statically typed, but
     // our expression system is not. This doesn't need to follow references because we only need the
     // type and the
-    expr_->Eval(context, [context, cb = std::move(cb)](const Err& err, ExprValue value) {
+    expr_->Eval(context, [context, cb = std::move(cb)](const Err& err, ExprValue value) mutable {
       if (err.has_error())
         cb(err, ExprValue());
       else
@@ -398,13 +399,13 @@ void TypeExprNode::Print(std::ostream& out, int indent) const {
 }
 
 void UnaryOpExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
-  expr_->EvalFollowReferences(context,
-                              [cb = std::move(cb), op = op_](const Err& err, ExprValue value) {
-                                if (err.has_error())
-                                  cb(err, std::move(value));
-                                else
-                                  EvalUnaryOperator(op, value, std::move(cb));
-                              });
+  expr_->EvalFollowReferences(
+      context, [cb = std::move(cb), op = op_](const Err& err, ExprValue value) mutable {
+        if (err.has_error())
+          cb(err, std::move(value));
+        else
+          EvalUnaryOperator(op, value, std::move(cb));
+      });
 }
 
 void UnaryOpExprNode::Print(std::ostream& out, int indent) const {

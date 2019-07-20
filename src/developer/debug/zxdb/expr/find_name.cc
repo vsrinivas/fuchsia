@@ -47,7 +47,7 @@ bool NameMatches(const FindNameOptions& options, const std::string& name,
 // the visitor says to continue. Searches the given vector of values for one with the given name. If
 // found, returns it, otherwise returns null.
 VisitResult VisitVariableVector(const std::vector<LazySymbol>& vect,
-                                const std::function<VisitResult(const Variable*)>& visitor) {
+                                fit::function<VisitResult(const Variable*)>& visitor) {
   for (const auto& cur : vect) {
     const Variable* var = cur.Get()->AsVariable();
     if (!var)
@@ -108,7 +108,7 @@ VisitResult GetNamesFromDieList(const ModuleSymbols* module_symbols, const FindN
 }
 
 VisitResult VisitPerModule(const FindNameContext& context,
-                           std::function<VisitResult(const ModuleSymbols*)> visitor) {
+                           fit::function<VisitResult(const ModuleSymbols*)> visitor) {
   if (context.module_symbols) {
     // Search in the current module.
     VisitResult vr = visitor(context.module_symbols);
@@ -262,7 +262,7 @@ void FindName(const FindNameContext& context, const FindNameOptions& options,
 }
 
 VisitResult VisitLocalVariables(const CodeBlock* block,
-                                const std::function<VisitResult(const Variable*)>& visitor) {
+                                fit::function<VisitResult(const Variable*)> visitor) {
   return VisitLocalBlocks(block, [&visitor](const CodeBlock* cur_block) {
     // Local variables in this block.
     VisitResult vr = VisitVariableVector(cur_block->variables(), visitor);

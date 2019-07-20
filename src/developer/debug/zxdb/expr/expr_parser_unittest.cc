@@ -63,14 +63,14 @@ class ExprParserTest : public testing::Test {
       return nullptr;
     }
 
-    parser_ = std::make_unique<ExprParser>(tokenizer_->TakeTokens(), name_lookup);
+    parser_ = std::make_unique<ExprParser>(tokenizer_->TakeTokens(), std::move(name_lookup));
     return parser_->Parse();
   }
 
   // Does the parse and returns the string dump of the structure.
   std::string GetParseString(const char* input,
                              NameLookupCallback name_lookup = NameLookupCallback()) {
-    auto root = Parse(input, name_lookup);
+    auto root = Parse(input, std::move(name_lookup));
     if (!root) {
       // Expect calls to this to parse successfully.
       if (parser_.get())

@@ -72,7 +72,7 @@ class FormatNode {
   // asynchronously in the future. The implementation of GetProgramaticValue does not have to worry
   // about the lifetime of the FormatNode, that will be handled by the implementation of the
   // callback passed to it.
-  using GetProgramaticValue = std::function<void(
+  using GetProgramaticValue = fit::function<void(
       fxl::RefPtr<EvalContext> context, fit::callback<void(const Err& err, ExprValue value)> cb)>;
 
   // The original source or the value for this node.
