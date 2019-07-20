@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_TESTS_BENCHMARKS_STORY_TRACING_WAITER_H_
-#define PERIDOT_TESTS_BENCHMARKS_STORY_TRACING_WAITER_H_
+#ifndef SRC_MODULAR_BENCHMARKS_TRACING_WAITER_H_
+#define SRC_MODULAR_BENCHMARKS_TRACING_WAITER_H_
+
+#include <functional>
+#include <memory>
 
 #include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <trace/observer.h>
-
-#include <functional>
-#include <memory>
 
 namespace modular {
 
@@ -36,4 +36,4 @@ class TracingWaiter {
 
 }  // namespace modular
 
-#endif  // PERIDOT_TESTS_BENCHMARKS_STORY_TRACING_WAITER_H_
+#endif  // SRC_MODULAR_BENCHMARKS_TRACING_WAITER_H_

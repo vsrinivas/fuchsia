@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+#include <utility>
+
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -13,9 +16,6 @@
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
 #include <trace/event.h>
-
-#include <memory>
-#include <utility>
 
 #include "peridot/lib/testing/session_shell_impl.h"
 #include "src/modular/benchmarks/tracing_waiter.h"
@@ -43,15 +43,12 @@ class TestStoryWatcher : fuchsia::modular::StoryWatcher {
   void Reset() { binding_.Unbind(); }
 
   // Sets a callback that will be called once the story is running.
-  void OnStoryRunning(fit::function<void()> on_running) {
-    on_running_ = std::move(on_running);
-  }
+  void OnStoryRunning(fit::function<void()> on_running) { on_running_ = std::move(on_running); }
 
  private:
   // |fuchsia::modular::StoryWatcher|
   void OnStateChange(fuchsia::modular::StoryState state) override {
-    FXL_LOG(INFO) << "TestStoryWatcher.OnStateChange(): "
-                  << fidl::ToUnderlying(state);
+    FXL_LOG(INFO) << "TestStoryWatcher.OnStateChange(): " << fidl::ToUnderlying(state);
     if (state != fuchsia::modular::StoryState::RUNNING) {
       return;
     }
@@ -78,17 +75,13 @@ class TestLinkWatcher : fuchsia::modular::LinkWatcher {
 
   // Registers itself as a watcher on the given link. Only one story at a time
   // can be watched.
-  void Watch(fuchsia::modular::Link* const link) {
-    link->WatchAll(binding_.NewBinding());
-  }
+  void Watch(fuchsia::modular::Link* const link) { link->WatchAll(binding_.NewBinding()); }
 
   // Deregisters itself from the watched story.
   void Reset() { binding_.Unbind(); }
 
   // Sets the function that is called when the link changes.
-  void OnNotify(fit::function<void(fidl::StringPtr)> callback) {
-    on_notify_ = std::move(callback);
-  }
+  void OnNotify(fit::function<void(fidl::StringPtr)> callback) { on_notify_ = std::move(callback); }
 
  private:
   // |fuchsia::modular::LinkWatcher|
@@ -110,9 +103,7 @@ class TestLinkWatcher : fuchsia::modular::LinkWatcher {
 // implementation of fuchsia::modular::SessionShell built for tests.
 class TestSessionShell : public modular::testing::FakeComponent {
  public:
-  fuchsia::modular::StoryProvider* story_provider() {
-    return story_provider_.get();
-  }
+  fuchsia::modular::StoryProvider* story_provider() { return story_provider_.get(); }
 
   fuchsia::modular::SessionShellContext* session_shell_context() {
     return session_shell_context_.get();
@@ -124,8 +115,7 @@ class TestSessionShell : public modular::testing::FakeComponent {
     component_context()->svc()->Connect(session_shell_context_.NewRequest());
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    component_context()->outgoing()->AddPublicService(
-        session_shell_impl_.GetHandler());
+    component_context()->outgoing()->AddPublicService(session_shell_impl_.GetHandler());
   }
 
   modular::testing::SessionShellImpl session_shell_impl_;
@@ -135,8 +125,7 @@ class TestSessionShell : public modular::testing::FakeComponent {
 
 // This module repeatedly updates its root link a number of times and then
 // just sits there until it's terminated.
-class TestModule : public modular::testing::FakeModule,
-                   fuchsia::modular::LinkWatcher {
+class TestModule : public modular::testing::FakeModule, fuchsia::modular::LinkWatcher {
  public:
   TestModule() : link_watcher_binding_(this) {}
 
@@ -213,18 +202,16 @@ class StoryBenchmarkTest : public modular::testing::TestHarnessFixture {
     story_watcher_ = std::make_unique<TestStoryWatcher>();
 
     session_shell_ = std::make_unique<TestSessionShell>();
-    builder.InterceptSessionShell(
-        session_shell_->GetOnCreateHandler(),
-        {.sandbox_services = {"fuchsia.modular.SessionShellContext",
-                              "fuchsia.modular.PuppetMaster"}});
+    builder.InterceptSessionShell(session_shell_->GetOnCreateHandler(),
+                                  {.sandbox_services = {"fuchsia.modular.SessionShellContext",
+                                                        "fuchsia.modular.PuppetMaster"}});
 
     // Listen for the module that is created in CreateStory().
     module_ = std::make_unique<TestModule>();
     module_url_ = modular::testing::GenerateFakeUrl();
     builder.InterceptComponent(
         module_->GetOnCreateHandler(),
-        {.url = module_url_,
-         .sandbox_services = module_->GetSandboxServices()});
+        {.url = module_url_, .sandbox_services = module_->GetSandboxServices()});
 
     TRACE_ASYNC_BEGIN("benchmark", "session/start", 0);
     builder.BuildAndRun(test_harness());
@@ -250,8 +237,7 @@ class StoryBenchmarkTest : public modular::testing::TestHarnessFixture {
 
     story_name_ = story_name;
 
-    puppet_master_->ControlStory(story_name_,
-                                 story_puppet_master_.NewRequest());
+    puppet_master_->ControlStory(story_name_, story_puppet_master_.NewRequest());
 
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name_transitional = kModName;
@@ -272,8 +258,7 @@ class StoryBenchmarkTest : public modular::testing::TestHarnessFixture {
     // Wait for the story to be created.
     RunLoopUntil([&] { return is_created; });
 
-    session_shell_->story_provider()->GetController(
-        story_name_, story_controller_.NewRequest());
+    session_shell_->story_provider()->GetController(story_name_, story_controller_.NewRequest());
   }
 
   void StoryInfo() {
@@ -281,11 +266,11 @@ class StoryBenchmarkTest : public modular::testing::TestHarnessFixture {
     TRACE_ASYNC_BEGIN("benchmark", "story/info", 0);
 
     bool got_story_info{false};
-    story_controller_->GetInfo([&](fuchsia::modular::StoryInfo story_info,
-                                   fuchsia::modular::StoryState state) {
-      TRACE_ASYNC_END("benchmark", "story/info", 0);
-      got_story_info = true;
-    });
+    story_controller_->GetInfo(
+        [&](fuchsia::modular::StoryInfo story_info, fuchsia::modular::StoryState state) {
+          TRACE_ASYNC_END("benchmark", "story/info", 0);
+          got_story_info = true;
+        });
 
     // Wait for the story info to be returned.
     RunLoopUntil([&] { return got_story_info; });
@@ -395,8 +380,8 @@ TEST_F(StoryBenchmarkTest, Loop) {
   for (int i = 1; i <= kStoryCount; i++) {
     auto story_name = std::string(kStoryNamePrefix) + std::to_string(i);
 
-    FXL_LOG(INFO) << "Creating story \"" << story_name << "\" (" << i << " of "
-                  << kStoryCount << ")";
+    FXL_LOG(INFO) << "Creating story \"" << story_name << "\" (" << i << " of " << kStoryCount
+                  << ")";
 
     CreateStory(story_name);
     StoryInfo();
