@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <ktl/unique_ptr.h>
 #include <lib/unittest/unittest.h>
 #include <lib/unittest/user_memory.h>
 #include <lib/user_copy/user_ptr.h>
+
+#include <ktl/unique_ptr.h>
 
 #include "object/message_packet.h"
 

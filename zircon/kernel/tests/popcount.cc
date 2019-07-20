@@ -4,9 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/unittest/unittest.h>
+
 #include <fbl/macros.h>
 #include <ktl/popcount.h>
-#include <lib/unittest/unittest.h>
 
 #include "tests.h"
 

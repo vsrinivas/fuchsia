@@ -7,15 +7,16 @@
 
 #include <assert.h>
 #include <err.h>
-#include <fbl/alloc_checker.h>
 #include <inttypes.h>
 #include <lib/userabi/vdso.h>
 #include <pow2.h>
 #include <trace.h>
+#include <zircon/types.h>
+
+#include <fbl/alloc_checker.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
-#include <zircon/types.h>
 
 #include "vm_priv.h"
 

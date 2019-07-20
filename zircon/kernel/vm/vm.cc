@@ -6,23 +6,24 @@
 // https://opensource.org/licenses/MIT
 #include "vm/vm.h"
 
-#include <arch/mmu.h>
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
-#include <fbl/algorithm.h>
 #include <inttypes.h>
-#include <kernel/thread.h>
 #include <lib/console.h>
 #include <lib/crypto/global_prng.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/types.h>
+
+#include <arch/mmu.h>
+#include <fbl/algorithm.h>
+#include <kernel/thread.h>
 #include <vm/bootalloc.h>
 #include <vm/init.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
-#include <zircon/types.h>
 
 #include "vm_priv.h"
 

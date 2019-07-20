@@ -7,9 +7,10 @@
 #ifndef ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_ENTROPY_COLLECTOR_H_
 #define ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_ENTROPY_COLLECTOR_H_
 
-#include <fbl/name.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#include <fbl/name.h>
 
 namespace crypto {
 

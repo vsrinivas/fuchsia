@@ -7,9 +7,10 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_VCPU_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_VCPU_DISPATCHER_H_
 
+#include <zircon/rights.h>
+
 #include <object/dispatcher.h>
 #include <object/handle.h>
-#include <zircon/rights.h>
 
 class GuestDispatcher;
 class Vcpu;

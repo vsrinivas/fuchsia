@@ -4,11 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/unittest/unittest.h>
+#include <platform.h>
+
 #include <kernel/semaphore.h>
 #include <kernel/thread_lock.h>
-#include <lib/unittest/unittest.h>
 #include <lockdep/lockdep.h>
-#include <platform.h>
 
 using lockdep::Guard;
 // using lockdep::ThreadLock;

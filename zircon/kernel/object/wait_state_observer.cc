@@ -7,6 +7,7 @@
 #include "object/wait_state_observer.h"
 
 #include <assert.h>
+
 #include <kernel/event.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>

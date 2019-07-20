@@ -6,11 +6,12 @@
 
 #include "object/mbuf.h"
 
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
 #include <lib/user_copy/user_ptr.h>
 
 #include <type_traits>
+
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 
 #define LOCAL_TRACE 0
 

@@ -4,12 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <kernel/mutex.h>
 #include <lib/unittest/unittest.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <stdint.h>
+
+#include <kernel/mutex.h>
 #include <lockdep/guard_multiple.h>
 #include <lockdep/lockdep.h>
-#include <stdint.h>
 
 #include "tests.h"
 

@@ -11,10 +11,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
-#include <fbl/auto_call.h>
 #include <inttypes.h>
-#include <kernel/mutex.h>
-#include <kernel/thread.h>
 #include <lib/unittest/unittest.h>
 #include <platform.h>
 #include <stdbool.h>
@@ -23,9 +20,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <vm/vm_aspace.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <fbl/auto_call.h>
+#include <kernel/mutex.h>
+#include <kernel/thread.h>
+#include <vm/vm_aspace.h>
 
 // Ensures unittests are not run concurrently.
 namespace {

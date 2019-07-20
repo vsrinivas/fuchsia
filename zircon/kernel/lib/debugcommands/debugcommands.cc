@@ -6,21 +6,22 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch.h>
-#include <arch/ops.h>
 #include <ctype.h>
 #include <debug.h>
-#include <kernel/cmdline.h>
-#include <kernel/thread.h>
 #include <lib/console.h>
 #include <list.h>
 #include <platform.h>
-#include <platform/debug.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <vm/pmm.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+
+#include <arch/ops.h>
+#include <kernel/cmdline.h>
+#include <kernel/thread.h>
+#include <platform/debug.h>
+#include <vm/pmm.h>
 
 static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_modify_mem(int argc, const cmd_args *argv, uint32_t flags);

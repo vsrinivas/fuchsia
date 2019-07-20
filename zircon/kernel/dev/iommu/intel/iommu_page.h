@@ -8,8 +8,9 @@
 #define ZIRCON_KERNEL_DEV_IOMMU_INTEL_IOMMU_PAGE_H_
 
 #include <err.h>
-#include <fbl/macros.h>
 #include <stdint.h>
+
+#include <fbl/macros.h>
 #include <vm/pmm.h>
 
 namespace intel_iommu {

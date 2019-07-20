@@ -5,12 +5,13 @@
 #ifndef ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_INLINE_ARRAY_H_
 #define ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_INLINE_ARRAY_H_
 
-#include <fbl/alloc_checker.h>
-#include <fbl/macros.h>
 #include <stddef.h>
 #include <zircon/assert.h>
 
 #include <new>
+
+#include <fbl/alloc_checker.h>
+#include <fbl/macros.h>
 
 namespace fbl {
 

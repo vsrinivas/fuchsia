@@ -7,9 +7,10 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_ACPI_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_ACPI_H_
 
+#include <stdint.h>
+
 #include <acpica/acpi.h>
 #include <arch/x86/bootstrap16.h>
-#include <stdint.h>
 
 __BEGIN_CDECLS
 

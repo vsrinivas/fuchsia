@@ -5,13 +5,14 @@
 // https://opensource.org/licenses/MIT
 #include <assert.h>
 #include <err.h>
-#include <fbl/auto_call.h>
 #include <inttypes.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/types.h>
+
+#include <fbl/auto_call.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
-#include <zircon/types.h>
 
 #include "vm/vm_address_region.h"
 #include "vm_priv.h"

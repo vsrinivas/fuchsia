@@ -8,12 +8,13 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_SPINLOCK_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_SPINLOCK_H_
 
-#include <arch/x86.h>
-#include <arch/x86/mp.h>
-#include <kernel/atomic.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdbool.h>
 #include <zircon/compiler.h>
+
+#include <arch/x86.h>
+#include <arch/x86/mp.h>
+#include <kernel/atomic.h>
 
 __BEGIN_CDECLS
 

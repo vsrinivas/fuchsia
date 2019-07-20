@@ -8,12 +8,13 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ASPACE_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ASPACE_H_
 
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <arch/arm64/mmu.h>
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 #include <vm/arch_vm_aspace.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 class ArmArchVmAspace final : public ArchVmAspaceInterface {
  public:

@@ -7,6 +7,9 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_HANDLE_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_HANDLE_H_
 
+#include <stdint.h>
+#include <zircon/types.h>
+
 #include <fbl/arena.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
@@ -16,8 +19,6 @@
 #include <kernel/lockdep.h>
 #include <ktl/atomic.h>
 #include <ktl/move.h>
-#include <stdint.h>
-#include <zircon/types.h>
 
 class Dispatcher;
 class Handle;

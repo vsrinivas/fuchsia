@@ -5,9 +5,10 @@
 #ifndef KERNEL_LIB_APIC_TABLES_H
 #define KERNEL_LIB_APIC_TABLES_H
 
+#include <zircon/types.h>
+
 #include <acpica/acpi.h>
 #include <arch/x86/apic.h>
-#include <zircon/types.h>
 
 // TODO(edcoyne): rename this to C++ naming.
 struct acpi_hpet_descriptor {

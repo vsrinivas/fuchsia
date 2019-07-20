@@ -29,11 +29,12 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
+#include <sys/types.h>
+#include <zircon/types.h>
+
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
-#include <sys/types.h>
-#include <zircon/types.h>
 
 /**
  * @brief  Destroy an event object.

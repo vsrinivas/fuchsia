@@ -7,10 +7,11 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_ARCH_VM_ASPACE_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_ARCH_VM_ASPACE_H_
 
-#include <arch/mmu.h>
-#include <fbl/macros.h>
 #include <sys/types.h>
 #include <zircon/types.h>
+
+#include <arch/mmu.h>
+#include <fbl/macros.h>
 
 // Flags
 const uint ARCH_MMU_FLAG_CACHED = (0u << 0);

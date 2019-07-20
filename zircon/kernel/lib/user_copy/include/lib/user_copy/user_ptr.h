@@ -5,12 +5,14 @@
 #ifndef ZIRCON_KERNEL_LIB_USER_COPY_INCLUDE_LIB_USER_COPY_USER_PTR_H_
 #define ZIRCON_KERNEL_LIB_USER_COPY_INCLUDE_LIB_USER_COPY_USER_PTR_H_
 
-#include <arch/user_copy.h>
 #include <lib/user_copy/internal.h>
-#include <vm/vm.h>
+#include <stddef.h>
 #include <zircon/types.h>
 
 #include <type_traits>
+
+#include <arch/user_copy.h>
+#include <vm/vm.h>
 
 // user_*_ptr<> wraps a pointer to user memory, to differentiate it from kernel
 // memory. They can be in, out, or inout pointers.

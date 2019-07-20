@@ -8,10 +8,11 @@
 // support so that individual platforms do not need to provide
 // them if they only partially support MSI.
 
-#include <dev/interrupt.h>
 #include <stdbool.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <dev/interrupt.h>
 
 __WEAK bool msi_is_supported() { return false; }
 

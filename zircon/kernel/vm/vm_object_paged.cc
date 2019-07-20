@@ -3,26 +3,28 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#include <arch/ops.h>
+#include "vm/vm_object_paged.h"
+
 #include <assert.h>
 #include <err.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <inttypes.h>
-#include <ktl/move.h>
 #include <lib/console.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/types.h>
+
+#include <arch/ops.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
+#include <ktl/move.h>
 #include <vm/bootreserve.h>
 #include <vm/fault.h>
 #include <vm/page_source.h>
 #include <vm/physmap.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
-#include <zircon/types.h>
 
-#include "vm/vm_object_paged.h"
 #include "vm_priv.h"
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)

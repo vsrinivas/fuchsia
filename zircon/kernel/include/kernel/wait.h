@@ -8,16 +8,17 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_WAIT_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_WAIT_H_
 
+#include <list.h>
+#include <sys/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <arch/defines.h>
 #include <arch/ops.h>
 #include <arch/thread.h>
 #include <kernel/deadline.h>
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
-#include <list.h>
-#include <sys/types.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 __BEGIN_CDECLS
 

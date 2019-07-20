@@ -5,25 +5,26 @@
 // https://opensource.org/licenses/MIT
 #include "arch/x86/mmu.h"
 
+#include <assert.h>
+#include <err.h>
+#include <lib/counters.h>
+#include <string.h>
+#include <trace.h>
+#include <zircon/types.h>
+
+#include <new>
+
 #include <arch/arch_ops.h>
 #include <arch/mmu.h>
 #include <arch/x86.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu_mem_types.h>
-#include <assert.h>
-#include <err.h>
 #include <kernel/mp.h>
-#include <lib/counters.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
-#include <zircon/types.h>
-
-#include <new>
 
 #define LOCAL_TRACE 0
 

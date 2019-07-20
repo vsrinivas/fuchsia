@@ -24,14 +24,26 @@
 // TODO(dje): rdpmc
 #include "arch/x86/perf_mon.h"
 
+#include <assert.h>
+#include <err.h>
+#include <lib/ktrace.h>
+#include <lib/pci/pio.h>
+#include <lib/perfmon.h>
+#include <lib/zircon-internal/mtrace.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <platform.h>
+#include <pow2.h>
+#include <string.h>
+#include <trace.h>
+
+#include <new>
+
 #include <arch/arch_ops.h>
 #include <arch/mmu.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
-#include <assert.h>
-#include <err.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
@@ -43,22 +55,11 @@
 #include <kernel/thread.h>
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
-#include <lib/ktrace.h>
-#include <lib/pci/pio.h>
-#include <lib/perfmon.h>
-#include <lib/zircon-internal/mtrace.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <lk/init.h>
-#include <platform.h>
-#include <pow2.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_physical.h>
-
-#include <new>
 
 #define LOCAL_TRACE 0
 

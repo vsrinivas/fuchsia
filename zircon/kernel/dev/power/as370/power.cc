@@ -4,12 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <zircon/boot/driver-config.h>
+
 #include <arch/arm64/periphmap.h>
 #include <dev/power.h>
 #include <dev/psci.h>
 #include <pdev/driver.h>
 #include <pdev/power.h>
-#include <zircon/boot/driver-config.h>
 
 static constexpr paddr_t kDwWdt0Cr = 0xf7e8'0400;
 static constexpr paddr_t kDwWdt0Crr = 0xf7e8'040c;

@@ -8,12 +8,13 @@
 #ifndef ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_ADDRESS_PROVIDER_ADDRESS_PROVIDER_H_
 #define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_ADDRESS_PROVIDER_ADDRESS_PROVIDER_H_
 
+#include <sys/types.h>
+#include <zircon/types.h>
+
 #include <dev/address_provider/ecam_region.h>
 #include <dev/pci_config.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
-#include <sys/types.h>
-#include <zircon/types.h>
 
 // PcieAddressProvider is an interface that implements translation from a BDF to
 // a PCI ECAM address.

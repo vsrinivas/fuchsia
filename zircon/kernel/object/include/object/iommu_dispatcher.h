@@ -7,12 +7,13 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_IOMMU_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_IOMMU_DISPATCHER_H_
 
+#include <sys/types.h>
+#include <zircon/rights.h>
+
 #include <dev/iommu.h>
 #include <fbl/canary.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
-#include <sys/types.h>
-#include <zircon/rights.h>
 
 class IommuDispatcher final : public SoloDispatcher<IommuDispatcher, ZX_DEFAULT_IOMMU_RIGHTS> {
  public:

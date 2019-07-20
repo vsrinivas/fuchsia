@@ -7,13 +7,14 @@
 #ifndef ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_PRNG_H_
 #define ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_PRNG_H_
 
+#include <lib/zircon-internal/thread_annotations.h>
+#include <stddef.h>
+#include <stdint.h>
+
 #include <kernel/event.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <ktl/atomic.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <stddef.h>
-#include <stdint.h>
 
 namespace crypto {
 

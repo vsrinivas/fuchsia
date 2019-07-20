@@ -4,21 +4,22 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <bits.h>
+#include <lib/ktrace.h>
+#include <zircon/syscalls/hypervisor.h>
+
+#include <new>
+
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/pvclock.h>
-#include <bits.h>
 #include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
 #include <hypervisor/ktrace.h>
 #include <kernel/mp.h>
-#include <lib/ktrace.h>
 #include <vm/fault.h>
 #include <vm/pmm.h>
 #include <vm/vm_object.h>
-#include <zircon/syscalls/hypervisor.h>
-
-#include <new>
 
 #include "pvclock_priv.h"
 #include "vcpu_priv.h"

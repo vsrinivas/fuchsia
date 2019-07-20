@@ -5,11 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/arm64.h>
 #include <assert.h>
 #include <bits.h>
-#include <kernel/thread.h>
 #include <trace.h>
+
+#include <arch/arm64.h>
+#include <kernel/thread.h>
 
 #define LOCAL_TRACE 0
 

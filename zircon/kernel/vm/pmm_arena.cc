@@ -7,14 +7,15 @@
 
 #include <err.h>
 #include <inttypes.h>
-#include <ktl/limits.h>
-#include <pretty/sizes.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/types.h>
+
+#include <ktl/limits.h>
+#include <pretty/sizes.h>
 #include <vm/bootalloc.h>
 #include <vm/bootreserve.h>
 #include <vm/physmap.h>
-#include <zircon/types.h>
 
 #include "pmm_node.h"
 #include "vm_priv.h"

@@ -7,19 +7,20 @@
 // TODO(gkalsi): Unify the two UART codepaths and use the port parameter to
 // select between the real uart and the miniuart.
 
-#include <arch/arm64/periphmap.h>
-#include <dev/interrupt.h>
-#include <dev/uart.h>
-#include <kernel/thread.h>
 #include <lib/cbuf.h>
 #include <lib/debuglog.h>
-#include <pdev/driver.h>
-#include <pdev/uart.h>
-#include <platform/debug.h>
 #include <reg.h>
 #include <stdio.h>
 #include <trace.h>
 #include <zircon/boot/driver-config.h>
+
+#include <arch/arm64/periphmap.h>
+#include <dev/interrupt.h>
+#include <dev/uart.h>
+#include <kernel/thread.h>
+#include <pdev/driver.h>
+#include <pdev/uart.h>
+#include <platform/debug.h>
 
 // clang-format off
 

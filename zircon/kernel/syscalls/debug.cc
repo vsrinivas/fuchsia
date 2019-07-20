@@ -11,17 +11,18 @@
 #include <lib/ktrace.h>
 #include <lib/mtrace.h>
 #include <lib/user_copy/user_ptr.h>
-#include <object/handle.h>
-#include <object/process_dispatcher.h>
-#include <object/resource.h>
 #include <platform.h>
-#include <platform/debug.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/syscalls/debug.h>
+
+#include <object/handle.h>
+#include <object/process_dispatcher.h>
+#include <object/resource.h>
+#include <platform/debug.h>
 
 #include "priv.h"
 

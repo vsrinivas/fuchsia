@@ -8,11 +8,12 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_DEBUG_H_
 #define ZIRCON_KERNEL_INCLUDE_DEBUG_H_
 
-#include <platform/debug.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/compiler.h>
+
+#include <platform/debug.h>
 
 #if !defined(LK_DEBUGLEVEL)
 #define LK_DEBUGLEVEL 0

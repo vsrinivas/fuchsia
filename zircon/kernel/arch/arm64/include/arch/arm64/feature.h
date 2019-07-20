@@ -7,10 +7,11 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_FEATURE_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_FEATURE_H_
 
-#include <arch/arm64.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/features.h>
+
+#include <arch/arm64.h>
 
 __BEGIN_CDECLS
 

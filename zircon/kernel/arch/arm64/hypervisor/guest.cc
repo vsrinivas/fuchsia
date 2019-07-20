@@ -4,11 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <zircon/syscalls/hypervisor.h>
+
 #include <arch/hypervisor.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <vm/pmm.h>
-#include <zircon/syscalls/hypervisor.h>
 
 #include "el2_cpu_state_priv.h"
 

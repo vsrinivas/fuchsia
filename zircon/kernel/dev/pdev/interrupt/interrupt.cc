@@ -5,11 +5,12 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
+#include <zircon/types.h>
+
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
 #include <lk/init.h>
 #include <pdev/interrupt.h>
-#include <zircon/types.h>
 
 #define ARM_MAX_INT 1024
 

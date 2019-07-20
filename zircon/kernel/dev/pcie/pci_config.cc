@@ -6,11 +6,12 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <dev/pci_config.h>
-#include <fbl/alloc_checker.h>
 #include <inttypes.h>
 #include <lib/pci/pio.h>
 #include <trace.h>
+
+#include <dev/pci_config.h>
+#include <fbl/alloc_checker.h>
 
 #define LOCAL_TRACE 0
 

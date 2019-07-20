@@ -7,13 +7,14 @@
 #ifndef ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_ARENA_H_
 #define ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_ARENA_H_
 
+#include <stddef.h>
+
+#include <new>
+
 #include <fbl/intrusive_single_list.h>
 #include <fbl/ref_ptr.h>
 #include <ktl/forward.h>
-#include <stddef.h>
 #include <vm/vm_address_region.h>
-
-#include <new>
 
 namespace fbl {
 

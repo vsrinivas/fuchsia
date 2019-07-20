@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/x86/feature.h>
 #include <assert.h>
 #include <lib/code_patching.h>
 #include <stddef.h>
+
+#include <arch/x86/feature.h>
 
 extern "C" {
 

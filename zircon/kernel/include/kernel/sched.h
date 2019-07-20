@@ -7,10 +7,11 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_SCHED_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_SCHED_H_
 
-#include <kernel/thread.h>
 #include <list.h>
 #include <stdbool.h>
 #include <zircon/compiler.h>
+
+#include <kernel/thread.h>
 
 __BEGIN_CDECLS
 

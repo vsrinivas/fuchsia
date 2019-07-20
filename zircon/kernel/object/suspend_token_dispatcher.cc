@@ -7,13 +7,14 @@
 #include "object/suspend_token_dispatcher.h"
 
 #include <err.h>
+#include <lib/counters.h>
+#include <zircon/rights.h>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <kernel/auto_lock.h>
-#include <lib/counters.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
-#include <zircon/rights.h>
 
 KCOUNTER(dispatcher_suspend_token_create_count, "dispatcher.suspend_token.create")
 KCOUNTER(dispatcher_suspend_token_destroy_count, "dispatcher.suspend_token.destroy")

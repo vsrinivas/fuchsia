@@ -7,17 +7,18 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_SOCKET_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_SOCKET_DISPATCHER_H_
 
+#include <lib/user_copy/user_ptr.h>
+#include <stdint.h>
+#include <zircon/rights.h>
+#include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
-#include <lib/user_copy/user_ptr.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
 #include <object/mbuf.h>
-#include <stdint.h>
-#include <zircon/rights.h>
-#include <zircon/types.h>
 
 class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher, ZX_DEFAULT_SOCKET_RIGHTS> {
  public:

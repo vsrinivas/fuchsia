@@ -7,11 +7,12 @@
 
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/thread.h>
 #include <platform.h>
 #include <rand.h>
 #include <stdio.h>
 #include <zircon/types.h>
+
+#include <kernel/thread.h>
 
 #include "tests.h"
 

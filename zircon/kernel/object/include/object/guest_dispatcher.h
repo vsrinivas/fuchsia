@@ -7,10 +7,11 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_GUEST_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_GUEST_DISPATCHER_H_
 
-#include <object/handle.h>
-#include <object/port_dispatcher.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/types.h>
+
+#include <object/handle.h>
+#include <object/port_dispatcher.h>
 
 class Guest;
 class VmObject;

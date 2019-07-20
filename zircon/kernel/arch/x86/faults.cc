@@ -6,6 +6,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <debug.h>
+#include <lib/counters.h>
+#include <lib/crashlog.h>
+#include <lib/ktrace.h>
+#include <platform.h>
+#include <trace.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
+
 #include <arch/exception.h>
 #include <arch/user_copy.h>
 #include <arch/x86.h>
@@ -15,19 +24,11 @@
 #include <arch/x86/interrupts.h>
 #include <arch/x86/perf_mon.h>
 #include <arch/x86/registers.h>
-#include <debug.h>
 #include <fbl/auto_call.h>
 #include <kernel/interrupt.h>
 #include <kernel/thread.h>
-#include <lib/counters.h>
-#include <lib/crashlog.h>
-#include <lib/ktrace.h>
-#include <platform.h>
-#include <trace.h>
 #include <vm/fault.h>
 #include <vm/vm.h>
-#include <zircon/syscalls/exception.h>
-#include <zircon/types.h>
 
 // Returns whether the register state indicates that the CPU was executing
 // userland code.

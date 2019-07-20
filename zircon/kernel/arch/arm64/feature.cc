@@ -5,10 +5,11 @@
 // https://opensource.org/licenses/MIT
 #include "arch/arm64/feature.h"
 
-#include <arch/arm64.h>
 #include <bits.h>
-#include <fbl/algorithm.h>
 #include <inttypes.h>
+
+#include <arch/arm64.h>
+#include <fbl/algorithm.h>
 
 // saved feature bitmap
 uint32_t arm64_features;

@@ -9,10 +9,11 @@
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_PMM_H_
 
 #include <sys/types.h>
-#include <vm/page.h>
-#include <vm/page_request.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <vm/page.h>
+#include <vm/page_request.h>
 
 // physical allocator
 typedef struct pmm_arena_info {

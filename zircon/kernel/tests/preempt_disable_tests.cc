@@ -4,14 +4,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/unittest/unittest.h>
+#include <platform.h>
+
 #include <kernel/event.h>
 #include <kernel/interrupt.h>
 #include <kernel/sched.h>
 #include <kernel/thread_lock.h>
 #include <kernel/timer.h>
 #include <ktl/atomic.h>
-#include <lib/unittest/unittest.h>
-#include <platform.h>
 
 // Test that preempt_disable is set for timer callbacks and that, in this
 // context, preempt_pending will get set by some functions.

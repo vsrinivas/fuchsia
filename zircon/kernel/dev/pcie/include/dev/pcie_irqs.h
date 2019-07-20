@@ -9,16 +9,17 @@
 #define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_IRQS_H_
 
 #include <assert.h>
+#include <err.h>
+#include <sys/types.h>
+
 #include <dev/interrupt.h>
 #include <dev/pcie_platform.h>
-#include <err.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/spinlock.h>
 #include <region-alloc/region-alloc.h>
-#include <sys/types.h>
 
 /* Fwd decls */
 class PcieDevice;

@@ -6,8 +6,9 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_MMU_MEM_TYPES_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_MMU_MEM_TYPES_H_
 
-#include <kernel/cpu.h>
 #include <zircon/compiler.h>
+
+#include <kernel/cpu.h>
 
 __BEGIN_CDECLS
 

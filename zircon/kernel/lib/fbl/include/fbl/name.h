@@ -7,13 +7,14 @@
 #ifndef ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_NAME_H_
 #define ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_NAME_H_
 
-#include <fbl/algorithm.h>
-#include <kernel/auto_lock.h>
-#include <kernel/spinlock.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <string.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <fbl/algorithm.h>
+#include <kernel/auto_lock.h>
+#include <kernel/spinlock.h>
 
 namespace fbl {
 

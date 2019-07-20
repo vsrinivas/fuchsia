@@ -7,14 +7,15 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_DEV_IOMMU_H_
 #define ZIRCON_KERNEL_INCLUDE_DEV_IOMMU_H_
 
-#include <fbl/intrusive_double_list.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <inttypes.h>
-#include <kernel/mutex.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdbool.h>
 #include <sys/types.h>
+
+#include <fbl/intrusive_double_list.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <kernel/mutex.h>
 #include <vm/vm_object.h>
 
 #define IOMMU_FLAG_PERM_READ (1 << 0)

@@ -24,8 +24,9 @@
 #include <arch.h>
 #include <assert.h>
 #include <inttypes.h>
-#include <vm/vm.h>
 #include <zircon/compiler.h>
+
+#include <vm/vm.h>
 
 __BEGIN_CDECLS
 

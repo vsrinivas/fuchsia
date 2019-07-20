@@ -8,9 +8,10 @@
 
 #include <assert.h>
 #include <err.h>
-#include <fbl/alloc_checker.h>
 #include <lib/counters.h>
 #include <zircon/rights.h>
+
+#include <fbl/alloc_checker.h>
 
 KCOUNTER(dispatcher_eventpair_create_count, "dispatcher.eventpair.create")
 KCOUNTER(dispatcher_eventpair_destroy_count, "dispatcher.eventpair.destroy")

@@ -7,14 +7,15 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EXCEPTION_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EXCEPTION_DISPATCHER_H_
 
+#include <zircon/rights.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
+
 #include <arch/exception.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/event.h>
 #include <object/dispatcher.h>
 #include <object/thread_dispatcher.h>
-#include <zircon/rights.h>
-#include <zircon/syscalls/exception.h>
-#include <zircon/types.h>
 
 // Zircon channel-based exception handling uses two primary classes,
 // ExceptionDispatcher (this file) and Exceptionate (exceptionate.h).

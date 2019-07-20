@@ -7,11 +7,12 @@
 #ifndef ZIRCON_KERNEL_DEV_INTERRUPT_INCLUDE_DEV_INTERRUPT_H_
 #define ZIRCON_KERNEL_DEV_INTERRUPT_INCLUDE_DEV_INTERRUPT_H_
 
-#include <kernel/mp.h>
 #include <stdbool.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <kernel/mp.h>
 
 __BEGIN_CDECLS
 

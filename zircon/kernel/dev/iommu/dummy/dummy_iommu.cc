@@ -4,13 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <dev/iommu/dummy.h>
 #include <err.h>
+
+#include <new>
+
+#include <dev/iommu/dummy.h>
 #include <fbl/ref_ptr.h>
 #include <ktl/move.h>
 #include <vm/vm.h>
-
-#include <new>
 
 #define INVALID_PADDR UINT64_MAX
 

@@ -6,10 +6,11 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <dev/interrupt/arm_gic_common.h>
-#include <dev/interrupt/arm_gic_hw_interface.h>
 #include <err.h>
 #include <zircon/types.h>
+
+#include <dev/interrupt/arm_gic_common.h>
+#include <dev/interrupt/arm_gic_hw_interface.h>
 
 static const struct arm_gic_hw_interface_ops* gic_ops = nullptr;
 

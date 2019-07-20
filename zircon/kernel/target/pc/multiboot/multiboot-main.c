@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
-#include <libzbi/zbi.h>
 #include <string.h>
 #include <zircon/boot/e820.h>
+
+#include <libzbi/zbi.h>
 
 #include "trampoline.h"
 

@@ -4,19 +4,20 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/arm64/periphmap.h>
-#include <dev/interrupt.h>
-#include <dev/uart.h>
-#include <kernel/thread.h>
 #include <lib/cbuf.h>
 #include <lib/debuglog.h>
-#include <pdev/driver.h>
-#include <pdev/uart.h>
 #include <reg.h>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/boot/driver-config.h>
+
+#include <arch/arm64/periphmap.h>
+#include <dev/interrupt.h>
+#include <dev/uart.h>
+#include <kernel/thread.h>
+#include <pdev/driver.h>
+#include <pdev/uart.h>
 
 // clang-format off
 

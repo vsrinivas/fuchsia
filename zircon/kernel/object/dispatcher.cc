@@ -6,12 +6,13 @@
 
 #include "object/dispatcher.h"
 
-#include <arch/ops.h>
-#include <fbl/mutex.h>
 #include <inttypes.h>
-#include <ktl/atomic.h>
 #include <lib/counters.h>
 #include <lib/ktrace.h>
+
+#include <arch/ops.h>
+#include <fbl/mutex.h>
+#include <ktl/atomic.h>
 #include <object/tls_slots.h>
 
 // kernel counters. The following counters never decrease.

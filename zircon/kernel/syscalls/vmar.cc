@@ -5,15 +5,16 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <fbl/auto_call.h>
-#include <fbl/ref_ptr.h>
 #include <inttypes.h>
 #include <lib/user_copy/user_ptr.h>
+#include <trace.h>
+
+#include <fbl/auto_call.h>
+#include <fbl/ref_ptr.h>
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
-#include <trace.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_object.h>
 

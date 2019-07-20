@@ -7,21 +7,22 @@
 //
 #include <assert.h>
 #include <debug.h>
+#include <err.h>
+#include <list.h>
+#include <pow2.h>
+#include <string.h>
+#include <trace.h>
+
 #include <dev/interrupt.h>
 #include <dev/pci_config.h>
 #include <dev/pcie_bridge.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
 #include <dev/pcie_root.h>
-#include <err.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <kernel/spinlock.h>
 #include <ktl/move.h>
-#include <list.h>
-#include <pow2.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/vm.h>
 
 using fbl::AutoLock;

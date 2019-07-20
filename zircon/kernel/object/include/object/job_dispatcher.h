@@ -7,6 +7,9 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_JOB_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_JOB_DISPATCHER_H_
 
+#include <stdint.h>
+#include <zircon/types.h>
+
 #include <fbl/array.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
@@ -20,8 +23,6 @@
 #include <object/handle.h>
 #include <object/job_policy.h>
 #include <object/process_dispatcher.h>
-#include <stdint.h>
-#include <zircon/types.h>
 
 class JobNode;
 

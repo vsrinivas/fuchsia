@@ -10,6 +10,9 @@
 // * Helper functions
 
 #include <inttypes.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
+
 #include <kernel/cmdline.h>
 #include <lk/init.h>
 #include <object/diagnostics.h>
@@ -18,8 +21,6 @@
 #include <object/job_dispatcher.h>
 #include <object/port_dispatcher.h>
 #include <platform/halt_helper.h>
-#include <zircon/syscalls/object.h>
-#include <zircon/types.h>
 
 // All jobs and processes are rooted at the |root_job|.
 static fbl::RefPtr<JobDispatcher> root_job;

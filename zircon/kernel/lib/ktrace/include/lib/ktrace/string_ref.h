@@ -7,8 +7,9 @@
 #ifndef ZIRCON_KERNEL_LIB_KTRACE_INCLUDE_LIB_KTRACE_STRING_REF_H_
 #define ZIRCON_KERNEL_LIB_KTRACE_INCLUDE_LIB_KTRACE_STRING_REF_H_
 
-#include <ktl/atomic.h>
 #include <zircon/types.h>
+
+#include <ktl/atomic.h>
 
 // Represents an internalized string that may be referenced in traces by id to
 // improve the efficiency of labels and other strings. This type does not define

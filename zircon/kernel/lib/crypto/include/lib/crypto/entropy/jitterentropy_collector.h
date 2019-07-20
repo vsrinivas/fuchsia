@@ -7,10 +7,11 @@
 #ifndef ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_ENTROPY_JITTERENTROPY_COLLECTOR_H_
 #define ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_ENTROPY_JITTERENTROPY_COLLECTOR_H_
 
-#include <kernel/mutex.h>
 #include <lib/crypto/entropy/collector.h>
 #include <lib/jitterentropy/jitterentropy.h>
 #include <zircon/types.h>
+
+#include <kernel/mutex.h>
 
 namespace crypto {
 

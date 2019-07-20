@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <cstdint>
+
 #include <llvm/ProfileData/InstrProfData.inc>
 
 namespace {

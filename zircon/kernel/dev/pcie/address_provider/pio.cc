@@ -4,8 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <dev/address_provider/address_provider.h>
 #include <lib/pci/pio.h>
+
+#include <dev/address_provider/address_provider.h>
 
 zx_status_t PioPcieAddressProvider::Translate(const uint8_t bus_id, const uint8_t device_id,
                                               const uint8_t function_id, vaddr_t* virt,

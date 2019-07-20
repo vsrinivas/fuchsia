@@ -9,13 +9,14 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_EVENT_H_
 
 #include <err.h>
-#include <kernel/thread.h>
-#include <kernel/timer.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <kernel/thread.h>
+#include <kernel/timer.h>
 
 #define EVENT_MAGIC (0x65766E74)  // "evnt"
 

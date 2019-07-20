@@ -8,8 +8,9 @@
 #ifndef ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_COMMON_INCLUDE_DEV_INTERRUPT_ARM_GIC_COMMON_H_
 #define ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_COMMON_INCLUDE_DEV_INTERRUPT_ARM_GIC_COMMON_H_
 
-#include <dev/interrupt.h>
 #include <sys/types.h>
+
+#include <dev/interrupt.h>
 
 #define GIC_BASE_SGI 0
 #define GIC_BASE_PPI 16

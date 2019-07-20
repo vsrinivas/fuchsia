@@ -7,20 +7,21 @@
 
 #include <assert.h>
 #include <err.h>
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
-#include <fbl/ref_ptr.h>
 #include <inttypes.h>
-#include <ktl/move.h>
 #include <lib/console.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/types.h>
+
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_ptr.h>
+#include <ktl/move.h>
 #include <vm/physmap.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_object_paged.h>
-#include <zircon/types.h>
 
 #include "vm_priv.h"
 

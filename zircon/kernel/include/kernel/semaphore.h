@@ -7,9 +7,10 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_SEMAPHORE_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_SEMAPHORE_H_
 
-#include <kernel/thread.h>
 #include <stdint.h>
 #include <zircon/types.h>
+
+#include <kernel/thread.h>
 
 // A basic counting semaphore. It directly uses the low-level wait queue API.
 class Semaphore {

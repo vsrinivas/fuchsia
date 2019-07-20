@@ -7,13 +7,14 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_LOG_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_LOG_DISPATCHER_H_
 
-#include <fbl/canary.h>
-#include <fbl/mutex.h>
 #include <lib/debuglog.h>
-#include <object/dispatcher.h>
-#include <object/handle.h>
 #include <zircon/rights.h>
 #include <zircon/types.h>
+
+#include <fbl/canary.h>
+#include <fbl/mutex.h>
+#include <object/dispatcher.h>
+#include <object/handle.h>
 
 class LogDispatcher final : public SoloDispatcher<LogDispatcher, ZX_DEFAULT_LOG_RIGHTS> {
  public:

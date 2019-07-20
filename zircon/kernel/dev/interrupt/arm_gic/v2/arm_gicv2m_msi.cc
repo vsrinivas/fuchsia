@@ -5,14 +5,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <dev/interrupt/arm_gicv2m.h>
-#include <dev/interrupt/arm_gicv2m_msi.h>
 #include <lib/pow2_range_allocator.h>
 #include <pow2.h>
 #include <string.h>
 #include <sys/types.h>
 #include <trace.h>
 #include <zircon/types.h>
+
+#include <dev/interrupt/arm_gicv2m.h>
+#include <dev/interrupt/arm_gicv2m_msi.h>
 
 #define LOCAL_TRACE 0
 

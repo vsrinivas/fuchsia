@@ -6,16 +6,17 @@
 #include "pmm_node.h"
 
 #include <inttypes.h>
+#include <lib/counters.h>
+#include <trace.h>
+
+#include <new>
+
 #include <kernel/mp.h>
 #include <kernel/thread.h>
-#include <lib/counters.h>
 #include <pretty/sizes.h>
-#include <trace.h>
 #include <vm/bootalloc.h>
 #include <vm/page_request.h>
 #include <vm/physmap.h>
-
-#include <new>
 
 #include "fbl/algorithm.h"
 #include "vm_priv.h"

@@ -7,6 +7,11 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PORT_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PORT_DISPATCHER_H_
 
+#include <sys/types.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -17,10 +22,6 @@
 #include <object/excp_port.h>
 #include <object/handle.h>
 #include <object/state_observer.h>
-#include <sys/types.h>
-#include <zircon/rights.h>
-#include <zircon/syscalls/port.h>
-#include <zircon/types.h>
 
 // Important pointers diagram for PortObserver
 //

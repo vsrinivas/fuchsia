@@ -8,12 +8,13 @@
 
 #include <assert.h>
 #include <err.h>
+#include <list.h>
+#include <trace.h>
+
 #include <kernel/event.h>
 #include <kernel/percpu.h>
 #include <kernel/spinlock.h>
-#include <list.h>
 #include <lk/init.h>
-#include <trace.h>
 
 static spin_lock_t dpc_lock = SPIN_LOCK_INITIAL_VALUE;
 

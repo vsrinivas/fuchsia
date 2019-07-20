@@ -5,15 +5,16 @@
 // https://opensource.org/licenses/MIT
 #include "arch/x86/feature.h"
 
-#include <arch/ops.h>
-#include <arch/x86/cpuid.h>
-#include <arch/x86/platform_access.h>
 #include <assert.h>
 #include <bits.h>
-#include <fbl/algorithm.h>
 #include <stdint.h>
 #include <string.h>
 #include <trace.h>
+
+#include <arch/ops.h>
+#include <arch/x86/cpuid.h>
+#include <arch/x86/platform_access.h>
+#include <fbl/algorithm.h>
 
 #define LOCAL_TRACE 0
 
@@ -530,16 +531,17 @@ static const x86_microarch_config_t kbl_config{
     .disable_c1e = true,
     .idle_states =
         {
-            .states = {
-                {.name = "C10", .mwait_hint = 0x60, .exit_latency = 890, .flushes_tlb = true},
-                {.name = "C9", .mwait_hint = 0x50, .exit_latency = 480, .flushes_tlb = true},
-                {.name = "C8", .mwait_hint = 0x40, .exit_latency = 200, .flushes_tlb = true},
-                {.name = "C7s", .mwait_hint = 0x33, .exit_latency = 124, .flushes_tlb = true},
-                {.name = "C6", .mwait_hint = 0x20, .exit_latency = 85, .flushes_tlb = true},
-                {.name = "C3", .mwait_hint = 0x10, .exit_latency = 70, .flushes_tlb = true},
-                {.name = "C1E", .mwait_hint = 0x01, .exit_latency = 10, .flushes_tlb = false},
-                X86_CSTATE_C1(0),
-            },
+            .states =
+                {
+                    {.name = "C10", .mwait_hint = 0x60, .exit_latency = 890, .flushes_tlb = true},
+                    {.name = "C9", .mwait_hint = 0x50, .exit_latency = 480, .flushes_tlb = true},
+                    {.name = "C8", .mwait_hint = 0x40, .exit_latency = 200, .flushes_tlb = true},
+                    {.name = "C7s", .mwait_hint = 0x33, .exit_latency = 124, .flushes_tlb = true},
+                    {.name = "C6", .mwait_hint = 0x20, .exit_latency = 85, .flushes_tlb = true},
+                    {.name = "C3", .mwait_hint = 0x10, .exit_latency = 70, .flushes_tlb = true},
+                    {.name = "C1E", .mwait_hint = 0x01, .exit_latency = 10, .flushes_tlb = false},
+                    X86_CSTATE_C1(0),
+                },
         },
 };
 static const x86_microarch_config_t skl_config{

@@ -4,8 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <fbl/algorithm.h>
 #include <lib/unittest/unittest.h>
+
+#include <fbl/algorithm.h>
 
 #include "object/job_policy.h"
 

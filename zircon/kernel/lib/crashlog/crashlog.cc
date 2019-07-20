@@ -6,12 +6,13 @@
 
 #include <ctype.h>
 #include <inttypes.h>
-#include <kernel/thread.h>
 #include <lib/crashlog.h>
 #include <lib/version.h>
 #include <platform.h>
 #include <printf.h>
 #include <string.h>
+
+#include <kernel/thread.h>
 
 crashlog_t crashlog = {};
 

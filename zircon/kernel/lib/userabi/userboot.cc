@@ -6,7 +6,6 @@
 
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/cmdline.h>
 #include <lib/console.h>
 #include <lib/counters.h>
 #include <lib/elf-psabi/sp.h>
@@ -15,8 +14,17 @@
 #include <lib/userabi/userboot.h>
 #include <lib/userabi/vdso.h>
 #include <lib/zircon-internal/default_stack_size.h>
-#include <lk/init.h>
 #include <mexec.h>
+#include <platform.h>
+#include <stdio.h>
+#include <trace.h>
+
+#include <cassert>
+#include <cstdlib>
+#include <cstring>
+
+#include <kernel/cmdline.h>
+#include <lk/init.h>
 #include <object/channel_dispatcher.h>
 #include <object/handle.h>
 #include <object/job_dispatcher.h>
@@ -26,14 +34,7 @@
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
-#include <platform.h>
-#include <stdio.h>
-#include <trace.h>
 #include <vm/vm_object_paged.h>
-
-#include <cassert>
-#include <cstdlib>
-#include <cstring>
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
 #include <lib/crypto/entropy/quality_test.h>

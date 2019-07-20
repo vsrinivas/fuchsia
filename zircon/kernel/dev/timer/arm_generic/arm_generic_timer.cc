@@ -5,19 +5,20 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/ops.h>
 #include <assert.h>
-#include <dev/interrupt.h>
-#include <dev/timer/arm_generic.h>
 #include <inttypes.h>
 #include <lib/fixed_point.h>
-#include <lk/init.h>
-#include <pdev/driver.h>
 #include <platform.h>
-#include <platform/timer.h>
 #include <trace.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/types.h>
+
+#include <arch/ops.h>
+#include <dev/interrupt.h>
+#include <dev/timer/arm_generic.h>
+#include <lk/init.h>
+#include <pdev/driver.h>
+#include <platform/timer.h>
 
 #define LOCAL_TRACE 0
 

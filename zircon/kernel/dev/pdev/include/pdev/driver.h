@@ -7,8 +7,9 @@
 #ifndef ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_DRIVER_H_
 #define ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_DRIVER_H_
 
-#include <lk/init.h>
 #include <zircon/compiler.h>
+
+#include <lk/init.h>
 
 __BEGIN_CDECLS
 

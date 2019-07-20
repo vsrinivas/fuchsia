@@ -6,16 +6,21 @@
 
 #include "object/process_dispatcher.h"
 
-#include <arch/defines.h>
 #include <assert.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
 #include <inttypes.h>
-#include <kernel/thread.h>
 #include <lib/counters.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/ktrace.h>
 #include <list.h>
+#include <rand.h>
+#include <string.h>
+#include <trace.h>
+#include <zircon/rights.h>
+
+#include <arch/defines.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <kernel/thread.h>
 #include <object/diagnostics.h>
 #include <object/futex_context.h>
 #include <object/handle.h>
@@ -23,13 +28,9 @@
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
-#include <rand.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
-#include <zircon/rights.h>
 
 #define LOCAL_TRACE 0
 

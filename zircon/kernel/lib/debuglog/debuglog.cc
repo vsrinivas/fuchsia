@@ -4,24 +4,25 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <dev/udisplay.h>
 #include <err.h>
+#include <lib/crashlog.h>
+#include <lib/debuglog.h>
+#include <lib/io.h>
+#include <lib/version.h>
+#include <platform.h>
+#include <stdint.h>
+#include <string.h>
+#include <zircon/types.h>
+
+#include <dev/udisplay.h>
 #include <kernel/cmdline.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <ktl/atomic.h>
-#include <lib/crashlog.h>
-#include <lib/debuglog.h>
-#include <lib/io.h>
-#include <lib/version.h>
 #include <lk/init.h>
-#include <platform.h>
-#include <stdint.h>
-#include <string.h>
 #include <vm/vm.h>
-#include <zircon/types.h>
 
 #define DLOG_SIZE (128u * 1024u)
 #define DLOG_MASK (DLOG_SIZE - 1u)

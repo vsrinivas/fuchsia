@@ -7,13 +7,14 @@
 #include "object/futex_context.h"
 
 #include <assert.h>
-#include <kernel/sched.h>
-#include <kernel/thread_lock.h>
 #include <lib/ktrace.h>
-#include <object/process_dispatcher.h>
-#include <object/thread_dispatcher.h>
 #include <trace.h>
 #include <zircon/types.h>
+
+#include <kernel/sched.h>
+#include <kernel/thread_lock.h>
+#include <object/process_dispatcher.h>
+#include <object/thread_dispatcher.h>
 
 #define LOCAL_TRACE 0
 

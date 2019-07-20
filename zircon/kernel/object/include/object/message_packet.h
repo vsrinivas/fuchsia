@@ -7,14 +7,15 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_MESSAGE_PACKET_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_MESSAGE_PACKET_H_
 
+#include <lib/user_copy/user_ptr.h>
+#include <stdint.h>
+#include <zircon/types.h>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
 #include <ktl/unique_ptr.h>
-#include <lib/user_copy/user_ptr.h>
 #include <object/buffer_chain.h>
 #include <object/handle.h>
-#include <stdint.h>
-#include <zircon/types.h>
 
 constexpr uint32_t kMaxMessageSize = 65536u;
 constexpr uint32_t kMaxMessageHandles = 64u;

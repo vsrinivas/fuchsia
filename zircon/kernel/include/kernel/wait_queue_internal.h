@@ -7,12 +7,13 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_WAIT_QUEUE_INTERNAL_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_WAIT_QUEUE_INTERNAL_H_
 
-#include <kernel/sched.h>
-#include <kernel/thread.h>
-#include <kernel/wait.h>
 #include <lib/ktrace.h>
 #include <platform.h>
 #include <zircon/errors.h>
+
+#include <kernel/sched.h>
+#include <kernel/thread.h>
+#include <kernel/wait.h>
 
 namespace internal {
 

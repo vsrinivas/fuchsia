@@ -7,6 +7,9 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_HYPERVISOR_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_HYPERVISOR_H_
 
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <arch/x86/apic.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/vmx_state.h>
@@ -20,8 +23,6 @@
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
 #include <ktl/unique_ptr.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 struct VmxInfo;
 

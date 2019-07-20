@@ -7,20 +7,21 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_RESOURCE_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_RESOURCE_DISPATCHER_H_
 
-#include <fbl/canary.h>
-#include <fbl/intrusive_double_list.h>
-#include <fbl/name.h>
-#include <kernel/lockdep.h>
-#include <kernel/mutex.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <object/dispatcher.h>
-#include <object/handle.h>
-#include <region-alloc/region-alloc.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
+
+#include <fbl/canary.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/name.h>
+#include <kernel/lockdep.h>
+#include <kernel/mutex.h>
+#include <object/dispatcher.h>
+#include <object/handle.h>
+#include <region-alloc/region-alloc.h>
 
 class ResourceRecord;
 

@@ -7,15 +7,16 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <fbl/algorithm.h>
-#include <kernel/auto_lock.h>
-#include <kernel/event.h>
-#include <kernel/spinlock.h>
 #include <lib/cbuf.h>
 #include <pow2.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+
+#include <fbl/algorithm.h>
+#include <kernel/auto_lock.h>
+#include <kernel/event.h>
+#include <kernel/spinlock.h>
 
 #define LOCAL_TRACE 0
 

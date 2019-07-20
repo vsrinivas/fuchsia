@@ -4,13 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <bits.h>
+#include <iovec.h>
+
 #include <arch/x86.h>
 #include <arch/x86/cpuid.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/platform_access.h>
-#include <bits.h>
 #include <fbl/algorithm.h>
-#include <iovec.h>
 #include <kernel/auto_lock.h>
 
 static SpinLock g_microcode_lock;

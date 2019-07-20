@@ -8,13 +8,14 @@
 #include "kernel/wait.h"
 
 #include <err.h>
+#include <lib/ktrace.h>
+#include <platform.h>
+#include <trace.h>
+
 #include <kernel/owned_wait_queue.h>
 #include <kernel/sched.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
-#include <lib/ktrace.h>
-#include <platform.h>
-#include <trace.h>
 
 #include "kernel/wait_queue_internal.h"
 

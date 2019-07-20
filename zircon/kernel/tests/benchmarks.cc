@@ -5,15 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/ops.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/brwlock.h>
-#include <kernel/mp.h>
-#include <kernel/mutex.h>
-#include <kernel/spinlock.h>
-#include <kernel/thread.h>
-#include <ktl/type_traits.h>
 #include <platform.h>
 #include <rand.h>
 #include <stdio.h>
@@ -21,6 +14,14 @@
 #include <string.h>
 #include <sys/types.h>
 #include <trace.h>
+
+#include <arch/ops.h>
+#include <kernel/brwlock.h>
+#include <kernel/mp.h>
+#include <kernel/mutex.h>
+#include <kernel/spinlock.h>
+#include <kernel/thread.h>
+#include <ktl/type_traits.h>
 
 #include "tests.h"
 

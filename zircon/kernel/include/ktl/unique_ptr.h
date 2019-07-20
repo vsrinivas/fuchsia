@@ -5,9 +5,9 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KTL_UNIQUE_PTR_H_
 #define ZIRCON_KERNEL_INCLUDE_KTL_UNIQUE_PTR_H_
 
-#include <fbl/alloc_checker.h>
-
 #include <memory>
+
+#include <fbl/alloc_checker.h>
 
 namespace ktl {
 

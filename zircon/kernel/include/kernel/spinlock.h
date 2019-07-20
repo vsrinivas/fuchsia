@@ -8,10 +8,11 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_SPINLOCK_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_SPINLOCK_H_
 
-#include <arch/arch_ops.h>
-#include <arch/spinlock.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/compiler.h>
+
+#include <arch/arch_ops.h>
+#include <arch/spinlock.h>
 
 __BEGIN_CDECLS
 

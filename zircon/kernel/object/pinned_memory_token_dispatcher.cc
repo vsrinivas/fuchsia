@@ -8,17 +8,18 @@
 
 #include <assert.h>
 #include <err.h>
+#include <lib/counters.h>
+#include <trace.h>
+
+#include <new>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <lib/counters.h>
 #include <object/bus_transaction_initiator_dispatcher.h>
-#include <trace.h>
 #include <vm/pinned_vm_object.h>
 #include <vm/vm.h>
 #include <vm/vm_object.h>
-
-#include <new>
 
 #define LOCAL_TRACE 0
 

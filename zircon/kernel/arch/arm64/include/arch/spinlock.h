@@ -8,12 +8,13 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_SPINLOCK_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_SPINLOCK_H_
 
-#include <arch/arm64/interrupt.h>
-#include <arch/arm64/mp.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdbool.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+
+#include <arch/arm64/interrupt.h>
+#include <arch/arm64/mp.h>
 
 __BEGIN_CDECLS
 

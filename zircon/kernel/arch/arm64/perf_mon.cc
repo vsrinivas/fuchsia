@@ -11,13 +11,22 @@
 // TODO(ZX-3304): combine common parts with x86 (after things settle)
 // TODO(ZX-3305): chain event handling
 
+#include <assert.h>
+#include <err.h>
+#include <lib/perfmon.h>
+#include <lib/zircon-internal/mtrace.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <platform.h>
+#include <string.h>
+#include <trace.h>
+
+#include <new>
+
 #include <arch/arch_ops.h>
 #include <arch/arm64.h>
 #include <arch/arm64/perf_mon.h>
 #include <arch/mmu.h>
-#include <assert.h>
 #include <dev/interrupt/arm_gic_common.h>
-#include <err.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
@@ -29,19 +38,11 @@
 #include <kernel/thread.h>
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
-#include <lib/perfmon.h>
-#include <lib/zircon-internal/mtrace.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <lk/init.h>
-#include <platform.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_physical.h>
-
-#include <new>
 
 #define LOCAL_TRACE 0
 

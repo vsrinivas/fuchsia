@@ -7,18 +7,19 @@
 
 #include "debug.h"
 
-#include <arch/ops.h>
 #include <ctype.h>
-#include <dev/hw_rng.h>
-#include <kernel/spinlock.h>
 #include <list.h>
 #include <platform.h>
-#include <platform/debug.h>
 #include <printf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+
+#include <arch/ops.h>
+#include <dev/hw_rng.h>
+#include <kernel/spinlock.h>
+#include <platform/debug.h>
 
 void spin(uint32_t usecs) {
   zx_time_t start = current_time();

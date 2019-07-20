@@ -7,15 +7,16 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_FIFO_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_FIFO_DISPATCHER_H_
 
-#include <fbl/canary.h>
-#include <fbl/mutex.h>
-#include <fbl/ref_counted.h>
 #include <lib/user_copy/user_ptr.h>
-#include <object/dispatcher.h>
-#include <object/handle.h>
 #include <stdint.h>
 #include <zircon/rights.h>
 #include <zircon/types.h>
+
+#include <fbl/canary.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
+#include <object/dispatcher.h>
+#include <object/handle.h>
 
 class FifoDispatcher final : public PeeredDispatcher<FifoDispatcher, ZX_DEFAULT_FIFO_RIGHTS> {
  public:

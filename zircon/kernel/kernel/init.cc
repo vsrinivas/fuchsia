@@ -8,10 +8,11 @@
 #include "kernel/init.h"
 
 #include <debug.h>
+#include <zircon/compiler.h>
+
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
-#include <zircon/compiler.h>
 
 void kernel_init(void) {
   dprintf(SPEW, "initializing mp\n");

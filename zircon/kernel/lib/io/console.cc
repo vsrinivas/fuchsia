@@ -5,19 +5,20 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/ops.h>
 #include <assert.h>
 #include <ctype.h>
 #include <debug.h>
 #include <err.h>
-#include <kernel/auto_lock.h>
-#include <kernel/thread.h>
 #include <lib/debuglog.h>
 #include <lib/io.h>
 #include <list.h>
 #include <platform.h>
-#include <platform/debug.h>
 #include <string.h>
+
+#include <arch/ops.h>
+#include <kernel/auto_lock.h>
+#include <kernel/thread.h>
+#include <platform/debug.h>
 #include <vm/vm.h>
 
 /* routines for dealing with main console io */

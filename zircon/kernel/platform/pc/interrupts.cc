@@ -6,19 +6,20 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/x86.h>
 #include <assert.h>
 #include <debug.h>
-#include <fbl/algorithm.h>
-#include <kernel/thread.h>
 #include <lib/acpi_tables.h>
-#include <lk/init.h>
-#include <platform/pc.h>
-#include <platform/pic.h>
 #include <reg.h>
 #include <sys/types.h>
 #include <trace.h>
 #include <zircon/types.h>
+
+#include <arch/x86.h>
+#include <fbl/algorithm.h>
+#include <kernel/thread.h>
+#include <lk/init.h>
+#include <platform/pc.h>
+#include <platform/pic.h>
 
 #include "interrupt_manager.h"
 #include "platform_p.h"

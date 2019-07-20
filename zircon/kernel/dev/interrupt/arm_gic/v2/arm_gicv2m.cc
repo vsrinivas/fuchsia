@@ -6,13 +6,14 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <dev/interrupt/arm_gic_common.h>
-#include <dev/interrupt/arm_gicv2_regs.h>
-#include <dev/interrupt/arm_gicv2m.h>
 #include <err.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/types.h>
+
+#include <dev/interrupt/arm_gic_common.h>
+#include <dev/interrupt/arm_gicv2_regs.h>
+#include <dev/interrupt/arm_gicv2m.h>
 
 #define LOCAL_TRACE 0
 

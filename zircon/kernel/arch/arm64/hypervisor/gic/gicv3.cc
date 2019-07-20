@@ -4,11 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <bits.h>
+
 #include <arch/arm64/hypervisor/el2_state.h>
 #include <arch/arm64/hypervisor/gic/el2.h>
 #include <arch/arm64/hypervisor/gic/gicv3.h>
 #include <arch/ops.h>
-#include <bits.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/interrupt/arm_gicv3_regs.h>
 #include <vm/physmap.h>

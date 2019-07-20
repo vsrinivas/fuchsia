@@ -6,11 +6,12 @@
 // https://opensource.org/licenses/MIT
 
 #include <debug.h>
-#include <platform/debug.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
+
+#include <platform/debug.h>
 
 int putchar(int c) {
   platform_dputc(c);

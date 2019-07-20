@@ -6,13 +6,14 @@
 
 #include <bits.h>
 #include <err.h>
+#include <zircon/types.h>
+
 #include <fbl/algorithm.h>
 #include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
 #include <lk/init.h>
 #include <platform/pc/hpet.h>
 #include <vm/vm_aspace.h>
-#include <zircon/types.h>
 
 struct hpet_timer_registers {
   volatile uint64_t conf_caps;

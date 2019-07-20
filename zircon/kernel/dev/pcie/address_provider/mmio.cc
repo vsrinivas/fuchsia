@@ -4,12 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <trace.h>
+
 #include <dev/address_provider/address_provider.h>
 #include <dev/pci_common.h>
 #include <fbl/auto_lock.h>
 #include <kernel/range_check.h>
 #include <ktl/move.h>
-#include <trace.h>
 
 #define LOCAL_TRACE 0
 

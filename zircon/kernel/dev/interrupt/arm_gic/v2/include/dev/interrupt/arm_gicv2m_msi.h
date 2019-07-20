@@ -8,10 +8,11 @@
 #ifndef ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V2_INCLUDE_DEV_INTERRUPT_ARM_GICV2M_MSI_H_
 #define ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V2_INCLUDE_DEV_INTERRUPT_ARM_GICV2M_MSI_H_
 
-#include <dev/interrupt.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <dev/interrupt.h>
 
 zx_status_t arm_gicv2m_msi_init();
 

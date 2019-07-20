@@ -9,6 +9,7 @@
 
 #include <lib/userabi/rodso.h>
 #include <lib/userabi/userboot.h>
+
 #include <vm/vm_object.h>
 
 class VmMapping;

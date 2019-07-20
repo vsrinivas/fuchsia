@@ -5,9 +5,10 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/counters.h>
+#include <trace.h>
+
 #include <object/pager_dispatcher.h>
 #include <object/thread_dispatcher.h>
-#include <trace.h>
 #include <vm/page_source.h>
 
 #define LOCAL_TRACE 0

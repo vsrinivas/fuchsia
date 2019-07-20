@@ -4,13 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <stdio.h>
+#include <zircon/boot/driver-config.h>
+
 #include <arch/arm64/periphmap.h>
 #include <dev/power.h>
 #include <dev/psci.h>
 #include <pdev/driver.h>
 #include <pdev/power.h>
-#include <stdio.h>
-#include <zircon/boot/driver-config.h>
 
 // clang-format off
 #define PMU_HRST_OFFSET         0x404

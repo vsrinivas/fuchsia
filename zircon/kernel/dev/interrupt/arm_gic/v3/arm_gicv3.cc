@@ -5,27 +5,28 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
+#include <bits.h>
+#include <err.h>
+#include <inttypes.h>
+#include <lib/ktrace.h>
+#include <string.h>
+#include <trace.h>
+#include <zircon/boot/driver-config.h>
+#include <zircon/types.h>
+
 #include <arch/arch_ops.h>
 #include <arch/arm64/hypervisor/gic/gicv3.h>
 #include <arch/arm64/periphmap.h>
-#include <assert.h>
-#include <bits.h>
 #include <dev/interrupt.h>
 #include <dev/interrupt/arm_gic_common.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
-#include <err.h>
-#include <inttypes.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
-#include <lib/ktrace.h>
 #include <lk/init.h>
 #include <pdev/driver.h>
 #include <pdev/interrupt.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/vm.h>
-#include <zircon/boot/driver-config.h>
-#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 

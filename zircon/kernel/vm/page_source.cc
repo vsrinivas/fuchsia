@@ -4,11 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/console.h>
+#include <trace.h>
+
 #include <fbl/auto_lock.h>
 #include <kernel/lockdep.h>
 #include <ktl/move.h>
-#include <lib/console.h>
-#include <trace.h>
 #include <vm/page_source.h>
 
 #define LOCAL_TRACE 0

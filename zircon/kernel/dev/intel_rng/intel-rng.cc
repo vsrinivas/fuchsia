@@ -4,14 +4,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/x86/feature.h>
-#include <arch/x86/x86intrin.h>
-#include <dev/hw_rng.h>
-#include <fbl/algorithm.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
+
+#include <arch/x86/feature.h>
+#include <arch/x86/x86intrin.h>
+#include <dev/hw_rng.h>
+#include <fbl/algorithm.h>
 
 enum entropy_instr {
   ENTROPY_INSTR_RDSEED,

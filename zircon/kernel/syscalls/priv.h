@@ -15,9 +15,10 @@
 class user_out_handle;
 
 #define ZX_SYSCALL_PARAM_ATTR(x)
+#include <zircon/syscall-definitions.h>
+
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
-#include <zircon/syscall-definitions.h>
 
 // This is the type of handle result parameters in system call
 // implementation functions (sys_*).  abigen recognizes return values of

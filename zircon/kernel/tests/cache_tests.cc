@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch.h>
-#include <arch/ops.h>
 #include <inttypes.h>
 #include <lib/console.h>
 #include <platform.h>
@@ -15,6 +14,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/types.h>
+
+#include <arch/ops.h>
 
 #include "tests.h"
 

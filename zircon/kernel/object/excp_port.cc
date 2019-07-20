@@ -6,16 +6,17 @@
 
 #include "object/excp_port.h"
 
-#include <arch/exception.h>
 #include <err.h>
-#include <fbl/alloc_checker.h>
 #include <inttypes.h>
+#include <string.h>
+#include <trace.h>
+
+#include <arch/exception.h>
+#include <fbl/alloc_checker.h>
 #include <object/job_dispatcher.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
-#include <string.h>
-#include <trace.h>
 
 #define LOCAL_TRACE 0
 

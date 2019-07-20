@@ -7,9 +7,10 @@
 #ifndef ZIRCON_KERNEL_LIB_UNITTEST_INCLUDE_LIB_UNITTEST_USER_MEMORY_H_
 #define ZIRCON_KERNEL_LIB_UNITTEST_INCLUDE_LIB_UNITTEST_USER_MEMORY_H_
 
+#include <lib/user_copy/user_ptr.h>
+
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
-#include <lib/user_copy/user_ptr.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>

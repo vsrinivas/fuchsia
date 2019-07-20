@@ -7,11 +7,12 @@
 #include "object/profile_dispatcher.h"
 
 #include <err.h>
+#include <lib/counters.h>
+#include <zircon/rights.h>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
-#include <lib/counters.h>
 #include <object/thread_dispatcher.h>
-#include <zircon/rights.h>
 
 KCOUNTER(dispatcher_profile_create_count, "dispatcher.profile.create")
 KCOUNTER(dispatcher_profile_destroy_count, "dispatcher.profile.destroy")

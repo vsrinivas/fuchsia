@@ -9,8 +9,9 @@
 #define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_REF_COUNTED_H_
 
 #include <assert.h>
-#include <fbl/ref_counted.h>
 #include <zircon/compiler.h>
+
+#include <fbl/ref_counted.h>
 
 /**
  * Notes on class hierarchy and RefCounting

@@ -8,16 +8,17 @@
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_ADDRESS_REGION_H_
 
 #include <assert.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <stdint.h>
+#include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <stdint.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page_list.h>
-#include <zircon/types.h>
 
 // Creation flags for VmAddressRegion and VmMappings
 

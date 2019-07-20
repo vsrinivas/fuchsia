@@ -8,10 +8,11 @@
 #ifndef ZIRCON_KERNEL_LIB_CBUF_INCLUDE_LIB_CBUF_H_
 #define ZIRCON_KERNEL_LIB_CBUF_INCLUDE_LIB_CBUF_H_
 
-#include <kernel/event.h>
-#include <kernel/spinlock.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+
+#include <kernel/event.h>
+#include <kernel/spinlock.h>
 
 __BEGIN_CDECLS
 

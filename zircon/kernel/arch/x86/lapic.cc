@@ -4,6 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
+#include <debug.h>
+#include <err.h>
+#include <lib/console.h>
+#include <stdio.h>
+#include <string.h>
+#include <zircon/types.h>
+
 #include <arch/ops.h>
 #include <arch/spinlock.h>
 #include <arch/x86.h>
@@ -11,15 +19,8 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mp.h>
-#include <assert.h>
-#include <debug.h>
 #include <dev/interrupt.h>
-#include <err.h>
-#include <lib/console.h>
-#include <stdio.h>
-#include <string.h>
 #include <vm/vm_aspace.h>
-#include <zircon/types.h>
 
 // We currently only implement support for the xAPIC
 

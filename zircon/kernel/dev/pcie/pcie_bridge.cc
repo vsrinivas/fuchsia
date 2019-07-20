@@ -7,18 +7,19 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <dev/interrupt.h>
-#include <dev/pci_config.h>
-#include <dev/pcie_bridge.h>
 #include <err.h>
-#include <fbl/alloc_checker.h>
 #include <inttypes.h>
-#include <lk/init.h>
 #include <platform.h>
 #include <string.h>
 #include <trace.h>
-#include <vm/vm.h>
 #include <zircon/compiler.h>
+
+#include <dev/interrupt.h>
+#include <dev/pci_config.h>
+#include <dev/pcie_bridge.h>
+#include <fbl/alloc_checker.h>
+#include <lk/init.h>
+#include <vm/vm.h>
 
 using fbl::AutoLock;
 

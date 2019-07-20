@@ -5,16 +5,17 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/ref_ptr.h>
 #include <inttypes.h>
 #include <lib/ktrace.h>
-#include <object/handle.h>
-#include <object/port_dispatcher.h>
-#include <object/process_dispatcher.h>
 #include <trace.h>
 #include <zircon/syscalls/policy.h>
 #include <zircon/types.h>
+
+#include <fbl/alloc_checker.h>
+#include <fbl/ref_ptr.h>
+#include <object/handle.h>
+#include <object/port_dispatcher.h>
+#include <object/process_dispatcher.h>
 
 #include "priv.h"
 

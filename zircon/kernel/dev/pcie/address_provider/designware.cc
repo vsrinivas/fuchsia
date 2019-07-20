@@ -4,9 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <dev/address_provider/address_provider.h>
 #include <trace.h>
 #include <zircon/hw/pci.h>
+
+#include <dev/address_provider/address_provider.h>
 
 #define LOCAL_TRACE 0
 

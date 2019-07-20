@@ -6,11 +6,12 @@
 
 #include "object/interrupt_dispatcher.h"
 
+#include <platform.h>
+#include <zircon/syscalls/port.h>
+
 #include <dev/interrupt.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
-#include <platform.h>
-#include <zircon/syscalls/port.h>
 
 InterruptDispatcher::InterruptDispatcher() : timestamp_(0), state_(InterruptState::IDLE) {
   event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);

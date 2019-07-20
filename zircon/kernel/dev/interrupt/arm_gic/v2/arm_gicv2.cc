@@ -7,31 +7,32 @@
 
 #include "arm_gicv2.h"
 
-#include <arch/arm64/hypervisor/gic/gicv2.h>
-#include <arch/arm64/periphmap.h>
-#include <arch/ops.h>
 #include <assert.h>
 #include <bits.h>
 #include <debug.h>
-#include <dev/interrupt.h>
-#include <dev/interrupt/arm_gic_common.h>
-#include <dev/interrupt/arm_gicv2_regs.h>
-#include <dev/interrupt/arm_gicv2m.h>
-#include <dev/interrupt/arm_gicv2m_msi.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/stats.h>
-#include <kernel/thread.h>
 #include <lib/ktrace.h>
 #include <lib/system-topology.h>
-#include <lk/init.h>
-#include <pdev/driver.h>
-#include <pdev/interrupt.h>
 #include <reg.h>
 #include <sys/types.h>
 #include <trace.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/types.h>
+
+#include <arch/arm64/hypervisor/gic/gicv2.h>
+#include <arch/arm64/periphmap.h>
+#include <arch/ops.h>
+#include <dev/interrupt.h>
+#include <dev/interrupt/arm_gic_common.h>
+#include <dev/interrupt/arm_gicv2_regs.h>
+#include <dev/interrupt/arm_gicv2m.h>
+#include <dev/interrupt/arm_gicv2m_msi.h>
+#include <kernel/stats.h>
+#include <kernel/thread.h>
+#include <lk/init.h>
+#include <pdev/driver.h>
+#include <pdev/interrupt.h>
 
 #define LOCAL_TRACE 0
 

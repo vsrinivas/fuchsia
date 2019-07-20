@@ -4,20 +4,21 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <err.h>
+#include <string.h>
+#include <sys/types.h>
+#include <zircon/syscalls/debug.h>
+#include <zircon/types.h>
+
 #include <arch/debugger.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/registers.h>
-#include <err.h>
 #include <kernel/lockdep.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
-#include <string.h>
-#include <sys/types.h>
 #include <vm/vm.h>
-#include <zircon/syscalls/debug.h>
-#include <zircon/types.h>
 
 // Note on locking: The below functions need to read and write the register state and make sure that
 // nothing happens with respect to scheduling that thread while this is happening. As a result they

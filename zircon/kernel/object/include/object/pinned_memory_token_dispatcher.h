@@ -7,17 +7,18 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PINNED_MEMORY_TOKEN_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PINNED_MEMORY_TOKEN_DISPATCHER_H_
 
-#include <dev/iommu.h>
 #include <err.h>
+#include <sys/types.h>
+#include <zircon/rights.h>
+
+#include <dev/iommu.h>
 #include <fbl/array.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
-#include <sys/types.h>
 #include <vm/pinned_vm_object.h>
-#include <zircon/rights.h>
 
 class BusTransactionInitiatorDispatcher;
 class VmObject;

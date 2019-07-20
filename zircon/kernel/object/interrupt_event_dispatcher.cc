@@ -6,14 +6,15 @@
 
 #include "object/interrupt_event_dispatcher.h"
 
+#include <lib/counters.h>
+#include <platform.h>
+#include <zircon/rights.h>
+
 #include <dev/interrupt.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <kernel/auto_lock.h>
-#include <lib/counters.h>
-#include <platform.h>
-#include <zircon/rights.h>
 
 KCOUNTER(dispatcher_interrupt_event_create_count, "dispatcher.interrupt_event.create")
 KCOUNTER(dispatcher_interrupt_event_destroy_count, "dispatcher.interrupt_event.destroy")

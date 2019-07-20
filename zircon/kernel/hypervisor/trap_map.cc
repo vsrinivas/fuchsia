@@ -4,13 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/ktrace.h>
+#include <zircon/syscalls/hypervisor.h>
+#include <zircon/types.h>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <hypervisor/ktrace.h>
 #include <hypervisor/trap_map.h>
-#include <lib/ktrace.h>
-#include <zircon/syscalls/hypervisor.h>
-#include <zircon/types.h>
 
 static constexpr size_t kMaxPacketsPerRange = 256;
 

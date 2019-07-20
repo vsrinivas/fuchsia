@@ -7,15 +7,16 @@
 
 #include <ctype.h>
 #include <debug.h>
-#include <dev/pcie_bridge.h>
-#include <dev/pcie_bus_driver.h>
-#include <dev/pcie_device.h>
 #include <err.h>
-#include <fbl/algorithm.h>
-#include <fbl/auto_lock.h>
 #include <inttypes.h>
 #include <lib/console.h>
 #include <string.h>
+
+#include <dev/pcie_bridge.h>
+#include <dev/pcie_bus_driver.h>
+#include <dev/pcie_device.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
 
 class PcieDebugConsole {
  public:

@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/unittest/unittest.h>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <ktl/move.h>
-#include <lib/unittest/unittest.h>
 #include <object/dispatcher.h>
 #include <object/event_pair_dispatcher.h>
 

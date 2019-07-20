@@ -4,23 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/arch_ops.h>
 #include <err.h>
-#include <fbl/auto_lock.h>
-#include <fbl/inline_array.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/string_piece.h>
 #include <inttypes.h>
 #include <lib/ktrace.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/userabi/vdso.h>
-#include <object/handle.h>
-#include <object/job_dispatcher.h>
-#include <object/process_dispatcher.h>
-#include <object/resource_dispatcher.h>
-#include <object/suspend_token_dispatcher.h>
-#include <object/thread_dispatcher.h>
-#include <object/vm_address_region_dispatcher.h>
 #include <platform.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -29,6 +17,19 @@
 #include <trace.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/policy.h>
+
+#include <arch/arch_ops.h>
+#include <fbl/auto_lock.h>
+#include <fbl/inline_array.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/string_piece.h>
+#include <object/handle.h>
+#include <object/job_dispatcher.h>
+#include <object/process_dispatcher.h>
+#include <object/resource_dispatcher.h>
+#include <object/suspend_token_dispatcher.h>
+#include <object/thread_dispatcher.h>
+#include <object/vm_address_region_dispatcher.h>
 
 #include "priv.h"
 

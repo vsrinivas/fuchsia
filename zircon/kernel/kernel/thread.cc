@@ -16,11 +16,24 @@
  */
 #include "kernel/thread.h"
 
-#include <arch/exception.h>
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/counters.h>
+#include <lib/heap.h>
+#include <lib/ktrace.h>
+#include <lib/version.h>
+#include <list.h>
+#include <malloc.h>
+#include <platform.h>
+#include <printf.h>
+#include <string.h>
+#include <target.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
+
+#include <arch/exception.h>
 #include <kernel/atomic.h>
 #include <kernel/dpc.h>
 #include <kernel/lockdep.h>
@@ -31,25 +44,13 @@
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <kernel/timer.h>
-#include <lib/counters.h>
-#include <lib/heap.h>
-#include <lib/ktrace.h>
-#include <lib/version.h>
-#include <list.h>
 #include <lockdep/lockdep.h>
-#include <malloc.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
-#include <platform.h>
-#include <printf.h>
-#include <string.h>
-#include <target.h>
 #include <vm/kstack.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
-#include <zircon/time.h>
-#include <zircon/types.h>
 
 // kernel counters. TODO(cpu): remove LK-era counters
 // The counters below never decrease.

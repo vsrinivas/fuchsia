@@ -8,11 +8,12 @@
 #ifndef ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_PLATFORM_H_
 #define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_PLATFORM_H_
 
-#include <dev/interrupt.h>
-#include <dev/pci_common.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
+
+#include <dev/interrupt.h>
+#include <dev/pci_common.h>
 
 #ifdef __cplusplus
 

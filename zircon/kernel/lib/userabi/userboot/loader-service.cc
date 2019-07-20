@@ -4,11 +4,12 @@
 
 #include "loader-service.h"
 
-#include <ldmsg/ldmsg.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 #include <cstring>
+
+#include <ldmsg/ldmsg.h>
 
 #include "bootfs.h"
 #include "util.h"

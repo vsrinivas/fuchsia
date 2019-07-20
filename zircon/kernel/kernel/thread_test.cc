@@ -7,15 +7,16 @@
 
 #include <assert.h>
 #include <debug.h>
+#include <lib/unittest/unittest.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
+
 #include <kernel/atomic.h>
 #include <kernel/cpu.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <ktl/popcount.h>
-#include <lib/unittest/unittest.h>
-#include <zircon/errors.h>
-#include <zircon/types.h>
 
 namespace {
 

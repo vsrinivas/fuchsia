@@ -5,22 +5,23 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
+#include <inttypes.h>
+#include <lib/ktrace.h>
+#include <lib/user_copy/user_ptr.h>
+#include <platform.h>
+#include <trace.h>
+#include <zircon/types.h>
+
 #include <fbl/inline_array.h>
 #include <fbl/ref_ptr.h>
-#include <inttypes.h>
 #include <kernel/event.h>
 #include <kernel/lockdep.h>
 #include <kernel/thread.h>
-#include <lib/ktrace.h>
-#include <lib/user_copy/user_ptr.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/wait_state_observer.h>
-#include <platform.h>
-#include <trace.h>
-#include <zircon/types.h>
 
 #include "priv.h"
 

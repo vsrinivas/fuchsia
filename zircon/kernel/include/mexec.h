@@ -13,12 +13,13 @@
 
 #ifndef __ASSEMBLER__
 
-#include <fbl/ref_ptr.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <vm/vm_object.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <fbl/ref_ptr.h>
+#include <vm/vm_object.h>
 
 // Warning: The geometry of this struct is depended upon by the mexec assembly
 //          function. Do not modify without also updating mexec.S.

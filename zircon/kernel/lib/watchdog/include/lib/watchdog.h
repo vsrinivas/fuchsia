@@ -8,11 +8,12 @@
 #ifndef ZIRCON_KERNEL_LIB_WATCHDOG_INCLUDE_LIB_WATCHDOG_H_
 #define ZIRCON_KERNEL_LIB_WATCHDOG_INCLUDE_LIB_WATCHDOG_H_
 
-#include <kernel/thread.h>
-#include <kernel/timer.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <zircon/types.h>
+
+#include <kernel/thread.h>
+#include <kernel/timer.h>
 
 #define WATCHDOG_MAGIC 'wdog'
 

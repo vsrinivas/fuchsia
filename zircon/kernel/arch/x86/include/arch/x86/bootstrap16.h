@@ -22,9 +22,10 @@
 
 #ifndef __ASSEMBLER__
 #include <assert.h>
-#include <vm/vm_aspace.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <vm/vm_aspace.h>
 
 __BEGIN_CDECLS
 

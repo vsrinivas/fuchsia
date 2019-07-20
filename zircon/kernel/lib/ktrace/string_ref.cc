@@ -4,9 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <ktl/atomic.h>
 #include <lib/ktrace.h>
 #include <lib/ktrace/string_ref.h>
+
+#include <ktl/atomic.h>
 
 int StringRef::Register(StringRef* string_ref) {
   // Return the id if the string ref is already registered.

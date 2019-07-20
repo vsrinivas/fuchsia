@@ -8,6 +8,9 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ASPACE_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ASPACE_H_
 
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <arch/x86/ioport.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/page_tables/page_tables.h>
@@ -15,8 +18,6 @@
 #include <fbl/canary.h>
 #include <ktl/atomic.h>
 #include <vm/arch_vm_aspace.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 // Implementation of page tables used by x86-64 CPUs.
 class X86PageTableMmu final : public X86PageTableBase {

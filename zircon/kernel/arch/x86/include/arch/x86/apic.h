@@ -7,9 +7,10 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_APIC_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_APIC_H_
 
-#include <dev/interrupt.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <dev/interrupt.h>
 
 __BEGIN_CDECLS
 

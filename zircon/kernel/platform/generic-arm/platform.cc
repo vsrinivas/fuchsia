@@ -6,36 +6,37 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch.h>
+#include <debug.h>
+#include <err.h>
+#include <lib/console.h>
+#include <lib/debuglog.h>
+#include <lib/memory_limit.h>
+#include <lib/system-topology.h>
+#include <mexec.h>
+#include <platform.h>
+#include <reg.h>
+#include <target.h>
+#include <trace.h>
+
 #include <arch/arch_ops.h>
 #include <arch/arm64.h>
 #include <arch/arm64/mmu.h>
 #include <arch/arm64/mp.h>
 #include <arch/arm64/periphmap.h>
 #include <arch/mp.h>
-#include <debug.h>
 #include <dev/display.h>
 #include <dev/hw_rng.h>
 #include <dev/interrupt.h>
 #include <dev/power.h>
 #include <dev/psci.h>
 #include <dev/uart.h>
-#include <err.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/cmdline.h>
 #include <kernel/dpc.h>
 #include <kernel/spinlock.h>
-#include <lib/console.h>
-#include <lib/debuglog.h>
-#include <lib/memory_limit.h>
-#include <lib/system-topology.h>
 #include <lk/init.h>
-#include <mexec.h>
 #include <object/resource_dispatcher.h>
-#include <platform.h>
-#include <reg.h>
-#include <target.h>
-#include <trace.h>
 #include <vm/bootreserve.h>
 #include <vm/kstack.h>
 #include <vm/physmap.h>
@@ -45,12 +46,13 @@
 #include <kernel/thread.h>
 #endif
 
-#include <libzbi/zbi-cpp.h>
-#include <pdev/pdev.h>
 #include <zircon/boot/image.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/smc.h>
 #include <zircon/types.h>
+
+#include <libzbi/zbi-cpp.h>
+#include <pdev/pdev.h>
 
 // Defined in start.S.
 extern paddr_t kernel_entry_paddr;
@@ -222,8 +224,8 @@ static void topology_cpu_init(void) {
     return 0;
   };
 
-  auto* warning_thread = thread_create("platform-cpu-boot-check-thread", check_cpus_booted,
-                                       nullptr, DEFAULT_PRIORITY);
+  auto* warning_thread =
+      thread_create("platform-cpu-boot-check-thread", check_cpus_booted, nullptr, DEFAULT_PRIORITY);
   thread_detach_and_resume(warning_thread);
 }
 

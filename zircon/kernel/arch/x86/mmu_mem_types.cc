@@ -5,16 +5,17 @@
 // https://opensource.org/licenses/MIT
 #include "arch/x86/mmu_mem_types.h"
 
-#include <arch/x86.h>
-#include <arch/x86/mmu.h>
-#include <arch/x86/registers.h>
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
-#include <kernel/mp.h>
 #include <lib/console.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <arch/x86.h>
+#include <arch/x86/mmu.h>
+#include <arch/x86/registers.h>
+#include <kernel/mp.h>
 
 /* address widths from mmu.c */
 extern uint8_t g_paddr_width;

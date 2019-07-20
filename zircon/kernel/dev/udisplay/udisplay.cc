@@ -5,8 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <dev/udisplay.h>
-#include <ktl/move.h>
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
 #include <lib/gfxconsole.h>
@@ -15,6 +13,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+
+#include <dev/udisplay.h>
+#include <ktl/move.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 

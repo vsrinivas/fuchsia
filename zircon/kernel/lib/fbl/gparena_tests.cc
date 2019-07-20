@@ -4,11 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/unittest/unittest.h>
 #include <platform.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/gparena.h>
-#include <lib/unittest/unittest.h>
 
 using fbl::GPArena;
 

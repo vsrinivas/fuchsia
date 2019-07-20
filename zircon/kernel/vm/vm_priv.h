@@ -8,10 +8,11 @@
 #ifndef ZIRCON_KERNEL_VM_VM_PRIV_H_
 #define ZIRCON_KERNEL_VM_VM_PRIV_H_
 
-#include <kernel/mutex.h>
-#include <kernel/range_check.h>
 #include <stdint.h>
 #include <sys/types.h>
+
+#include <kernel/mutex.h>
+#include <kernel/range_check.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 

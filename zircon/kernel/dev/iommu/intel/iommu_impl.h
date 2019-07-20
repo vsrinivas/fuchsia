@@ -8,13 +8,14 @@
 #define ZIRCON_KERNEL_DEV_IOMMU_INTEL_IOMMU_IMPL_H_
 
 #include <bits.h>
+#include <zircon/syscalls/iommu.h>
+
 #include <dev/interrupt.h>
 #include <dev/iommu.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <hwreg/mmio.h>
-#include <zircon/syscalls/iommu.h>
 
 #include "domain_allocator.h"
 #include "hw.h"

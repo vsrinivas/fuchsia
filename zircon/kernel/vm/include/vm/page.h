@@ -11,8 +11,9 @@
 #include <list.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include <vm/page_state.h>
 #include <zircon/compiler.h>
+
+#include <vm/page_state.h>
 
 // core per page structure allocated at pmm arena creation time
 typedef struct vm_page {

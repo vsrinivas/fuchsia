@@ -10,13 +10,14 @@
 
 #ifndef __ASSEMBLER__
 
+#include <reg.h>
+#include <stdbool.h>
+#include <zircon/compiler.h>
+
 #include <arch/arm64.h>
 #include <arch/arm64/feature.h>
 #include <arch/arm64/interrupt.h>
 #include <arch/arm64/mp.h>
-#include <reg.h>
-#include <stdbool.h>
-#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 

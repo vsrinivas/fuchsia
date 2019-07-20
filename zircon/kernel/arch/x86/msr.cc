@@ -4,6 +4,16 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
+#include <debug.h>
+#include <err.h>
+#include <platform.h>
+#include <stdio.h>
+#include <string.h>
+#include <trace.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <arch/mp.h>
 #include <arch/ops.h>
 #include <arch/x86.h>
@@ -13,19 +23,10 @@
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mp.h>
 #include <arch/x86/tsc.h>
-#include <assert.h>
-#include <debug.h>
 #include <dev/hw_rng.h>
 #include <dev/interrupt.h>
-#include <err.h>
 #include <kernel/event.h>
 #include <kernel/timer.h>
-#include <platform.h>
-#include <stdio.h>
-#include <string.h>
-#include <trace.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 struct read_msr_context {
   uint32_t msr;

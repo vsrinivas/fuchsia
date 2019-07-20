@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <arch/x86/page_tables/constants.h>
-#include <arch/x86/registers.h>
 #include <cpuid.h>
 #include <stdalign.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+
+#include <arch/x86/page_tables/constants.h>
+#include <arch/x86/registers.h>
 
 #include "trampoline.h"
 

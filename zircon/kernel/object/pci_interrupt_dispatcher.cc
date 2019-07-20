@@ -8,12 +8,13 @@
 
 #include "object/pci_interrupt_dispatcher.h"
 
-#include <fbl/alloc_checker.h>
-#include <kernel/auto_lock.h>
 #include <lib/counters.h>
-#include <object/pci_device_dispatcher.h>
 #include <platform.h>
 #include <zircon/rights.h>
+
+#include <fbl/alloc_checker.h>
+#include <kernel/auto_lock.h>
+#include <object/pci_device_dispatcher.h>
 
 KCOUNTER(dispatcher_pci_interrupt_create_count, "dispatcher.pci_interrupt.create")
 KCOUNTER(dispatcher_pci_interrupt_destroy_count, "dispatcher.pci_interrupt.destroy")

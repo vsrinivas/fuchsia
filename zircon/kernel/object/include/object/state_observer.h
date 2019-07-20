@@ -7,9 +7,10 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_STATE_OBSERVER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_STATE_OBSERVER_H_
 
+#include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
-#include <zircon/types.h>
 
 class Handle;
 

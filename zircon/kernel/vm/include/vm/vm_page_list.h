@@ -8,13 +8,14 @@
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_PAGE_LIST_H_
 
 #include <err.h>
+#include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <ktl/unique_ptr.h>
 #include <vm/vm.h>
-#include <zircon/types.h>
 
 struct vm_page;
 

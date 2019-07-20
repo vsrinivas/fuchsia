@@ -7,24 +7,25 @@
 // https://opensource.org/licenses/MIT
 #include "arch/x86/descriptor.h"
 
+#include <assert.h>
+#include <bits.h>
+#include <err.h>
+#include <string.h>
+#include <trace.h>
+#include <zircon/compiler.h>
+
 #include <arch/arch_ops.h>
 #include <arch/x86.h>
 #include <arch/x86/idt.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mp.h>
-#include <assert.h>
-#include <bits.h>
-#include <err.h>
 #include <kernel/mp.h>
 #include <ktl/move.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/fault.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>
-#include <zircon/compiler.h>
 
 #define TSS_DESC_BUSY_BIT (1ull << 41)
 

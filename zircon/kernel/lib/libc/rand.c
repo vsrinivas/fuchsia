@@ -5,9 +5,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <kernel/atomic.h>
 #include <rand.h>
 #include <sys/types.h>
+
+#include <kernel/atomic.h>
 
 static uint64_t randseed;
 

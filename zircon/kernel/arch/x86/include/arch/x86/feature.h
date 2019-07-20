@@ -7,11 +7,12 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_FEATURE_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_FEATURE_H_
 
-#include <arch/x86.h>
-#include <arch/x86/idle_states.h>
 #include <assert.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
+
+#include <arch/x86.h>
+#include <arch/x86/idle_states.h>
 
 #ifdef __cplusplus
 

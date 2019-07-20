@@ -7,47 +7,49 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
+
 #include <arch/mmu.h>
 #include <arch/mp.h>
 #include <arch/ops.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/mmu.h>
-#include <assert.h>
 
 #include "platform_p.h"
 #if defined(WITH_KERNEL_PCIE)
 #include <dev/pcie_bus_driver.h>
 #endif
-#include <dev/uart.h>
 #include <err.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/vector.h>
-#include <kernel/cmdline.h>
 #include <lib/acpi_tables.h>
 #include <lib/cksum.h>
 #include <lib/debuglog.h>
 #include <lib/system-topology.h>
-#include <libzbi/zbi-cpp.h>
-#include <lk/init.h>
 #include <mexec.h>
 #include <platform.h>
+#include <string.h>
+#include <trace.h>
+#include <zircon/boot/e820.h>
+#include <zircon/boot/image.h>
+#include <zircon/pixelformat.h>
+#include <zircon/types.h>
+
+#include <dev/uart.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/vector.h>
+#include <kernel/cmdline.h>
+#include <libzbi/zbi-cpp.h>
+#include <lk/init.h>
 #include <platform/console.h>
 #include <platform/keyboard.h>
 #include <platform/pc.h>
 #include <platform/pc/bootloader.h>
 #include <platform/pc/smbios.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/bootalloc.h>
 #include <vm/bootreserve.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
-#include <zircon/boot/e820.h>
-#include <zircon/boot/image.h>
-#include <zircon/pixelformat.h>
-#include <zircon/types.h>
 
 extern "C" {
 #include <efi/runtime-services.h>
@@ -217,8 +219,9 @@ void* platform_get_ramdisk(size_t* size) {
   }
 }
 
-#include <dev/display.h>
 #include <lib/gfxconsole.h>
+
+#include <dev/display.h>
 
 zx_status_t display_get_info(struct display_info* info) {
   return gfxconsole_display_get_info(info);

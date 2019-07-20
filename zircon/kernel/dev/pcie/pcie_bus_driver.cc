@@ -5,6 +5,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <inttypes.h>
+#include <lib/pci/pio.h>
+#include <trace.h>
+
 #include <dev/pcie_bridge.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
@@ -13,12 +17,9 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <inttypes.h>
 #include <ktl/limits.h>
 #include <ktl/move.h>
-#include <lib/pci/pio.h>
 #include <lk/init.h>
-#include <trace.h>
 #include <vm/vm_aspace.h>
 
 using fbl::AutoLock;

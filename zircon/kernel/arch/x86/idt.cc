@@ -4,21 +4,22 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
+#include <err.h>
+#include <string.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <arch/ops.h>
 #include <arch/x86.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/idt.h>
 #include <arch/x86/interrupts.h>
-#include <assert.h>
-#include <err.h>
 #include <fbl/algorithm.h>
 #include <kernel/mp.h>
-#include <string.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 // The size of the `clac` instruction
 #define CLAC_SIZE 3

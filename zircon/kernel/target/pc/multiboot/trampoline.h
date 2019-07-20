@@ -26,9 +26,9 @@
   {                                                                                            \
     0, /* Null entry for selector 0. */ /* 64-bit code segment with base zero, the only one we \
                                            need. */                                            \
-        0xffffull |                     /* limit 15:00 */                                      \
-            (0b10011010ull << 40) |     /* P(1) DPL(00) S(1) 1 C(0) R(1) A(0) */               \
-            (0b10101111ull << 48),      /* G(1) D(0) L(1) AVL(0) limit 19:16 */                \
+           0xffffull |                  /* limit 15:00 */                                      \
+           (0b10011010ull << 40) |      /* P(1) DPL(00) S(1) 1 C(0) R(1) A(0) */               \
+           (0b10101111ull << 48),       /* G(1) D(0) L(1) AVL(0) limit 19:16 */                \
   }
 
 // This is stored in some "safe" memory that won't be overwritten by

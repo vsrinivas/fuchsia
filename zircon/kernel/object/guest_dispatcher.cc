@@ -6,11 +6,12 @@
 
 #include "object/guest_dispatcher.h"
 
+#include <lib/counters.h>
+#include <zircon/rights.h>
+
 #include <arch/hypervisor.h>
 #include <fbl/alloc_checker.h>
-#include <lib/counters.h>
 #include <object/vm_address_region_dispatcher.h>
-#include <zircon/rights.h>
 
 KCOUNTER(dispatcher_guest_create_count, "dispatcher.guest.create")
 KCOUNTER(dispatcher_guest_destroy_count, "dispatcher.guest.destroy")

@@ -7,11 +7,12 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_VIRTUAL_INTERRUPT_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_VIRTUAL_INTERRUPT_DISPATCHER_H_
 
+#include <sys/types.h>
+#include <zircon/types.h>
+
 #include <fbl/ref_ptr.h>
 #include <object/handle.h>
 #include <object/interrupt_dispatcher.h>
-#include <sys/types.h>
-#include <zircon/types.h>
 
 class VirtualInterruptDispatcher final : public InterruptDispatcher {
  public:

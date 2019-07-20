@@ -7,6 +7,9 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PROCESS_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PROCESS_DISPATCHER_H_
 
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
+
 #include <fbl/array.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
@@ -25,8 +28,6 @@
 #include <object/job_policy.h>
 #include <object/thread_dispatcher.h>
 #include <vm/vm_aspace.h>
-#include <zircon/syscalls/object.h>
-#include <zircon/types.h>
 
 class JobDispatcher;
 

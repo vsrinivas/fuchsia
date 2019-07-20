@@ -6,23 +6,24 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/x86.h>
-#include <arch/x86/apic.h>
 #include <assert.h>
 #include <ctype.h>
 #include <debug.h>
-#include <dev/interrupt.h>
 #include <err.h>
-#include <kernel/thread.h>
 #include <lib/cbuf.h>
 #include <platform.h>
+#include <reg.h>
+#include <sys/types.h>
+#include <trace.h>
+
+#include <arch/x86.h>
+#include <arch/x86/apic.h>
+#include <dev/interrupt.h>
+#include <kernel/thread.h>
 #include <platform/console.h>
 #include <platform/keyboard.h>
 #include <platform/pc.h>
 #include <platform/timer.h>
-#include <reg.h>
-#include <sys/types.h>
-#include <trace.h>
 
 #include "platform_p.h"
 

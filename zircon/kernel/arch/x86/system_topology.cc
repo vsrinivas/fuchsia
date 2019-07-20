@@ -6,14 +6,15 @@
 
 #include "arch/x86/system_topology.h"
 
-#include <ktl/unique_ptr.h>
 #include <lib/system-topology.h>
-#include <lk/init.h>
 #include <pow2.h>
 #include <printf.h>
 #include <trace.h>
 
 #include <algorithm>
+
+#include <ktl/unique_ptr.h>
+#include <lk/init.h>
 
 #define LOCAL_TRACE 0
 

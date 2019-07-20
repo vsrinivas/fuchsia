@@ -8,6 +8,7 @@
 
 #include <platform.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -16,7 +17,6 @@
 #include <kernel/sched.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
-#include <zircon/types.h>
 
 // Guard the definition of this class because TaskTraits directly refers to
 // thread_t::fair_task_state, which is not present when the fair scheduler is

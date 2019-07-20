@@ -6,14 +6,15 @@
 
 #include "object/vcpu_dispatcher.h"
 
+#include <lib/counters.h>
+#include <zircon/rights.h>
+#include <zircon/types.h>
+
 #include <arch/hypervisor.h>
 #include <fbl/alloc_checker.h>
 #include <hypervisor/guest_physical_address_space.h>
-#include <lib/counters.h>
 #include <object/guest_dispatcher.h>
 #include <vm/vm_object.h>
-#include <zircon/rights.h>
-#include <zircon/types.h>
 
 KCOUNTER(dispatcher_vcpu_create_count, "dispatcher.vcpu.create")
 KCOUNTER(dispatcher_vcpu_destroy_count, "dispatcher.vcpu.destroy")

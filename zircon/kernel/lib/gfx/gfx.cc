@@ -15,10 +15,8 @@
  * @file
  * @brief  Graphics drawing library
  */
-#include <arch/ops.h>
 #include <assert.h>
 #include <debug.h>
-#include <dev/display.h>
 #include <err.h>
 #include <lib/gfx-font-data/gfx-font-data.h>
 #include <lib/gfx.h>
@@ -26,6 +24,9 @@
 #include <string.h>
 #include <sys/types.h>
 #include <trace.h>
+
+#include <arch/ops.h>
+#include <dev/display.h>
 
 #define LOCAL_TRACE 0
 

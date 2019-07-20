@@ -5,10 +5,11 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_JOB_POLICY_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_JOB_POLICY_H_
 
-#include <kernel/timer.h>
 #include <stdint.h>
 #include <zircon/syscalls/policy.h>
 #include <zircon/types.h>
+
+#include <kernel/timer.h>
 
 typedef uint64_t pol_cookie_t;
 

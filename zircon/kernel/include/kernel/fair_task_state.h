@@ -6,13 +6,14 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_FAIR_TASK_STATE_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_FAIR_TASK_STATE_H_
 
-#include <fbl/intrusive_wavl_tree.h>
-#include <ffl/fixed.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
 #include <utility>
+
+#include <fbl/intrusive_wavl_tree.h>
+#include <ffl/fixed.h>
 
 // Forward declaration.
 typedef struct thread thread_t;

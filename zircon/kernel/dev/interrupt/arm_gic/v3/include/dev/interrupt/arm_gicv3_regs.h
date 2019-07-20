@@ -6,8 +6,9 @@
 
 #ifndef ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V3_INCLUDE_DEV_INTERRUPT_ARM_GICV3_REGS_H_
 #define ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V3_INCLUDE_DEV_INTERRUPT_ARM_GICV3_REGS_H_
-#include <arch/arm64.h>
 #include <reg.h>
+
+#include <arch/arm64.h>
 
 extern vaddr_t arm_gicv3_gic_base;
 extern uint64_t arm_gicv3_gicd_offset;

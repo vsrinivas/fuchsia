@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <zircon/syscalls/hypervisor.h>
+
 #include <fbl/ref_ptr.h>
 #include <object/guest_dispatcher.h>
 #include <object/handle.h>
@@ -13,7 +15,6 @@
 #include <object/vcpu_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
-#include <zircon/syscalls/hypervisor.h>
 
 #include "priv.h"
 

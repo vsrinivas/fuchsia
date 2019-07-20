@@ -4,18 +4,19 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <dev/hw_rng.h>
 #include <inttypes.h>
-#include <kernel/cmdline.h>
 #include <lib/crypto/entropy/collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
 #include <lib/crypto/entropy/jitterentropy_collector.h>
 #include <lib/crypto/entropy/quality_test.h>
-#include <lk/init.h>
 #include <platform.h>
 #include <string.h>
-#include <vm/vm_object_paged.h>
 #include <zircon/types.h>
+
+#include <dev/hw_rng.h>
+#include <kernel/cmdline.h>
+#include <lk/init.h>
+#include <vm/vm_object_paged.h>
 
 namespace crypto {
 

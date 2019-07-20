@@ -7,14 +7,15 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EVENT_PAIR_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EVENT_PAIR_DISPATCHER_H_
 
+#include <sys/types.h>
+#include <zircon/rights.h>
+#include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
-#include <sys/types.h>
-#include <zircon/rights.h>
-#include <zircon/types.h>
 
 class EventPairDispatcher final
     : public PeeredDispatcher<EventPairDispatcher, ZX_DEFAULT_EVENTPAIR_RIGHTS, ZX_EVENT_SIGNALED> {

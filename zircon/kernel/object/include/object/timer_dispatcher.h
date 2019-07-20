@@ -7,15 +7,16 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_TIMER_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_TIMER_DISPATCHER_H_
 
+#include <sys/types.h>
+#include <zircon/rights.h>
+#include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 #include <kernel/dpc.h>
 #include <kernel/timer.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
-#include <sys/types.h>
-#include <zircon/rights.h>
-#include <zircon/types.h>
 
 class TimerDispatcher final : public SoloDispatcher<TimerDispatcher, ZX_DEFAULT_TIMER_RIGHTS> {
  public:

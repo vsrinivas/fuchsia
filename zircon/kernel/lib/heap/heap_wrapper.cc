@@ -5,12 +5,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/ops.h>
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
-#include <kernel/auto_lock.h>
-#include <kernel/spinlock.h>
 #include <lib/cmpctmalloc.h>
 #include <lib/console.h>
 #include <lib/heap.h>
@@ -18,6 +15,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+
+#include <arch/ops.h>
+#include <kernel/auto_lock.h>
+#include <kernel/spinlock.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>

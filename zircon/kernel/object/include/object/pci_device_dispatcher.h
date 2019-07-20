@@ -8,6 +8,11 @@
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PCI_DEVICE_DISPATCHER_H_
 #if WITH_KERNEL_PCIE
 
+#include <sys/types.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls/pci.h>
+#include <zircon/types.h>
+
 #include <dev/pci_common.h>
 #include <dev/pcie_device.h>
 #include <fbl/canary.h>
@@ -20,11 +25,7 @@
 #include <object/dispatcher.h>
 #include <object/handle.h>
 #include <object/interrupt_dispatcher.h>
-#include <sys/types.h>
 #include <vm/vm_aspace.h>
-#include <zircon/rights.h>
-#include <zircon/syscalls/pci.h>
-#include <zircon/types.h>
 
 class PciInterruptDispatcher;
 

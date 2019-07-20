@@ -7,10 +7,11 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_DIAGNOSTICS_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_DIAGNOSTICS_H_
 
-#include <fbl/ref_ptr.h>
 #include <lib/user_copy/user_ptr.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
+
+#include <fbl/ref_ptr.h>
 
 class ProcessDispatcher;
 class VmAspace;

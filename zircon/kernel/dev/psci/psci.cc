@@ -4,13 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/arm64/smccc.h>
-#include <dev/psci.h>
 #include <inttypes.h>
-#include <pdev/driver.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/boot/driver-config.h>
+
+#include <arch/arm64/smccc.h>
+#include <dev/psci.h>
+#include <pdev/driver.h>
 
 #define LOCAL_TRACE 0
 

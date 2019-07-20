@@ -4,9 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <trace.h>
+
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
-#include <trace.h>
 
 #include "system_priv.h"
 

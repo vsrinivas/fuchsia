@@ -7,13 +7,14 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_VM_OBJECT_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_VM_OBJECT_DISPATCHER_H_
 
-#include <fbl/canary.h>
 #include <lib/user_copy/user_ptr.h>
-#include <object/dispatcher.h>
 #include <sys/types.h>
-#include <vm/vm_object.h>
 #include <zircon/rights.h>
 #include <zircon/types.h>
+
+#include <fbl/canary.h>
+#include <object/dispatcher.h>
+#include <vm/vm_object.h>
 
 class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DEFAULT_VMO_RIGHTS>,
                                  public VmObjectChildObserver {

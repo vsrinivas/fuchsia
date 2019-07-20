@@ -4,9 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <zircon/syscalls/hypervisor.h>
+
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
-#include <zircon/syscalls/hypervisor.h>
 
 #include "vmx_cpu_state_priv.h"
 

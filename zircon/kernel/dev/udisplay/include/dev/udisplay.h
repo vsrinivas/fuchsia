@@ -7,10 +7,11 @@
 #ifndef ZIRCON_KERNEL_DEV_UDISPLAY_INCLUDE_DEV_UDISPLAY_H_
 #define ZIRCON_KERNEL_DEV_UDISPLAY_INCLUDE_DEV_UDISPLAY_H_
 
-#include <dev/display.h>
 #include <err.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <dev/display.h>
 
 __BEGIN_CDECLS
 

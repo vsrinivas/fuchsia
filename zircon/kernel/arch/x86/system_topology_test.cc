@@ -4,7 +4,6 @@
 
 #include "arch/x86/system_topology.h"
 
-#include <arch/x86/cpuid_test_data.h>
 #include <lib/acpi_tables_test_data.h>
 #include <lib/system-topology.h>
 #include <lib/unittest/unittest.h>
@@ -13,6 +12,8 @@
 #include <string.h>
 
 #include <initializer_list>
+
+#include <arch/x86/cpuid_test_data.h>
 
 using system_topology::Graph;
 

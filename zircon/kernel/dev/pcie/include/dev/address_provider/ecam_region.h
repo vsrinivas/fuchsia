@@ -8,10 +8,11 @@
 #ifndef ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_ADDRESS_PROVIDER_ECAM_REGION_H_
 #define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_ADDRESS_PROVIDER_ECAM_REGION_H_
 
-#include <fbl/intrusive_wavl_tree.h>
-#include <ktl/unique_ptr.h>
 #include <sys/types.h>
 #include <zircon/types.h>
+
+#include <fbl/intrusive_wavl_tree.h>
+#include <ktl/unique_ptr.h>
 
 struct PciEcamRegion {
   paddr_t phys_base;  // Physical address of the memory mapped config region.

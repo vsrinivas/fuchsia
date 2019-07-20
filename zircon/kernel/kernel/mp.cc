@@ -7,14 +7,19 @@
 
 #include "kernel/mp.h"
 
-#include <arch/mp.h>
-#include <arch/ops.h>
 #include <assert.h>
 #include <debug.h>
-#include <dev/interrupt.h>
 #include <err.h>
-#include <fbl/algorithm.h>
 #include <inttypes.h>
+#include <platform.h>
+#include <stdlib.h>
+#include <trace.h>
+#include <zircon/types.h>
+
+#include <arch/mp.h>
+#include <arch/ops.h>
+#include <dev/interrupt.h>
+#include <fbl/algorithm.h>
 #include <kernel/align.h>
 #include <kernel/dpc.h>
 #include <kernel/event.h>
@@ -25,11 +30,7 @@
 #include <kernel/stats.h>
 #include <kernel/timer.h>
 #include <lk/init.h>
-#include <platform.h>
 #include <platform/timer.h>
-#include <stdlib.h>
-#include <trace.h>
-#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 

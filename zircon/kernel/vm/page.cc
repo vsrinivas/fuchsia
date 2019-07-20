@@ -8,11 +8,12 @@
 
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/percpu.h>
 #include <lib/console.h>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
+
+#include <kernel/percpu.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>

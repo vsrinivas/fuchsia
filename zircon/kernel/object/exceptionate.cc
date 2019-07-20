@@ -6,13 +6,14 @@
 
 #include "object/exceptionate.h"
 
+#include <zircon/errors.h>
+#include <zircon/syscalls/exception.h>
+
 #include <object/exception_dispatcher.h>
 #include <object/handle.h>
 #include <object/message_packet.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
-#include <zircon/errors.h>
-#include <zircon/syscalls/exception.h>
 
 Exceptionate::Exceptionate(ExceptionPort::Type port_type) : port_type_(port_type) {}
 

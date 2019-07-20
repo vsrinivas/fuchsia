@@ -7,13 +7,14 @@
 #ifndef ZIRCON_KERNEL_DEV_IOMMU_INTEL_HW_H_
 #define ZIRCON_KERNEL_DEV_IOMMU_INTEL_HW_H_
 
-#include <arch/ops.h>
 #include <err.h>
+#include <stdint.h>
+#include <zircon/compiler.h>
+
+#include <arch/ops.h>
 #include <hwreg/bitfields.h>
 #include <kernel/atomic.h>
 #include <ktl/type_traits.h>
-#include <stdint.h>
-#include <zircon/compiler.h>
 
 namespace intel_iommu {
 

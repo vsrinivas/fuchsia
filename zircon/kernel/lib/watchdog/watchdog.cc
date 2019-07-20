@@ -9,15 +9,16 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/auto_lock.h>
-#include <kernel/spinlock.h>
-#include <kernel/thread.h>
-#include <kernel/timer.h>
 #include <lib/watchdog.h>
 #include <platform.h>
 #include <zircon/compiler.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+
+#include <kernel/auto_lock.h>
+#include <kernel/spinlock.h>
+#include <kernel/thread.h>
+#include <kernel/timer.h>
 
 static SpinLock lock;
 

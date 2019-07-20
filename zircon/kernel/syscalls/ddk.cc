@@ -4,13 +4,25 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <err.h>
+#include <lib/user_copy/user_ptr.h>
+#include <platform.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <trace.h>
+#include <zircon/syscalls/iommu.h>
+#include <zircon/syscalls/pci.h>
+#include <zircon/syscalls/smc.h>
+
+#include <new>
+
 #include <dev/interrupt.h>
 #include <dev/iommu.h>
 #include <dev/udisplay.h>
-#include <err.h>
 #include <fbl/auto_call.h>
 #include <fbl/inline_array.h>
-#include <lib/user_copy/user_ptr.h>
 #include <object/bus_transaction_initiator_dispatcher.h>
 #include <object/handle.h>
 #include <object/interrupt_dispatcher.h>
@@ -21,20 +33,9 @@
 #include <object/vcpu_dispatcher.h>
 #include <object/virtual_interrupt_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
-#include <platform.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/vm.h>
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>
-#include <zircon/syscalls/iommu.h>
-#include <zircon/syscalls/pci.h>
-#include <zircon/syscalls/smc.h>
-
-#include <new>
 
 #if ARCH_X86
 #include <platform/pc/bootloader.h>
@@ -255,14 +256,14 @@ zx_status_t sys_ioports_request(zx_handle_t hrsrc, uint16_t io_addr, uint32_t le
 
 // zx_status_t zx_ioports_release
 zx_status_t sys_ioports_release(zx_handle_t hrsrc, uint16_t io_addr, uint32_t len) {
-    zx_status_t status;
-    if ((status = validate_resource_ioport(hrsrc, io_addr, len)) != ZX_OK) {
-        return status;
-    }
+  zx_status_t status;
+  if ((status = validate_resource_ioport(hrsrc, io_addr, len)) != ZX_OK) {
+    return status;
+  }
 
-    LTRACEF("addr 0x%x len 0x%x\n", io_addr, len);
+  LTRACEF("addr 0x%x len 0x%x\n", io_addr, len);
 
-    return IoBitmap::GetCurrent().SetIoBitmap(io_addr, len, /*enable=*/false);
+  return IoBitmap::GetCurrent().SetIoBitmap(io_addr, len, /*enable=*/false);
 }
 
 #else
@@ -274,7 +275,7 @@ zx_status_t sys_ioports_request(zx_handle_t hrsrc, uint16_t io_addr, uint32_t le
 
 // zx_status_t zx_ioports_release
 zx_status_t sys_ioports_release(zx_handle_t hrsrc, uint16_t io_addr, uint32_t len) {
-    return ZX_ERR_NOT_SUPPORTED;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 #endif
 

@@ -4,19 +4,20 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <bits.h>
+#include <platform.h>
+#include <trace.h>
+#include <zircon/syscalls/hypervisor.h>
+#include <zircon/syscalls/port.h>
+
 #include <arch/arm64/hypervisor/el2_state.h>
 #include <arch/hypervisor.h>
-#include <bits.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/psci.h>
 #include <dev/timer/arm_generic.h>
 #include <hypervisor/ktrace.h>
-#include <platform.h>
-#include <trace.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
-#include <zircon/syscalls/hypervisor.h>
-#include <zircon/syscalls/port.h>
 
 #include "vmexit_priv.h"
 

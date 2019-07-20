@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/debuglog.h>
+
 #include <platform/halt_helper.h>
 
 void platform_graceful_halt_helper(platform_halt_action action) {

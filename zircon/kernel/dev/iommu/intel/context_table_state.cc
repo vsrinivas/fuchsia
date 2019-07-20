@@ -6,10 +6,10 @@
 
 #include "context_table_state.h"
 
+#include <new>
+
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
-
-#include <new>
 
 #include "device_context.h"
 #include "hw.h"

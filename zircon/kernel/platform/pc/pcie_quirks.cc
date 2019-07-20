@@ -9,14 +9,15 @@
 
 #if WITH_KERNEL_PCIE
 
+#include <inttypes.h>
+#include <trace.h>
+#include <zircon/types.h>
+
 #include <arch/x86/feature.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
-#include <inttypes.h>
-#include <trace.h>
-#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 

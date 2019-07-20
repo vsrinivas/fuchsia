@@ -7,12 +7,13 @@
 
 #include <debug.h>
 #include <err.h>
-#include <kernel/thread.h>
 #include <lib/console.h>
 #include <platform.h>
-#include <platform/debug.h>
 #include <stdio.h>
 #include <zircon/compiler.h>
+
+#include <kernel/thread.h>
+#include <platform/debug.h>
 
 /*
  * default implementations of these routines, if the platform code

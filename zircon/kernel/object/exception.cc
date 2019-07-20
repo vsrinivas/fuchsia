@@ -5,18 +5,19 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch.h>
-#include <arch/exception.h>
 #include <assert.h>
 #include <err.h>
-#include <fbl/auto_call.h>
 #include <inttypes.h>
+#include <stdio.h>
+#include <trace.h>
+#include <zircon/syscalls/object.h>
+
+#include <arch/exception.h>
+#include <fbl/auto_call.h>
 #include <object/excp_port.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
-#include <stdio.h>
-#include <trace.h>
-#include <zircon/syscalls/object.h>
 
 #define LOCAL_TRACE 0
 #define TRACE_EXCEPTIONS 1

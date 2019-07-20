@@ -5,18 +5,19 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <object/exceptionate.h>
-#include <object/excp_port.h>
-#include <object/job_dispatcher.h>
-#include <object/port_dispatcher.h>
-#include <object/process_dispatcher.h>
-#include <object/thread_dispatcher.h>
 #include <platform.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+
+#include <object/exceptionate.h>
+#include <object/excp_port.h>
+#include <object/job_dispatcher.h>
+#include <object/port_dispatcher.h>
+#include <object/process_dispatcher.h>
+#include <object/thread_dispatcher.h>
 
 #include "priv.h"
 

@@ -5,15 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <fbl/algorithm.h>
 #include <inttypes.h>
-#include <kernel/auto_lock.h>
-#include <kernel/event.h>
-#include <kernel/mp.h>
-#include <kernel/spinlock.h>
-#include <kernel/thread.h>
-#include <kernel/timer.h>
-#include <ktl/atomic.h>
 #include <lib/unittest/unittest.h>
 #include <malloc.h>
 #include <platform.h>
@@ -22,6 +14,15 @@
 #include <stdio.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+
+#include <fbl/algorithm.h>
+#include <kernel/auto_lock.h>
+#include <kernel/event.h>
+#include <kernel/mp.h>
+#include <kernel/spinlock.h>
+#include <kernel/thread.h>
+#include <kernel/timer.h>
+#include <ktl/atomic.h>
 
 #include "tests.h"
 

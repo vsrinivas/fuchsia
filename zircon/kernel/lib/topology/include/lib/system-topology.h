@@ -5,13 +5,14 @@
 #ifndef ZIRCON_KERNEL_LIB_TOPOLOGY_INCLUDE_LIB_SYSTEM_TOPOLOGY_H_
 #define ZIRCON_KERNEL_LIB_TOPOLOGY_INCLUDE_LIB_SYSTEM_TOPOLOGY_H_
 
+#include <lib/lazy_init/lazy_init.h>
+#include <zircon/boot/image.h>
+#include <zircon/types.h>
+
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <kernel/cpu.h>
 #include <ktl/move.h>
-#include <lib/lazy_init/lazy_init.h>
-#include <zircon/boot/image.h>
-#include <zircon/types.h>
 
 /*
  * Captures the physical layout of the core system (processors, caches, etc..).

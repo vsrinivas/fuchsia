@@ -8,12 +8,13 @@
 #ifndef ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_UPSTREAM_NODE_H_
 #define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_UPSTREAM_NODE_H_
 
+#include <sys/types.h>
+
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
 #include <dev/pcie_ref_counted.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <sys/types.h>
 
 struct pcie_config_t;
 class RegionAllocator;

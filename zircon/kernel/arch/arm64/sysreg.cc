@@ -3,13 +3,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/arm64.h>
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <arch/arm64.h>
 
 #if ARCH_ARM64
 #include <lib/console.h>

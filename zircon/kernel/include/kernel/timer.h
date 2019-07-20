@@ -8,12 +8,13 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_TIMER_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_TIMER_H_
 
-#include <kernel/deadline.h>
-#include <kernel/spinlock.h>
 #include <list.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <kernel/deadline.h>
+#include <kernel/spinlock.h>
 
 __BEGIN_CDECLS
 

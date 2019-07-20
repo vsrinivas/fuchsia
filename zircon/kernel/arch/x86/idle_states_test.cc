@@ -5,15 +5,16 @@
 // https://opensource.org/licenses/MIT
 #include "arch/x86/idle_states.h"
 
+#include <lib/unittest/unittest.h>
+#include <platform.h>
+#include <stdlib.h>
+#include <zircon/time.h>
+
 #include <arch/arch_ops.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
 #include <kernel/thread.h>
-#include <lib/unittest/unittest.h>
-#include <platform.h>
 #include <platform/timer.h>
-#include <stdlib.h>
-#include <zircon/time.h>
 
 namespace {
 

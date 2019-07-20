@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/instrumentation/vmo.h>
-#include <object/vm_object_dispatcher.h>
-#include <vm/vm_object_paged.h>
 
 #include <cstring>
+
+#include <object/vm_object_dispatcher.h>
+#include <vm/vm_object_paged.h>
 
 namespace {
 

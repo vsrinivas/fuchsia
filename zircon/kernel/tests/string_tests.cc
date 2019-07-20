@@ -5,16 +5,17 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <fbl/auto_call.h>
 #include <inttypes.h>
-#include <kernel/thread.h>
 #include <malloc.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/types.h>
+
+#include <fbl/auto_call.h>
+#include <kernel/thread.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
-#include <zircon/types.h>
 
 static uint8_t* src;
 static uint8_t* dst;

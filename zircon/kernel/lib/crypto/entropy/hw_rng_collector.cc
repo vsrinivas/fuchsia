@@ -4,9 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <dev/hw_rng.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
 #include <zircon/errors.h>
+
+#include <dev/hw_rng.h>
 
 namespace crypto {
 

@@ -4,9 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <fbl/auto_call.h>
 #include <lib/unittest/unittest.h>
 #include <lib/unittest/user_memory.h>
+
+#include <fbl/auto_call.h>
 
 namespace testing {
 

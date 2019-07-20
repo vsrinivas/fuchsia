@@ -7,9 +7,10 @@
 #ifndef ZIRCON_KERNEL_DEV_IOMMU_INTEL_INCLUDE_DEV_IOMMU_INTEL_H_
 #define ZIRCON_KERNEL_DEV_IOMMU_INTEL_INCLUDE_DEV_IOMMU_INTEL_H_
 
+#include <zircon/syscalls/iommu.h>
+
 #include <dev/iommu.h>
 #include <fbl/ref_ptr.h>
-#include <zircon/syscalls/iommu.h>
 
 class IntelIommu {
  public:

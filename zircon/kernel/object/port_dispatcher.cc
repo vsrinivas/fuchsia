@@ -8,19 +8,20 @@
 
 #include <assert.h>
 #include <err.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/arena.h>
-#include <fbl/auto_lock.h>
 #include <lib/counters.h>
-#include <object/excp_port.h>
-#include <object/process_dispatcher.h>
-#include <object/thread_dispatcher.h>
 #include <platform.h>
 #include <pow2.h>
 #include <zircon/compiler.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
+
+#include <fbl/alloc_checker.h>
+#include <fbl/arena.h>
+#include <fbl/auto_lock.h>
+#include <object/excp_port.h>
+#include <object/process_dispatcher.h>
+#include <object/thread_dispatcher.h>
 
 // All port sub-packets must be exactly 32 bytes
 static_assert(sizeof(zx_packet_user_t) == 32, "incorrect size for zx_packet_signal_t");

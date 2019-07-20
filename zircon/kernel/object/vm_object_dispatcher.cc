@@ -8,14 +8,15 @@
 
 #include <assert.h>
 #include <err.h>
-#include <fbl/alloc_checker.h>
 #include <inttypes.h>
 #include <lib/counters.h>
 #include <trace.h>
+#include <zircon/rights.h>
+
+#include <fbl/alloc_checker.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
-#include <zircon/rights.h>
 
 #define LOCAL_TRACE 0
 

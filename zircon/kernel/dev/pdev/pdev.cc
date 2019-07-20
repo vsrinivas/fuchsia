@@ -5,10 +5,11 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
+#include <stdio.h>
+
 #include <lk/init.h>
 #include <pdev/driver.h>
 #include <pdev/pdev.h>
-#include <stdio.h>
 
 static const zbi_header_t* driver_zbi = NULL;
 

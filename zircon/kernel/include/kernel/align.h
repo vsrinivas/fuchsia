@@ -7,8 +7,9 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_ALIGN_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_ALIGN_H_
 
-#include <arch/defines.h>
 #include <zircon/compiler.h>
+
+#include <arch/defines.h>
 
 // Use to align structures on cache lines to avoid cpu aliasing.
 #define __CPU_ALIGN __ALIGNED(MAX_CACHE_LINE)

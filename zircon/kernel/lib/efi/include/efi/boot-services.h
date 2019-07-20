@@ -5,9 +5,10 @@
 #ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_BOOT_SERVICES_H_
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_BOOT_SERVICES_H_
 
+#include <stdbool.h>
+
 #include <efi/protocol/device-path.h>
 #include <efi/types.h>
-#include <stdbool.h>
 
 #define EFI_BOOT_SERVICES_SIGNATURE 0x56524553544f4f42
 #define EFI_BOOT_SERVICES_REVISION EFI_SPECIFICATION_VERSION

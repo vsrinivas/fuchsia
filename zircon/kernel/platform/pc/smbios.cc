@@ -4,20 +4,21 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 //
-#include <fbl/auto_call.h>
-#include <ktl/move.h>
 #include <lib/console.h>
 #include <lib/smbios/smbios.h>
-#include <platform/pc/bootloader.h>
-#include <platform/pc/smbios.h>
 #include <stdint.h>
 #include <string.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
+#include <fbl/auto_call.h>
+#include <ktl/move.h>
+#include <platform/pc/bootloader.h>
+#include <platform/pc/smbios.h>
 #include <vm/physmap.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_physical.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 namespace {
 

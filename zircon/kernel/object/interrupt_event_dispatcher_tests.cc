@@ -7,12 +7,13 @@
 #if ARCH_X86
 #include <arch/x86/apic.h>
 #endif
-#include <ktl/atomic.h>
 #include <lib/unittest/unittest.h>
+#include <platform.h>
+
+#include <ktl/atomic.h>
 #include <object/interrupt_dispatcher.h>
 #include <object/interrupt_event_dispatcher.h>
 #include <object/port_dispatcher.h>
-#include <platform.h>
 
 namespace {
 

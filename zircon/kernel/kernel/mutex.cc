@@ -20,13 +20,14 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/ktrace.h>
+#include <trace.h>
+#include <zircon/types.h>
+
 #include <kernel/sched.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <ktl/type_traits.h>
-#include <lib/ktrace.h>
-#include <trace.h>
-#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 

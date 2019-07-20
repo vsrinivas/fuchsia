@@ -5,8 +5,9 @@
 #ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SIMPLE_NETWORK_H_
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_SIMPLE_NETWORK_H_
 
-#include <efi/types.h>
 #include <stdbool.h>
+
+#include <efi/types.h>
 
 #define EFI_SIMPLE_NETWORK_PROTOCOL_GUID                                           \
   {                                                                                \

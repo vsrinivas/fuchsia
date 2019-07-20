@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/unittest/unittest.h>
+
 #include <object/job_dispatcher.h>
 
 namespace {

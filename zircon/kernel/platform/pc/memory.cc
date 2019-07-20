@@ -4,26 +4,27 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
+#include <err.h>
+#include <inttypes.h>
+#include <lib/memory_limit.h>
+#include <platform.h>
+#include <string.h>
+#include <trace.h>
+#include <zircon/boot/e820.h>
+#include <zircon/types.h>
+
 #include <arch/x86/bootstrap16.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
-#include <assert.h>
 #include <dev/interrupt.h>
 #include <efi/boot-services.h>
-#include <err.h>
 #include <fbl/algorithm.h>
-#include <inttypes.h>
-#include <lib/memory_limit.h>
 #include <lk/init.h>
 #include <object/handle.h>
 #include <object/resource_dispatcher.h>
-#include <platform.h>
 #include <platform/pc/bootloader.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/vm.h>
-#include <zircon/boot/e820.h>
-#include <zircon/types.h>
 
 #include "debug.h"
 #include "platform_p.h"

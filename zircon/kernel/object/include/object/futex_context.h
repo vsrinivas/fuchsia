@@ -7,6 +7,9 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_FUTEX_CONTEXT_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_FUTEX_CONTEXT_H_
 
+#include <lib/user_copy/user_ptr.h>
+#include <zircon/types.h>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/mutex.h>
@@ -15,8 +18,6 @@
 #include <kernel/owned_wait_queue.h>
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
-#include <lib/user_copy/user_ptr.h>
-#include <zircon/types.h>
 
 class ThreadDispatcher;
 

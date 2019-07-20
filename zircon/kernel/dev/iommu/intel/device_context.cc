@@ -6,15 +6,16 @@
 
 #include "device_context.h"
 
+#include <trace.h>
+
+#include <new>
+
 #include <fbl/auto_call.h>
 #include <kernel/range_check.h>
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
-#include <trace.h>
 #include <vm/vm.h>
 #include <vm/vm_object_paged.h>
-
-#include <new>
 
 #include "hw.h"
 #include "iommu_impl.h"

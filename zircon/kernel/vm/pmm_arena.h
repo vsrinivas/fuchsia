@@ -6,11 +6,12 @@
 #ifndef ZIRCON_KERNEL_VM_PMM_ARENA_H_
 #define ZIRCON_KERNEL_VM_PMM_ARENA_H_
 
+#include <trace.h>
+#include <zircon/types.h>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
-#include <trace.h>
 #include <vm/pmm.h>
-#include <zircon/types.h>
 
 class PmmNode;
 

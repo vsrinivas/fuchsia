@@ -10,6 +10,9 @@
 #include <assert.h>
 #include <debug.h>
 #include <endian.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <stdint.h>
+
 #include <fbl/canary.h>
 #include <kernel/owned_wait_queue.h>
 #include <kernel/sched.h>
@@ -17,8 +20,6 @@
 #include <kernel/thread_lock.h>
 #include <kernel/wait.h>
 #include <ktl/atomic.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <stdint.h>
 
 namespace internal {
 

@@ -7,10 +7,11 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_MBUF_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_MBUF_H_
 
-#include <fbl/intrusive_single_list.h>
 #include <lib/user_copy/user_ptr.h>
 #include <stdint.h>
 #include <zircon/types.h>
+
+#include <fbl/intrusive_single_list.h>
 
 // MBufChain is a container for storing a stream of bytes or a sequence of datagrams.
 //

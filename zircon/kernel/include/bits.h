@@ -8,8 +8,9 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_BITS_H_
 #define ZIRCON_KERNEL_INCLUDE_BITS_H_
 
-#include <arch/ops.h>
 #include <zircon/compiler.h>
+
+#include <arch/ops.h>
 
 __BEGIN_CDECLS
 

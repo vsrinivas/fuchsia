@@ -7,10 +7,11 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_RESOURCE_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_RESOURCE_H_
 
-#include <fbl/ref_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
+
+#include <fbl/ref_ptr.h>
 
 // Resource constants (ZX_RSRC_KIND_..., etc) are located
 // in system/public/zircon/syscalls/resource.h

@@ -5,17 +5,18 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/ops.h>
 #include <assert.h>
 #include <err.h>
-#include <fbl/algorithm.h>
-#include <kernel/event.h>
-#include <kernel/mp.h>
-#include <kernel/thread.h>
 #include <lib/unittest/unittest.h>
 #include <stdio.h>
 #include <trace.h>
 #include <zircon/types.h>
+
+#include <arch/ops.h>
+#include <fbl/algorithm.h>
+#include <kernel/event.h>
+#include <kernel/mp.h>
+#include <kernel/thread.h>
 
 #include "tests.h"
 

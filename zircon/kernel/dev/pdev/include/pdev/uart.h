@@ -7,8 +7,9 @@
 #ifndef ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_UART_H_
 #define ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_UART_H_
 
-#include <dev/uart.h>
 #include <zircon/compiler.h>
+
+#include <dev/uart.h>
 
 __BEGIN_CDECLS
 

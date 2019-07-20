@@ -4,9 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/unittest/unittest.h>
+
 #include <arch/hypervisor.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
-#include <lib/unittest/unittest.h>
 
 static bool has_pending_interrupt() {
   BEGIN_TEST;

@@ -6,6 +6,11 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_PERCPU_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_PERCPU_H_
 
+#include <lib/lazy_init/lazy_init.h>
+#include <list.h>
+#include <sys/types.h>
+#include <zircon/compiler.h>
+
 #include <arch/ops.h>
 #include <kernel/align.h>
 #include <kernel/event.h>
@@ -14,11 +19,7 @@
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <ktl/forward.h>
-#include <lib/lazy_init/lazy_init.h>
-#include <list.h>
-#include <sys/types.h>
 #include <vm/page_state.h>
-#include <zircon/compiler.h>
 
 struct percpu {
   percpu(cpu_num_t cpu_num);

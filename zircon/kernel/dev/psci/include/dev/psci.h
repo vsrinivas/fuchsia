@@ -9,6 +9,7 @@
 #define ZIRCON_KERNEL_DEV_PSCI_INCLUDE_DEV_PSCI_H_
 
 #include <arch.h>
+
 #include <arch/arm64/mp.h>
 #include <dev/power.h>
 

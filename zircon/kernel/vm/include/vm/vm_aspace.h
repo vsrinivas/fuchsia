@@ -7,9 +7,12 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_VM_ASPACE_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_ASPACE_H_
 
+#include <assert.h>
+#include <lib/crypto/prng.h>
+#include <zircon/types.h>
+
 #include <arch/aspace.h>
 #include <arch/mmu.h>
-#include <assert.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -18,11 +21,9 @@
 #include <fbl/ref_ptr.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
-#include <lib/crypto/prng.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
-#include <zircon/types.h>
 
 namespace hypervisor {
 class GuestPhysicalAddressSpace;

@@ -4,6 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/unittest/unittest.h>
+#include <platform.h>
+#include <zircon/types.h>
+
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
@@ -14,9 +18,6 @@
 #include <ktl/atomic.h>
 #include <ktl/limits.h>
 #include <ktl/type_traits.h>
-#include <lib/unittest/unittest.h>
-#include <platform.h>
-#include <zircon/types.h>
 
 #include "tests.h"
 

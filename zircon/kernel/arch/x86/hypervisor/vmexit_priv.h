@@ -7,9 +7,10 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VMEXIT_PRIV_H_
 #define ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VMEXIT_PRIV_H_
 
+#include <zircon/types.h>
+
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/trap_map.h>
-#include <zircon/types.h>
 
 // clang-format off
 

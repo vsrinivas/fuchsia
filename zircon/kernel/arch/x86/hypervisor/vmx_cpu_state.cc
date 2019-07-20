@@ -6,11 +6,12 @@
 
 #include <assert.h>
 #include <bits.h>
+#include <string.h>
+
 #include <hypervisor/cpu.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
-#include <string.h>
 
 #include "vmx_cpu_state_priv.h"
 

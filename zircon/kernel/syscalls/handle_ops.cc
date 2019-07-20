@@ -6,10 +6,11 @@
 
 #include <err.h>
 #include <inttypes.h>
+#include <trace.h>
+
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <object/user_handles.h>
-#include <trace.h>
 
 #include "priv.h"
 

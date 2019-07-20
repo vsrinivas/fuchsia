@@ -7,27 +7,28 @@
 
 #include <assert.h>
 #include <err.h>
-#include <fbl/auto_lock.h>
-#include <fbl/intrusive_double_list.h>
-#include <fbl/mutex.h>
 #include <inttypes.h>
-#include <kernel/mp.h>
-#include <kernel/timer.h>
 #include <lib/console.h>
-#include <lk/init.h>
 #include <platform.h>
 #include <pow2.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
-#include <vm/bootalloc.h>
-#include <vm/physmap.h>
-#include <vm/pmm.h>
-#include <vm/vm.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <new>
+
+#include <fbl/auto_lock.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
+#include <kernel/mp.h>
+#include <kernel/timer.h>
+#include <lk/init.h>
+#include <vm/bootalloc.h>
+#include <vm/physmap.h>
+#include <vm/pmm.h>
+#include <vm/vm.h>
 
 #include "pmm_arena.h"
 #include "pmm_node.h"

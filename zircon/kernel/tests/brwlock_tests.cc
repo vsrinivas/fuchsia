@@ -4,12 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/unittest/unittest.h>
+#include <platform.h>
+
 #include <fbl/algorithm.h>
 #include <kernel/brwlock.h>
 #include <kernel/mp.h>
 #include <ktl/atomic.h>
-#include <lib/unittest/unittest.h>
-#include <platform.h>
 
 #include "tests.h"
 

@@ -4,20 +4,21 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/ops.h>
-#include <arch/user_copy.h>
 #include <debug.h>
 #include <err.h>
-#include <fbl/alloc_checker.h>
-#include <hypervisor/ktrace.h>
-#include <kernel/cmdline.h>
 #include <lib/ktrace.h>
 #include <lib/ktrace/string_ref.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lk/init.h>
-#include <object/thread_dispatcher.h>
 #include <platform.h>
 #include <string.h>
+
+#include <arch/ops.h>
+#include <arch/user_copy.h>
+#include <fbl/alloc_checker.h>
+#include <hypervisor/ktrace.h>
+#include <kernel/cmdline.h>
+#include <lk/init.h>
+#include <object/thread_dispatcher.h>
 #include <vm/vm_aspace.h>
 
 #define ktrace_ticks_per_ms() (ticks_per_second() / 1000)

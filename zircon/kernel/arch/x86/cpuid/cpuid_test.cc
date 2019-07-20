@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <arch/x86/cpuid.h>
-#include <arch/x86/cpuid_test_data.h>
 #include <lib/unittest/unittest.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <initializer_list>
+
+#include <arch/x86/cpuid.h>
+#include <arch/x86/cpuid_test_data.h>
 
 namespace {
 using cpu_id::CpuId;

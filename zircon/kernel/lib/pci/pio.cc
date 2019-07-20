@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 #include <assert.h>
 #include <endian.h>
+#include <lib/pci/pio.h>
+#include <zircon/types.h>
+
 #include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
-#include <lib/pci/pio.h>
-#include <zircon/types.h>
 
 // TODO: This library exists as a shim for the awkward period between bringing
 // PCI legacy support online, and moving PCI to userspace. Initially, it exists

@@ -8,12 +8,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
-#include <fbl/algorithm.h>
 #include <inttypes.h>
-#include <kernel/event.h>
-#include <kernel/mp.h>
-#include <kernel/mutex.h>
-#include <kernel/thread.h>
 #include <lib/unittest/unittest.h>
 #include <platform.h>
 #include <pow2.h>
@@ -21,6 +16,12 @@
 #include <string.h>
 #include <trace.h>
 #include <zircon/types.h>
+
+#include <fbl/algorithm.h>
+#include <kernel/event.h>
+#include <kernel/mp.h>
+#include <kernel/mutex.h>
+#include <kernel/thread.h>
 
 #include "tests.h"
 

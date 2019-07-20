@@ -5,15 +5,16 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/x86/feature.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/lockdep.h>
-#include <kernel/mp.h>
-#include <kernel/spinlock.h>
 #include <lib/console.h>
 #include <string.h>
 #include <zircon/compiler.h>
+
+#include <arch/x86/feature.h>
+#include <kernel/lockdep.h>
+#include <kernel/mp.h>
+#include <kernel/spinlock.h>
 
 static bool hwp_enabled = false;
 

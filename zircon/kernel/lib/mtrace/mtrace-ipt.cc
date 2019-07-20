@@ -8,9 +8,9 @@
 
 #include <assert.h>
 #include <inttypes.h>
-
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <lib/zircon-internal/mtrace.h>
+
 #include <object/process_dispatcher.h>
 
 #include "arch/x86/proc_trace.h"

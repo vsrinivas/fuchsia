@@ -9,15 +9,16 @@
 #define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_CAPS_H_
 
 #include <assert.h>
-#include <dev/pci_common.h>
-#include <dev/pci_config.h>
 #include <endian.h>
 #include <err.h>
+#include <sys/types.h>
+#include <zircon/compiler.h>
+
+#include <dev/pci_common.h>
+#include <dev/pci_config.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <sys/types.h>
-#include <zircon/compiler.h>
 
 /**
  * @see PCI Code and ID Assignment Specification Revision 1.7 Section 2

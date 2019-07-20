@@ -6,18 +6,19 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch.h>
-#include <arch/ops.h>
 #include <debug.h>
 #include <err.h>
-#include <fbl/algorithm.h>
 #include <lib/console.h>
 #include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/types.h>
+
+#include <arch/ops.h>
+#include <fbl/algorithm.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
-#include <zircon/types.h>
 
 #include "tests.h"
 

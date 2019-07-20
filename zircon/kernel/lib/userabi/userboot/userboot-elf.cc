@@ -5,12 +5,13 @@
 #include "userboot-elf.h"
 
 #include <elf.h>
-#include <elfload/elfload.h>
 #include <stdbool.h>
 #include <string.h>
 #include <zircon/compiler.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+
+#include <elfload/elfload.h>
 
 #include "bootfs.h"
 #include "util.h"

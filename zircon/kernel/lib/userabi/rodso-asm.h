@@ -7,8 +7,9 @@
 #ifndef ZIRCON_KERNEL_LIB_USERABI_RODSO_ASM_H_
 #define ZIRCON_KERNEL_LIB_USERABI_RODSO_ASM_H_
 
-#include <arch/defines.h>
 #include <asm.h>
+
+#include <arch/defines.h>
 
 // clang-format off
 

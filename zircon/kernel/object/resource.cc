@@ -6,12 +6,13 @@
 
 #include "object/resource.h"
 
+#include <trace.h>
+#include <zircon/syscalls/resource.h>
+
 #include <fbl/ref_ptr.h>
 #include <kernel/range_check.h>
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>
-#include <trace.h>
-#include <zircon/syscalls/resource.h>
 
 #define LOCAL_TRACE 0
 

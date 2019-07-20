@@ -7,15 +7,16 @@
 
 #include <assert.h>
 #include <err.h>
-#include <fbl/alloc_checker.h>
 #include <inttypes.h>
-#include <ktl/move.h>
 #include <lib/console.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
-#include <vm/vm.h>
 #include <zircon/types.h>
+
+#include <fbl/alloc_checker.h>
+#include <ktl/move.h>
+#include <vm/vm.h>
 
 #include "vm_priv.h"
 

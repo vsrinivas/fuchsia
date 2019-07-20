@@ -6,9 +6,10 @@
 
 #if defined(__x86_64__) || defined(__aarch64__)  // entire file
 
-#include <arch/user_copy.h>
 #include <lib/perfmon.h>
 #include <lib/zircon-internal/mtrace.h>
+
+#include <arch/user_copy.h>
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 

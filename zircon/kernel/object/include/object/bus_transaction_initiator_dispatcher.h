@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_BUS_TRANSACTION_INITIATOR_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_BUS_TRANSACTION_INITIATOR_DISPATCHER_H_
 
+#include <sys/types.h>
+
 #include <dev/iommu.h>
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
@@ -14,7 +16,6 @@
 #include <object/dispatcher.h>
 #include <object/handle.h>
 #include <object/pinned_memory_token_dispatcher.h>
-#include <sys/types.h>
 
 class Iommu;
 

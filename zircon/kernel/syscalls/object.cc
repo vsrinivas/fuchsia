@@ -5,12 +5,17 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <fbl/ref_ptr.h>
 #include <inttypes.h>
+#include <lib/heap.h>
+#include <platform.h>
+#include <trace.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
+
+#include <fbl/ref_ptr.h>
 #include <kernel/mp.h>
 #include <kernel/stats.h>
 #include <kernel/thread_lock.h>
-#include <lib/heap.h>
 #include <object/bus_transaction_initiator_dispatcher.h>
 #include <object/diagnostics.h>
 #include <object/exception_dispatcher.h>
@@ -23,12 +28,8 @@
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
-#include <platform.h>
-#include <trace.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
-#include <zircon/time.h>
-#include <zircon/types.h>
 
 #include "priv.h"
 

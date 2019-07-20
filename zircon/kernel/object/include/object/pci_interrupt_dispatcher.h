@@ -8,11 +8,12 @@
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PCI_INTERRUPT_DISPATCHER_H_
 #if WITH_KERNEL_PCIE
 
+#include <sys/types.h>
+
 #include <fbl/canary.h>
 #include <object/handle.h>
 #include <object/interrupt_dispatcher.h>
 #include <object/pci_device_dispatcher.h>
-#include <sys/types.h>
 
 class PciDeviceDispatcher;
 

@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <kernel/cmdline.h>
-#include <ktl/atomic.h>
 #include <lib/crypto/entropy/jitterentropy_collector.h>
 #include <zircon/errors.h>
+
+#include <kernel/cmdline.h>
+#include <ktl/atomic.h>
 
 #ifndef JITTERENTROPY_MEM_SIZE
 #define JITTERENTROPY_MEM_SIZE (64u * 1024u)

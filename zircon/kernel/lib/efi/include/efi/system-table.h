@@ -5,12 +5,13 @@
 #ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_SYSTEM_TABLE_H_
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_SYSTEM_TABLE_H_
 
+#include <stdint.h>
+
 #include <efi/boot-services.h>
 #include <efi/protocol/simple-text-input.h>
 #include <efi/protocol/simple-text-output.h>
 #include <efi/runtime-services.h>
 #include <efi/types.h>
-#include <stdint.h>
 
 #define EFI_SYSTEM_TABLE_SIGNATURE 0x5453595320494249
 #define EFI_2_60_SYSTEM_TABLE_REVISION ((2 << 16) | (60))

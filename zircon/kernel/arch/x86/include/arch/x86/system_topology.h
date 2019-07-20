@@ -7,10 +7,11 @@
 #ifndef ARCH_X86_SYSTEM_TOPOLOGY_H
 #define ARCH_X86_SYSTEM_TOPOLOGY_H
 
-#include <arch/x86/cpuid.h>
-#include <fbl/vector.h>
 #include <lib/acpi_tables.h>
 #include <zircon/boot/image.h>
+
+#include <arch/x86/cpuid.h>
+#include <fbl/vector.h>
 
 namespace x86 {
 // Generates the system topology.

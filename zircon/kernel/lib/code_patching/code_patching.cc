@@ -4,8 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/ops.h>
 #include <lib/code_patching.h>
+
+#include <arch/ops.h>
 #include <lk/init.h>
 
 extern const CodePatchInfo __start_code_patch_table[];

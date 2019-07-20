@@ -7,19 +7,20 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
+#include <debug.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+
 #include <arch/x86.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mp.h>
 #include <arch/x86/registers.h>
 #include <arch/x86/x86intrin.h>
-#include <assert.h>
-#include <debug.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
 
 void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
   // create a default stack frame on the stack

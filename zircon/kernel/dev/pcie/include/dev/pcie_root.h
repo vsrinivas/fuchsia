@@ -8,13 +8,14 @@
 #ifndef ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_ROOT_H_
 #define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_ROOT_H_
 
+#include <zircon/compiler.h>
+
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_ref_counted.h>
 #include <dev/pcie_upstream_node.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <zircon/compiler.h>
 
 class PcieRoot : public fbl::WAVLTreeContainable<fbl::RefPtr<PcieRoot>>, public PcieUpstreamNode {
  public:

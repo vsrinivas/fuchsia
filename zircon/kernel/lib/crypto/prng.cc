@@ -6,15 +6,16 @@
 
 #include <assert.h>
 #include <err.h>
-#include <explicit-memory/bytes.h>
-#include <fbl/auto_call.h>
-#include <kernel/mutex.h>
-#include <ktl/atomic.h>
 #include <lib/crypto/prng.h>
 #include <pow2.h>
 #include <string.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <explicit-memory/bytes.h>
+#include <fbl/auto_call.h>
+#include <kernel/mutex.h>
+#include <ktl/atomic.h>
 
 // See note in //zircon/third_party/ulib/uboringssl/rules.mk
 #define BORINGSSL_NO_CXX

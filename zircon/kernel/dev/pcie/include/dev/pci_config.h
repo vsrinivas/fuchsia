@@ -8,8 +8,9 @@
 #define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCI_CONFIG_H_
 
 #include <debug.h>
-#include <dev/pci_common.h>
 #include <endian.h>
+
+#include <dev/pci_common.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>

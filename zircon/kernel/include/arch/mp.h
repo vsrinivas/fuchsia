@@ -8,10 +8,11 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_ARCH_MP_H_
 #define ZIRCON_KERNEL_INCLUDE_ARCH_MP_H_
 
-#include <kernel/cpu.h>
-#include <kernel/mp.h>
 #include <sys/types.h>
 #include <zircon/types.h>
+
+#include <kernel/cpu.h>
+#include <kernel/mp.h>
 
 __BEGIN_CDECLS
 

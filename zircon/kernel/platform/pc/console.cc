@@ -8,14 +8,15 @@
 
 #if WITH_LEGACY_PC_CONSOLE
 
-#include <arch/x86.h>
 #include <lib/io.h>
-#include <platform/console.h>
-#include <platform/pc.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <arch/x86.h>
+#include <platform/console.h>
+#include <platform/pc.h>
 
 /* memory mapped framebuffer */
 #define FB (0xB8000U + KERNEL_ASPACE_BASE)

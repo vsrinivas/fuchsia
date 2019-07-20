@@ -7,9 +7,10 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_BOOTRESERVE_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_BOOTRESERVE_H_
 
-#include <fbl/function.h>
 #include <sys/types.h>
 #include <zircon/types.h>
+
+#include <fbl/function.h>
 
 // The boot memory reservation system is a one-use early boot mechanism for
 // a platform to mark certain ranges of physical space as occupied by something

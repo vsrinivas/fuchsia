@@ -4,13 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
+#include <trace.h>
+
 #include <arch/x86/feature.h>
 #include <arch/x86/page_tables/constants.h>
 #include <arch/x86/page_tables/page_tables.h>
-#include <assert.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <trace.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 

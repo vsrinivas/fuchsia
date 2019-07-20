@@ -4,23 +4,24 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <assert.h>
+#include <bits.h>
+#include <err.h>
+#include <string.h>
+#include <zircon/types.h>
+
 #include <arch/x86.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/ioport.h>
 #include <arch/x86/mp.h>
-#include <assert.h>
-#include <bits.h>
-#include <err.h>
 #include <fbl/alloc_checker.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
-#include <string.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
-#include <zircon/types.h>
 
 void x86_reset_tss_io_bitmap(void) {
   DEBUG_ASSERT(arch_ints_disabled());

@@ -6,10 +6,11 @@
 
 #include <assert.h>
 #include <err.h>
-#include <fbl/algorithm.h>
-#include <kernel/deadline.h>
 #include <lib/counters.h>
 #include <zircon/syscalls/policy.h>
+
+#include <fbl/algorithm.h>
+#include <kernel/deadline.h>
 
 namespace {
 

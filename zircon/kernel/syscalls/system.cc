@@ -4,36 +4,37 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <debug.h>
+#include <lib/debuglog.h>
+#include <mexec.h>
+#include <platform.h>
+#include <string.h>
+#include <trace.h>
+#include <zircon/boot/image.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls/resource.h>
+#include <zircon/syscalls/system.h>
+#include <zircon/types.h>
+
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
-#include <debug.h>
 #include <dev/interrupt.h>
 #include <kernel/cmdline.h>
 #include <kernel/mp.h>
 #include <kernel/range_check.h>
 #include <kernel/thread.h>
-#include <lib/debuglog.h>
 #include <libzbi/zbi-cpp.h>
-#include <mexec.h>
 #include <object/event_dispatcher.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resource.h>
 #include <object/user_handles.h>
 #include <object/vm_object_dispatcher.h>
-#include <platform.h>
 #include <platform/halt_helper.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
-#include <zircon/boot/image.h>
-#include <zircon/compiler.h>
-#include <zircon/syscalls/resource.h>
-#include <zircon/syscalls/system.h>
-#include <zircon/types.h>
 
 #include "priv.h"
 #include "system_priv.h"

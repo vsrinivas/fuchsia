@@ -7,10 +7,11 @@
 
 #include <debug.h>
 #include <lib/version.h>
-#include <lk/init.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <lk/init.h>
 #include <vm/vm.h>
 
 /* generated for us */

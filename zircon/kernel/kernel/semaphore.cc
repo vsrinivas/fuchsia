@@ -6,8 +6,9 @@
 #include "kernel/semaphore.h"
 
 #include <err.h>
-#include <kernel/thread_lock.h>
 #include <zircon/compiler.h>
+
+#include <kernel/thread_lock.h>
 
 Semaphore::Semaphore(int64_t initial_count) : count_(initial_count) {}
 

@@ -7,9 +7,10 @@
 #include "object/exception_dispatcher.h"
 
 #include <assert.h>
+#include <lib/counters.h>
+
 #include <fbl/alloc_checker.h>
 #include <ktl/move.h>
-#include <lib/counters.h>
 #include <object/process_dispatcher.h>
 
 KCOUNTER(dispatcher_exception_create_count, "dispatcher.exception.create")

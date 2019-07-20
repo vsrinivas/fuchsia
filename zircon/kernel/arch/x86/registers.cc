@@ -20,20 +20,21 @@
  ****************************************************************************/
 #include "arch/x86/registers.h"
 
+#include <inttypes.h>
+#include <string.h>
+#include <trace.h>
+#include <zircon/compiler.h>
+
 #include <arch/ops.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mp.h>
 #include <arch/x86/proc_trace.h>
 #include <fbl/auto_call.h>
-#include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/vm.h>
-#include <zircon/compiler.h>
 
 #define LOCAL_TRACE 0
 

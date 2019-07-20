@@ -8,8 +8,9 @@
 #define ZIRCON_KERNEL_DEV_IOMMU_INTEL_DOMAIN_ALLOCATOR_H_
 
 #include <err.h>
-#include <fbl/macros.h>
 #include <stdint.h>
+
+#include <fbl/macros.h>
 
 namespace intel_iommu {
 

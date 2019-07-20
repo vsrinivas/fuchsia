@@ -12,12 +12,13 @@
 
 #ifndef __ASSEMBLER__
 
-#include <arch/arm64/registers.h>
 #include <assert.h>
 #include <stddef.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/tls.h>
+
+#include <arch/arm64/registers.h>
 
 __BEGIN_CDECLS
 

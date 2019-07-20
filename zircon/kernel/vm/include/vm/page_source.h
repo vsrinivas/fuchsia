@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_SOURCE_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_SOURCE_H_
 
+#include <zircon/types.h>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
@@ -18,7 +20,6 @@
 #include <vm/page.h>
 #include <vm/page_request.h>
 #include <vm/vm.h>
-#include <zircon/types.h>
 
 // A page source has two parts - the PageSource and the PageSourceCallback. The
 // PageSource is responsible for generic functionality, mostly around managing

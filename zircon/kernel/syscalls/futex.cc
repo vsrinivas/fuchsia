@@ -5,10 +5,11 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
-#include <object/futex_context.h>
-#include <object/process_dispatcher.h>
 #include <trace.h>
 #include <zircon/types.h>
+
+#include <object/futex_context.h>
+#include <object/process_dispatcher.h>
 
 #include "priv.h"
 

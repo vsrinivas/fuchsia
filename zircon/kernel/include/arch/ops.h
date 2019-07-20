@@ -15,14 +15,15 @@
 
 #ifndef __ASSEMBLER__
 
-#include <arch/defines.h>
-#include <kernel/atomic.h>
-#include <kernel/cpu.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+
+#include <arch/defines.h>
+#include <kernel/atomic.h>
+#include <kernel/cpu.h>
 
 __BEGIN_CDECLS
 

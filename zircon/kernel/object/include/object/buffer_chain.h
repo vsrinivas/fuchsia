@@ -7,19 +7,20 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_BUFFER_CHAIN_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_BUFFER_CHAIN_H_
 
+#include <lib/user_copy/user_ptr.h>
+#include <stdint.h>
+#include <string.h>
+#include <zircon/types.h>
+
+#include <new>
+
 #include <fbl/algorithm.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_single_list.h>
 #include <ktl/move.h>
-#include <lib/user_copy/user_ptr.h>
-#include <stdint.h>
-#include <string.h>
 #include <vm/page.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
-#include <zircon/types.h>
-
-#include <new>
 
 // BufferChain is a list of fixed-size buffers allocated from the PMM.
 //

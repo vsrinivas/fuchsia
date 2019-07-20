@@ -6,14 +6,15 @@
 
 #include "object/bus_transaction_initiator_dispatcher.h"
 
-#include <dev/iommu.h>
 #include <err.h>
 #include <lib/counters.h>
-#include <vm/pinned_vm_object.h>
-#include <vm/vm_object.h>
 #include <zircon/rights.h>
 
 #include <new>
+
+#include <dev/iommu.h>
+#include <vm/pinned_vm_object.h>
+#include <vm/vm_object.h>
 
 KCOUNTER(dispatcher_bti_create_count, "dispatcher.bti.create")
 KCOUNTER(dispatcher_bti_destroy_count, "dispatcher.bti.destroy")

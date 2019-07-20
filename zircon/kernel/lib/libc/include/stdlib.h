@@ -8,13 +8,14 @@
 #ifndef ZIRCON_KERNEL_LIB_LIBC_INCLUDE_STDLIB_H_
 #define ZIRCON_KERNEL_LIB_LIBC_INCLUDE_STDLIB_H_
 
-#include <arch/defines.h>
 #include <endian.h>
 #include <malloc.h>
 #include <rand.h>
 #include <stddef.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+
+#include <arch/defines.h>
 
 __BEGIN_CDECLS
 

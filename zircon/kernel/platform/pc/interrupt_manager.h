@@ -9,15 +9,16 @@
 #ifndef ZIRCON_KERNEL_PLATFORM_PC_INTERRUPT_MANAGER_H_
 #define ZIRCON_KERNEL_PLATFORM_PC_INTERRUPT_MANAGER_H_
 
+#include <err.h>
+#include <pow2.h>
+
 #include <arch/x86/apic.h>
 #include <arch/x86/interrupts.h>
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
 #include <dev/interrupt.h>
-#include <err.h>
 #include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
-#include <pow2.h>
 
 #define MAX_IRQ_BLOCK_SIZE MAX_MSI_IRQS
 

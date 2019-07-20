@@ -4,21 +4,22 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/ops.h>
 #include <debug.h>
 #include <inttypes.h>
+#include <lib/console.h>
+#include <lib/version.h>
+#include <string.h>
+
+#include <new>
+
+#include <arch/ops.h>
 #include <kernel/event.h>
 #include <kernel/percpu.h>
 #include <kernel/thread.h>
 #include <ktl/atomic.h>
-#include <lib/console.h>
-#include <lib/version.h>
 #include <lk/init.h>
 #include <lockdep/lockdep.h>
-#include <string.h>
 #include <vm/vm.h>
-
-#include <new>
 
 // Always assert to catch changes when lockdep is not enabled.
 static_assert(sizeof(lockdep_state_t) == sizeof(lockdep::ThreadLockState),

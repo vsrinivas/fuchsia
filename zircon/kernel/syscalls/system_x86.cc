@@ -4,16 +4,17 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <inttypes.h>
+#include <platform.h>
+#include <trace.h>
+
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
 #include <arch/x86/acpi.h>
 #include <arch/x86/bootstrap16.h>
 #include <arch/x86/feature.h>
 #include <fbl/auto_call.h>
-#include <inttypes.h>
 #include <kernel/timer.h>
-#include <platform.h>
-#include <trace.h>
 #include <vm/vm_aspace.h>
 
 #include "system_priv.h"

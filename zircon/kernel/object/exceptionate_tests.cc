@@ -4,12 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <fbl/ref_ptr.h>
 #include <lib/unittest/unittest.h>
+#include <zircon/rights.h>
+
+#include <fbl/ref_ptr.h>
 #include <object/channel_dispatcher.h>
 #include <object/excp_port.h>
 #include <object/handle.h>
-#include <zircon/rights.h>
 
 #include "object/exceptionate.h"
 

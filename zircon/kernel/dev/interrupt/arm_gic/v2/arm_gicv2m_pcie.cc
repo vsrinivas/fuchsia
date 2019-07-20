@@ -6,19 +6,20 @@
 // https://opensource.org/licenses/MIT
 
 #if WITH_KERNEL_PCIE
+#include <inttypes.h>
+#include <trace.h>
+#include <zircon/boot/driver-config.h>
+#include <zircon/types.h>
+
 #include <dev/interrupt/arm_gicv2m_msi.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_platform.h>
 #include <dev/pcie_root.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
-#include <inttypes.h>
 #include <lk/init.h>
 #include <pdev/driver.h>
 #include <pdev/interrupt.h>
-#include <trace.h>
-#include <zircon/boot/driver-config.h>
-#include <zircon/types.h>
 
 class ArmGicV2PciePlatformSupport : public PciePlatformInterface {
  public:

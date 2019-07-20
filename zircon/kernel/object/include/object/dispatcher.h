@@ -8,6 +8,12 @@
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_DISPATCHER_H_
 
 #include <err.h>
+#include <stdint.h>
+#include <string.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
+
 #include <fbl/auto_lock.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
@@ -24,11 +30,6 @@
 #include <ktl/unique_ptr.h>
 #include <object/handle.h>
 #include <object/state_observer.h>
-#include <stdint.h>
-#include <string.h>
-#include <zircon/compiler.h>
-#include <zircon/syscalls/object.h>
-#include <zircon/types.h>
 
 template <typename T>
 struct DispatchTag;

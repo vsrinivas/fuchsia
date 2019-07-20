@@ -8,20 +8,21 @@
 
 #include <assert.h>
 #include <err.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
-#include <kernel/event.h>
 #include <lib/counters.h>
-#include <object/handle.h>
-#include <object/message_packet.h>
-#include <object/process_dispatcher.h>
-#include <object/thread_dispatcher.h>
 #include <platform.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
+
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <kernel/event.h>
+#include <object/handle.h>
+#include <object/message_packet.h>
+#include <object/process_dispatcher.h>
+#include <object/thread_dispatcher.h>
 
 #define LOCAL_TRACE 0
 

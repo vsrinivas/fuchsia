@@ -5,10 +5,11 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
-#include <kernel/thread.h>
 #include <platform.h>
 #include <stdio.h>
 #include <zircon/types.h>
+
+#include <kernel/thread.h>
 
 #include "tests.h"
 

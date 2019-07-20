@@ -7,20 +7,21 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <dev/interrupt.h>
-#include <dev/pcie_bridge.h>
-#include <dev/pcie_root.h>
 #include <err.h>
-#include <fbl/algorithm.h>
 #include <inttypes.h>
-#include <kernel/mutex.h>
-#include <kernel/spinlock.h>
-#include <lk/init.h>
 #include <platform.h>
 #include <string.h>
 #include <trace.h>
-#include <vm/vm.h>
 #include <zircon/compiler.h>
+
+#include <dev/interrupt.h>
+#include <dev/pcie_bridge.h>
+#include <dev/pcie_root.h>
+#include <fbl/algorithm.h>
+#include <kernel/mutex.h>
+#include <kernel/spinlock.h>
+#include <lk/init.h>
+#include <vm/vm.h>
 
 #define LOCAL_TRACE 0
 

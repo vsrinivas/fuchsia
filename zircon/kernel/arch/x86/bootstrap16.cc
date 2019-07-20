@@ -6,23 +6,24 @@
 
 #include "arch/x86/bootstrap16.h"
 
+#include <assert.h>
+#include <err.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <string.h>
+#include <trace.h>
+#include <zircon/types.h>
+
 #include <arch/mmu.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/mp.h>
-#include <assert.h>
-#include <err.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <kernel/mutex.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
-#include <zircon/types.h>
 
 static paddr_t bootstrap_phys_addr = UINT64_MAX;
 static Mutex bootstrap_lock;

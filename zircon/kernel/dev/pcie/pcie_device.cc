@@ -5,29 +5,30 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/mmu.h>
 #include <assert.h>
 #include <debug.h>
+#include <err.h>
+#include <inttypes.h>
+#include <platform.h>
+#include <string.h>
+#include <trace.h>
+#include <zircon/compiler.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
+
+#include <arch/mmu.h>
 #include <dev/interrupt.h>
 #include <dev/pcie_bridge.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
-#include <err.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <inttypes.h>
 #include <kernel/spinlock.h>
 #include <ktl/limits.h>
 #include <lk/init.h>
-#include <platform.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/vm.h>
-#include <zircon/compiler.h>
-#include <zircon/time.h>
-#include <zircon/types.h>
 
 using fbl::AutoLock;
 

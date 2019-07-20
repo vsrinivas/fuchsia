@@ -6,12 +6,14 @@
 
 #include <assert.h>
 #include <err.h>
+#include <lib/unittest/unittest.h>
+#include <zircon/types.h>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <kernel/semaphore.h>
 #include <ktl/move.h>
-#include <lib/unittest/unittest.h>
 #include <vm/physmap.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
@@ -19,7 +21,6 @@
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>
-#include <zircon/types.h>
 
 #include "pmm_node.h"
 

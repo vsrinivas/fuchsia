@@ -7,13 +7,14 @@
 #ifndef ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_INTERRUPT_TRACKER_H_
 #define ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_INTERRUPT_TRACKER_H_
 
+#include <lib/ktrace.h>
+
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
 #include <hypervisor/ktrace.h>
 #include <hypervisor/state_invalidator.h>
 #include <kernel/auto_lock.h>
 #include <kernel/event.h>
-#include <lib/ktrace.h>
 
 namespace hypervisor {
 

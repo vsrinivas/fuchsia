@@ -8,13 +8,14 @@
 #include <assert.h>
 #include <debug.h>
 #include <limits.h>
-#include <platform/debug.h>
 #include <printf.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+
+#include <platform/debug.h>
 
 struct _output_args {
   char *outstr;

@@ -7,6 +7,11 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EXCP_PORT_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EXCP_PORT_H_
 
+#include <stdint.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/types.h>
+
 #include <arch/exception.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
@@ -16,10 +21,6 @@
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <object/dispatcher.h>
-#include <stdint.h>
-#include <zircon/syscalls/exception.h>
-#include <zircon/syscalls/port.h>
-#include <zircon/types.h>
 
 class ThreadDispatcher;
 class ProcessDispatcher;

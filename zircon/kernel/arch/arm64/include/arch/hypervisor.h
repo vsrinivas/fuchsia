@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_HYPERVISOR_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_HYPERVISOR_H_
 
+#include <zircon/types.h>
+
 #include <arch/arm64/hypervisor/el2_state.h>
 #include <fbl/ref_ptr.h>
 #include <hypervisor/guest_physical_address_space.h>
@@ -17,7 +19,6 @@
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
 #include <ktl/unique_ptr.h>
-#include <zircon/types.h>
 
 static constexpr uint8_t kNumGroups = 2;
 // See CoreLink GIC-400, Section 2.3.2 PPIs.

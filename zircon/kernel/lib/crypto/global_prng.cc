@@ -7,11 +7,6 @@
 #include <assert.h>
 #include <ctype.h>
 #include <err.h>
-#include <explicit-memory/bytes.h>
-#include <fbl/algorithm.h>
-#include <kernel/auto_lock.h>
-#include <kernel/cmdline.h>
-#include <kernel/mutex.h>
 #include <lib/crypto/cryptolib.h>
 #include <lib/crypto/entropy/collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
@@ -19,11 +14,17 @@
 #include <lib/crypto/entropy/quality_test.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
-#include <lk/init.h>
 #include <string.h>
 #include <trace.h>
 
 #include <new>
+
+#include <explicit-memory/bytes.h>
+#include <fbl/algorithm.h>
+#include <kernel/auto_lock.h>
+#include <kernel/cmdline.h>
+#include <kernel/mutex.h>
+#include <lk/init.h>
 
 #define LOCAL_TRACE 0
 

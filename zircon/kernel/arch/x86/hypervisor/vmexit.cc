@@ -4,29 +4,30 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <bits.h>
+#include <inttypes.h>
+#include <lib/ktrace.h>
+#include <platform.h>
+#include <string.h>
+#include <trace.h>
+#include <zircon/syscalls/hypervisor.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
+
 #include <arch/hypervisor.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/pvclock.h>
-#include <bits.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/canary.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/ktrace.h>
-#include <inttypes.h>
 #include <kernel/auto_lock.h>
-#include <lib/ktrace.h>
-#include <platform.h>
 #include <platform/pc/timer.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
-#include <zircon/syscalls/hypervisor.h>
-#include <zircon/time.h>
-#include <zircon/types.h>
 
 #include "pvclock_priv.h"
 #include "vcpu_priv.h"

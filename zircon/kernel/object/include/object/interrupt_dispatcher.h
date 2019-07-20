@@ -7,15 +7,16 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_INTERRUPT_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_INTERRUPT_DISPATCHER_H_
 
+#include <sys/types.h>
+#include <zircon/rights.h>
+#include <zircon/types.h>
+
 #include <fbl/mutex.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
 #include <object/dispatcher.h>
 #include <object/port_dispatcher.h>
 #include <object/vcpu_dispatcher.h>
-#include <sys/types.h>
-#include <zircon/rights.h>
-#include <zircon/types.h>
 
 enum class InterruptState {
   WAITING = 0,

@@ -7,11 +7,12 @@
 #include "object/message_packet.h"
 
 #include <err.h>
-#include <fbl/algorithm.h>
 #include <stdint.h>
 #include <string.h>
 
 #include <new>
+
+#include <fbl/algorithm.h>
 
 // MessagePackets have special allocation requirements because they can contain a variable number of
 // handles and a variable size payload.

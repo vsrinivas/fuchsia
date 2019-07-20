@@ -5,16 +5,17 @@
 // https://opensource.org/licenses/MIT
 #include "arch/x86/user_copy.h"
 
-#include <arch/user_copy.h>
-#include <arch/x86.h>
-#include <arch/x86/feature.h>
 #include <assert.h>
-#include <kernel/thread.h>
 #include <lib/code_patching.h>
 #include <string.h>
 #include <trace.h>
-#include <vm/vm.h>
 #include <zircon/types.h>
+
+#include <arch/user_copy.h>
+#include <arch/x86.h>
+#include <arch/x86/feature.h>
+#include <kernel/thread.h>
+#include <vm/vm.h>
 
 #define LOCAL_TRACE 0
 

@@ -4,13 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/counters.h>
+#include <platform.h>
+#include <stdlib.h>
+
 #include <arch/ops.h>
 #include <kernel/percpu.h>
 #include <kernel/spinlock.h>
-#include <lib/counters.h>
 #include <lk/init.h>
-#include <platform.h>
-#include <stdlib.h>
 
 // kernel.ld uses this and fills in the descriptor table size after it and then
 // places the sorted descriptor table after that (and then pads to page size),

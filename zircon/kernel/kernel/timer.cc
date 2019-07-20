@@ -24,6 +24,14 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/counters.h>
+#include <list.h>
+#include <malloc.h>
+#include <platform.h>
+#include <trace.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
+
 #include <kernel/align.h>
 #include <kernel/lockdep.h>
 #include <kernel/mp.h>
@@ -32,14 +40,7 @@
 #include <kernel/spinlock.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
-#include <lib/counters.h>
-#include <list.h>
-#include <malloc.h>
-#include <platform.h>
 #include <platform/timer.h>
-#include <trace.h>
-#include <zircon/time.h>
-#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 

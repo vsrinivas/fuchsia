@@ -4,8 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/arch_perfmon.h>
 #include <err.h>
+
+#include <arch/arch_perfmon.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/align.h>
 #include <kernel/mp.h>

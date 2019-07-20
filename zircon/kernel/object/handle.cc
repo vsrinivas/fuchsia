@@ -6,11 +6,12 @@
 
 #include "object/handle.h"
 
+#include <lib/counters.h>
+#include <pow2.h>
+
 #include <fbl/arena.h>
 #include <fbl/mutex.h>
-#include <lib/counters.h>
 #include <object/dispatcher.h>
-#include <pow2.h>
 
 namespace {
 

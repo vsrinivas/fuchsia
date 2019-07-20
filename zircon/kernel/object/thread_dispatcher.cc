@@ -6,32 +6,33 @@
 
 #include "object/thread_dispatcher.h"
 
-#include <arch/debugger.h>
-#include <arch/exception.h>
 #include <assert.h>
 #include <err.h>
+#include <inttypes.h>
+#include <lib/counters.h>
+#include <platform.h>
+#include <string.h>
+#include <trace.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls/debug.h>
+#include <zircon/types.h>
+
+#include <arch/debugger.h>
+#include <arch/exception.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <inttypes.h>
 #include <kernel/thread.h>
-#include <lib/counters.h>
 #include <object/excp_port.h>
 #include <object/handle.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
-#include <platform.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/kstack.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
-#include <zircon/rights.h>
-#include <zircon/syscalls/debug.h>
-#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 

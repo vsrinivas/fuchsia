@@ -10,14 +10,15 @@
 
 #include <assert.h>
 #include <err.h>
+#include <lib/counters.h>
+#include <trace.h>
+#include <zircon/rights.h>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <kernel/auto_lock.h>
-#include <lib/counters.h>
 #include <object/pci_interrupt_dispatcher.h>
 #include <object/process_dispatcher.h>
-#include <trace.h>
-#include <zircon/rights.h>
 
 KCOUNTER(dispatcher_pci_device_create_count, "dispatcher.pci_device.create")
 KCOUNTER(dispatcher_pci_device_destroy_count, "dispatcher.pci_device.destroy")

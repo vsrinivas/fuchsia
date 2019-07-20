@@ -9,8 +9,9 @@
 #include <err.h>
 #include <stdio.h>
 #include <trace.h>
-#include <vm/vm_aspace.h>
 #include <zircon/types.h>
+
+#include <vm/vm_aspace.h>
 
 #if ARCH_X86
 #include <platform/pc/bootloader.h>

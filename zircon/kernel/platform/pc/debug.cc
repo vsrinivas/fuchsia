@@ -7,31 +7,32 @@
 
 #include "debug.h"
 
-#include <arch/x86.h>
-#include <arch/x86/apic.h>
 #include <bits.h>
-#include <dev/interrupt.h>
-#include <kernel/cmdline.h>
-#include <kernel/spinlock.h>
-#include <kernel/thread.h>
-#include <kernel/timer.h>
 #include <lib/cbuf.h>
 #include <lib/debuglog.h>
-#include <lk/init.h>
 #include <platform.h>
-#include <platform/console.h>
-#include <platform/debug.h>
-#include <platform/pc.h>
-#include <platform/pc/bootloader.h>
 #include <reg.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
-#include <vm/physmap.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+
+#include <arch/x86.h>
+#include <arch/x86/apic.h>
+#include <dev/interrupt.h>
+#include <kernel/cmdline.h>
+#include <kernel/spinlock.h>
+#include <kernel/thread.h>
+#include <kernel/timer.h>
+#include <lk/init.h>
+#include <platform/console.h>
+#include <platform/debug.h>
+#include <platform/pc.h>
+#include <platform/pc/bootloader.h>
+#include <vm/physmap.h>
 
 #include "platform_p.h"
 

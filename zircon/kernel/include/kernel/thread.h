@@ -8,21 +8,22 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_H_
 
+#include <debug.h>
+#include <list.h>
+#include <sys/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <arch/defines.h>
 #include <arch/ops.h>
 #include <arch/thread.h>
-#include <debug.h>
 #include <fbl/intrusive_double_list.h>
 #include <kernel/cpu.h>
 #include <kernel/fair_task_state.h>
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
 #include <kernel/wait.h>
-#include <list.h>
-#include <sys/types.h>
 #include <vm/kstack.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 // fwd decls
 class OwnedWaitQueue;

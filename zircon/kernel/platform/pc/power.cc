@@ -5,19 +5,20 @@
 // https://opensource.org/licenses/MIT
 //
 
+#include <lib/console.h>
+#include <lib/debuglog.h>
+#include <lib/version.h>
+#include <platform.h>
+#include <stdio.h>
+#include <string.h>
+
 #include <arch/mp.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mp.h>
 #include <ktl/atomic.h>
-#include <lib/console.h>
-#include <lib/debuglog.h>
-#include <lib/version.h>
-#include <platform.h>
 #include <platform/keyboard.h>
-#include <stdio.h>
-#include <string.h>
 
 // The I/O port to write to for QEMU debug exit.
 const uint16_t kQEMUDebugExitPort = 0xf4;

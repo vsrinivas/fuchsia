@@ -9,9 +9,6 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/mutex.h>
-#include <kernel/spinlock.h>
-#include <kernel/thread.h>
 #include <lib/cmpctmalloc.h>
 #include <lib/counters.h>
 #include <lib/heap.h>
@@ -20,6 +17,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+
+#include <kernel/mutex.h>
+#include <kernel/spinlock.h>
+#include <kernel/thread.h>
 #include <vm/vm.h>
 
 // Malloc implementation tuned for space.

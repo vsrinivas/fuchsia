@@ -6,16 +6,17 @@
 
 #include <assert.h>
 #include <err.h>
-#include <fbl/algorithm.h>
 #include <inttypes.h>
-#include <kernel/cmdline.h>
-#include <kernel/range_check.h>
 #include <lib/memory_limit.h>
 #include <platform.h>
-#include <pretty/sizes.h>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
+
+#include <fbl/algorithm.h>
+#include <kernel/cmdline.h>
+#include <kernel/range_check.h>
+#include <pretty/sizes.h>
 #include <vm/bootreserve.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>

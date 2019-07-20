@@ -28,9 +28,15 @@
 #include "arch/x86/proc_trace.h"
 
 #include <err.h>
+#include <lib/ktrace.h>
+#include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
+#include <lib/zircon-internal/ktrace.h>
+#include <lib/zircon-internal/mtrace.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <pow2.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/types.h>
 
 #include <arch/arch_ops.h>
 #include <arch/mmu.h>
@@ -43,14 +49,8 @@
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <ktl/unique_ptr.h>
-#include <lib/ktrace.h>
-#include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
-#include <lib/zircon-internal/ktrace.h>
-#include <lib/zircon-internal/mtrace.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
-#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 

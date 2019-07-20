@@ -6,10 +6,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <sys/types.h>
+
 #include <arch/ops.h>
 #include <platform/pc.h>
 #include <platform/pic.h>
-#include <sys/types.h>
 
 #define PIC1 0x20
 #define PIC2 0xA0

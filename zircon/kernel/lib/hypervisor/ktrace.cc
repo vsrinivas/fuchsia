@@ -4,9 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/ktrace.h>
+
 #include <hypervisor/ktrace.h>
 #include <kernel/thread.h>
-#include <lib/ktrace.h>
 
 static const char* const vcpu_meta[] = {
     [VCPU_INTERRUPT] = "wait:interrupt",

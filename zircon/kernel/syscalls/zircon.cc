@@ -5,22 +5,9 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <explicit-memory/bytes.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/ref_ptr.h>
 #include <inttypes.h>
-#include <kernel/auto_lock.h>
-#include <kernel/thread.h>
-#include <ktl/atomic.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/user_copy/user_ptr.h>
-#include <object/event_dispatcher.h>
-#include <object/event_pair_dispatcher.h>
-#include <object/handle.h>
-#include <object/log_dispatcher.h>
-#include <object/process_dispatcher.h>
-#include <object/resource.h>
-#include <object/thread_dispatcher.h>
 #include <platform.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -30,6 +17,20 @@
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/policy.h>
 #include <zircon/types.h>
+
+#include <explicit-memory/bytes.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/ref_ptr.h>
+#include <kernel/auto_lock.h>
+#include <kernel/thread.h>
+#include <ktl/atomic.h>
+#include <object/event_dispatcher.h>
+#include <object/event_pair_dispatcher.h>
+#include <object/handle.h>
+#include <object/log_dispatcher.h>
+#include <object/process_dispatcher.h>
+#include <object/resource.h>
+#include <object/thread_dispatcher.h>
 
 #include "priv.h"
 

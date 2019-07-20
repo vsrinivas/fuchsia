@@ -7,15 +7,16 @@
 
 #include <assert.h>
 #include <err.h>
+#include <inttypes.h>
+#include <string.h>
+#include <trace.h>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
-#include <inttypes.h>
 #include <ktl/move.h>
-#include <string.h>
-#include <trace.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>

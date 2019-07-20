@@ -3,19 +3,20 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#include <arch/x86/interrupts.h>
 #include <assert.h>
 #include <err.h>
-#include <fbl/array.h>
-#include <kernel/lockdep.h>
-#include <kernel/spinlock.h>
 #include <trace.h>
-#include <vm/physmap.h>
-#include <vm/pmm.h>
-#include <vm/vm_aspace.h>
 #include <zircon/types.h>
 
 #include <new>
+
+#include <arch/x86/interrupts.h>
+#include <fbl/array.h>
+#include <kernel/lockdep.h>
+#include <kernel/spinlock.h>
+#include <vm/physmap.h>
+#include <vm/pmm.h>
+#include <vm/vm_aspace.h>
 
 #include "arch/x86/apic.h"
 

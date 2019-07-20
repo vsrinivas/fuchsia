@@ -7,10 +7,11 @@
 #ifndef ZIRCON_KERNEL_DEV_IOMMU_DUMMY_INCLUDE_DEV_IOMMU_DUMMY_H_
 #define ZIRCON_KERNEL_DEV_IOMMU_DUMMY_INCLUDE_DEV_IOMMU_DUMMY_H_
 
-#include <dev/iommu.h>
-#include <ktl/unique_ptr.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/iommu.h>
+
+#include <dev/iommu.h>
+#include <ktl/unique_ptr.h>
 
 class DummyIommu final : public Iommu {
  public:

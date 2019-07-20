@@ -10,14 +10,15 @@
 
 #ifndef __ASSEMBLER__
 
-#include <arch/arm64/iframe.h>
 #include <arm_acle.h>
 #include <assert.h>
 #include <stdbool.h>
 #include <sys/types.h>
-#include <syscalls/syscalls.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <arch/arm64/iframe.h>
+#include <syscalls/syscalls.h>
 
 // Constants from ACLE section 8.3, used as the argument for __dmb(), __dsb(), and __isb()
 // in arm_acle.h. Values are the architecturally defined immediate values encoded in barrier

@@ -7,13 +7,14 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_INTERRUPT_EVENT_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_INTERRUPT_EVENT_DISPATCHER_H_
 
+#include <sys/types.h>
+#include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/vector.h>
 #include <kernel/mp.h>
 #include <object/handle.h>
 #include <object/interrupt_dispatcher.h>
-#include <sys/types.h>
-#include <zircon/types.h>
 
 class InterruptEventDispatcher final : public InterruptDispatcher {
  public:

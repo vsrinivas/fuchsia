@@ -6,11 +6,12 @@
 
 #include "kernel/percpu.h"
 
+#include <lib/counters.h>
+#include <lib/system-topology.h>
+
 #include <arch/ops.h>
 #include <kernel/align.h>
 #include <kernel/lockdep.h>
-#include <lib/counters.h>
-#include <lib/system-topology.h>
 #include <lk/init.h>
 #include <lockdep/lockdep.h>
 

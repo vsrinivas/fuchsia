@@ -7,6 +7,10 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_CHANNEL_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_CHANNEL_DISPATCHER_H_
 
+#include <stdint.h>
+#include <zircon/rights.h>
+#include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -16,9 +20,6 @@
 #include <object/dispatcher.h>
 #include <object/handle.h>
 #include <object/message_packet.h>
-#include <stdint.h>
-#include <zircon/rights.h>
-#include <zircon/types.h>
 
 class ChannelDispatcher final
     : public PeeredDispatcher<ChannelDispatcher, ZX_DEFAULT_CHANNEL_RIGHTS> {

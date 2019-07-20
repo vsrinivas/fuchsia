@@ -7,10 +7,11 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_IOPORT_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_IOPORT_H_
 
+#include <sys/types.h>
+
 #include <bitmap/rle-bitmap.h>
 #include <kernel/spinlock.h>
 #include <ktl/unique_ptr.h>
-#include <sys/types.h>
 
 class IoBitmap {
  public:

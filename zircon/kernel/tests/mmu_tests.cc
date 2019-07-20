@@ -4,14 +4,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/aspace.h>
-#include <arch/mmu.h>
 #include <bits.h>
 #include <err.h>
 #include <lib/unittest/unittest.h>
+#include <zircon/types.h>
+
+#include <arch/aspace.h>
+#include <arch/mmu.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/pmm.h>
-#include <zircon/types.h>
 
 #ifdef __x86_64__
 #include <arch/x86/mmu.h>

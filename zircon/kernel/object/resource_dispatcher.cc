@@ -6,17 +6,18 @@
 
 #include "object/resource_dispatcher.h"
 
-#include <fbl/alloc_checker.h>
 #include <inttypes.h>
-#include <kernel/auto_lock.h>
-#include <kernel/range_check.h>
 #include <lib/counters.h>
-#include <pretty/sizes.h>
 #include <string.h>
 #include <trace.h>
-#include <vm/vm.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/resource.h>
+
+#include <fbl/alloc_checker.h>
+#include <kernel/auto_lock.h>
+#include <kernel/range_check.h>
+#include <pretty/sizes.h>
+#include <vm/vm.h>
 
 #define LOCAL_TRACE 0
 

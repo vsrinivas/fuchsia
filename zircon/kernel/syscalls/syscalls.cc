@@ -6,16 +6,17 @@
 
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/stats.h>
-#include <kernel/thread.h>
 #include <lib/ktrace.h>
 #include <lib/userabi/vdso.h>
-#include <object/process_dispatcher.h>
 #include <platform.h>
 #include <stdint.h>
-#include <syscalls/syscalls.h>
 #include <trace.h>
 #include <zircon/zx-syscall-numbers.h>
+
+#include <kernel/stats.h>
+#include <kernel/thread.h>
+#include <object/process_dispatcher.h>
+#include <syscalls/syscalls.h>
 
 #include "priv.h"
 #include "vdso-valid-sysret.h"

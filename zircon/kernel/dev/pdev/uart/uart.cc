@@ -4,8 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/arch_ops.h>
 #include <err.h>
+
+#include <arch/arch_ops.h>
 #include <pdev/uart.h>
 
 static int default_getc(bool wait) { return ZX_ERR_NOT_SUPPORTED; }

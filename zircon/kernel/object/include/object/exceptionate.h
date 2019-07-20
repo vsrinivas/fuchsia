@@ -7,13 +7,14 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EXCEPTIONATE_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EXCEPTIONATE_H_
 
+#include <lib/zircon-internal/thread_annotations.h>
+#include <zircon/types.h>
+
 #include <fbl/ref_ptr.h>
 #include <kernel/mutex.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <object/channel_dispatcher.h>
 #include <object/excp_port.h>
 #include <object/handle.h>
-#include <zircon/types.h>
 
 class ExceptionDispatcher;
 

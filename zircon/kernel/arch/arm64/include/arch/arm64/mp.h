@@ -7,11 +7,12 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_MP_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_MP_H_
 
+#include <reg.h>
+#include <zircon/compiler.h>
+
 #include <arch/arm64.h>
 #include <kernel/align.h>
 #include <kernel/cpu.h>
-#include <reg.h>
-#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 

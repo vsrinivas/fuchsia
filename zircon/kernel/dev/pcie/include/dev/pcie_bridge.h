@@ -8,6 +8,10 @@
 #ifndef ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_BRIDGE_H_
 #define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_BRIDGE_H_
 
+#include <sys/types.h>
+#include <zircon/compiler.h>
+#include <zircon/errors.h>
+
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
 #include <dev/pcie_ref_counted.h>
@@ -15,9 +19,6 @@
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 #include <region-alloc/region-alloc.h>
-#include <sys/types.h>
-#include <zircon/compiler.h>
-#include <zircon/errors.h>
 
 class PciConfig;
 class PcieBridge : public PcieDevice, public PcieUpstreamNode {

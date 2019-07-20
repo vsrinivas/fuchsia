@@ -9,8 +9,9 @@
 #define ZIRCON_KERNEL_INCLUDE_ARCH_THREAD_H_
 
 // give the arch code a chance to declare the arch_thread struct
-#include <arch/arch_thread.h>
 #include <zircon/compiler.h>
+
+#include <arch/arch_thread.h>
 
 __BEGIN_CDECLS
 

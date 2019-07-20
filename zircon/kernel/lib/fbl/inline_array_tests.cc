@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/unittest/unittest.h>
+#include <stddef.h>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/inline_array.h>
-#include <lib/unittest/unittest.h>
-#include <stddef.h>
 
 namespace {
 

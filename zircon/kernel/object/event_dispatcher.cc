@@ -7,9 +7,10 @@
 #include "object/event_dispatcher.h"
 
 #include <err.h>
-#include <fbl/alloc_checker.h>
 #include <lib/counters.h>
 #include <zircon/rights.h>
+
+#include <fbl/alloc_checker.h>
 
 KCOUNTER(dispatcher_event_create_count, "dispatcher.event.create")
 KCOUNTER(dispatcher_event_destroy_count, "dispatcher.event.destroy")

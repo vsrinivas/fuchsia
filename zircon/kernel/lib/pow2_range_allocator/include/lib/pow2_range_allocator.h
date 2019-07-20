@@ -9,10 +9,11 @@
 #define ZIRCON_KERNEL_LIB_POW2_RANGE_ALLOCATOR_INCLUDE_LIB_POW2_RANGE_ALLOCATOR_H_
 
 #include <err.h>
-#include <kernel/mutex.h>
 #include <list.h>
 #include <sys/types.h>
 #include <zircon/types.h>
+
+#include <kernel/mutex.h>
 
 __BEGIN_CDECLS
 

@@ -7,8 +7,6 @@
 #include "object/iommu_dispatcher.h"
 
 #include <assert.h>
-#include <dev/iommu.h>
-#include <dev/iommu/dummy.h>
 #include <err.h>
 #include <inttypes.h>
 #include <trace.h>
@@ -16,6 +14,9 @@
 #include <zircon/syscalls/iommu.h>
 
 #include <new>
+
+#include <dev/iommu.h>
+#include <dev/iommu/dummy.h>
 #if ARCH_X86
 #include <dev/iommu/intel.h>
 #endif

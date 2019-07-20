@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/unittest/unittest.h>
+
 #include <object/dispatcher.h>
 #include <object/state_observer.h>
 

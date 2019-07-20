@@ -5,26 +5,27 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 #include <arch.h>
-#include <arch/arm64/feature.h>
-#include <arch/arm64/mmu.h>
-#include <arch/arm64/registers.h>
-#include <arch/mp.h>
-#include <arch/ops.h>
 #include <assert.h>
 #include <bits.h>
 #include <debug.h>
 #include <inttypes.h>
-#include <kernel/atomic.h>
-#include <kernel/cmdline.h>
-#include <kernel/thread.h>
-#include <lk/init.h>
-#include <lk/main.h>
 #include <platform.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+
+#include <arch/arm64/feature.h>
+#include <arch/arm64/mmu.h>
+#include <arch/arm64/registers.h>
+#include <arch/mp.h>
+#include <arch/ops.h>
+#include <kernel/atomic.h>
+#include <kernel/cmdline.h>
+#include <kernel/thread.h>
+#include <lk/init.h>
+#include <lk/main.h>
 
 #include "arch/arm64.h"
 

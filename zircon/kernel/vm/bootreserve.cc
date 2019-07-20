@@ -5,11 +5,12 @@
 // https://opensource.org/licenses/MIT
 #include "vm/bootreserve.h"
 
-#include <fbl/algorithm.h>
-#include <fbl/function.h>
 #include <inttypes.h>
 #include <sys/types.h>
 #include <trace.h>
+
+#include <fbl/algorithm.h>
+#include <fbl/function.h>
 #include <vm/pmm.h>
 
 #include "vm_priv.h"

@@ -5,8 +5,9 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <fbl/ref_ptr.h>
 #include <inttypes.h>
+
+#include <fbl/ref_ptr.h>
 #include <object/channel_dispatcher.h>
 #include <object/handle.h>
 #include <object/process_dispatcher.h>

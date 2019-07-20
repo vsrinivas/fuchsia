@@ -8,18 +8,19 @@
 
 #include <assert.h>
 #include <err.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
 #include <lib/counters.h>
 #include <lib/user_copy/user_ptr.h>
-#include <object/handle.h>
 #include <pow2.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/rights.h>
+
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <object/handle.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
-#include <zircon/rights.h>
 
 #define LOCAL_TRACE 0
 

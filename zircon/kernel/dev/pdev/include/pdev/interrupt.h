@@ -7,9 +7,10 @@
 #ifndef ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_INTERRUPT_H_
 #define ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_INTERRUPT_H_
 
-#include <dev/interrupt.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <dev/interrupt.h>
 
 __BEGIN_CDECLS
 

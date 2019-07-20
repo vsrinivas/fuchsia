@@ -4,8 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <ktl/unique_ptr.h>
 #include <lib/unittest/unittest.h>
+
+#include <ktl/unique_ptr.h>
 
 #include "interrupt_manager.h"
 

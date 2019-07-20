@@ -18,18 +18,19 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/console.h>
+#include <platform.h>
+#include <stdio.h>
+#include <string.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
+
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <kernel/timer.h>
-#include <lib/console.h>
-#include <platform.h>
-#include <stdio.h>
-#include <string.h>
 #include <vm/vm.h>
-#include <zircon/time.h>
-#include <zircon/types.h>
 
 static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags);

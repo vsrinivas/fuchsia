@@ -5,16 +5,17 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <fbl/auto_call.h>
-#include <fbl/ref_ptr.h>
 #include <inttypes.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <trace.h>
+
+#include <fbl/auto_call.h>
+#include <fbl/ref_ptr.h>
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <object/resource.h>
 #include <object/vm_object_dispatcher.h>
-#include <trace.h>
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
 

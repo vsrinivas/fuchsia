@@ -6,19 +6,20 @@
 
 #include "object/diagnostics.h"
 
-#include <fbl/auto_lock.h>
 #include <inttypes.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
+#include <stdio.h>
+#include <string.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
+
+#include <fbl/auto_lock.h>
 #include <object/handle.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 #include <pretty/sizes.h>
-#include <stdio.h>
-#include <string.h>
-#include <zircon/syscalls/object.h>
-#include <zircon/types.h>
 
 // Machinery to walk over a job tree and run a callback on each process.
 template <typename ProcessCallbackType>

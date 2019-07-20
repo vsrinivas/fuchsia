@@ -5,12 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <fbl/ref_ptr.h>
 #include <inttypes.h>
 #include <lib/user_copy/user_ptr.h>
-#include <object/handle.h>
-#include <object/process_dispatcher.h>
-#include <object/socket_dispatcher.h>
 #include <platform.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -18,6 +14,11 @@
 #include <string.h>
 #include <trace.h>
 #include <zircon/syscalls/policy.h>
+
+#include <fbl/ref_ptr.h>
+#include <object/handle.h>
+#include <object/process_dispatcher.h>
+#include <object/socket_dispatcher.h>
 
 #include "priv.h"
 

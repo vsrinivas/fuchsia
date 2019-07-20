@@ -5,35 +5,36 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/x86.h>
-#include <arch/x86/apic.h>
-#include <arch/x86/feature.h>
-#include <arch/x86/pvclock.h>
-#include <arch/x86/timer_freq.h>
 #include <assert.h>
 #include <debug.h>
-#include <dev/interrupt.h>
 #include <err.h>
-#include <fbl/algorithm.h>
 #include <inttypes.h>
-#include <kernel/cmdline.h>
-#include <kernel/spinlock.h>
-#include <kernel/thread.h>
-#include <ktl/limits.h>
 #include <lib/fixed_point.h>
-#include <lk/init.h>
 #include <platform.h>
-#include <platform/console.h>
-#include <platform/pc.h>
-#include <platform/pc/hpet.h>
-#include <platform/pc/timer.h>
-#include <platform/timer.h>
 #include <pow2.h>
 #include <reg.h>
 #include <sys/types.h>
 #include <trace.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+
+#include <arch/x86.h>
+#include <arch/x86/apic.h>
+#include <arch/x86/feature.h>
+#include <arch/x86/pvclock.h>
+#include <arch/x86/timer_freq.h>
+#include <dev/interrupt.h>
+#include <fbl/algorithm.h>
+#include <kernel/cmdline.h>
+#include <kernel/spinlock.h>
+#include <kernel/thread.h>
+#include <ktl/limits.h>
+#include <lk/init.h>
+#include <platform/console.h>
+#include <platform/pc.h>
+#include <platform/pc/hpet.h>
+#include <platform/pc/timer.h>
+#include <platform/timer.h>
 
 #include "platform_p.h"
 

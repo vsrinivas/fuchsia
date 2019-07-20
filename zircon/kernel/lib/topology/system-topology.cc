@@ -1,6 +1,7 @@
-#include <ktl/move.h>
 #include <lib/system-topology.h>
 #include <zircon/errors.h>
+
+#include <ktl/move.h>
 
 namespace system_topology {
 

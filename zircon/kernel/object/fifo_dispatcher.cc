@@ -6,12 +6,13 @@
 
 #include "object/fifo_dispatcher.h"
 
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
 #include <lib/counters.h>
-#include <object/handle.h>
 #include <string.h>
 #include <zircon/rights.h>
+
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <object/handle.h>
 
 KCOUNTER(dispatcher_fifo_create_count, "dispatcher.fifo.create")
 KCOUNTER(dispatcher_fifo_destroy_count, "dispatcher.fifo.destroy")

@@ -7,13 +7,14 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <dev/pci_config.h>
-#include <dev/pcie_device.h>
 #include <err.h>
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
 #include <string.h>
 #include <trace.h>
+
+#include <dev/pci_config.h>
+#include <dev/pcie_device.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 
 #define LOCAL_TRACE 0
 

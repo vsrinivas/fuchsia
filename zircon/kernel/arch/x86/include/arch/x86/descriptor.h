@@ -42,10 +42,11 @@
 
 #ifndef __ASSEMBLER__
 
-#include <arch/aspace.h>
 #include <reg.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+
+#include <arch/aspace.h>
 
 #ifdef __cplusplus
 #include <arch/x86/ioport.h>

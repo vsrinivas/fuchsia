@@ -4,15 +4,16 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#include <arch/mp.h>
-#include <arch/ops.h>
 #include <assert.h>
-#include <dev/interrupt.h>
 #include <err.h>
-#include <kernel/event.h>
 #include <platform.h>
 #include <trace.h>
 #include <zircon/types.h>
+
+#include <arch/mp.h>
+#include <arch/ops.h>
+#include <dev/interrupt.h>
+#include <kernel/event.h>
 
 #define LOCAL_TRACE 0
 

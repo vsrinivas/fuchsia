@@ -7,9 +7,10 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_HYPERVISOR_VMEXIT_PRIV_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_HYPERVISOR_VMEXIT_PRIV_H_
 
+#include <zircon/types.h>
+
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/trap_map.h>
-#include <zircon/types.h>
 
 typedef struct zx_port_packet zx_port_packet_t;
 

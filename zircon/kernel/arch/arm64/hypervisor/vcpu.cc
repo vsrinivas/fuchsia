@@ -4,9 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <bits.h>
+#include <lib/ktrace.h>
+#include <zircon/errors.h>
+#include <zircon/syscalls/hypervisor.h>
+
 #include <arch/hypervisor.h>
 #include <arch/ops.h>
-#include <bits.h>
 #include <dev/interrupt/arm_gic_common.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <fbl/auto_call.h>
@@ -15,12 +19,9 @@
 #include <hypervisor/ktrace.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
-#include <lib/ktrace.h>
 #include <platform/timer.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
-#include <zircon/errors.h>
-#include <zircon/syscalls/hypervisor.h>
 
 #include "el2_cpu_state_priv.h"
 #include "vmexit_priv.h"

@@ -6,6 +6,8 @@
 
 #include "kernel/owned_wait_queue.h"
 
+#include <lib/counters.h>
+
 #include <arch/mp.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -14,7 +16,6 @@
 #include <kernel/wait_queue_internal.h>
 #include <ktl/popcount.h>
 #include <ktl/type_traits.h>
-#include <lib/counters.h>
 
 // Notes on the defined kernel counters.
 //

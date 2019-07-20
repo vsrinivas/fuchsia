@@ -7,13 +7,14 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <fbl/auto_call.h>
-#include <kernel/lockdep.h>
 #include <lib/pow2_range_allocator.h>
 #include <pow2.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+
+#include <fbl/auto_call.h>
+#include <kernel/lockdep.h>
 
 #define LOCAL_TRACE 0
 

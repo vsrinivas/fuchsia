@@ -6,11 +6,12 @@
 
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/mp.h>
-#include <kernel/thread.h>
 #include <lib/unittest/unittest.h>
 #include <platform.h>
 #include <zircon/types.h>
+
+#include <kernel/mp.h>
+#include <kernel/thread.h>
 
 #include "tests.h"
 

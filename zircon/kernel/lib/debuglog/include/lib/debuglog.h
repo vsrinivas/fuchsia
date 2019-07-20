@@ -7,12 +7,13 @@
 #ifndef ZIRCON_KERNEL_LIB_DEBUGLOG_INCLUDE_LIB_DEBUGLOG_H_
 #define ZIRCON_KERNEL_LIB_DEBUGLOG_INCLUDE_LIB_DEBUGLOG_H_
 
-#include <kernel/event.h>
-#include <kernel/mutex.h>
 #include <list.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <kernel/event.h>
+#include <kernel/mutex.h>
 
 struct dlog;
 typedef struct dlog dlog_t;

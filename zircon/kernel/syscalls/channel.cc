@@ -5,20 +5,21 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
-#include <fbl/ref_ptr.h>
 #include <inttypes.h>
 #include <lib/counters.h>
 #include <lib/ktrace.h>
+#include <trace.h>
+#include <zircon/syscalls/policy.h>
+#include <zircon/types.h>
+
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/ref_ptr.h>
 #include <object/channel_dispatcher.h>
 #include <object/handle.h>
 #include <object/message_packet.h>
 #include <object/process_dispatcher.h>
 #include <object/user_handles.h>
-#include <trace.h>
-#include <zircon/syscalls/policy.h>
-#include <zircon/types.h>
 
 #include "priv.h"
 

@@ -12,11 +12,12 @@
  */
 #include "lk/init.h"
 
-#include <arch/ops.h>
 #include <assert.h>
 #include <debug.h>
 #include <trace.h>
 #include <zircon/compiler.h>
+
+#include <arch/ops.h>
 
 #define LOCAL_TRACE 0
 #define TRACE_INIT (LK_DEBUGLEVEL >= 2)

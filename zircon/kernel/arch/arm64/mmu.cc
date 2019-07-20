@@ -6,19 +6,11 @@
 // https://opensource.org/licenses/MIT
 #include "arch/arm64/mmu.h"
 
-#include <arch/arm64/hypervisor/el2_state.h>
-#include <arch/aspace.h>
-#include <arch/mmu.h>
 #include <assert.h>
-#include <bitmap/raw-bitmap.h>
-#include <bitmap/storage.h>
 #include <bits.h>
 #include <debug.h>
 #include <err.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <inttypes.h>
-#include <kernel/mutex.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
 #include <rand.h>
@@ -26,11 +18,20 @@
 #include <string.h>
 #include <sys/types.h>
 #include <trace.h>
+#include <zircon/types.h>
+
+#include <arch/arm64/hypervisor/el2_state.h>
+#include <arch/aspace.h>
+#include <arch/mmu.h>
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <kernel/mutex.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
-#include <zircon/types.h>
 
 #define LOCAL_TRACE 0
 #define TRACE_CONTEXT_SWITCH 0

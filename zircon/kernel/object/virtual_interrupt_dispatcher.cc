@@ -6,14 +6,15 @@
 
 #include "object/virtual_interrupt_dispatcher.h"
 
+#include <lib/counters.h>
+#include <platform.h>
+#include <zircon/rights.h>
+
 #include <dev/interrupt.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <kernel/auto_lock.h>
-#include <lib/counters.h>
-#include <platform.h>
-#include <zircon/rights.h>
 
 KCOUNTER(dispatcher_virtual_interrupt_create_count, "dispatcher.virtual_interrupt.create")
 KCOUNTER(dispatcher_virtual_interrupt_destroy_count, "dispatcher.virtual_interrupt.destroy")

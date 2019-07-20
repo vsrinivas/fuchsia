@@ -10,18 +10,19 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_H_
 
+#include <cpuid.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <arch/x86/general_regs.h>
 #include <arch/x86/iframe.h>
 #include <arch/x86/registers.h>
 #include <arch/x86/x86intrin.h>
-#include <cpuid.h>
 #include <kernel/cpu.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <sys/types.h>
 #include <syscalls/syscalls.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 __BEGIN_CDECLS
 

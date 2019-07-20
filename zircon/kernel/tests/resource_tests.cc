@@ -4,9 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/unittest/unittest.h>
+
 #include <fbl/alloc_checker.h>
 #include <ktl/unique_ptr.h>
-#include <lib/unittest/unittest.h>
 #include <object/handle.h>
 #include <object/resource_dispatcher.h>
 

@@ -9,6 +9,10 @@
 #define ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_DEVICE_H_
 
 #include <assert.h>
+#include <sys/types.h>
+#include <zircon/compiler.h>
+#include <zircon/errors.h>
+
 #include <dev/pci_common.h>
 #include <dev/pci_config.h>
 #include <dev/pcie_bus_driver.h>
@@ -21,9 +25,6 @@
 #include <fbl/ref_ptr.h>
 #include <kernel/spinlock.h>
 #include <ktl/unique_ptr.h>
-#include <sys/types.h>
-#include <zircon/compiler.h>
-#include <zircon/errors.h>
 
 /* Fwd decls */
 class PcieBusDriver;

@@ -11,15 +11,16 @@
 
 #include <assert.h>
 #include <debug.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <stdint.h>
+#include <zircon/compiler.h>
+
 #include <fbl/canary.h>
 #include <fbl/macros.h>
 #include <kernel/lockdep.h>
 #include <kernel/owned_wait_queue.h>
 #include <kernel/thread.h>
 #include <ktl/atomic.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <stdint.h>
-#include <zircon/compiler.h>
 
 // Kernel mutex support.
 //

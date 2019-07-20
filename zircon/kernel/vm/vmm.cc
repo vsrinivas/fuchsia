@@ -7,21 +7,22 @@
 
 #include <assert.h>
 #include <err.h>
-#include <fbl/null_lock.h>
 #include <inttypes.h>
-#include <kernel/mutex.h>
-#include <kernel/thread_lock.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
-#include <object/diagnostics.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/types.h>
+
+#include <fbl/null_lock.h>
+#include <kernel/mutex.h>
+#include <kernel/thread_lock.h>
+#include <object/diagnostics.h>
 #include <vm/fault.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
-#include <zircon/types.h>
 
 #include "vm_priv.h"
 

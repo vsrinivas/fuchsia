@@ -5,9 +5,10 @@
 #ifndef ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_DEVICE_PATH_TO_TEXT_H_
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_DEVICE_PATH_TO_TEXT_H_
 
+#include <stdbool.h>
+
 #include <efi/protocol/device-path.h>
 #include <efi/types.h>
-#include <stdbool.h>
 
 #define EFI_DEVICE_PATH_TO_TEXT_PROTOCOL_GUID                                      \
   {                                                                                \

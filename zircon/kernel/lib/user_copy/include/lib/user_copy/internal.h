@@ -5,6 +5,8 @@
 #ifndef ZIRCON_KERNEL_LIB_USER_COPY_INCLUDE_LIB_USER_COPY_INTERNAL_H_
 #define ZIRCON_KERNEL_LIB_USER_COPY_INCLUDE_LIB_USER_COPY_INTERNAL_H_
 
+#include <stddef.h>
+
 namespace internal {
 
 // type_size<T>() is 1 if T is (const/volatile) void or sizeof(T) otherwise.

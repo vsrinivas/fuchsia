@@ -4,15 +4,16 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/aspace.h>
-#include <arch/mmu.h>
-#include <arch/x86/mmu.h>
 #include <bits.h>
 #include <err.h>
 #include <lib/unittest/unittest.h>
+#include <zircon/types.h>
+
+#include <arch/aspace.h>
+#include <arch/mmu.h>
+#include <arch/x86/mmu.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/pmm.h>
-#include <zircon/types.h>
 
 static bool check_virtual_address_mapped(uint64_t* pml4, vaddr_t va) {
   constexpr uint kPageTableLevels = 4;

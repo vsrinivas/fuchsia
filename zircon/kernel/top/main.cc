@@ -13,19 +13,20 @@
 
 #include <arch.h>
 #include <debug.h>
+#include <lib/debuglog.h>
+#include <lib/heap.h>
+#include <platform.h>
+#include <string.h>
+#include <target.h>
+#include <zircon/compiler.h>
+
 #include <kernel/init.h>
 #include <kernel/mutex.h>
 #include <kernel/percpu.h>
 #include <kernel/thread.h>
-#include <lib/debuglog.h>
-#include <lib/heap.h>
 #include <lk/init.h>
-#include <platform.h>
-#include <string.h>
-#include <target.h>
 #include <vm/init.h>
 #include <vm/vm.h>
-#include <zircon/compiler.h>
 
 extern void (*const __init_array_start[])();
 extern void (*const __init_array_end[])();

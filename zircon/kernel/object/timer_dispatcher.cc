@@ -8,14 +8,15 @@
 
 #include <assert.h>
 #include <err.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
-#include <kernel/thread.h>
 #include <lib/counters.h>
 #include <platform.h>
 #include <zircon/compiler.h>
 #include <zircon/rights.h>
 #include <zircon/types.h>
+
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <kernel/thread.h>
 
 KCOUNTER(dispatcher_timer_create_count, "dispatcher.timer.create")
 KCOUNTER(dispatcher_timer_destroy_count, "dispatcher.timer.destroy")

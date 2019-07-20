@@ -5,8 +5,9 @@
 #include <assert.h>
 #include <err.h>
 #include <lib/acpi_tables.h>
-#include <lk/init.h>
 #include <trace.h>
+
+#include <lk/init.h>
 
 #define LOCAL_TRACE 0
 

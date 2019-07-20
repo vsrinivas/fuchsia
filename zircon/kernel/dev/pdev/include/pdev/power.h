@@ -7,8 +7,9 @@
 #ifndef ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_POWER_H_
 #define ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_POWER_H_
 
-#include <dev/power.h>
 #include <zircon/compiler.h>
+
+#include <dev/power.h>
 
 __BEGIN_CDECLS
 

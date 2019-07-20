@@ -7,10 +7,11 @@
 #ifndef ZIRCON_KERNEL_LIB_COUNTERS_INCLUDE_LIB_COUNTERS_H_
 #define ZIRCON_KERNEL_LIB_COUNTERS_INCLUDE_LIB_COUNTERS_H_
 
+#include <zircon/compiler.h>
+
 #include <arch/ops.h>
 #include <kernel/atomic.h>
 #include <kernel/percpu.h>
-#include <zircon/compiler.h>
 
 #include "counter-vmo-abi.h"
 

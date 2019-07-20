@@ -7,16 +7,17 @@
 #include "object/job_dispatcher.h"
 
 #include <err.h>
+#include <inttypes.h>
+#include <lib/counters.h>
+#include <platform.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls/policy.h>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <inttypes.h>
-#include <lib/counters.h>
 #include <object/process_dispatcher.h>
-#include <platform.h>
-#include <zircon/rights.h>
-#include <zircon/syscalls/policy.h>
 
 KCOUNTER(dispatcher_job_create_count, "dispatcher.job.create")
 KCOUNTER(dispatcher_job_destroy_count, "dispatcher.job.destroy")

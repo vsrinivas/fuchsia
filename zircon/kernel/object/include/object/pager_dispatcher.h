@@ -7,13 +7,14 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PAGER_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PAGER_DISPATCHER_H_
 
+#include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <fbl/ref_ptr.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
 #include <object/port_dispatcher.h>
 #include <vm/page_source.h>
-#include <zircon/types.h>
 
 // Page source implementation that talks to a userspace pager service.
 //

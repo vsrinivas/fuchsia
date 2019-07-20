@@ -4,28 +4,29 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <dev/interrupt.h>
 #include <err.h>
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/unique_free_ptr.h>
-#include <ktl/limits.h>
-#include <ktl/unique_ptr.h>
 #include <lib/pci/pio.h>
 #include <lib/user_copy/user_ptr.h>
-#include <object/handle.h>
-#include <object/process_dispatcher.h>
-#include <object/resource.h>
-#include <object/vm_object_dispatcher.h>
 #include <platform.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
-#include <vm/vm_object_physical.h>
 #include <zircon/syscalls/pci.h>
+
+#include <dev/interrupt.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_free_ptr.h>
+#include <ktl/limits.h>
+#include <ktl/unique_ptr.h>
+#include <object/handle.h>
+#include <object/process_dispatcher.h>
+#include <object/resource.h>
+#include <object/vm_object_dispatcher.h>
+#include <vm/vm_object_physical.h>
 
 #include "priv.h"
 

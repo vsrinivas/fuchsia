@@ -4,17 +4,18 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/arm64/periphmap.h>
-#include <arch/arm64/smccc.h>
-#include <dev/interrupt.h>
-#include <kernel/thread.h>
 #include <lib/cbuf.h>
-#include <pdev/driver.h>
 #include <reg.h>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/boot/driver-config.h>
+
+#include <arch/arm64/periphmap.h>
+#include <arch/arm64/smccc.h>
+#include <dev/interrupt.h>
+#include <kernel/thread.h>
+#include <pdev/driver.h>
 
 static vaddr_t preset_base;
 static vaddr_t hiu_base;

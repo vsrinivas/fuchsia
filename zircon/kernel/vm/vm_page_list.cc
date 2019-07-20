@@ -6,14 +6,15 @@
 #include "vm/vm_page_list.h"
 
 #include <err.h>
-#include <fbl/alloc_checker.h>
 #include <inttypes.h>
-#include <ktl/move.h>
 #include <trace.h>
+#include <zircon/types.h>
+
+#include <fbl/alloc_checker.h>
+#include <ktl/move.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
 #include <vm/vm_object_paged.h>
-#include <zircon/types.h>
 
 #include "vm_priv.h"
 

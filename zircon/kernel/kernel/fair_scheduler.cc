@@ -10,12 +10,15 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/counters.h>
+#include <lib/ktrace.h>
 #include <list.h>
 #include <platform.h>
 #include <printf.h>
 #include <string.h>
 #include <target.h>
 #include <trace.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 #include <new>
@@ -27,10 +30,7 @@
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <ktl/move.h>
-#include <lib/counters.h>
-#include <lib/ktrace.h>
 #include <vm/vm.h>
-#include <zircon/types.h>
 
 using ffl::Expression;
 using ffl::Fixed;

@@ -9,17 +9,18 @@
 #include <ctype.h>
 #include <debug.h>
 #include <err.h>
-#include <kernel/cmdline.h>
-#include <kernel/mutex.h>
-#include <kernel/thread.h>
 #include <lib/console.h>
-#include <lk/init.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <kernel/cmdline.h>
+#include <kernel/mutex.h>
+#include <kernel/thread.h>
+#include <lk/init.h>
 
 #ifndef CONSOLE_ENABLE_HISTORY
 #define CONSOLE_ENABLE_HISTORY 1

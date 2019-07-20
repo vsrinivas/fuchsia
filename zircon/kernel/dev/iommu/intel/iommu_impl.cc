@@ -6,21 +6,22 @@
 
 #include "iommu_impl.h"
 
-#include <dev/interrupt.h>
 #include <err.h>
+#include <platform.h>
+#include <trace.h>
+#include <zircon/time.h>
+
+#include <new>
+
+#include <dev/interrupt.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
-#include <platform.h>
-#include <trace.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>
-#include <zircon/time.h>
-
-#include <new>
 
 #include "context_table_state.h"
 #include "device_context.h"

@@ -7,8 +7,9 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_PVCLOCK_PRIV_H_
 #define ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_PVCLOCK_PRIV_H_
 
-#include <hypervisor/guest_physical_address_space.h>
 #include <zircon/types.h>
+
+#include <hypervisor/guest_physical_address_space.h>
 
 struct PvClockState;
 

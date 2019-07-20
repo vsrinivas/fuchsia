@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/arm64/hypervisor/el2_state.h>
-#include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <assert.h>
 #include <bits.h>
+
+#include <arch/arm64/hypervisor/el2_state.h>
+#include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/interrupt/arm_gicv2_regs.h>
 #include <vm/pmm.h>

@@ -6,16 +6,17 @@
 // https://opensource.org/licenses/MIT
 
 #if WITH_KERNEL_PCIE
-#include <dev/pcie_bus_driver.h>
-#include <dev/pcie_platform.h>
-#include <dev/pcie_root.h>
 #include <inttypes.h>
-#include <lk/init.h>
-#include <pdev/driver.h>
-#include <pdev/interrupt.h>
 #include <trace.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/types.h>
+
+#include <dev/pcie_bus_driver.h>
+#include <dev/pcie_platform.h>
+#include <dev/pcie_root.h>
+#include <lk/init.h>
+#include <pdev/driver.h>
+#include <pdev/interrupt.h>
 
 static void arm_gicv3_pcie_init(const void* driver_data, uint32_t length) {
   ASSERT(length >= sizeof(dcfg_arm_gicv3_driver_t));

@@ -4,6 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <iovec.h>
+#include <lib/console.h>
+#include <lib/unittest/unittest.h>
+
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
 #include <arch/x86.h>
@@ -11,10 +15,7 @@
 #include <arch/x86/cpuid_test_data.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/platform_access.h>
-#include <iovec.h>
 #include <ktl/array.h>
-#include <lib/console.h>
-#include <lib/unittest/unittest.h>
 
 namespace {
 

@@ -7,8 +7,9 @@
 #define ZIRCON_KERNEL_LIB_MEMORY_LIMIT_INCLUDE_LIB_MEMORY_LIMIT_H_
 #include <iovec.h>
 #include <sys/types.h>
-#include <vm/pmm.h>
 #include <zircon/types.h>
+
+#include <vm/pmm.h>
 
 __BEGIN_CDECLS
 

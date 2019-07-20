@@ -4,8 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <fbl/name.h>
 #include <lib/unittest/unittest.h>
+
+#include <fbl/name.h>
 
 namespace {
 
