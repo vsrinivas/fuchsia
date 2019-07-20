@@ -75,8 +75,8 @@ struct WlanStats {
     fuchsia.wlan.stats.IfaceStats stats;
 };
 
-// Stub interface; eventually to be replaced by something based on the 802.11
-// SME / MSGCF.
+/// Stub interface; eventually to be replaced by something based on the 802.11
+/// SME / MSGCF.
 [Discoverable]
 protocol Wlan {
     Scan(ScanRequest req) -> (ScanResult result);

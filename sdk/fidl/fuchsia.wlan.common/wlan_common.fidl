@@ -16,11 +16,16 @@ enum RequestStatus {
 // LINT.IfChange
 
 enum PHY {
-    HR = 1; // IEEE 802.11b, used for DSSS, HR/DSSS, ERP-DSSS/CCK
-    ERP = 2; // IEEE 802.11a/g, used for ERP-OFDM
-    HT = 3; // IEEE 802.11n
-    VHT = 4; // IEEE 802.11ac
-    HEW = 5; // IEEE 802.11ax
+    /// IEEE 802.11b, used for DSSS, HR/DSSS, ERP-DSSS/CCK
+    HR = 1;
+    /// IEEE 802.11a/g, used for ERP-OFDM
+    ERP = 2;
+    /// IEEE 802.11n
+    HT = 3;
+    /// IEEE 802.11ac
+    VHT = 4;
+    /// IEEE 802.11ax
+    HEW = 5;
 };
 
 enum CBW {	// Channel Bandwidth
@@ -58,7 +63,7 @@ enum DriverFeature {
     SYNTH = 2;
     TX_STATUS_REPORT = 3;
     DFS = 4;
-    // Temporary feature flag for incrementally transitioning drivers to use
-    // SME channel on iface creation.
+    /// Temporary feature flag for incrementally transitioning drivers to use
+    /// SME channel on iface creation.
     TEMP_DIRECT_SME_CHANNEL = 3141592;
 };

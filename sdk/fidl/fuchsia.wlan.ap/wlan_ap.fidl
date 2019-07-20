@@ -38,16 +38,20 @@ struct AccessPointParams {
 
 
 enum ApBand {
-  BAND_ANY = 0;    // allows the band to switch depending on device
-                   // operating mode and environment
-  BAND_2_4GHZ = 1; // restricted to 2.4ghz bands only
-  BAND_5GHZ = 2;   // restricted to 5ghz bands only
+  /// allows the band to switch depending on device
+  /// operating mode and environment
+  BAND_ANY = 0;
+  /// restricted to 2.4ghz bands only
+  BAND_2_4GHZ = 1;
+  /// restricted to 5ghz bands only
+  BAND_5GHZ = 2;
 };
 
 
 enum ApState {
-  STARTING = 0;     // confirmation that the softap interface will attempt to be
-                    // created (this can take seconds on some devices)
+  /// confirmation that the softap interface will attempt to be
+  /// created (this can take seconds on some devices)
+  STARTING = 0;
   UP = 1;
   DOWN = 2;
 };
