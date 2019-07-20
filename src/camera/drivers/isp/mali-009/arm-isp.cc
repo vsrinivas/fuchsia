@@ -90,6 +90,98 @@ void ArmIspDevice::PowerUpIsp() {
                       HHI_MIPI_ISP_CLK_CNTL);
 }
 
+void ArmIspDevice::HandleDmaError() {
+    auto global_mon_status = IspGlobalMonitor_Status::Get()
+                                 .ReadFrom(&isp_mmio_);
+
+    auto global_mon_failures = IspGlobalMonitor_Failures::Get()
+                                   .ReadFrom(&isp_mmio_);
+
+    global_mon_status.Print();
+    global_mon_failures.Print();
+
+    IspGlobalMonitor_ClearError::Get()
+        .ReadFrom(&isp_mmio_)
+        .set_output_dma_clr_alarm(1)
+        .set_temper_dma_clr_alarm(1)
+        .WriteTo(&isp_mmio_);
+
+    IspGlobalMonitor_ClearError::Get()
+        .ReadFrom(&isp_mmio_)
+        .set_output_dma_clr_alarm(1)
+        .WriteTo(&isp_mmio_);
+
+    // Now read the alarms:
+    global_mon_status = IspGlobalMonitor_Status::Get()
+                            .ReadFrom(&isp_mmio_);
+    global_mon_failures = IspGlobalMonitor_Failures::Get()
+                              .ReadFrom(&isp_mmio_);
+
+    global_mon_status.Print();
+    global_mon_failures.Print();
+
+    zxlogf(INFO, "DMA Writer statuses:\n");
+    full_resolution_dma_->PrintStatus(&isp_mmio_);
+    downscaled_dma_->PrintStatus(&isp_mmio_);
+
+    zxlogf(INFO, "Clearing dma alarm\n");
+    IspGlobalMonitor_ClearError::Get()
+        .ReadFrom(&isp_mmio_)
+        .set_output_dma_clr_alarm(0)
+        .set_temper_dma_clr_alarm(0)
+        .WriteTo(&isp_mmio_);
+
+    IspGlobalMonitor_ClearError::Get()
+        .ReadFrom(&isp_mmio_)
+        .set_output_dma_clr_alarm(0)
+        .WriteTo(&isp_mmio_);
+}
+
+zx_status_t ArmIspDevice::ErrorRoutine() {
+    // Mask all IRQs
+    IspGlobalInterrupt_MaskVector::Get()
+        .ReadFrom(&isp_mmio_)
+        .mask_all()
+        .WriteTo(&isp_mmio_);
+
+    zx_status_t status = SetPort(kSafeStop);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s Stopping ISP failed \n", __func__);
+        return status;
+    }
+
+    IspGlobal_Config0::Get()
+        .ReadFrom(&isp_mmio_)
+        .set_global_fsm_reset(1)
+        .WriteTo(&isp_mmio_);
+
+    IspGlobal_Config0::Get()
+        .ReadFrom(&isp_mmio_)
+        .set_global_fsm_reset(0)
+        .WriteTo(&isp_mmio_);
+
+    IspGlobalInterrupt_MaskVector::Get()
+        .ReadFrom(&isp_mmio_)
+        .set_isp_start(0)
+        .set_ctx_management_error(0)
+        .set_broken_frame_error(0)
+        .set_wdg_timer_timed_out(0)
+        .set_frame_collision_error(0)
+        .set_dma_error_interrupt(0)
+        .set_fr_y_dma_write_done(0)
+        .set_fr_uv_dma_write_done(0)
+        .set_ds_y_dma_write_done(0)
+        .set_ds_uv_dma_write_done(0)
+        .WriteTo(&isp_mmio_);
+
+    status = SetPort(kSafeStart);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s Starting ISP failed \n", __func__);
+        return status;
+    }
+    return status;
+}
+
 // Interrupt handler for the ISP.
 int ArmIspDevice::IspIrqHandler() {
   zxlogf(INFO, "%s start\n", __func__);
@@ -104,6 +196,11 @@ int ArmIspDevice::IspIrqHandler() {
     auto irq_status =
         IspGlobalInterrupt_StatusVector::Get().ReadFrom(&isp_mmio_);
 
+    IspGlobalInterrupt_ClearVector::Get()
+      .ReadFrom(&isp_mmio_)
+      .set_reg_value(0xFFFFFFFF)
+      .WriteTo(&isp_mmio_);
+
     // Clear IRQ Vector
     IspGlobalInterrupt_Clear::Get()
         .ReadFrom(&isp_mmio_)
@@ -115,9 +212,22 @@ int ArmIspDevice::IspIrqHandler() {
         .set_value(1)
         .WriteTo(&isp_mmio_);
 
+    IspGlobalInterrupt_Clear::Get()
+        .ReadFrom(&isp_mmio_)
+        .set_value(0)
+        .WriteTo(&isp_mmio_);
+
+
     if (irq_status.has_errors()) {
-      zxlogf(ERROR, "%s ISP Error Occured, resetting ISP", __func__);
-      // TODO(braval) : Handle error case here
+      zxlogf(ERROR, "%s ISP Error Occured, resetting ISP\n", __func__);
+      if (irq_status.dma_error_interrupt()) {
+         HandleDmaError();
+      } else {
+          status = ErrorRoutine();
+          if (status != ZX_OK) {
+              return status;
+          }
+      }
       continue;
     }
 
@@ -346,6 +456,10 @@ zx_status_t ArmIspDevice::InitIsp() {
       .set_wdg_timer_timed_out(0)
       .set_frame_collision_error(0)
       .set_dma_error_interrupt(0)
+      .set_fr_y_dma_write_done(0)
+      .set_fr_uv_dma_write_done(0)
+      .set_ds_y_dma_write_done(0)
+      .set_ds_uv_dma_write_done(0)
       .WriteTo(&isp_mmio_);
 
   // put ping pong in slave mode
