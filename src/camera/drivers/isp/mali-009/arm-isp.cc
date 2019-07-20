@@ -631,6 +631,68 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
   return status;
 }
 
+DmaManager *ArmIspDevice::GetStream(stream_type_t type) {
+  // Ignore anything that is not FullFrame or Downscaled:
+  switch (type) {
+    case STREAM_TYPE_FULL_RESOLUTION:
+      return full_resolution_dma_.get();
+    case STREAM_TYPE_DOWNSCALED:
+      return downscaled_dma_.get();
+    default:
+      zxlogf(ERROR, "%s: Invalid stream type\n", __func__);
+  }
+  return nullptr;
+}
+
+
+// Functions that the isp_stream_protocol calls:
+zx_status_t ArmIspDevice::ReleaseFrame(uint32_t buffer_id, stream_type_t type) {
+  auto stream = GetStream(type);
+  if (!stream) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return stream->ReleaseFrame(buffer_id);
+}
+
+// A call to either stream type to start will get the isp to start running.
+zx_status_t ArmIspDevice::StartStream(stream_type_t type) {
+  auto stream = GetStream(type);
+  if (!stream) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  stream->Enable();
+
+  if (!streaming_) {
+    auto status = StartStreaming();
+    if (status == ZX_OK) {
+        streaming_ = true;
+    }
+    return status;
+  }
+  return ZX_OK;
+}
+
+// The ISP will only stop streaming when both streams are stopped.
+zx_status_t ArmIspDevice::StopStream(stream_type_t type) {
+  auto stream = GetStream(type);
+  if (!stream) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  stream->Disable();
+
+  if (streaming_ && !full_resolution_dma_->enabled() &&
+      !downscaled_dma_->enabled()) {
+    auto status = StopStreaming();
+    if (status == ZX_OK) {
+      streaming_ = false;
+    }
+    return status;
+  }
+  return ZX_OK;
+}
+
 zx_status_t ArmIspDevice::StartStreaming() {
   if (streaming_) {
       return ZX_OK;

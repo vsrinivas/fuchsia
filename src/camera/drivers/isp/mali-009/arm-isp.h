@@ -101,6 +101,24 @@ class ArmIspDevice : public IspDeviceType,
       const buffer_collection_info_t* buffer_collection,
       const frame_rate_t* rate, stream_type_t type,
       const output_stream_callback_t* stream, output_stream_protocol_t* out_s);
+
+  // Functions to service the output_stream_protocol interface:
+
+  // Releases a frame that was being used by a consumer
+  // |buffer_id| : the buffer_id that was sent with FrameReady
+  // |type| : Either STREAM_TYPE_FULL_RESOLUTION or STREAM_TYPE_DOWNSCALED
+  // @Return : indicates if the frame was released.
+  zx_status_t ReleaseFrame(uint32_t buffer_id, stream_type_t type);
+
+  // Starts streaming one of the stream types.
+  // |type| : Either STREAM_TYPE_FULL_RESOLUTION or STREAM_TYPE_DOWNSCALED
+  // @Return : indicates if the stream was started.
+  zx_status_t StartStream(stream_type_t type);
+
+  // Stops streaming one of the stream types.
+  // |type| : Either STREAM_TYPE_FULL_RESOLUTION or STREAM_TYPE_DOWNSCALED
+  // @Return : indicates if the stream was stopped.
+  zx_status_t StopStream(stream_type_t type);
   // ---------------  End ZX_PROTOCOL_ISP ---------------
 
   // ISP Init Sequences (init_sequences.cc)
@@ -132,6 +150,9 @@ class ArmIspDevice : public IspDeviceType,
 
   zx_status_t StartStreaming();
   zx_status_t StopStreaming();
+
+  // Get the DMA Manager associated with stream type |type|.
+  DmaManager *GetStream(stream_type_t type);
 
   // Functions used by the debugging / testing interface:
   // Returns all the current registers written into a struct for analysis.
