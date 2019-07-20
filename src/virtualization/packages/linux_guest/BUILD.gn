@@ -52,7 +52,7 @@ guest_package("linux_guest") {
 
   linux = "$target_out_dir/linux/Image"
 
-  disk_filename = "filesystem.img"
+  disk_filename = "disk.img"
   resources = [
     {
       path = rebase_path("${disk_image}")
