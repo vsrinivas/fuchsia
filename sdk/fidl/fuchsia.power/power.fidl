@@ -9,47 +9,47 @@ enum Status {
     NotAvailable = 1;
 };
 
-// Provides battery status
+/// Provides battery status
 struct BatteryStatus {
-    // Error status
+    /// Error status
     Status status;
 
-    // If battery is present
+    /// If battery is present
     bool batteryPresent;
 
-    // If battery is charging
+    /// If battery is charging
     bool charging;
 
-    // If battery is dis-charging
+    /// If battery is dis-charging
     bool discharging;
 
-    // If battery is at critical level
+    /// If battery is at critical level
     bool critical;
 
-    // If power cable is plugged in
+    /// If power cable is plugged in
     bool powerAdapterOnline;
 
-    // To distinguish between latest and stale status
+    /// To distinguish between latest and stale status
     int64 timestamp;
 
-    // Battery level in percentage
+    /// Battery level in percentage
     float32 level;
 
-    // Remaining Battery life in hours. It is negative when battery is not discharging
+    /// Remaining Battery life in hours. It is negative when battery is not discharging
     float32 remainingBatteryLife;
 };
 
-// Manager Interface used to manage power
+/// Manager Interface used to manage power
 [Discoverable]
 protocol PowerManager {
-    // Gets battery status
+    /// Gets battery status
     GetBatteryStatus() -> (BatteryStatus status);
 
-    // watcher called when battery status changes
+    /// watcher called when battery status changes
     Watch(PowerManagerWatcher watcher);
 };
 
-// Watcher on battery status
+/// Watcher on battery status
 protocol PowerManagerWatcher {
     OnChangeBatteryStatus(BatteryStatus battery_status);
 };
