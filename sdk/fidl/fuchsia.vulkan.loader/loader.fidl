@@ -4,11 +4,11 @@
 
 library fuchsia.vulkan.loader;
 
-// Service to provide Vulkan libraries to the loader.
+/// Service to provide Vulkan libraries to the loader.
 [Discoverable, Layout = "Simple"]
 protocol Loader {
-    // Requests a client driver library with the given name from the Vulkan loader
-    // service. Returns a VMO suitable for loading as a dynamic library on
-    // success, a null handle on failure.
+    /// Requests a client driver library with the given name from the Vulkan loader
+    /// service. Returns a VMO suitable for loading as a dynamic library on
+    /// success, a null handle on failure.
     Get(string:64 name) -> (handle<vmo>? lib);
 };
