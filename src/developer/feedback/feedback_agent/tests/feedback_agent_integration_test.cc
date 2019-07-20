@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include <stdint.h>
-
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -16,6 +14,7 @@
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
+#include <stdint.h>
 #include <zircon/errors.h>
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"

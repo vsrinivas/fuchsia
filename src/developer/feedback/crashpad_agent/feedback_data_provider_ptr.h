@@ -4,14 +4,14 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_FEEDBACK_DATA_PROVIDER_PTR_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_FEEDBACK_DATA_PROVIDER_PTR_H_
 
-#include <memory>
-
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
+
+#include <memory>
 
 #include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"

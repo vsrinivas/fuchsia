@@ -3,13 +3,6 @@
 
 #include "src/developer/feedback/crashpad_agent/crashpad_agent.h"
 
-#include <stdint.h>
-
-#include <algorithm>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
@@ -22,8 +15,14 @@
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
+#include <stdint.h>
 #include <zircon/errors.h>
 #include <zircon/time.h>
+
+#include <algorithm>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"

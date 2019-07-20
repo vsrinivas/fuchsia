@@ -4,11 +4,11 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_BUGREPORT_BUG_REPORTER_H_
 #define SRC_DEVELOPER_FEEDBACK_BUGREPORT_BUG_REPORTER_H_
 
+#include <lib/sys/cpp/service_directory.h>
+
 #include <memory>
 #include <set>
 #include <string>
-
-#include <lib/sys/cpp/service_directory.h>
 
 namespace fuchsia {
 namespace bugreport {

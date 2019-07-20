@@ -4,14 +4,14 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_LOGGER_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_LOGGER_H_
 
-#include <string>
-#include <vector>
-
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/zx/time.h>
+
+#include <string>
+#include <vector>
 
 #include "src/lib/fxl/logging.h"
 

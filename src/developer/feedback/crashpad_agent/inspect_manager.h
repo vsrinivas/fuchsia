@@ -4,12 +4,12 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_INSPECT_MANAGER_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_INSPECT_MANAGER_H_
 
+#include <lib/fit/function.h>
+#include <lib/inspect_deprecated/component.h>
+
 #include <map>
 #include <string>
 #include <vector>
-
-#include <lib/fit/function.h>
-#include <lib/inspect_deprecated/component.h>
 
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/util/misc/uuid.h"

@@ -3,10 +3,9 @@
 
 #include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
 
-#include <stdint.h>
-
 #include <fuchsia/images/cpp/fidl.h>
 #include <lib/zx/vmo.h>
+#include <stdint.h>
 
 #include "src/lib/fxl/logging.h"
 

@@ -3,11 +3,11 @@
 
 #include "src/developer/feedback/crashpad_agent/tests/stub_feedback_data_provider.h"
 
-#include <string>
-#include <vector>
-
 #include <lib/fsl/vmo/strings.h>
 #include <zircon/errors.h>
+
+#include <string>
+#include <vector>
 
 #include "src/lib/fxl/logging.h"
 

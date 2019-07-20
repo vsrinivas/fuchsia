@@ -5,11 +5,10 @@
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CONFIG_H_
 
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <string>
-
-#include <zircon/types.h>
 
 namespace fuchsia {
 namespace crash {

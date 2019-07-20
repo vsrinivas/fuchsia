@@ -3,12 +3,8 @@
 
 #include "src/developer/feedback/feedback_agent/log_listener_ptr.h"
 
-#include <inttypes.h>
-
-#include <string>
-#include <vector>
-
 #include <fuchsia/mem/cpp/fidl.h>
+#include <inttypes.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -18,6 +14,9 @@
 #include <lib/syslog/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
+
+#include <string>
+#include <vector>
 
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"

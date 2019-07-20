@@ -1,13 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include <lib/sys/cpp/component_context.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <set>
 #include <string>
-
-#include <lib/sys/cpp/component_context.h>
 
 #include "src/developer/feedback/bugreport/bug_reporter.h"
 #include "src/developer/feedback/bugreport/command_line_options.h"

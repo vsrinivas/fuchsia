@@ -3,12 +3,11 @@
 
 #include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
 
-#include <stdint.h>
-
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
+#include <stdint.h>
 
 #include "src/lib/fxl/logging.h"
 

@@ -3,11 +3,6 @@
 
 #include "src/developer/feedback/feedback_agent/inspect_ptr.h"
 
-#include <memory>
-#include <string>
-#include <thread>
-#include <vector>
-
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/bridge.h>
@@ -21,6 +16,11 @@
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
+
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include "src/lib/fxl/functional/cancelable_callback.h"
 

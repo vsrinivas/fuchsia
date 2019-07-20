@@ -4,18 +4,17 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_LOG_LISTENER_PTR_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_LOG_LISTENER_PTR_H_
 
-#include <inttypes.h>
-
-#include <vector>
-
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
+#include <inttypes.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/time.h>
+
+#include <vector>
 
 #include "src/lib/fxl/functional/cancelable_callback.h"
 

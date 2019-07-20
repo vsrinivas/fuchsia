@@ -3,14 +3,13 @@
 
 #include "src/developer/feedback/bugreport/bug_reporter.h"
 
-#include <stdio.h>
-
-#include <vector>
-
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
+#include <stdio.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
+
+#include <vector>
 
 #include "src/developer/feedback/bugreport/bug_report_schema.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"

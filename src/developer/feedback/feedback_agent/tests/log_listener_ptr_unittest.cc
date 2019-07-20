@@ -3,10 +3,6 @@
 
 #include "src/developer/feedback/feedback_agent/log_listener_ptr.h"
 
-#include <memory>
-#include <ostream>
-#include <vector>
-
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async_promise/executor.h>
 #include <lib/fit/single_threaded_executor.h>
@@ -17,6 +13,10 @@
 #include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
+
+#include <memory>
+#include <ostream>
+#include <vector>
 
 #include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
 #include "src/lib/fxl/logging.h"

@@ -4,10 +4,10 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CONFIG_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CONFIG_H_
 
+#include <zircon/types.h>
+
 #include <set>
 #include <string>
-
-#include <zircon/types.h>
 
 namespace fuchsia {
 namespace feedback {
