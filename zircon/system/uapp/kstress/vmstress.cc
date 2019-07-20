@@ -645,7 +645,7 @@ fbl::RefPtr<CowCloneTestInstance::TestData> CowCloneTestInstance::CreateTestVmo(
             page_offset = rand() % parent->page_count;
 
             parent_clone_start_op_id = parent->next_op_id.load();
-            zx_status_t status = parent->vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE,
+            zx_status_t status = parent->vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
                                                           page_offset * ZX_PAGE_SIZE,
                                                           page_count * ZX_PAGE_SIZE,
                                                           &vmo);

@@ -478,9 +478,9 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
   return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, uint64_t offset,
-                                       uint64_t size, bool copy_name,
-                                       fbl::RefPtr<VmObject>* child_vmo) {
+zx_status_t VmObjectPaged::CreateCowClone(Resizability resizable, CloneType type, uint64_t offset,
+                                          uint64_t size, bool copy_name,
+                                          fbl::RefPtr<VmObject>* child_vmo) {
   LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
 
   canary_.Assert();
@@ -511,15 +511,15 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
 
   fbl::RefPtr<VmObjectPaged> hidden_parent;
   switch (type) {
-    case CloneType::CopyOnWrite: {
-      // To create a copy-on-write clone, the kernel creates an artifical parent vmo
+    case CloneType::Bidirectional: {
+      // To create a bidirectional clone, the kernel creates an artifical parent vmo
       // called a 'hidden vmo'. The content of the original vmo is moved into the hidden
       // vmo, and the original vmo becomes a child of the hidden vmo. Then a second child
       // is created, which is the userspace visible clone.
       //
       // Hidden vmos are an implementation detail that are not exposed to userspace.
 
-      if (!IsCowClonable()) {
+      if (!IsBidirectionalClonable()) {
         return ZX_ERR_NOT_SUPPORTED;
       }
 
@@ -542,6 +542,12 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
         return ZX_ERR_NOT_SUPPORTED;
       }
       break;
+    case CloneType::Unidirectional:
+      // Force these clients to use private pager copies
+      if (GetRootPageSourceLocked()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      break;
   }
 
   bool notify_one_child;
@@ -559,7 +565,7 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
     vmo->parent_limit_ = fbl::min(size, size_ - offset);
 
     VmObjectPaged* clone_parent;
-    if (type == CloneType::CopyOnWrite) {
+    if (type == CloneType::Bidirectional) {
       clone_parent = hidden_parent.get();
 
       InsertHiddenParentLocked(ktl::move(hidden_parent));
@@ -2362,10 +2368,10 @@ fbl::RefPtr<PageSource> VmObjectPaged::GetRootPageSourceLocked() const {
   return vm_object->page_source_;
 }
 
-bool VmObjectPaged::IsCowClonable() const {
+bool VmObjectPaged::IsBidirectionalClonable() const {
   Guard<fbl::Mutex> guard{&lock_};
 
-  // Copy-on-write clones of pager vmos aren't supported as we can't
+  // Bidirectional clones of pager vmos aren't supported as we can't
   // efficiently make an immutable snapshot.
   if (page_source_) {
     return false;

@@ -260,17 +260,25 @@ mod tests {
         assert!(clone.read(&mut read_buffer, 0).is_ok());
         assert_eq!(&read_buffer[0..3], b"one");
 
-        // Writing to the original will not affect the clone.
+        // Writing to the original will affect the clone too, surprisingly.
         assert!(original.write(b"two", 0).is_ok());
         assert!(original.read(&mut read_buffer, 0).is_ok());
         assert_eq!(&read_buffer[0..3], b"two");
         assert!(clone.read(&mut read_buffer, 0).is_ok());
-        assert_eq!(&read_buffer[0..3], b"one");
+        assert_eq!(&read_buffer[0..3], b"two");
 
-        // However, writing to the clone will not affect the original.
+        // However, writing to the clone will not affect the original
         assert!(clone.write(b"three", 0).is_ok());
         assert!(original.read(&mut read_buffer, 0).is_ok());
         assert_eq!(&read_buffer[0..3], b"two");
+        assert!(clone.read(&mut read_buffer, 0).is_ok());
+        assert_eq!(&read_buffer[0..5], b"three");
+
+        // And now that the copy-on-write has happened, writing to the original will not affect the
+        // clone. How bizarre.
+        assert!(original.write(b"four", 0).is_ok());
+        assert!(original.read(&mut read_buffer, 0).is_ok());
+        assert_eq!(&read_buffer[0..4], b"four");
         assert!(clone.read(&mut read_buffer, 0).is_ok());
         assert_eq!(&read_buffer[0..5], b"three");
     }

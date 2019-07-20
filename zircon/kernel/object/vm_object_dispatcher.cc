@@ -225,7 +225,10 @@ zx_status_t VmObjectDispatcher::CreateChild(uint32_t options, uint64_t offset, u
   CloneType type;
   if (options & ZX_VMO_CHILD_COPY_ON_WRITE) {
     options &= ~ZX_VMO_CHILD_COPY_ON_WRITE;
-    type = CloneType::CopyOnWrite;
+    type = CloneType::Unidirectional;
+  } else if (options & ZX_VMO_CHILD_COPY_ON_WRITE2) {
+    options &= ~ZX_VMO_CHILD_COPY_ON_WRITE2;
+    type = CloneType::Bidirectional;
   } else if (options & ZX_VMO_CHILD_PRIVATE_PAGER_COPY) {
     options &= ~ZX_VMO_CHILD_PRIVATE_PAGER_COPY;
     type = CloneType::PrivatePagerCopy;
@@ -242,5 +245,5 @@ zx_status_t VmObjectDispatcher::CreateChild(uint32_t options, uint64_t offset, u
   if (options)
     return ZX_ERR_INVALID_ARGS;
 
-  return vmo_->CreateClone(resizable, type, offset, size, copy_name, child_vmo);
+  return vmo_->CreateCowClone(resizable, type, offset, size, copy_name, child_vmo);
 }
