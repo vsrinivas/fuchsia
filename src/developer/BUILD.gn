@@ -6,13 +6,9 @@ group("developer") {
   testonly = true
   deps = [
     ":tests",
-    "bugreport",
-    "bugreport:host_tool",
-    "crashpad_agent",
     "debug",
-    "feedback_agent",
+    "feedback",
     "fuchsia-criterion",
-    "kernel_crash_checker",
     "tracing",
   ]
 }
@@ -21,10 +17,7 @@ group("tests") {
   testonly = true
 
   deps = [
-    "//src/developer/bugreport/tests:bugreport_client_tests($host_toolchain)",
-    "//src/developer/bugreport/tests:bugreport_tests",
-    "//src/developer/crashpad_agent/tests",
-    "//src/developer/feedback_agent/tests",
+    "//src/developer/feedback:tests",
     "//src/developer/fuchsia-criterion:fuchsia-criterion-tests",
     "//src/developer/tracing:tests",
   ]

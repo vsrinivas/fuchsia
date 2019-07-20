@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+group("feedback") {
+  testonly = true
+
+  public_deps = [
+    ":tests",
+    "bugreport",
+    "bugreport:host_tool",
+    "crashpad_agent",
+    "feedback_agent",
+    "kernel_crash_checker",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    "//src/developer/feedback/bugreport/tests:bugreport_client_tests($host_toolchain)",
+    "//src/developer/feedback/bugreport/tests:bugreport_tests",
+    "//src/developer/feedback/crashpad_agent/tests",
+    "//src/developer/feedback/feedback_agent/tests",
+  ]
+}

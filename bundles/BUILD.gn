@@ -7,9 +7,9 @@ group("tools") {
   public_deps = [
     "//garnet/packages/products:devtools",
     "//garnet/packages/tools:all",
-    "//src/developer/bugreport",
-    "//src/developer/bugreport:host_tool",
     "//src/developer/debug/zxdb:zxdb_host",
+    "//src/developer/feedback/bugreport",
+    "//src/developer/feedback/bugreport:host_tool",
     "//tools/fidlcat:fidlcat_host",
   ]
 }

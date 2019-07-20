@@ -1,0 +1,123 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/package/component.gni")
+
+package("feedback_agent") {
+  deprecated_shell = "//build"
+
+  deps = [
+    ":data_provider",
+    ":main",
+  ]
+
+  binaries = [
+    {
+      name = "feedback_agent"
+    },
+    {
+      name = "data_provider"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/feedback_agent.cmx"
+      dest = "feedback_agent.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = "configs/default.json"
+      dest = "default_config.json"
+    },
+  ]
+}
+
+executable("main") {
+  output_name = "feedback_agent"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("data_provider") {
+  sources = [
+    "data_provider_main.cc",
+  ]
+
+  deps = [
+    ":src",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("src") {
+  sources = [
+    "annotations.cc",
+    "annotations.h",
+    "attachments.cc",
+    "attachments.h",
+    "channel_provider_ptr.cc",
+    "channel_provider_ptr.h",
+    "config.cc",
+    "config.h",
+    "data_provider.cc",
+    "data_provider.h",
+    "image_conversion.cc",
+    "image_conversion.h",
+    "inspect_ptr.cc",
+    "inspect_ptr.h",
+    "log_listener_ptr.cc",
+    "log_listener_ptr.h",
+    "scenic_ptr.cc",
+    "scenic_ptr.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/async_promise",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.update",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.images",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/inspect_deprecated/query",
+    "//garnet/public/lib/inspect_deprecated/query:json_formatter",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/files",
+    "//third_party/libpng",
+    "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-logger",
+    "//zircon/public/fidl/fuchsia-sysinfo",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fit",
+  ]
+}

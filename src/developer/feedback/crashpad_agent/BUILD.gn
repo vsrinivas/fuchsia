@@ -1,0 +1,107 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/package/component.gni")
+
+package("crashpad_agent") {
+  deps = [
+    ":main",
+  ]
+  binaries = [
+    {
+      name = "crashpad_agent"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/crashpad_agent.cmx")
+      dest = "crashpad_agent.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = "configs/default.json"
+      dest = "default_config.json"
+    },
+  ]
+}
+
+executable("main") {
+  output_name = "crashpad_agent"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":src",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/fidl/fuchsia-crash",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+source_set("src") {
+  sources = [
+    "config.cc",
+    "config.h",
+    "crash_server.cc",
+    "crash_server.h",
+    "crashpad_agent.cc",
+    "crashpad_agent.h",
+    "feedback_data_provider_ptr.cc",
+    "feedback_data_provider_ptr.h",
+    "inspect_manager.cc",
+    "inspect_manager.h",
+    "report_annotations.cc",
+    "report_annotations.h",
+    "report_attachments.cc",
+    "report_attachments.h",
+    "scoped_unlink.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/async_promise",
+    "//garnet/public/lib/inspect_deprecated:component",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//third_party/crashpad/client",
+    "//third_party/crashpad/util",
+    "//zircon/public/fidl/fuchsia-crash",
+    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/syslog/cpp",
+    "//third_party/crashpad/handler",
+    "//third_party/crashpad/minidump",
+    "//third_party/crashpad/snapshot",
+    "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
+    "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+config_data("upload_to_prod_server_config") {
+  for_pkg = "crashpad_agent"
+  sources = [
+    "configs/upload_to_prod_server.json",
+  ]
+  outputs = [
+    "override_config.json",
+  ]
+}
