@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_STACK_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_STACK_H_
 
-#include <functional>
 #include <optional>
 #include <vector>
 

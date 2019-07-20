@@ -172,7 +172,7 @@ void DwarfDieDecoder::AddAbstractParent(llvm::DWARFDie* output) {
 }
 
 void DwarfDieDecoder::AddCustom(llvm::dwarf::Attribute attribute,
-                                std::function<void(const llvm::DWARFFormValue&)> callback) {
+                                fit::function<void(const llvm::DWARFFormValue&)> callback) {
   attrs_.emplace_back(attribute, std::move(callback));
 }
 

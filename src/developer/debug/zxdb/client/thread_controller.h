@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_CONTROLLER_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_CONTROLLER_H_
 
-#include <functional>
 #include <vector>
 
 #include "lib/fit/function.h"

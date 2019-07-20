@@ -5,9 +5,9 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_STEP_OVER_THREAD_CONTROLLER_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_STEP_OVER_THREAD_CONTROLLER_H_
 
-#include <functional>
 #include <memory>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/client/step_mode.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"

@@ -7,8 +7,7 @@
 
 #include <stdint.h>
 
-#include <functional>
-
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"

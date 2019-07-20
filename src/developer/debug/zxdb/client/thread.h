@@ -8,7 +8,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <functional>
 #include <string>
 
 #include "lib/fit/function.h"

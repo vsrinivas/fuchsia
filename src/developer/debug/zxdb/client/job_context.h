@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_JOB_CONTEXT_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_JOB_CONTEXT_H_
 
-#include <functional>
 #include <string>
 #include <vector>
 

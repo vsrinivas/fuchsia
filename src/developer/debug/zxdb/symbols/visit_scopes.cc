@@ -14,7 +14,7 @@ namespace {
 
 VisitResult DoVisitClassHierarchy(
     const Collection* current, uint64_t offset,
-    std::function<VisitResult(const Collection*, uint64_t offset)>& cb) {
+    fit::function<VisitResult(const Collection*, uint64_t offset)>& cb) {
   VisitResult result = cb(current, offset);
   if (result != VisitResult::kContinue)
     return result;
@@ -40,7 +40,7 @@ VisitResult DoVisitClassHierarchy(
 }  // namespace
 
 VisitResult VisitLocalBlocks(const CodeBlock* starting,
-                             std::function<VisitResult(const CodeBlock*)> cb) {
+                             fit::function<VisitResult(const CodeBlock*)> cb) {
   const CodeBlock* cur_block = starting;
   while (cur_block) {
     VisitResult result = cb(cur_block);
@@ -55,7 +55,7 @@ VisitResult VisitLocalBlocks(const CodeBlock* starting,
 }
 
 VisitResult VisitClassHierarchy(const Collection* starting,
-                                std::function<VisitResult(const Collection*, uint64_t offset)> cb) {
+                                fit::function<VisitResult(const Collection*, uint64_t offset)> cb) {
   return DoVisitClassHierarchy(starting, 0, cb);
 }
 

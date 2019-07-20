@@ -7,10 +7,10 @@
 
 #include <stdint.h>
 
-#include <functional>
 #include <memory>
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
@@ -55,7 +55,7 @@ class DwarfExprEval {
   // Storage for opcode data.
   using Expression = std::vector<uint8_t>;
 
-  using CompletionCallback = std::function<void(DwarfExprEval* eval, const Err& err)>;
+  using CompletionCallback = fit::callback<void(DwarfExprEval* eval, const Err& err)>;
 
   DwarfExprEval();
   ~DwarfExprEval();

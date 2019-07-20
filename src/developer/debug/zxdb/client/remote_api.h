@@ -5,8 +5,6 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_REMOTE_API_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_REMOTE_API_H_
 
-#include <functional>
-
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/lib/fxl/macros.h"

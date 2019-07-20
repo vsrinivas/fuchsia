@@ -6,11 +6,11 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_BUILD_ID_INDEX_H_
 
 #include <filesystem>
-#include <functional>
 #include <map>
 #include <string>
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/symbols/debug_symbol_file_type.h"
 
 namespace zxdb {
@@ -38,7 +38,7 @@ class BuildIDIndex {
   ~BuildIDIndex();
 
   // Sets the callback for informational messages. Null callbacks are legal.
-  void set_information_callback(std::function<void(const std::string&)> fn) {
+  void set_information_callback(fit::function<void(const std::string&)> fn) {
     information_callback_ = std::move(fn);
   }
 
@@ -108,7 +108,7 @@ class BuildIDIndex {
   std::string SearchRepoSources(const std::string& build_id, DebugSymbolFileType file_type);
 
   // Function to output informational messages. May be null. Use LogMessage().
-  std::function<void(const std::string&)> information_callback_;
+  fit::function<void(const std::string&)> information_callback_;
 
   std::vector<std::string> build_id_files_;
 

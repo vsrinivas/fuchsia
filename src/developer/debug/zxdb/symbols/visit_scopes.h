@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_VISIT_SCOPES_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_VISIT_SCOPES_H_
 
-#include <functional>
+#include "lib/fit/function.h"
 
 namespace zxdb {
 
@@ -25,7 +25,7 @@ enum class VisitResult {
 // The starting block is called first. Stops iterating when it hits a function
 // boundary.
 VisitResult VisitLocalBlocks(const CodeBlock* starting,
-                             std::function<VisitResult(const CodeBlock*)> cb);
+                             fit::function<VisitResult(const CodeBlock*)> cb);
 
 // Calls the callback for all classes in the inheritance hierarchy of the given
 // collection. This works backwards, first calling the callback with the
@@ -34,7 +34,7 @@ VisitResult VisitLocalBlocks(const CodeBlock* starting,
 // The callback takes the current collection being iterated, as well as the
 // offset of that collection from the beginning of the starting collection.
 VisitResult VisitClassHierarchy(const Collection* starting,
-                                std::function<VisitResult(const Collection*, uint64_t offset)> cb);
+                                fit::function<VisitResult(const Collection*, uint64_t offset)> cb);
 
 }  // namespace zxdb
 
