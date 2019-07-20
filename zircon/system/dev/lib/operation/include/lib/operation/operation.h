@@ -107,123 +107,119 @@ class OperationNode;
 
 template <typename D, typename OperationTraits, typename CallbackTraits, typename Storage>
 class OperationBase {
-public:
-    using NodeType = OperationNode<D, OperationTraits, CallbackTraits, Storage>;
-    using OperationType = typename OperationTraits::OperationType;
+ public:
+  using NodeType = OperationNode<D, OperationTraits, CallbackTraits, Storage>;
+  using OperationType = typename OperationTraits::OperationType;
 
-    OperationType* take() __WARN_UNUSED_RESULT {
-        auto* tmp = operation_;
-        operation_ = nullptr;
-        return tmp;
-    }
+  OperationType* take() __WARN_UNUSED_RESULT {
+    auto* tmp = operation_;
+    operation_ = nullptr;
+    return tmp;
+  }
 
-    OperationType* operation() const {
-        return operation_;
-    }
+  OperationType* operation() const { return operation_; }
 
-    static constexpr size_t OperationSize(size_t parent_op_size) {
-        return fbl::round_up(parent_op_size, kAlignment) + sizeof(NodeType);
-    }
+  static constexpr size_t OperationSize(size_t parent_op_size) {
+    return fbl::round_up(parent_op_size, kAlignment) + sizeof(NodeType);
+  }
 
-    size_t size() const {
-        return node_offset_ + sizeof(NodeType);
-    }
+  size_t size() const { return node_offset_ + sizeof(NodeType); }
 
-    // Returns private node stored inline
-    NodeType* node() {
-        auto* node = reinterpret_cast<NodeType*>(
-            reinterpret_cast<uintptr_t>(operation_) + node_offset_);
-        return node;
-    }
+  // Returns private node stored inline
+  NodeType* node() {
+    auto* node =
+        reinterpret_cast<NodeType*>(reinterpret_cast<uintptr_t>(operation_) + node_offset_);
+    return node;
+  }
 
-    Storage* private_storage() {
-        static_assert(!std::is_same<Storage, void>::value,
-                      "private_storage not available on void type.");
-        return node()->private_storage();
-    }
+  Storage* private_storage() {
+    static_assert(!std::is_same<Storage, void>::value,
+                  "private_storage not available on void type.");
+    return node()->private_storage();
+  }
 
-protected:
-    OperationBase(OperationType* operation, size_t parent_op_size, bool allow_destruct = true)
-        : operation_(operation),
-          node_offset_(fbl::round_up(parent_op_size, kAlignment)),
-          allow_destruct_(allow_destruct) {
-        ZX_DEBUG_ASSERT(operation != nullptr);
-    }
+ protected:
+  OperationBase(OperationType* operation, size_t parent_op_size, bool allow_destruct = true)
+      : operation_(operation),
+        node_offset_(fbl::round_up(parent_op_size, kAlignment)),
+        allow_destruct_(allow_destruct) {
+    ZX_DEBUG_ASSERT(operation != nullptr);
+  }
 
-    OperationBase(OperationBase&& other)
-        : operation_(other.operation_),
-          node_offset_(other.node_offset_),
-          allow_destruct_(other.allow_destruct_) {
-        other.operation_ = nullptr;
-    }
+  OperationBase(OperationBase&& other)
+      : operation_(other.operation_),
+        node_offset_(other.node_offset_),
+        allow_destruct_(other.allow_destruct_) {
+    other.operation_ = nullptr;
+  }
 
-    OperationBase& operator=(OperationBase&& other) {
-        operation_ = other.operation_;
-        node_offset_ = other.node_offset_;
-        allow_destruct_ = other.allow_destruct_;
-        other.operation_ = nullptr;
-        return *this;
-    }
+  OperationBase& operator=(OperationBase&& other) {
+    operation_ = other.operation_;
+    node_offset_ = other.node_offset_;
+    allow_destruct_ = other.allow_destruct_;
+    other.operation_ = nullptr;
+    return *this;
+  }
 
-    OperationBase(const OperationBase& other) = delete;
-    OperationBase& operator=(const OperationBase& other) = delete;
+  OperationBase(const OperationBase& other) = delete;
+  OperationBase& operator=(const OperationBase& other) = delete;
 
-    OperationType* operation_;
-    zx_off_t node_offset_;
-    bool allow_destruct_;
+  OperationType* operation_;
+  zx_off_t node_offset_;
+  bool allow_destruct_;
 
-private:
-    static constexpr size_t kAlignment = alignof(NodeType);
+ private:
+  static constexpr size_t kAlignment = alignof(NodeType);
 };
 
 template <typename D, typename OperationTraits, typename Storage = void>
 class Operation : public OperationBase<D, OperationTraits, void, Storage> {
-public:
-    using BaseClass = OperationBase<D, OperationTraits, void, Storage>;
-    using NodeType = OperationNode<D, OperationTraits, void, Storage>;
-    using OperationType = typename OperationTraits::OperationType;
+ public:
+  using BaseClass = OperationBase<D, OperationTraits, void, Storage>;
+  using NodeType = OperationNode<D, OperationTraits, void, Storage>;
+  using OperationType = typename OperationTraits::OperationType;
 
-    // Creates a new operation with payload space of data_size.
-    static std::optional<D> Alloc(size_t parent_op_size) {
-        const size_t op_size = BaseClass::OperationSize(parent_op_size);
-        OperationType* op = OperationTraits::Alloc(op_size);
-        if (op == nullptr) {
-            return std::nullopt;
-        }
-
-        D out(op, parent_op_size);
-        new (out.node()) NodeType(out.node_offset_);
-        return std::move(out);
+  // Creates a new operation with payload space of data_size.
+  static std::optional<D> Alloc(size_t parent_op_size) {
+    const size_t op_size = BaseClass::OperationSize(parent_op_size);
+    OperationType* op = OperationTraits::Alloc(op_size);
+    if (op == nullptr) {
+      return std::nullopt;
     }
 
-    // Must be called with |operation| allocated via OperationTraits::Alloc.
-    Operation(OperationType* operation, size_t parent_op_size, bool allow_destruct = true)
-        : BaseClass(operation, parent_op_size, allow_destruct) {}
+    D out(op, parent_op_size);
+    new (out.node()) NodeType(out.node_offset_);
+    return std::move(out);
+  }
 
-    Operation(Operation&& other)
-        : BaseClass(other.operation_, other.node_offset_, other.allow_destruct_) {
-        other.operation_ = nullptr;
-    }
+  // Must be called with |operation| allocated via OperationTraits::Alloc.
+  Operation(OperationType* operation, size_t parent_op_size, bool allow_destruct = true)
+      : BaseClass(operation, parent_op_size, allow_destruct) {}
 
-    Operation& operator=(Operation&& other) {
-        BaseClass::operator=(std::move(other));
-        return *this;
-    }
+  Operation(Operation&& other)
+      : BaseClass(other.operation_, other.node_offset_, other.allow_destruct_) {
+    other.operation_ = nullptr;
+  }
 
-    ~Operation() {
-        if (!BaseClass::allow_destruct_) {
-            return;
-        }
-        Release();
-    }
+  Operation& operator=(Operation&& other) {
+    BaseClass::operator=(std::move(other));
+    return *this;
+  }
 
-    void Release() {
-        ZX_DEBUG_ASSERT(BaseClass::allow_destruct_);
-        if (BaseClass::operation_) {
-            BaseClass::node()->NodeType::~NodeType();
-            OperationTraits::Free(BaseClass::take());
-        }
+  ~Operation() {
+    if (!BaseClass::allow_destruct_) {
+      return;
     }
+    Release();
+  }
+
+  void Release() {
+    ZX_DEBUG_ASSERT(BaseClass::allow_destruct_);
+    if (BaseClass::operation_) {
+      BaseClass::node()->NodeType::~NodeType();
+      OperationTraits::Free(BaseClass::take());
+    }
+  }
 };
 
 // Similar to operation::Operation, but it doesn't call free on destruction.
@@ -232,58 +228,55 @@ public:
 // NOTE: This WILL auto-complete the request on destruction if allow_destruct is set.
 template <typename D, typename OperationTraits, typename CallbackTraits, typename Storage = void>
 class BorrowedOperation : public OperationBase<D, OperationTraits, CallbackTraits, Storage> {
-public:
-    using BaseClass = OperationBase<D, OperationTraits, CallbackTraits, Storage>;
-    using NodeType = OperationNode<D, OperationTraits, CallbackTraits, Storage>;
-    using OperationType = typename OperationTraits::OperationType;
-    using CallbackType = typename CallbackTraits::CallbackType;
+ public:
+  using BaseClass = OperationBase<D, OperationTraits, CallbackTraits, Storage>;
+  using NodeType = OperationNode<D, OperationTraits, CallbackTraits, Storage>;
+  using OperationType = typename OperationTraits::OperationType;
+  using CallbackType = typename CallbackTraits::CallbackType;
 
-    BorrowedOperation(OperationType* operation, const CallbackType* complete_cb, void* cookie,
-                     size_t parent_op_size, bool allow_destruct = true)
-        : BaseClass(operation, parent_op_size, allow_destruct) {
-        new (BaseClass::node()) NodeType(BaseClass::node_offset_, complete_cb, cookie);
-    }
+  BorrowedOperation(OperationType* operation, const CallbackType* complete_cb, void* cookie,
+                    size_t parent_op_size, bool allow_destruct = true)
+      : BaseClass(operation, parent_op_size, allow_destruct) {
+    new (BaseClass::node()) NodeType(BaseClass::node_offset_, complete_cb, cookie);
+  }
 
-    BorrowedOperation(OperationType* operation, size_t parent_op_size, bool allow_destruct = true)
-        : BaseClass(operation, parent_op_size, allow_destruct) {
-        ZX_DEBUG_ASSERT(BaseClass::node()->node_offset() != 0);
-    }
+  BorrowedOperation(OperationType* operation, size_t parent_op_size, bool allow_destruct = true)
+      : BaseClass(operation, parent_op_size, allow_destruct) {
+    ZX_DEBUG_ASSERT(BaseClass::node()->node_offset() != 0);
+  }
 
-    BorrowedOperation(BorrowedOperation&& other)
-        : BaseClass(other.operation_, other.node_offset_, other.allow_destruct_) {
-        other.operation_ = nullptr;
-    }
+  BorrowedOperation(BorrowedOperation&& other)
+      : BaseClass(other.operation_, other.node_offset_, other.allow_destruct_) {
+    other.operation_ = nullptr;
+  }
 
-    BorrowedOperation& operator=(BorrowedOperation&& other) {
-        BaseClass::operator=(std::move(other));
-        return *this;
-    }
+  BorrowedOperation& operator=(BorrowedOperation&& other) {
+    BaseClass::operator=(std::move(other));
+    return *this;
+  }
 
-    ~BorrowedOperation() {
-        if (!BaseClass::allow_destruct_) {
-            return;
-        }
-        // Auto-complete if it wasn't.
-        auto complete = [this](auto... args) {
-            this->Complete(std::forward<decltype(args)>(args)...);
-        };
-        std::apply(complete, CallbackTraits::AutoCompleteArgs());
+  ~BorrowedOperation() {
+    if (!BaseClass::allow_destruct_) {
+      return;
     }
+    // Auto-complete if it wasn't.
+    auto complete = [this](auto... args) { this->Complete(std::forward<decltype(args)>(args)...); };
+    std::apply(complete, CallbackTraits::AutoCompleteArgs());
+  }
 
-    // Must be called by the processor when the operation has completed or failed.
-    // The operation and any virtual or physical memory obtained from it is no
-    // longer valid after Complete is called.
-    template <typename... Args>
-    void Complete(Args... args) {
-        ZX_DEBUG_ASSERT(BaseClass::allow_destruct_);
-        if (BaseClass::operation_) {
-            auto* complete_cb = BaseClass::node()->complete_cb();
-            auto* cookie = BaseClass::node()->cookie();
-            BaseClass::node()->NodeType::~NodeType();
-            CallbackTraits::Callback(complete_cb, cookie, BaseClass::take(),
-                                     std::forward<Args>(args)...);
-        }
+  // Must be called by the processor when the operation has completed or failed.
+  // The operation and any virtual or physical memory obtained from it is no
+  // longer valid after Complete is called.
+  template <typename... Args>
+  void Complete(Args... args) {
+    ZX_DEBUG_ASSERT(BaseClass::allow_destruct_);
+    if (BaseClass::operation_) {
+      auto* complete_cb = BaseClass::node()->complete_cb();
+      auto* cookie = BaseClass::node()->cookie();
+      BaseClass::node()->NodeType::~NodeType();
+      CallbackTraits::Callback(complete_cb, cookie, BaseClass::take(), std::forward<Args>(args)...);
     }
+  }
 };
 
 // Node storage for operation::Operation and operation::BorrowedOperation. Does not maintain
@@ -294,225 +287,200 @@ public:
 template <typename T, typename OperationTraits, typename CallbackTraits, typename Storage>
 class OperationNode : public fbl::DoublyLinkedListable<
                           OperationNode<T, OperationTraits, CallbackTraits, Storage>*> {
-public:
-    using OperationType = typename OperationTraits::OperationType;
-    using CallbackType = typename CallbackTraits::CallbackType;
+ public:
+  using OperationType = typename OperationTraits::OperationType;
+  using CallbackType = typename CallbackTraits::CallbackType;
 
-    OperationNode(zx_off_t node_offset, const CallbackType* complete_cb, void* cookie)
-        : node_offset_(node_offset), complete_cb_(complete_cb), cookie_(cookie) {}
+  OperationNode(zx_off_t node_offset, const CallbackType* complete_cb, void* cookie)
+      : node_offset_(node_offset), complete_cb_(complete_cb), cookie_(cookie) {}
 
-    ~OperationNode() = default;
+  ~OperationNode() = default;
 
-    T operation(bool allow_destruct = true) const {
-        return T(
-            reinterpret_cast<OperationType*>(reinterpret_cast<uintptr_t>(this) - node_offset_),
-            node_offset_, allow_destruct);
-    }
+  T operation(bool allow_destruct = true) const {
+    return T(reinterpret_cast<OperationType*>(reinterpret_cast<uintptr_t>(this) - node_offset_),
+             node_offset_, allow_destruct);
+  }
 
-    zx_off_t node_offset() const { return node_offset_; }
+  zx_off_t node_offset() const { return node_offset_; }
 
-    const CallbackType* complete_cb() const {
-        return complete_cb_;
-    }
+  const CallbackType* complete_cb() const { return complete_cb_; }
 
-    void* cookie() const {
-        return cookie_;
-    }
+  void* cookie() const { return cookie_; }
 
-    Storage* private_storage() {
-        return &private_storage_;
-    }
+  Storage* private_storage() { return &private_storage_; }
 
-private:
-    const zx_off_t node_offset_;
-    const CallbackType* complete_cb_;
-    void* cookie_;
-    Storage private_storage_;
+ private:
+  const zx_off_t node_offset_;
+  const CallbackType* complete_cb_;
+  void* cookie_;
+  Storage private_storage_;
 };
 
 // Specialized version for when complete_cb is not required.
 template <typename T, typename OperationTraits, typename Storage>
-class OperationNode<T, OperationTraits, void, Storage> : public fbl::DoublyLinkedListable<
-                                                             OperationNode<T, OperationTraits, void,
-                                                                           Storage>*> {
-public:
-    using OperationType = typename OperationTraits::OperationType;
+class OperationNode<T, OperationTraits, void, Storage>
+    : public fbl::DoublyLinkedListable<OperationNode<T, OperationTraits, void, Storage>*> {
+ public:
+  using OperationType = typename OperationTraits::OperationType;
 
-    explicit OperationNode(zx_off_t node_offset)
-        : node_offset_(node_offset) {}
+  explicit OperationNode(zx_off_t node_offset) : node_offset_(node_offset) {}
 
-    ~OperationNode() = default;
+  ~OperationNode() = default;
 
-    T operation(bool allow_destruct = true) const {
-        return T(
-            reinterpret_cast<OperationType*>(reinterpret_cast<uintptr_t>(this) - node_offset_),
-            node_offset_, allow_destruct);
-    }
+  T operation(bool allow_destruct = true) const {
+    return T(reinterpret_cast<OperationType*>(reinterpret_cast<uintptr_t>(this) - node_offset_),
+             node_offset_, allow_destruct);
+  }
 
-    zx_off_t node_offset() const { return node_offset_; }
+  zx_off_t node_offset() const { return node_offset_; }
 
-    Storage* private_storage() {
-        return &private_storage_;
-    }
+  Storage* private_storage() { return &private_storage_; }
 
-private:
-    const zx_off_t node_offset_;
-    Storage private_storage_;
+ private:
+  const zx_off_t node_offset_;
+  Storage private_storage_;
 };
 
 // Specialized version for when no additional storage is required.
 template <typename T, typename OperationTraits, typename CallbackTraits>
-class OperationNode<T, OperationTraits, CallbackTraits, void> : public fbl::DoublyLinkedListable<
-                                                                    OperationNode<T,
-                                                                                  OperationTraits,
-                                                                                  CallbackTraits,
-                                                                                  void>*> {
-public:
-    using OperationType = typename OperationTraits::OperationType;
-    using CallbackType = typename CallbackTraits::CallbackType;
+class OperationNode<T, OperationTraits, CallbackTraits, void>
+    : public fbl::DoublyLinkedListable<OperationNode<T, OperationTraits, CallbackTraits, void>*> {
+ public:
+  using OperationType = typename OperationTraits::OperationType;
+  using CallbackType = typename CallbackTraits::CallbackType;
 
-    OperationNode(zx_off_t node_offset, const CallbackType* complete_cb, void* cookie)
-        : node_offset_(node_offset), complete_cb_(complete_cb), cookie_(cookie) {}
+  OperationNode(zx_off_t node_offset, const CallbackType* complete_cb, void* cookie)
+      : node_offset_(node_offset), complete_cb_(complete_cb), cookie_(cookie) {}
 
-    ~OperationNode() = default;
+  ~OperationNode() = default;
 
-    T operation(bool allow_destruct = true) const {
-        return T(
-            reinterpret_cast<OperationType*>(reinterpret_cast<uintptr_t>(this) - node_offset_),
-            node_offset_, allow_destruct);
-    }
+  T operation(bool allow_destruct = true) const {
+    return T(reinterpret_cast<OperationType*>(reinterpret_cast<uintptr_t>(this) - node_offset_),
+             node_offset_, allow_destruct);
+  }
 
-    zx_off_t node_offset() const { return node_offset_; }
+  zx_off_t node_offset() const { return node_offset_; }
 
-    const CallbackType* complete_cb() const {
-        return complete_cb_;
-    }
+  const CallbackType* complete_cb() const { return complete_cb_; }
 
-    void* cookie() const {
-        return cookie_;
-    }
+  void* cookie() const { return cookie_; }
 
-private:
-    const zx_off_t node_offset_;
-    const CallbackType* complete_cb_;
-    void* cookie_;
+ private:
+  const zx_off_t node_offset_;
+  const CallbackType* complete_cb_;
+  void* cookie_;
 };
 
 // Specialized version for when no additional storage is required, and
 // complete_cb is not required.
 template <typename T, typename OperationTraits>
-class OperationNode<T, OperationTraits, void, void> : public fbl::DoublyLinkedListable<
-                                                          OperationNode<T, OperationTraits, void,
-                                                                        void>*> {
-public:
-    using OperationType = typename OperationTraits::OperationType;
+class OperationNode<T, OperationTraits, void, void>
+    : public fbl::DoublyLinkedListable<OperationNode<T, OperationTraits, void, void>*> {
+ public:
+  using OperationType = typename OperationTraits::OperationType;
 
-    OperationNode(zx_off_t node_offset)
-        : node_offset_(node_offset) {}
+  OperationNode(zx_off_t node_offset) : node_offset_(node_offset) {}
 
-    ~OperationNode() = default;
+  ~OperationNode() = default;
 
-    T operation(bool allow_destruct = true) const {
-        return T(
-            reinterpret_cast<OperationType*>(reinterpret_cast<uintptr_t>(this) - node_offset_),
-            node_offset_, allow_destruct);
-    }
+  T operation(bool allow_destruct = true) const {
+    return T(reinterpret_cast<OperationType*>(reinterpret_cast<uintptr_t>(this) - node_offset_),
+             node_offset_, allow_destruct);
+  }
 
-    zx_off_t node_offset() const { return node_offset_; }
+  zx_off_t node_offset() const { return node_offset_; }
 
-private:
-    const zx_off_t node_offset_;
+ private:
+  const zx_off_t node_offset_;
 };
 
 // Convenience queue wrapper around fbl::DoublyLinkedList<T>.
 // The class is thread-safe.
 template <typename OpType, typename OperationTraits, typename CallbackTraits, typename Storage>
 class BaseQueue {
-public:
-    using NodeType = OperationNode<OpType, OperationTraits, CallbackTraits, Storage>;
+ public:
+  using NodeType = OperationNode<OpType, OperationTraits, CallbackTraits, Storage>;
 
-    DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_node, node, NodeType* (C::*)());
-    static_assert(has_node<OpType>::value,
-                  "OpType must implement OperationNode<OpType, OperationTraits, CallbackTraits, "
-                  "Storage>* node()");
+  DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_node, node, NodeType* (C::*)());
+  static_assert(has_node<OpType>::value,
+                "OpType must implement OperationNode<OpType, OperationTraits, CallbackTraits, "
+                "Storage>* node()");
 
-    BaseQueue() {}
+  BaseQueue() {}
 
-    ~BaseQueue() {
-        Release();
+  ~BaseQueue() { Release(); }
+
+  BaseQueue(BaseQueue&& other) {
+    fbl::AutoLock al(&other.lock_);
+    queue_.swap(other.queue_);
+  }
+
+  BaseQueue& operator=(BaseQueue&& other) {
+    fbl::AutoLock al1(&lock_);
+    fbl::AutoLock al2(&other.lock_);
+    queue_.clear();
+    queue_.swap(other.queue_);
+    return *this;
+  }
+
+  void push(OpType op) {
+    fbl::AutoLock al(&lock_);
+    auto* node = op.node();
+    queue_.push_front(node);
+    // Must prevent Complete/Release from being called in destructor.
+    __UNUSED auto dummy = op.take();
+  }
+
+  void push_next(OpType op) {
+    fbl::AutoLock al(&lock_);
+    auto* node = op.node();
+    queue_.push_back(node);
+    // Must prevent Complete/Release from being called in destructor.
+    __UNUSED auto dummy = op.take();
+  }
+
+  std::optional<OpType> pop() {
+    fbl::AutoLock al(&lock_);
+    auto* node = queue_.pop_back();
+    if (node) {
+      return std::move(node->operation());
     }
+    return std::nullopt;
+  }
 
-    BaseQueue(BaseQueue&& other) {
-        fbl::AutoLock al(&other.lock_);
-        queue_.swap(other.queue_);
+  std::optional<OpType> pop_last() {
+    fbl::AutoLock al(&lock_);
+    auto* node = queue_.pop_front();
+    if (node) {
+      return std::move(node->operation());
     }
+    return std::nullopt;
+  }
 
-    BaseQueue& operator=(BaseQueue&& other) {
-        fbl::AutoLock al1(&lock_);
-        fbl::AutoLock al2(&other.lock_);
-        queue_.clear();
-        queue_.swap(other.queue_);
-        return *this;
+  bool erase(OpType* op) {
+    fbl::AutoLock al(&lock_);
+    auto* node = op->node();
+    bool erased = queue_.erase(*node) != nullptr;
+    return erased;
+  }
+
+  bool is_empty() {
+    fbl::AutoLock al(&lock_);
+    return queue_.is_empty();
+  }
+
+  // Releases all ops stored in the queue.
+  void Release() {
+    fbl::AutoLock al(&lock_);
+    while (!queue_.is_empty()) {
+      // Transform back into operation to force correct destructor to run.
+      __UNUSED auto op = queue_.pop_back()->operation();
     }
+  }
 
-    void push(OpType op) {
-        fbl::AutoLock al(&lock_);
-        auto* node = op.node();
-        queue_.push_front(node);
-        // Must prevent Complete/Release from being called in destructor.
-        __UNUSED auto dummy = op.take();
-    }
-
-    void push_next(OpType op) {
-        fbl::AutoLock al(&lock_);
-        auto* node = op.node();
-        queue_.push_back(node);
-        // Must prevent Complete/Release from being called in destructor.
-        __UNUSED auto dummy = op.take();
-    }
-
-    std::optional<OpType> pop() {
-        fbl::AutoLock al(&lock_);
-        auto* node = queue_.pop_back();
-        if (node) {
-            return std::move(node->operation());
-        }
-        return std::nullopt;
-    }
-
-    std::optional<OpType> pop_last() {
-        fbl::AutoLock al(&lock_);
-        auto* node = queue_.pop_front();
-        if (node) {
-            return std::move(node->operation());
-        }
-        return std::nullopt;
-    }
-
-    bool erase(OpType* op) {
-        fbl::AutoLock al(&lock_);
-        auto* node = op->node();
-        bool erased = queue_.erase(*node) != nullptr;
-        return erased;
-    }
-
-    bool is_empty() {
-        fbl::AutoLock al(&lock_);
-        return queue_.is_empty();
-    }
-
-    // Releases all ops stored in the queue.
-    void Release() {
-        fbl::AutoLock al(&lock_);
-        while (!queue_.is_empty()) {
-            // Transform back into operation to force correct destructor to run.
-            __UNUSED auto op = queue_.pop_back()->operation();
-        }
-    }
-
-protected:
-    fbl::Mutex lock_;
-    fbl::DoublyLinkedList<NodeType*> queue_ __TA_GUARDED(lock_);
+ protected:
+  fbl::Mutex lock_;
+  fbl::DoublyLinkedList<NodeType*> queue_ __TA_GUARDED(lock_);
 };
 
 template <typename D, typename OperationTraits, typename CallbackTraits, typename Storage = void>
@@ -524,132 +492,126 @@ using OperationQueue = BaseQueue<D, OperationTraits, void, Storage>;
 // A driver may use operation::OperationPool for recycling their own operations.
 template <typename OpType, typename OperationTraits, typename Storage = void>
 class OperationPool : protected BaseQueue<OpType, OperationTraits, void, Storage> {
-public:
-    using BaseClass = BaseQueue<OpType, OperationTraits, void, Storage>;
+ public:
+  using BaseClass = BaseQueue<OpType, OperationTraits, void, Storage>;
 
-    // Use constructor.
-    using BaseClass::BaseClass;
+  // Use constructor.
+  using BaseClass::BaseClass;
 
-    // Operate like a stack rather than a queue.
-    void push(OpType op) {
-        BaseClass::push_next(std::forward<OpType>(op));
-    }
-    using BaseClass::pop;
+  // Operate like a stack rather than a queue.
+  void push(OpType op) { BaseClass::push_next(std::forward<OpType>(op)); }
+  using BaseClass::pop;
 
-    using BaseClass::Release;
+  using BaseClass::Release;
 };
 
 // Convenience list wrapper around fbl::DoublyLinkedList<T>.
 // The class is not thread-safe.
 template <typename OpType, typename OperationTraits, typename CallbackTraits, typename Storage>
 class BaseList {
-public:
-    using NodeType = OperationNode<OpType, OperationTraits, CallbackTraits, Storage>;
+ public:
+  using NodeType = OperationNode<OpType, OperationTraits, CallbackTraits, Storage>;
 
-    DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_node, node, NodeType* (C::*)());
-    static_assert(has_node<OpType>::value,
-                  "OpType must implement OperationNode<OpType, OperationTraits, CallbackTraits, "
-                  "Storage>* node()");
+  DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_node, node, NodeType* (C::*)());
+  static_assert(has_node<OpType>::value,
+                "OpType must implement OperationNode<OpType, OperationTraits, CallbackTraits, "
+                "Storage>* node()");
 
-    BaseList() {}
+  BaseList() {}
 
-    ~BaseList() {
-        Release();
+  ~BaseList() { Release(); }
+
+  BaseList(BaseList&& other) {
+    list_.swap(other.list_);
+    size_t temp = size_;
+    size_ = other.size_;
+    other.size_ = temp;
+  }
+
+  BaseList& operator=(BaseList&& other) {
+    list_.clear();
+    list_.swap(other.list_);
+    size_ = other.size_;
+    other.size_ = 0;
+    return *this;
+  }
+
+  // Adds the operation to the end of the list.
+  void push_back(OpType* op) {
+    auto* node = op->node();
+    list_.push_back(node);
+    ++size_;
+  }
+
+  // Returns the index of the given operation in the list, or std::nullopt if none was found.
+  std::optional<size_t> find(OpType* op) {
+    size_t i = 0;
+    for (auto iter = list_.begin(); iter != list_.end(); ++iter) {
+      auto test_op = iter->operation(/* allow_destruct */ false);
+      if (test_op.operation() == op->operation()) {
+        return i;
+      }
+      ++i;
     }
+    return std::nullopt;
+  }
 
-    BaseList(BaseList&& other) {
-        list_.swap(other.list_);
-        size_t temp = size_;
-        size_ = other.size_;
-        other.size_ = temp;
+  // Returns the operation at the start of the list.
+  std::optional<OpType> begin() {
+    if (size_ == 0) {
+      return std::nullopt;
     }
+    auto iter = list_.begin();
+    return iter->operation(/* allow_destruct */ false);
+  }
 
-    BaseList& operator=(BaseList&& other) {
-        list_.clear();
-        list_.swap(other.list_);
-        size_ = other.size_;
-        other.size_ = 0;
-        return *this;
+  // Returns the operation in the list before |op|, or std::nullopt if |op| is the
+  // start of the list.
+  std::optional<OpType> prev(OpType* op) {
+    auto* node = op->node();
+    auto iter = list_.make_iterator(*node);
+    if (iter == list_.begin()) {
+      return std::nullopt;
     }
+    --iter;
+    return std::move(iter->operation(/* allow_destruct */ false));
+  }
 
-    // Adds the operation to the end of the list.
-    void push_back(OpType* op) {
-        auto* node = op->node();
-        list_.push_back(node);
-        ++size_;
+  // Returns the operation in the list following |op|, or std::nullopt if |op| is the
+  // end of the list.
+  std::optional<OpType> next(OpType* op) {
+    auto* node = op->node();
+    auto iter = list_.make_iterator(*node);
+    ++iter;
+    if (iter == list_.end()) {
+      return std::nullopt;
     }
+    return std::move(iter->operation(/* allow_destruct */ false));
+  }
 
-    // Returns the index of the given operation in the list, or std::nullopt if none was found.
-    std::optional<size_t> find(OpType* op) {
-        size_t i = 0;
-        for (auto iter = list_.begin(); iter != list_.end(); ++iter) {
-            auto test_op = iter->operation(/* allow_destruct */ false);
-            if (test_op.operation() == op->operation()) {
-                return i;
-            }
-            ++i;
-        }
-        return std::nullopt;
+  // Deletes the first instance of the operation found in the list.
+  // Returns whether an operation was deleted.
+  bool erase(OpType* op) {
+    auto* node = op->node();
+    bool erased = list_.erase(*node) != nullptr;
+    if (erased) {
+      --size_;
     }
+    return erased;
+  }
 
-    // Returns the operation at the start of the list.
-    std::optional<OpType> begin() {
-        if (size_ == 0) {
-            return std::nullopt;
-        }
-        auto iter = list_.begin();
-        return iter->operation(/* allow_destruct */ false);
-    }
+  // Returns the number of ops in the list.
+  size_t size() const { return size_; }
 
-    // Returns the operation in the list before |op|, or std::nullopt if |op| is the
-    // start of the list.
-    std::optional<OpType> prev(OpType* op) {
-        auto* node = op->node();
-        auto iter = list_.make_iterator(*node);
-        if (iter == list_.begin()) {
-            return std::nullopt;
-        }
-        --iter;
-        return std::move(iter->operation(/* allow_destruct */ false));
-    }
+  // Releases all ops stored in the list.
+  void Release() {
+    list_.clear();
+    size_ = 0;
+  }
 
-    // Returns the operation in the list following |op|, or std::nullopt if |op| is the
-    // end of the list.
-    std::optional<OpType> next(OpType* op) {
-        auto* node = op->node();
-        auto iter = list_.make_iterator(*node);
-        ++iter;
-        if (iter == list_.end()) {
-            return std::nullopt;
-        }
-        return std::move(iter->operation(/* allow_destruct */ false));
-    }
-
-    // Deletes the first instance of the operation found in the list.
-    // Returns whether an operation was deleted.
-    bool erase(OpType* op) {
-        auto* node = op->node();
-        bool erased = list_.erase(*node) != nullptr;
-        if (erased) {
-            --size_;
-        }
-        return erased;
-    }
-
-    // Returns the number of ops in the list.
-    size_t size() const {
-        return size_;
-    }
-
-    // Releases all ops stored in the list.
-    void Release() {
-        list_.clear();
-        size_ = 0;
-    }
-
-protected:
-    fbl::DoublyLinkedList<NodeType*> list_;
-    size_t size_ = 0;
+ protected:
+  fbl::DoublyLinkedList<NodeType*> list_;
+  size_t size_ = 0;
 };
 
 template <typename D, typename OperationTraits, typename CallbackTraits, typename Storage = void>
@@ -658,4 +620,4 @@ using BorrowedOperationList = BaseList<D, OperationTraits, CallbackTraits, Stora
 template <typename D, typename OperationTraits, typename Storage = void>
 using OperationList = BaseList<D, OperationTraits, void, Storage>;
 
-} // namespace operation
+}  // namespace operation
