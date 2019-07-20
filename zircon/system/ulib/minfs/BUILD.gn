@@ -6,11 +6,10 @@ library("minfs") {
   host = true
   static = true
   sources = [
+    "allocator/allocator-common.cc",
     "allocator/allocator-promise.cc",
-    "allocator/allocator.cc",
-    "allocator/inode-manager.cc",
     "allocator/metadata.cc",
-    "allocator/storage.cc",
+    "allocator/storage-common.cc",
     "bcache.cc",
     "directory.cc",
     "file.cc",
@@ -24,7 +23,12 @@ library("minfs") {
     "writeback.cc",
   ]
   if (!is_fuchsia) {
-    sources += [ "host.cc" ]
+    sources += [
+      "allocator/allocator-host.cc",
+      "allocator/inode-manager-host.cc",
+      "allocator/storage-host.cc",
+      "host.cc",
+    ]
   }
   public_deps = [
     "$zx/system/ulib/bitmap:headers",
@@ -75,6 +79,9 @@ library("minfs") {
       "$zx/system/ulib/zx",
     ]
     sources += [
+      "allocator/allocator.cc",
+      "allocator/inode-manager.cc",
+      "allocator/storage.cc",
       "vnode-allocation.cc",
       "work-queue.cc",
       "writeback-async.cc",

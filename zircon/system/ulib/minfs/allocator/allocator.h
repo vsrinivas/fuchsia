@@ -121,6 +121,8 @@ private:
     Allocator(fbl::unique_ptr<AllocatorStorage> storage) : reserved_(0), first_free_(0),
                                                            storage_(std::move(storage)) {}
 
+    zx_status_t LoadStorage(fs::ReadTxn* txn) FS_TA_EXCLUDES(lock_);
+
     // See |GetAvailable()|.
     size_t GetAvailableLocked() const FS_TA_REQUIRES(lock_);
 

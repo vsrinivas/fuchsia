@@ -70,7 +70,7 @@ public:
 
 // A type of storage which represents a persistent disk.
 class PersistentStorage : public AllocatorStorage {
-public:
+  public:
     // Callback invoked after the data portion of the allocator grows.
     using GrowHandler = fbl::Function<zx_status_t(uint32_t pool_size)>;
 
@@ -106,7 +106,11 @@ public:
     void PersistAllocate(WriteTxn* txn, size_t count) final;
 
     void PersistRelease(WriteTxn* txn, size_t count) final;
-private:
+
+  private:
+    // Returns the number of blocks necessary to store a pool containing |size| bits.
+    static blk_t BitmapBlocksForSize(size_t size);
+
 #ifdef __Fuchsia__
     block_client::BlockDevice* device_;
     size_t unit_size_;
