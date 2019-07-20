@@ -4,6 +4,7 @@
 
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent};
 use fuchsia_inspect_contrib::{inspect_log, log::InspectBytes};
+use fuchsia_zircon as zx;
 use log::{error, warn};
 use wep_deprecated;
 use wlan_common::{format::MacFmt, ie::rsn::cipher, RadioConfig};
@@ -17,6 +18,7 @@ use super::{ConnectFailure, ConnectResult, Status};
 
 use crate::client::{
     event::{self, Event},
+    info::{ConnectionMilestone, ConnectionMilestoneInfo},
     report_connect_finished, Context,
 };
 use crate::clone_utils::clone_bss_desc;
@@ -50,6 +52,8 @@ pub enum LinkState {
     },
     LinkUp {
         protection: Protection,
+        since: zx::Time,
+        next_milestone: Option<EventId>,
     },
 }
 
@@ -201,7 +205,7 @@ impl State {
             State::Associated { cfg, bss, last_rssi, link_state, radio_cfg } => match event {
                 MlmeEvent::DisassociateInd { .. } => {
                     let (responder, mut protection) = match link_state {
-                        LinkState::LinkUp { protection } => (None, protection),
+                        LinkState::LinkUp { protection, .. } => (None, protection),
                         LinkState::EstablishingRsna { responder, rsna, .. } => {
                             (responder, Protection::Rsna(rsna))
                         }
@@ -263,9 +267,18 @@ impl State {
                                 ));
                                 context.info.report_rsna_established(context.att_id);
                                 report_connect_finished(responder, context, ConnectResult::Success);
+                                let now = now();
+                                let info = ConnectionMilestoneInfo::new(
+                                    ConnectionMilestone::Connected,
+                                    now,
+                                );
+                                let next_milestone = report_milestone(info, context);
                                 state_change_msg.replace("RSNA established".to_string());
-                                let link_state =
-                                    LinkState::LinkUp { protection: Protection::Rsna(rsna) };
+                                let link_state = LinkState::LinkUp {
+                                    protection: Protection::Rsna(rsna),
+                                    since: now,
+                                    next_milestone,
+                                };
                                 State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
                             }
                             RsnaStatus::Failed => {
@@ -298,28 +311,36 @@ impl State {
                                 State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
                             }
                         },
-                        LinkState::LinkUp { protection } => match protection {
-                            Protection::Rsna(mut rsna) => {
-                                match process_eapol_ind(context, &mut rsna, &ind) {
-                                    RsnaStatus::Unchanged => {}
-                                    // This can happen when there's a GTK rotation.
-                                    // Timeout is ignored because only one RX frame is needed in
-                                    // the exchange, so we are not waiting for another one.
-                                    RsnaStatus::Progressed { new_resp_timeout: _ } => {}
-                                    // Once re-keying is supported, the RSNA can fail in LinkUp as
-                                    // well and cause deauthentication.
-                                    s => error!("unexpected RsnaStatus in LinkUp state: {:?}", s),
-                                };
-                                let link_state =
-                                    LinkState::LinkUp { protection: Protection::Rsna(rsna) };
-                                State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
+                        LinkState::LinkUp { protection, next_milestone, since } => {
+                            match protection {
+                                Protection::Rsna(mut rsna) => {
+                                    match process_eapol_ind(context, &mut rsna, &ind) {
+                                        RsnaStatus::Unchanged => {}
+                                        // This can happen when there's a GTK rotation.
+                                        // Timeout is ignored because only one RX frame is needed in
+                                        // the exchange, so we are not waiting for another one.
+                                        RsnaStatus::Progressed { new_resp_timeout: _ } => {}
+                                        // Once re-keying is supported, the RSNA can fail in LinkUp as
+                                        // well and cause deauthentication.
+                                        s => {
+                                            error!("unexpected RsnaStatus in LinkUp state: {:?}", s)
+                                        }
+                                    };
+                                    let link_state = LinkState::LinkUp {
+                                        protection: Protection::Rsna(rsna),
+                                        next_milestone,
+                                        since,
+                                    };
+                                    State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
+                                }
+                                // Drop EAPOL frames if the BSS is not an RSN.
+                                _ => {
+                                    let link_state =
+                                        LinkState::LinkUp { protection, next_milestone, since };
+                                    State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
+                                }
                             }
-                            // Drop EAPOL frames if the BSS is not an RSN.
-                            _ => {
-                                let link_state = LinkState::LinkUp { protection };
-                                State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
-                            }
-                        },
+                        }
                     }
                 }
                 _ => State::Associated { cfg, bss, last_rssi, link_state, radio_cfg },
@@ -348,7 +369,7 @@ impl State {
                     mut rsna_timeout,
                     mut resp_timeout,
                 } => match event {
-                    Event::EstablishingRsnaTimeout if triggered(&rsna_timeout, event_id) => {
+                    Event::EstablishingRsnaTimeout(..) if triggered(&rsna_timeout, event_id) => {
                         error!("timeout establishing RSNA; deauthenticating");
                         cancel(&mut rsna_timeout);
                         report_connect_finished(
@@ -360,7 +381,12 @@ impl State {
                         state_change_msg.replace("RSNA timeout".to_string());
                         State::Idle { cfg }
                     }
-                    Event::KeyFrameExchangeTimeout { bssid, sta_addr, frame, attempt } => {
+                    Event::KeyFrameExchangeTimeout(event::KeyFrameExchangeTimeout {
+                        bssid,
+                        sta_addr,
+                        frame,
+                        attempt,
+                    }) => {
                         if !triggered(&resp_timeout, event_id) {
                             let link_state = LinkState::EstablishingRsna {
                                 responder,
@@ -414,7 +440,22 @@ impl State {
                         State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
                     }
                 },
-                _ => State::Associated { cfg, bss, last_rssi, link_state, radio_cfg },
+                LinkState::LinkUp { protection, since, mut next_milestone } => match event {
+                    Event::ConnectionMilestone(ref info)
+                        if triggered(&next_milestone, event_id) =>
+                    {
+                        cancel(&mut next_milestone);
+                        if let Some(id) = report_milestone(info.clone(), context) {
+                            next_milestone.replace(id);
+                        }
+                        let link_state = LinkState::LinkUp { protection, since, next_milestone };
+                        State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
+                    }
+                    _ => {
+                        let link_state = LinkState::LinkUp { protection, since, next_milestone };
+                        State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
+                    }
+                },
             },
             _ => self,
         };
@@ -560,7 +601,7 @@ fn handle_mlme_assoc_conf(
                         context.info.report_rsna_started(context.att_id);
 
                         let rsna_timeout =
-                            Some(context.timer.schedule(Event::EstablishingRsnaTimeout));
+                            Some(context.timer.schedule(event::EstablishingRsnaTimeout));
                         state_change_msg.replace("successful association".to_string());
                         State::Associated {
                             cfg,
@@ -578,12 +619,19 @@ fn handle_mlme_assoc_conf(
                 },
                 Protection::Open | Protection::Wep(_) => {
                     report_connect_finished(cmd.responder, context, ConnectResult::Success);
+                    let now = now();
+                    let info = ConnectionMilestoneInfo::new(ConnectionMilestone::Connected, now);
+                    let next_milestone = report_milestone(info, context);
                     state_change_msg.replace("successful association".to_string());
                     State::Associated {
                         cfg,
                         bss: cmd.bss,
                         last_rssi: None,
-                        link_state: LinkState::LinkUp { protection: Protection::Open },
+                        link_state: LinkState::LinkUp {
+                            protection: Protection::Open,
+                            since: now,
+                            next_milestone,
+                        },
                         radio_cfg: cmd.radio_cfg,
                     }
                 }
@@ -741,7 +789,7 @@ fn send_eapol_frame(
     frame: eapol::KeyFrameBuf,
     attempt: u32,
 ) -> EventId {
-    let resp_timeout_id = context.timer.schedule(Event::KeyFrameExchangeTimeout {
+    let resp_timeout_id = context.timer.schedule(event::KeyFrameExchangeTimeout {
         bssid,
         sta_addr,
         frame: frame.clone(),
@@ -841,21 +889,32 @@ fn handle_supplicant_start_failure(
     );
 }
 
+fn report_milestone(milestone: ConnectionMilestoneInfo, context: &mut Context) -> Option<EventId> {
+    context.info.report_connection_milestone(milestone.clone());
+    milestone.next_milestone().map(|next_milestone| {
+        let deadline = next_milestone.deadline();
+        context.timer.schedule_at(deadline, Event::ConnectionMilestone(next_milestone))
+    })
+}
+
+fn now() -> zx::Time {
+    zx::Time::get(zx::ClockId::Monotonic)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use failure::format_err;
     use fuchsia_inspect::Inspector;
     use futures::channel::{mpsc, oneshot};
-    use std::error::Error;
     use std::sync::Arc;
     use wlan_common::{assert_variant, ie::rsn::rsne::RsnCapabilities, RadioConfig};
     use wlan_rsn::{rsna::UpdateSink, NegotiatedProtection};
 
     use crate::client::test_utils::{
         create_assoc_conf, create_auth_conf, create_join_conf, expect_info_event,
-        fake_protected_bss_description, fake_unprotected_bss_description, fake_wep_bss_description,
-        mock_supplicant, MockSupplicant, MockSupplicantController,
+        expect_stream_empty, fake_protected_bss_description, fake_unprotected_bss_description,
+        fake_wep_bss_description, mock_supplicant, MockSupplicant, MockSupplicantController,
     };
     use crate::client::{info::InfoReporter, inspect, InfoEvent, InfoSink, TimeStream};
     use crate::{test_utils, timer, DeviceInfo, InfoStream, MlmeStream, Ssid};
@@ -1212,7 +1271,7 @@ mod tests {
 
         // Verify state did not change.
         assert_variant!(state, State::Associated {
-            link_state: LinkState::LinkUp { protection: Protection::Rsna(_) },
+            link_state: LinkState::LinkUp { protection: Protection::Rsna(_), .. },
             ..
         });
     }
@@ -1248,7 +1307,7 @@ mod tests {
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
-        assert_variant!(timed_event.event, Event::EstablishingRsnaTimeout);
+        assert_variant!(timed_event.event, Event::EstablishingRsnaTimeout(..));
 
         expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
 
@@ -1276,8 +1335,8 @@ mod tests {
             expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
 
             let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
-            assert_variant!(timed_event.event, Event::KeyFrameExchangeTimeout { attempt, .. } => {
-                assert_eq!(attempt, i)
+            assert_variant!(timed_event.event, Event::KeyFrameExchangeTimeout(ref event) => {
+                assert_eq!(event.attempt, i)
             });
             state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
         }
@@ -1404,6 +1463,33 @@ mod tests {
         let state = state.on_mlme_event(disassociate_ind, &mut h.context);
         assert_associating(state, &unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8]));
         assert_eq!(h.context.att_id, 1);
+    }
+
+    #[test]
+    fn connection_milestone() {
+        let mut h = TestHelper::new();
+
+        let (cmd, _receiver) = connect_command_one();
+
+        // Start in an "Associating" state
+        let state = State::Associating { cfg: ClientConfig::default(), cmd };
+        let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCodes::Success);
+        let state = state.on_mlme_event(assoc_conf, &mut h.context);
+
+        // Verify timeout is scheduled for when connection will have lasted one minute
+        let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
+        assert_variant!(timed_event.event, Event::ConnectionMilestone(ref info) => {
+            assert_eq!(info.milestone, ConnectionMilestone::OneMinute);
+        });
+
+        // Trigger the above timeout
+        let _state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
+
+        // Verify timeout is scheduled for when the next milestone happens (10 minutes)
+        let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
+        assert_variant!(timed_event.event, Event::ConnectionMilestone(ref info) => {
+            assert_eq!(info.milestone, ConnectionMilestone::TenMinutes);
+        });
     }
 
     struct TestHelper {
@@ -1571,14 +1657,6 @@ mod tests {
         assert_eq!(Ok(Some(expected_result)), receiver.try_recv());
     }
 
-    fn expect_stream_empty<T>(stream: &mut mpsc::UnboundedReceiver<T>, error_msg: &str) {
-        assert_variant!(stream.try_next(), Err(e) => {
-                assert_eq!(e.description(), "receiver channel is empty")
-            },
-            format!("error, receiver not empty: {}", error_msg)
-        );
-    }
-
     fn connect_command_one() -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
         let (responder, receiver) = Responder::new();
         let cmd = ConnectCommand {
@@ -1686,7 +1764,11 @@ mod tests {
             cfg: ClientConfig::default(),
             bss,
             last_rssi: None,
-            link_state: LinkState::LinkUp { protection: Protection::Open },
+            link_state: LinkState::LinkUp {
+                protection: Protection::Open,
+                since: now(),
+                next_milestone: None,
+            },
             radio_cfg: RadioConfig::default(),
         }
     }
@@ -1703,7 +1785,11 @@ mod tests {
             cfg: ClientConfig::default(),
             bss: Box::new(bss),
             last_rssi: None,
-            link_state: LinkState::LinkUp { protection: Protection::Rsna(rsna) },
+            link_state: LinkState::LinkUp {
+                protection: Protection::Rsna(rsna),
+                since: now(),
+                next_milestone: None,
+            },
             radio_cfg: RadioConfig::default(),
         }
     }

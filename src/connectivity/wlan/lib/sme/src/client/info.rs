@@ -11,7 +11,8 @@ use {
         sink::InfoSink,
     },
     failure::Fail,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon::{self as zx, prelude::DurationNum},
     log::warn,
     std::collections::HashMap,
 };
@@ -22,29 +23,46 @@ pub enum InfoEvent {
     ConnectStarted,
     /// Sent when a connection attempt succeeds, fails, or gets canceled because another connection
     /// attempt comes
-    ConnectFinished { result: ConnectResult },
+    ConnectFinished {
+        result: ConnectResult,
+    },
     /// Sent when SME forwards a ScanRequest message to MLME. Note that this may happen
     /// some time after a scan request first arrives at SME as it may be queued. If a scan
     /// request is canceled before SME sends it to MLME, this event won't be sent out
-    MlmeScanStart { txn_id: ScanTxnId },
+    MlmeScanStart {
+        txn_id: ScanTxnId,
+    },
     /// Sent when SME receives a ScanEnd message from MLME (signaling that an existing scan
     /// attempt finishes)
-    MlmeScanEnd { txn_id: ScanTxnId },
+    MlmeScanEnd {
+        txn_id: ScanTxnId,
+    },
     /// Sent when SME finishes selecting a network and starts the Join step during a connection
     /// attempt.
-    JoinStarted { att_id: ConnectionAttemptId },
+    JoinStarted {
+        att_id: ConnectionAttemptId,
+    },
     /// Sent when SME finishes the association step during a connection attempt
-    AssociationSuccess { att_id: ConnectionAttemptId },
+    AssociationSuccess {
+        att_id: ConnectionAttemptId,
+    },
     /// Sent when SME starts the step of establishing security during a connection attempt
-    RsnaStarted { att_id: ConnectionAttemptId },
+    RsnaStarted {
+        att_id: ConnectionAttemptId,
+    },
     /// Sent when SME finishes the step of establishing security during a connection attempt
-    RsnaEstablished { att_id: ConnectionAttemptId },
+    RsnaEstablished {
+        att_id: ConnectionAttemptId,
+    },
     /// Event for the aggregated stats of a discovery scan. Sent when a discovery scan has
     /// finished, as signaled by a MlmeScanEnd event
     DiscoveryScanStats(ScanStats, Option<DiscoveryStats>),
     /// Event for the aggregated stats of a connection attempt. Sent when a connection attempt
     /// has finished, whether it succeeds, fails, or gets canceled.
     ConnectStats(ConnectStats),
+    /// Event generated whenever the client first connects, or when the connection has reached
+    /// a certain milestone (e.g. 1/10/30 minutes)
+    ConnectionMilestone(ConnectionMilestoneInfo),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -145,6 +163,75 @@ fn to_duration(end: &Option<zx::Time>, start: &Option<zx::Time>) -> Option<zx::D
     match (end, start) {
         (Some(end), Some(start)) => Some(*end - *start),
         _ => None,
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConnectionMilestoneInfo {
+    pub milestone: ConnectionMilestone,
+    pub connected_since: zx::Time,
+}
+
+impl ConnectionMilestoneInfo {
+    pub fn new(milestone: ConnectionMilestone, connected_since: zx::Time) -> Self {
+        Self { connected_since, milestone }
+    }
+
+    pub fn next_milestone(&self) -> Option<Self> {
+        self.milestone
+            .next_milestone()
+            .map(|milestone| ConnectionMilestoneInfo::new(milestone, self.connected_since))
+    }
+
+    /// Return the earliest that at which this connection milestone would be satisfied
+    pub fn deadline(&self) -> zx::Time {
+        self.connected_since + self.milestone.duration()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ConnectionMilestone {
+    Connected,
+    OneMinute,
+    TenMinutes,
+    ThirtyMinutes,
+    OneHour,
+    ThreeHours,
+    SixHours,
+    TwelveHours,
+    OneDay,
+}
+
+impl ConnectionMilestone {
+    /// Given the current connection milestone, return the next milestone. If current milestone
+    /// is already the highest that's tracked, return None.
+    pub fn next_milestone(&self) -> Option<Self> {
+        match self {
+            ConnectionMilestone::Connected => Some(ConnectionMilestone::OneMinute),
+            ConnectionMilestone::OneMinute => Some(ConnectionMilestone::TenMinutes),
+            ConnectionMilestone::TenMinutes => Some(ConnectionMilestone::ThirtyMinutes),
+            ConnectionMilestone::ThirtyMinutes => Some(ConnectionMilestone::OneHour),
+            ConnectionMilestone::OneHour => Some(ConnectionMilestone::ThreeHours),
+            ConnectionMilestone::ThreeHours => Some(ConnectionMilestone::SixHours),
+            ConnectionMilestone::SixHours => Some(ConnectionMilestone::TwelveHours),
+            ConnectionMilestone::TwelveHours => Some(ConnectionMilestone::OneDay),
+            ConnectionMilestone::OneDay => None,
+        }
+    }
+
+    /// Return the minimum connected duration required to satisfy current milestone.
+    pub fn duration(&self) -> zx::Duration {
+        match self {
+            ConnectionMilestone::Connected => 0.millis(),
+            ConnectionMilestone::OneMinute => 1.minutes(),
+            ConnectionMilestone::TenMinutes => 10.minutes(),
+            ConnectionMilestone::ThirtyMinutes => 30.minutes(),
+            ConnectionMilestone::OneHour => 1.hour(),
+            ConnectionMilestone::ThreeHours => 3.hours(),
+            ConnectionMilestone::SixHours => 6.hours(),
+            ConnectionMilestone::TwelveHours => 12.hours(),
+            ConnectionMilestone::OneDay => 24.hours(),
+        }
     }
 }
 
@@ -254,6 +341,10 @@ impl InfoReporter {
         if let Ok(stats) = stats {
             self.info_sink.send(InfoEvent::ConnectStats(stats));
         }
+    }
+
+    pub fn report_connection_milestone(&mut self, milestone: ConnectionMilestoneInfo) {
+        self.info_sink.send(InfoEvent::ConnectionMilestone(milestone));
     }
 }
 
@@ -640,5 +731,35 @@ mod tests {
             StatsCollector::new().report_connect_finished(ConnectResult::Success),
             Err(StatsError::NoPendingConnect)
         );
+    }
+
+    #[test]
+    fn test_connection_milestone() {
+        let start = zx::Time::from_nanos(3);
+        use ConnectionMilestone::*;
+
+        let milestone = ConnectionMilestoneInfo::new(ConnectionMilestone::Connected, start);
+        let milestone = expect_next_milestone(milestone, OneMinute, 60_000000003);
+        let milestone = expect_next_milestone(milestone, TenMinutes, 600_000000003);
+        let milestone = expect_next_milestone(milestone, ThirtyMinutes, 1_800_000000003);
+        let milestone = expect_next_milestone(milestone, OneHour, 3_600_000000003);
+        let milestone = expect_next_milestone(milestone, ThreeHours, 10_800_000000003);
+        let milestone = expect_next_milestone(milestone, SixHours, 21_600_000000003);
+        let milestone = expect_next_milestone(milestone, TwelveHours, 43_200_000000003);
+        let milestone = expect_next_milestone(milestone, OneDay, 86_400_000000003);
+        assert_eq!(milestone.next_milestone(), None);
+    }
+
+    fn expect_next_milestone(
+        milestone: ConnectionMilestoneInfo,
+        expected_next_milestone: ConnectionMilestone,
+        nanos_deadline: i64,
+    ) -> ConnectionMilestoneInfo {
+        let next_milestone = milestone.next_milestone();
+        assert_variant!(next_milestone, Some(next_milestone) => {
+            assert_eq!(next_milestone.milestone, expected_next_milestone);
+            assert_eq!(next_milestone.deadline().into_nanos(), nanos_deadline);
+            next_milestone
+        })
     }
 }

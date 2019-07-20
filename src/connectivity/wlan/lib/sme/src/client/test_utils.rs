@@ -5,6 +5,7 @@
 use failure::{bail, format_err};
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
+use futures::channel::mpsc;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
@@ -135,6 +136,14 @@ pub fn create_assoc_conf(result_code: fidl_mlme::AssociateResultCodes) -> fidl_m
     fidl_mlme::MlmeEvent::AssociateConf {
         resp: fidl_mlme::AssociateConfirm { result_code, association_id: 55 },
     }
+}
+
+pub fn expect_stream_empty<T>(stream: &mut mpsc::UnboundedReceiver<T>, error_msg: &str) {
+    assert_variant!(
+        stream.try_next(),
+        Ok(None) | Err(..),
+        format!("error, receiver not empty: {}", error_msg)
+    );
 }
 
 pub fn mock_supplicant() -> (MockSupplicant, MockSupplicantController) {

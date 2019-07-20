@@ -47,11 +47,11 @@ impl<E> Timer<E> {
         id
     }
 
-    pub fn schedule(&mut self, event: E) -> EventId
+    pub fn schedule<EV>(&mut self, event: EV) -> EventId
     where
-        E: TimeoutDuration,
+        EV: TimeoutDuration + Into<E>,
     {
-        self.schedule_at(zx::Time::after(event.timeout_duration()), event)
+        self.schedule_at(zx::Time::after(event.timeout_duration()), event.into())
     }
 }
 

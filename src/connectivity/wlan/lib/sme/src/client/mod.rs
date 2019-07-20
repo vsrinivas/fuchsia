@@ -336,8 +336,9 @@ impl super::Station for ClientSme {
 
     fn on_timeout(&mut self, timed_event: TimedEvent<Event>) {
         self.state = self.state.take().map(|state| match timed_event.event {
-            event @ Event::EstablishingRsnaTimeout
-            | event @ Event::KeyFrameExchangeTimeout { .. } => {
+            event @ Event::EstablishingRsnaTimeout(..)
+            | event @ Event::KeyFrameExchangeTimeout(..)
+            | event @ Event::ConnectionMilestone(..) => {
                 state.handle_timeout(timed_event.id, event, &mut self.context)
             }
         });
@@ -401,6 +402,7 @@ mod tests {
     use crate::Config as SmeConfig;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use fuchsia_inspect as finspect;
+    use info::ConnectionMilestone;
     use maplit::hashmap;
     use std::error::Error;
     use wlan_common::{assert_variant, RadioConfig};
@@ -408,7 +410,8 @@ mod tests {
     use super::info::DiscoveryStats;
     use super::test_utils::{
         create_assoc_conf, create_auth_conf, create_join_conf, expect_info_event,
-        fake_protected_bss_description, fake_unprotected_bss_description, fake_wep_bss_description,
+        expect_stream_empty, fake_protected_bss_description, fake_unprotected_bss_description,
+        fake_wep_bss_description,
     };
 
     use crate::test_utils;
@@ -833,6 +836,9 @@ mod tests {
             assert_eq!(stats.result, ConnectResult::Success);
             assert!(stats.selected_network.is_some());
         });
+        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectionMilestone(info))) => {
+            assert_eq!(info.milestone, ConnectionMilestone::Connected);
+        });
     }
 
     #[test]
@@ -867,6 +873,7 @@ mod tests {
             assert_eq!(stats.result, result);
             assert!(stats.selected_network.is_some());
         });
+        expect_stream_empty(&mut info_stream, "unexpected event in info stream");
     }
 
     #[test]
