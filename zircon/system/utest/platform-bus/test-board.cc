@@ -21,6 +21,7 @@
 #include <memory>
 
 #include "test-resources.h"
+#include "test-metadata.h"
 #include "test.h"
 
 namespace board_test {
@@ -162,21 +163,33 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {fbl::count_of(codec_component), codec_component},
   };
 
-  const uint32_t test_metadata_value = 12345;
+  struct composite_test_metadata metadata_1 = {
+      .composite_device_id = PDEV_DID_TEST_COMPOSITE_1,
+      .metadata_value = 12345,
+  };
 
-  const pbus_metadata_t test_metadata[] = {{
+  struct composite_test_metadata metadata_2 = {
+      .composite_device_id = PDEV_DID_TEST_COMPOSITE_2,
+      .metadata_value = 12345,
+  };
+  const pbus_metadata_t test_metadata_1[] = {{
       .type = DEVICE_METADATA_PRIVATE,
-      .data_buffer = &test_metadata_value,
-      .data_size = sizeof(test_metadata_value),
+      .data_buffer = &metadata_1,
+      .data_size = sizeof(composite_test_metadata),
   }};
 
+  const pbus_metadata_t test_metadata_2[] = {{
+      .type = DEVICE_METADATA_PRIVATE,
+      .data_buffer = &metadata_2,
+      .data_size = sizeof(composite_test_metadata),
+  }};
   pbus_dev_t pdev = {};
   pdev.name = "composite-dev";
   pdev.vid = PDEV_VID_TEST;
   pdev.pid = PDEV_PID_PBUS_TEST;
-  pdev.did = PDEV_DID_TEST_COMPOSITE;
-  pdev.metadata_list = test_metadata;
-  pdev.metadata_count = fbl::count_of(test_metadata);
+  pdev.did = PDEV_DID_TEST_COMPOSITE_1;
+  pdev.metadata_list = test_metadata_1;
+  pdev.metadata_count = fbl::count_of(test_metadata_1);
 
   status = pbus_composite_device_add(&pbus, &pdev, composite, fbl::count_of(composite), UINT32_MAX);
   if (status != ZX_OK) {
@@ -184,21 +197,17 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   }
 
   device_component_t composite2[] = {
-      {fbl::count_of(gpio_component), gpio_component},
       {fbl::count_of(clock_component), clock_component},
-      {fbl::count_of(i2c_component), i2c_component},
       {fbl::count_of(power_component), power_component},
       {fbl::count_of(child4_component), child4_component},
-      {fbl::count_of(codec_component), codec_component},
   };
-  zxlogf(ERROR, "TestBoard STARTED STARTED ADD MY COMPOSITE DEVICE\n");
   pbus_dev_t pdev2 = {};
   pdev2.name = "composite-dev-2";
   pdev2.vid = PDEV_VID_TEST;
   pdev2.pid = PDEV_PID_PBUS_TEST;
-  pdev2.did = PDEV_DID_TEST_COMPOSITE;
-  pdev2.metadata_list = test_metadata;
-  pdev2.metadata_count = fbl::count_of(test_metadata);
+  pdev2.did = PDEV_DID_TEST_COMPOSITE_2;
+  pdev2.metadata_list = test_metadata_2;
+  pdev2.metadata_count = fbl::count_of(test_metadata_2);
 
   status =
       pbus_composite_device_add(&pbus, &pdev2, composite2, fbl::count_of(composite2), UINT32_MAX);

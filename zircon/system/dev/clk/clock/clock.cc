@@ -99,7 +99,7 @@ zx_status_t ClockDevice::Create(void* ctx, zx_device_t* parent) {
             { BIND_CLOCK_ID, 0, clock_id },
         };
 
-        status = dev->DdkAdd(name, 0, props, countof(props));
+        status = dev->DdkAdd(name, DEVICE_ADD_ALLOW_MULTI_COMPOSITE, props, countof(props));
         if (status != ZX_OK) {
             return status;
         }

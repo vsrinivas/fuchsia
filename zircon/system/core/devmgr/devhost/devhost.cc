@@ -620,13 +620,10 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
   bool add_invisible = child->flags & DEV_FLAG_INVISIBLE;
   fuchsia_device_manager_AddDeviceConfig add_device_config = 0;
 
-  // TODO(ravoorir): Support this per device configuration. Uncomment the below when
-  // we can configure this per device.
-  /*if (child->flags & DEV_FLAG_ALLOW_MULTI_COMPOSITE) {
+  if (child->flags & DEV_FLAG_ALLOW_MULTI_COMPOSITE) {
     add_device_config |= fuchsia_device_manager_AddDeviceConfig_ALLOW_MULTI_COMPOSITE;
-  }*/
+  }
 
-  add_device_config |= fuchsia_device_manager_AddDeviceConfig_ALLOW_MULTI_COMPOSITE;
   zx_status_t status;
   zx::channel hrpc, hsend;
   if ((status = zx::channel::create(0, &hrpc, &hsend)) != ZX_OK) {

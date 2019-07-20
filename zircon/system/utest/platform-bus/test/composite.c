@@ -21,17 +21,27 @@
 #include <ddk/protocol/power.h>
 #include <zircon/assert.h>
 
+#include "../test-metadata.h"
+
 #define DRIVER_NAME "test-composite"
 
-enum {
-    COMPONENT_PDEV,
-    COMPONENT_GPIO,
-    COMPONENT_CLOCK,
-    COMPONENT_I2C,
-    COMPONENT_POWER,
-    COMPONENT_CHILD4,
-    COMPONENT_CODEC,
-    COMPONENT_COUNT,
+enum Components_1 {
+    COMPONENT_PDEV_1, /* Should be 1st component */
+    COMPONENT_GPIO_1,
+    COMPONENT_CLOCK_1,
+    COMPONENT_I2C_1,
+    COMPONENT_POWER_1,
+    COMPONENT_CHILD4_1,
+    COMPONENT_CODEC_1,
+    COMPONENT_COUNT_1,
+};
+
+enum Components_2 {
+    COMPONENT_PDEV_2, /* Should be 1st component */
+    COMPONENT_CLOCK_2,
+    COMPONENT_POWER_2,
+    COMPONENT_CHILD4_2,
+    COMPONENT_COUNT_2,
 };
 
 typedef struct {
@@ -309,79 +319,142 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     size_t actual;
     zx_device_t* components[count];
     composite_get_components(&composite, components, count, &actual);
-    if (count != actual || count != COMPONENT_COUNT) {
+    if (count != actual) {
         zxlogf(ERROR, "%s: got the wrong number of components (%u, %zu)\n", DRIVER_NAME, count,
                actual);
         return ZX_ERR_BAD_STATE;
     }
 
     pdev_protocol_t pdev;
-    gpio_protocol_t gpio;
-    clock_protocol_t clock;
-    i2c_protocol_t i2c;
-    power_protocol_t power;
-    clock_protocol_t child4;
-    codec_protocol_t codec;
 
-    status = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
+    status = device_get_protocol(components[COMPONENT_PDEV_1], ZX_PROTOCOL_PDEV, &pdev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PDEV\n", DRIVER_NAME);
         return status;
     }
-    status = device_get_protocol(components[COMPONENT_GPIO], ZX_PROTOCOL_GPIO, &gpio);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO\n", DRIVER_NAME);
-        return status;
+
+    size_t size;
+    composite_test_metadata metadata;
+    status = device_get_metadata_size(components[COMPONENT_PDEV_1], DEVICE_METADATA_PRIVATE, &size);
+    if (status != ZX_OK || size != sizeof(composite_test_metadata)) {
+        zxlogf(ERROR, "%s: device_get_metadata_size failed: %d\n", DRIVER_NAME, status);
+        return ZX_ERR_INTERNAL;
     }
-    status = device_get_protocol(components[COMPONENT_CLOCK], ZX_PROTOCOL_CLOCK, &clock);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK\n", DRIVER_NAME);
-        return status;
-    }
-    status = device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &i2c);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C\n", DRIVER_NAME);
-        return status;
-    }
-    status = device_get_protocol(components[COMPONENT_POWER], ZX_PROTOCOL_POWER, &power);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER\n", DRIVER_NAME);
-        return status;
-    }
-    status = device_get_protocol(components[COMPONENT_CHILD4], ZX_PROTOCOL_CLOCK, &child4);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not get protocol from child4\n", DRIVER_NAME);
-        return status;
-    }
-    status = device_get_protocol(components[COMPONENT_CODEC], ZX_PROTOCOL_CODEC, &codec);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CODEC\n", DRIVER_NAME);
-        return status;
+    status = device_get_metadata(components[COMPONENT_PDEV_1], DEVICE_METADATA_PRIVATE, &metadata,
+                                 sizeof(metadata), &size);
+    if (status != ZX_OK || size != sizeof(composite_test_metadata)) {
+        zxlogf(ERROR, "%s: device_get_metadata failed: %d\n", DRIVER_NAME, status);
+        return ZX_ERR_INTERNAL;
     }
 
-    if ((status = test_gpio(&gpio)) != ZX_OK) {
-        zxlogf(ERROR, "%s: test_gpio failed: %d\n", DRIVER_NAME, status);
-        return status;
+    if (metadata.metadata_value != 12345) {
+      zxlogf(ERROR, "%s: device_get_metadata failed: %d\n", DRIVER_NAME, status);
+      return ZX_ERR_INTERNAL;
     }
 
-    if ((status = test_clock(&clock)) != ZX_OK) {
-        zxlogf(ERROR, "%s: test_clock failed: %d\n", DRIVER_NAME, status);
-        return status;
-    }
+    clock_protocol_t clock;
+    power_protocol_t power;
+    clock_protocol_t child4;
+    gpio_protocol_t gpio;
+    i2c_protocol_t i2c;
+    codec_protocol_t codec;
 
-    if ((status = test_i2c(&i2c)) != ZX_OK) {
-        zxlogf(ERROR, "%s: test_i2c failed: %d\n", DRIVER_NAME, status);
-        return status;
-    }
+    if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_1) {
+        if (count != COMPONENT_COUNT_1) {
+            zxlogf(ERROR, "%s: got the wrong number of components (%u, %zu)\n", DRIVER_NAME, count,
+                   actual);
+            return ZX_ERR_BAD_STATE;
+        }
+        status = device_get_protocol(components[COMPONENT_CLOCK_1], ZX_PROTOCOL_CLOCK, &clock);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK\n", DRIVER_NAME);
+            return status;
+        }
 
-    if ((status = test_power(&power)) != ZX_OK) {
-        zxlogf(ERROR, "%s: test_power failed: %d\n", DRIVER_NAME, status);
-        return status;
-    }
+        status = device_get_protocol(components[COMPONENT_POWER_1], ZX_PROTOCOL_POWER, &power);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER\n", DRIVER_NAME);
+            return status;
+        }
 
-    if ((status = test_codec(&codec)) != ZX_OK) {
-        zxlogf(ERROR, "%s: test_codec failed: %d\n", DRIVER_NAME, status);
-        return status;
+        status = device_get_protocol(components[COMPONENT_CHILD4_1], ZX_PROTOCOL_CLOCK, &child4);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: could not get protocol from child4\n", DRIVER_NAME);
+            return status;
+        }
+
+        status = device_get_protocol(components[COMPONENT_GPIO_1], ZX_PROTOCOL_GPIO, &gpio);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO\n", DRIVER_NAME);
+            return status;
+        }
+        status = device_get_protocol(components[COMPONENT_I2C_1], ZX_PROTOCOL_I2C, &i2c);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C\n", DRIVER_NAME);
+            return status;
+        }
+        status = device_get_protocol(components[COMPONENT_CODEC_1], ZX_PROTOCOL_CODEC, &codec);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CODEC\n", DRIVER_NAME);
+            return status;
+        }
+
+        if ((status = test_clock(&clock)) != ZX_OK) {
+            zxlogf(ERROR, "%s: test_clock failed: %d\n", DRIVER_NAME, status);
+            return status;
+        }
+
+        if ((status = test_power(&power)) != ZX_OK) {
+            zxlogf(ERROR, "%s: test_power failed: %d\n", DRIVER_NAME, status);
+            return status;
+        }
+        if ((status = test_gpio(&gpio)) != ZX_OK) {
+            zxlogf(ERROR, "%s: test_gpio failed: %d\n", DRIVER_NAME, status);
+            return status;
+        }
+
+        if ((status = test_i2c(&i2c)) != ZX_OK) {
+            zxlogf(ERROR, "%s: test_i2c failed: %d\n", DRIVER_NAME, status);
+            return status;
+        }
+
+        if ((status = test_codec(&codec)) != ZX_OK) {
+            zxlogf(ERROR, "%s: test_codec failed: %d\n", DRIVER_NAME, status);
+            return status;
+        }
+    } else if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_2) {
+        if (count != COMPONENT_COUNT_2) {
+            zxlogf(ERROR, "%s: got the wrong number of components (%u, %zu)\n", DRIVER_NAME, count,
+                   actual);
+            return ZX_ERR_BAD_STATE;
+        }
+        status = device_get_protocol(components[COMPONENT_CLOCK_2], ZX_PROTOCOL_CLOCK, &clock);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK\n", DRIVER_NAME);
+            return status;
+        }
+
+        status = device_get_protocol(components[COMPONENT_POWER_2], ZX_PROTOCOL_POWER, &power);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER\n", DRIVER_NAME);
+            return status;
+        }
+
+        status = device_get_protocol(components[COMPONENT_CHILD4_2], ZX_PROTOCOL_CLOCK, &child4);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: could not get protocol from child4\n", DRIVER_NAME);
+            return status;
+        }
+
+        if ((status = test_clock(&clock)) != ZX_OK) {
+            zxlogf(ERROR, "%s: test_clock failed: %d\n", DRIVER_NAME, status);
+            return status;
+        }
+
+        if ((status = test_power(&power)) != ZX_OK) {
+            zxlogf(ERROR, "%s: test_power failed: %d\n", DRIVER_NAME, status);
+            return status;
+        }
     }
 
     test_t* test = calloc(1, sizeof(test_t));
@@ -405,20 +478,24 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Make sure we can read metadata added to a component.
-    size_t size;
-    uint32_t value;
     status = device_get_metadata_size(test->zxdev, DEVICE_METADATA_PRIVATE, &size);
-    if (status != ZX_OK || size != sizeof(value)) {
+    if (status != ZX_OK || size != sizeof(composite_test_metadata)) {
         zxlogf(ERROR, "%s: device_get_metadata_size failed: %d\n", DRIVER_NAME, status);
         device_remove(test->zxdev);
         return ZX_ERR_INTERNAL;
     }
-    status = device_get_metadata(test->zxdev, DEVICE_METADATA_PRIVATE, &value, sizeof(value),
+    status = device_get_metadata(test->zxdev, DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata),
                                  &size);
-    if (status != ZX_OK || size != sizeof(value) || value != 12345) {
+    if (status != ZX_OK || size != sizeof(composite_test_metadata)) {
         zxlogf(ERROR, "%s: device_get_metadata failed: %d\n", DRIVER_NAME, status);
         device_remove(test->zxdev);
         return ZX_ERR_INTERNAL;
+    }
+
+    if (metadata.metadata_value != 12345) {
+      zxlogf(ERROR, "%s: device_get_metadata failed: %d\n", DRIVER_NAME, status);
+      device_remove(test->zxdev);
+      return ZX_ERR_INTERNAL;
     }
 
     return ZX_OK;
@@ -429,9 +506,10 @@ static zx_driver_ops_t test_driver_ops = {
     .bind = test_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(test_bus, test_driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(test_bus, test_driver_ops, "zircon", "0.1", 5)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_COMPOSITE),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_COMPOSITE_1),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_COMPOSITE_2),
 ZIRCON_DRIVER_END(test_bus)

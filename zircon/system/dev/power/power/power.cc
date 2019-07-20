@@ -99,7 +99,7 @@ zx_status_t PowerDevice::Create(void* ctx, zx_device_t* parent) {
             { BIND_POWER_DOMAIN, 0, index },
         };
 
-        status = dev->DdkAdd(name, 0, props, countof(props));
+        status = dev->DdkAdd(name, DEVICE_ADD_ALLOW_MULTI_COMPOSITE, props, countof(props));
         if (status != ZX_OK) {
             return status;
         }
