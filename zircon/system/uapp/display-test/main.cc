@@ -523,8 +523,10 @@ int main(int argc, const char* argv[]) {
         layers.push_back(std::move(layer1));
     } else if (platform == SIMPLE) {
         // Simple display test
+        bool mirrors = true;
         fbl::unique_ptr<PrimaryLayer> layer1 = fbl::make_unique_checked<PrimaryLayer>(&ac,
-                                                                                      displays);
+                                                                                      displays,
+                                                                                      mirrors);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }

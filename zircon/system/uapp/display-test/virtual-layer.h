@@ -35,7 +35,7 @@ typedef struct layer {
 class VirtualLayer {
 public:
     explicit VirtualLayer(Display* display);
-    explicit VirtualLayer(const fbl::Vector<Display>& displays);
+    explicit VirtualLayer(const fbl::Vector<Display>& displays, bool tiled = true);
 
     virtual ~VirtualLayer() {}
 
@@ -103,7 +103,7 @@ protected:
 class PrimaryLayer : public VirtualLayer {
 public:
     explicit PrimaryLayer(Display* display);
-    explicit PrimaryLayer(const fbl::Vector<Display>& displays);
+    explicit PrimaryLayer(const fbl::Vector<Display>& displays, bool mirrors = false);
 
     // Set* methods to configure the layer.
     void SetImageDimens(uint32_t width, uint32_t height) {
@@ -175,6 +175,7 @@ private:
     float alpha_val_ = 0.f;
     bool scaling_ = false;
     bool intel_y_tiling_ = false;
+    bool mirrors_ = false;
 
     bool alt_image_ = false;
     Image* images_[2];

@@ -51,7 +51,7 @@ VirtualLayer::VirtualLayer(Display* display) {
     height_ = display->mode().vertical_resolution;
 }
 
-VirtualLayer::VirtualLayer(const fbl::Vector<Display>& displays) {
+VirtualLayer::VirtualLayer(const fbl::Vector<Display>& displays, bool tiled) {
     for (auto& d : displays) {
         displays_.push_back(&d);
     }
@@ -59,7 +59,11 @@ VirtualLayer::VirtualLayer(const fbl::Vector<Display>& displays) {
     width_ = 0;
     height_ = 0;
     for (auto* d : displays_) {
-        width_ += d->mode().horizontal_resolution;
+        if (tiled) {
+            width_ += d->mode().horizontal_resolution;
+        } else {
+            width_ = fbl::max(width_, d->mode().horizontal_resolution);
+        }
         height_ = fbl::max(height_, d->mode().vertical_resolution);
     }
 }
@@ -96,7 +100,8 @@ PrimaryLayer::PrimaryLayer(Display* display) : VirtualLayer(display) {
     image_format_ = display->format();
 }
 
-PrimaryLayer::PrimaryLayer(const fbl::Vector<Display>& displays) : VirtualLayer(displays) {
+PrimaryLayer::PrimaryLayer(const fbl::Vector<Display>& displays, bool mirrors)
+    : VirtualLayer(displays, !mirrors), mirrors_(mirrors) {
     image_format_ = displays_[0]->format();
     SetImageDimens(width_, height_);
 }
@@ -217,6 +222,19 @@ void PrimaryLayer::StepLayout(int32_t frame_num) {
     for (unsigned i = 0; i < displays_.size(); i++) {
         display.height = displays_[i]->mode().vertical_resolution;
         display.width = displays_[i]->mode().horizontal_resolution;
+
+        if (mirrors_) {
+            layers_[i].src.x_pos = 0;
+            layers_[i].src.y_pos = 0;
+            layers_[i].src.width = image_width_;
+            layers_[i].src.height = image_height_;
+            layers_[i].dest.x_pos = 0;
+            layers_[i].dest.y_pos = 0;
+            layers_[i].dest.width = display.width;
+            layers_[i].dest.height = display.height;
+            layers_[i].active = true;
+            continue;
+        }
 
         // Calculate the portion of the dest frame which shows up on this display
         if (compute_intersection(display, dest_frame_, &layers_[i].dest)) {

@@ -5,6 +5,10 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_GOLDFISH_DISPLAY_DISPLAY_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_GOLDFISH_DISPLAY_DISPLAY_H_
 
+#include <threads.h>
+
+#include <map>
+
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddktl/device.h>
@@ -13,9 +17,8 @@
 #include <ddktl/protocol/goldfish/pipe.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <lib/zx/pmt.h>
-#include <threads.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/pmt.h>
 #include <zircon/types.h>
 
 namespace goldfish {
@@ -68,12 +71,21 @@ class Display : public DisplayType,
     zx::vmo vmo;
     zx::pmt pmt;
   };
+  struct Device {
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t x = 0;
+    uint32_t y = 0;
+    uint32_t refresh_rate_hz = 60;
+    float scale = 1.0;
+    thrd_t flush_thread{};
+  };
 
   static void OnSignal(void* ctx, int32_t flags);
   void OnReadable();
 
   void WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
-  zx_status_t ReadResultLocked(uint32_t* result) TA_REQ(lock_);
+  zx_status_t ReadResultLocked(uint32_t* result, uint32_t count) TA_REQ(lock_);
   zx_status_t ExecuteCommandLocked(uint32_t cmd_size, uint32_t* result) TA_REQ(lock_);
   int32_t GetFbParamLocked(uint32_t param, int32_t default_value) TA_REQ(lock_);
   zx_status_t CreateColorBufferLocked(uint32_t width, uint32_t height, uint32_t* id) TA_REQ(lock_);
@@ -84,10 +96,17 @@ class Display : public DisplayType,
   zx_status_t UpdateColorBufferLocked(uint32_t id, zx_paddr_t paddr, uint32_t width,
                                       uint32_t height, size_t size, uint32_t* result) TA_REQ(lock_);
   void FbPostLocked(uint32_t id) TA_REQ(lock_);
+  zx_status_t CreateDisplayLocked(uint32_t* result) TA_REQ(lock_);
+  zx_status_t DestroyDisplayLocked(uint32_t display_id, uint32_t* result) TA_REQ(lock_);
+  zx_status_t SetDisplayColorBufferLocked(uint32_t display_id, uint32_t id, uint32_t* result)
+      TA_REQ(lock_);
+  zx_status_t SetDisplayPoseLocked(uint32_t display_id, int32_t x, int32_t y, uint32_t w,
+                                   uint32_t h, uint32_t* result) TA_REQ(lock_);
 
-  int FlushHandler();
+  int FlushHandler(uint64_t id);
 
   fbl::Mutex lock_;
+  fbl::Mutex read_lock_;
   fbl::ConditionVariable readable_cvar_;
   ddk::GoldfishControlProtocolClient control_ TA_GUARDED(lock_);
   ddk::GoldfishPipeProtocolClient pipe_ TA_GUARDED(lock_);
@@ -96,12 +115,10 @@ class Display : public DisplayType,
   ddk::IoBuffer cmd_buffer_ TA_GUARDED(lock_);
   ddk::IoBuffer io_buffer_ TA_GUARDED(lock_);
 
-  thrd_t flush_thread_{};
+  std::map<uint64_t, Device> devices_;
   fbl::Mutex flush_lock_;
-  ColorBuffer* current_fb_ TA_GUARDED(flush_lock_) = nullptr;
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(flush_lock_);
-  uint32_t width_ TA_GUARDED(flush_lock_) = 1024;
-  uint32_t height_ TA_GUARDED(flush_lock_) = 768;
+  std::map<uint64_t, ColorBuffer*> current_cb_ TA_GUARDED(flush_lock_);
   bool shutdown_ TA_GUARDED(flush_lock_) = false;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Display);

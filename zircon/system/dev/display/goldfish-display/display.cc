@@ -4,6 +4,10 @@
 
 #include "display.h"
 
+#include <memory>
+#include <sstream>
+#include <vector>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
@@ -13,8 +17,6 @@
 #include <zircon/pixelformat.h>
 #include <zircon/threads.h>
 
-#include <memory>
-
 namespace goldfish {
 namespace {
 
@@ -22,9 +24,7 @@ const char* kTag = "goldfish-display";
 
 const char* kPipeName = "pipe:opengles";
 
-constexpr uint32_t kRefreshRateHz = 60;
-
-constexpr uint64_t kDisplayId = 1;
+constexpr uint64_t kPrimaryDisplayId = 1;
 
 constexpr uint32_t kClientFlags = 0;
 
@@ -35,6 +35,7 @@ constexpr zx_pixel_format_t kPixelFormats[] = {
 
 constexpr uint32_t FB_WIDTH = 1;
 constexpr uint32_t FB_HEIGHT = 2;
+constexpr uint32_t FB_FPS = 5;
 
 constexpr uint32_t GL_BGRA_EXT = 0x80E1;
 constexpr uint32_t GL_UNSIGNED_BYTE = 0x1401;
@@ -107,6 +108,43 @@ struct FbPostCmd {
 constexpr uint32_t kOP_rcFbPost = 10018;
 constexpr uint32_t kSize_rcFbPost = 12;
 
+struct CreateDisplayCmd {
+  uint32_t op;
+  uint32_t size;
+  uint32_t size_display_id;
+};
+constexpr uint32_t kOP_rcCreateDisplay = 10038;
+constexpr uint32_t kSize_rcCreateDisplay = 12;
+
+struct DestroyDisplayCmd {
+  uint32_t op;
+  uint32_t size;
+  uint32_t display_id;
+};
+constexpr uint32_t kOP_rcDestroyDisplay = 10039;
+constexpr uint32_t kSize_rcDestroyDisplay = 12;
+
+struct SetDisplayColorBufferCmd {
+  uint32_t op;
+  uint32_t size;
+  uint32_t display_id;
+  uint32_t id;
+};
+constexpr uint32_t kOP_rcSetDisplayColorBuffer = 10040;
+constexpr uint32_t kSize_rcSetDisplayColorBuffer = 16;
+
+struct SetDisplayPoseCmd {
+  uint32_t op;
+  uint32_t size;
+  uint32_t display_id;
+  int32_t x;
+  int32_t y;
+  uint32_t w;
+  uint32_t h;
+};
+constexpr uint32_t kOP_rcSetDisplayPose = 10044;
+constexpr uint32_t kSize_rcSetDisplayPose = 28;
+
 }  // namespace
 
 // static
@@ -124,6 +162,15 @@ zx_status_t Display::Create(void* ctx, zx_device_t* device) {
 Display::Display(zx_device_t* parent) : DisplayType(parent), control_(parent), pipe_(parent) {}
 
 Display::~Display() {
+  {
+    fbl::AutoLock lock(&flush_lock_);
+    shutdown_ = true;
+  }
+
+  for (auto& it : devices_) {
+    thrd_join(it.second.flush_thread, nullptr);
+  }
+
   if (id_) {
     fbl::AutoLock lock(&lock_);
     if (cmd_buffer_.is_valid()) {
@@ -137,13 +184,6 @@ Display::~Display() {
     }
     pipe_.Destroy(id_);
   }
-
-  {
-    fbl::AutoLock lock(&flush_lock_);
-    shutdown_ = true;
-  }
-
-  thrd_join(flush_thread_, NULL);
 }
 
 zx_status_t Display::Bind() {
@@ -204,11 +244,85 @@ zx_status_t Display::Bind() {
   memcpy(io_buffer_.virt(), &kClientFlags, sizeof(kClientFlags));
   WriteLocked(sizeof(kClientFlags));
 
-  int rc = thrd_create_with_name(
-      &flush_thread_, [](void* arg) { return static_cast<Display*>(arg)->FlushHandler(); }, this,
-      "goldfish_display_flush_thread");
-  if (rc != thrd_success) {
-    return thrd_status_to_zx_status(rc);
+  uint64_t next_display_id = kPrimaryDisplayId;
+
+  // Parse optional display params. This is comma seperated list of
+  // display devices. The format is:
+  //
+  // widthxheight[-xpos+ypos][@refresh][%scale]
+  char* flag = getenv("driver.goldfish.displays");
+  if (flag) {
+    std::stringstream devices_stream(flag);
+    std::string device_string;
+    while (std::getline(devices_stream, device_string, ',')) {
+      Device device;
+      char delim = 0;
+      std::stringstream device_stream(device_string);
+      do {
+        switch (delim) {
+          case 0:
+            device_stream >> device.width;
+            break;
+          case 'x':
+            device_stream >> device.height;
+            break;
+          case '-':
+            device_stream >> device.x;
+            break;
+          case '+':
+            device_stream >> device.y;
+            break;
+          case '@':
+            device_stream >> device.refresh_rate_hz;
+            break;
+          case '%':
+            device_stream >> device.scale;
+            break;
+        }
+      } while (device_stream >> delim);
+
+      if (!device.width || !device.height) {
+        zxlogf(ERROR, "%s: skip device=%s, missing size\n", kTag, device_string.c_str());
+        continue;
+      }
+      if (!device.refresh_rate_hz) {
+        zxlogf(ERROR, "%s: skip device=%s, refresh rate is zero\n", kTag, device_string.c_str());
+        continue;
+      }
+      if (device.scale < 0.1f || device.scale > 100.f) {
+        zxlogf(ERROR, "%s: skip device=%s, scale is not in range 0.1-100\n", kTag,
+               device_string.c_str());
+        continue;
+      }
+
+      devices_[next_display_id++] = device;
+    }
+  }
+
+  // Create primary device if needed.
+  if (devices_.empty()) {
+    Device device;
+    device.width = static_cast<uint32_t>(GetFbParamLocked(FB_WIDTH, 1024));
+    device.height = static_cast<uint32_t>(GetFbParamLocked(FB_HEIGHT, 768));
+    device.refresh_rate_hz = static_cast<uint32_t>(GetFbParamLocked(FB_FPS, 60));
+    devices_[kPrimaryDisplayId] = device;
+  }
+
+  // Start flush thread for each device.
+  for (auto& it : devices_) {
+    using DeviceCtx = std::pair<Display*, uint64_t>;
+    auto ctx = new DeviceCtx(this, it.first);
+    int rc = thrd_create_with_name(
+        &it.second.flush_thread,
+        [](void* arg) {
+          auto ctx = std::unique_ptr<DeviceCtx>(static_cast<DeviceCtx*>(arg));
+          return ctx->first->FlushHandler(ctx->second);
+        },
+        ctx, "goldfish_display_flush_thread");
+    if (rc != thrd_success) {
+      delete ctx;
+      return thrd_status_to_zx_status(rc);
+    }
   }
 
   return DdkAdd("goldfish-display");
@@ -220,24 +334,33 @@ void Display::DdkRelease() { delete this; }
 
 void Display::DisplayControllerImplSetDisplayControllerInterface(
     const display_controller_interface_protocol_t* interface) {
-  fbl::AutoLock lock(&flush_lock_);
-  dc_intf_ = ddk::DisplayControllerInterfaceProtocolClient(interface);
-  {
-    fbl::AutoLock lock(&lock_);
-    width_ = GetFbParamLocked(FB_WIDTH, 1);
-    height_ = GetFbParamLocked(FB_HEIGHT, 1);
+  std::vector<added_display_args_t> args;
+  for (auto& it : devices_) {
+    added_display_args_t display = {
+        .display_id = it.first,
+        .edid_present = false,
+        .panel =
+            {
+                .params =
+                    {
+                        .width = it.second.width,
+                        .height = it.second.height,
+                        .refresh_rate_e2 = it.second.refresh_rate_hz * 100,
+                    },
+            },
+        .pixel_format_list = kPixelFormats,
+        .pixel_format_count = sizeof(kPixelFormats) / sizeof(kPixelFormats[0]),
+        .cursor_info_list = nullptr,
+        .cursor_info_count = 0,
+    };
+    args.push_back(display);
   }
 
-  added_display_args_t args = {};
-  args.display_id = kDisplayId;
-  args.edid_present = false;
-  args.panel.params.height = height_;
-  args.panel.params.width = width_;
-  args.panel.params.refresh_rate_e2 = kRefreshRateHz * 100;
-  args.pixel_format_list = kPixelFormats;
-  args.pixel_format_count = sizeof(kPixelFormats) / sizeof(kPixelFormats[0]);
-
-  dc_intf_.OnDisplaysChanged(&args, 1, nullptr, 0, nullptr, 0, nullptr);
+  {
+    fbl::AutoLock lock(&flush_lock_);
+    dc_intf_ = ddk::DisplayControllerInterfaceProtocolClient(interface);
+    dc_intf_.OnDisplaysChanged(args.data(), args.size(), nullptr, 0, nullptr, 0, nullptr);
+  }
 }
 
 zx_status_t Display::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
@@ -335,80 +458,96 @@ uint32_t Display::DisplayControllerImplCheckConfiguration(const display_config_t
                                                           size_t display_count,
                                                           uint32_t** layer_cfg_results,
                                                           size_t* layer_cfg_result_count) {
-  if (display_count != 1) {
-    ZX_DEBUG_ASSERT(display_count == 0);
+  if (display_count == 0) {
     return CONFIG_DISPLAY_OK;
   }
-  ZX_DEBUG_ASSERT(display_configs[0]->display_id == kDisplayId);
-  bool success;
-  if (display_configs[0]->layer_count != 1) {
-    success = false;
-  } else {
-    fbl::AutoLock lock(&flush_lock_);
+  for (unsigned i = 0; i < display_count; i++) {
+    bool success;
+    if (display_configs[i]->layer_count != 1) {
+      success = false;
+    } else {
+      fbl::AutoLock lock(&flush_lock_);
 
-    primary_layer_t* layer = &display_configs[0]->layer_list[0]->cfg.primary;
-    frame_t frame = {
-        .x_pos = 0,
-        .y_pos = 0,
-        .width = width_,
-        .height = height_,
-    };
-    success = display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY &&
-              layer->transform_mode == FRAME_TRANSFORM_IDENTITY && layer->image.width == width_ &&
-              layer->image.height == height_ &&
-              memcmp(&layer->dest_frame, &frame, sizeof(frame_t)) == 0 &&
-              memcmp(&layer->src_frame, &frame, sizeof(frame_t)) == 0 &&
-              display_configs[0]->cc_flags == 0 && layer->alpha_mode == ALPHA_DISABLE;
-  }
-  if (!success) {
-    layer_cfg_results[0][0] = CLIENT_MERGE_BASE;
-    for (unsigned i = 1; i < display_configs[0]->layer_count; i++) {
-      layer_cfg_results[0][i] = CLIENT_MERGE_SRC;
+      ZX_DEBUG_ASSERT(devices_.find(display_configs[i]->display_id) != devices_.end());
+      const Device& device = devices_[display_configs[i]->display_id];
+
+      primary_layer_t* layer = &display_configs[i]->layer_list[0]->cfg.primary;
+      // Scaling is allowed if destination frame match display and
+      // source frame match image.
+      frame_t dest_frame = {
+          .x_pos = 0,
+          .y_pos = 0,
+          .width = device.width,
+          .height = device.height,
+      };
+      frame_t src_frame = {
+          .x_pos = 0,
+          .y_pos = 0,
+          .width = layer->image.width,
+          .height = layer->image.height,
+      };
+      success = display_configs[i]->layer_list[0]->type == LAYER_TYPE_PRIMARY &&
+                layer->transform_mode == FRAME_TRANSFORM_IDENTITY &&
+                memcmp(&layer->dest_frame, &dest_frame, sizeof(frame_t)) == 0 &&
+                memcmp(&layer->src_frame, &src_frame, sizeof(frame_t)) == 0 &&
+                display_configs[i]->cc_flags == 0 && layer->alpha_mode == ALPHA_DISABLE;
     }
-    layer_cfg_result_count[0] = display_configs[0]->layer_count;
+    if (!success) {
+      layer_cfg_results[i][0] = CLIENT_MERGE_BASE;
+      for (unsigned j = 1; j < display_configs[i]->layer_count; j++) {
+        layer_cfg_results[i][j] = CLIENT_MERGE_SRC;
+      }
+      layer_cfg_result_count[i] = display_configs[i]->layer_count;
+    }
   }
   return CONFIG_DISPLAY_OK;
 }
 
 void Display::DisplayControllerImplApplyConfiguration(const display_config_t** display_configs,
                                                       size_t display_count) {
-  uint64_t handle = 0;
-  if (display_count && display_configs[0]->layer_count) {
-    handle = display_configs[0]->layer_list[0]->cfg.primary.image.handle;
-  }
-
-  auto color_buffer = reinterpret_cast<ColorBuffer*>(handle);
-  if (color_buffer && !color_buffer->id) {
-    zx::vmo vmo;
-
-    zx_status_t status = color_buffer->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: failed to duplicate vmo: %d\n", kTag, status);
-    } else {
-      fbl::AutoLock lock(&lock_);
-
-      status = control_.GetColorBuffer(std::move(vmo), &color_buffer->id);
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: failed to get color buffer: %d\n", kTag, status);
+  for (auto it : devices_) {
+    uint64_t handle = 0;
+    for (unsigned i = 0; i < display_count; i++) {
+      if (display_configs[i]->display_id == it.first) {
+        if (display_configs[i]->layer_count) {
+          handle = display_configs[i]->layer_list[0]->cfg.primary.image.handle;
+        }
+        break;
       }
+    }
+    auto color_buffer = reinterpret_cast<ColorBuffer*>(handle);
+    if (color_buffer && !color_buffer->id) {
+      zx::vmo vmo;
 
-      // Color buffers are in vulkan-only mode by default as that avoids
-      // unnecessary copies on the host in some cases. The color buffer
-      // needs to be moved out of vulkan-only mode before being used for
-      // presentation.
-      if (color_buffer->id) {
-        uint32_t result = 0;
-        status = SetColorBufferVulkanModeLocked(color_buffer->id, 0, &result);
-        if (status != ZX_OK || result) {
-          zxlogf(ERROR, "%s: failed to set vulkan mode: %d %d\n", kTag, status, result);
+      zx_status_t status = color_buffer->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: failed to duplicate vmo: %d\n", kTag, status);
+      } else {
+        fbl::AutoLock lock(&lock_);
+
+        status = control_.GetColorBuffer(std::move(vmo), &color_buffer->id);
+        if (status != ZX_OK) {
+          zxlogf(ERROR, "%s: failed to get color buffer: %d\n", kTag, status);
+        }
+
+        // Color buffers are in vulkan-only mode by default as that avoids
+        // unnecessary copies on the host in some cases. The color buffer
+        // needs to be moved out of vulkan-only mode before being used for
+        // presentation.
+        if (color_buffer->id) {
+          uint32_t result = 0;
+          status = SetColorBufferVulkanModeLocked(color_buffer->id, 0, &result);
+          if (status != ZX_OK || result) {
+            zxlogf(ERROR, "%s: failed to set vulkan mode: %d %d\n", kTag, status, result);
+          }
         }
       }
     }
-  }
 
-  {
-    fbl::AutoLock lock(&flush_lock_);
-    current_fb_ = color_buffer;
+    {
+      fbl::AutoLock lock(&flush_lock_);
+      current_cb_[it.first] = color_buffer;
+    }
   }
 }
 
@@ -495,7 +634,7 @@ void Display::OnSignal(void* ctx, int32_t flags) {
 void Display::OnReadable() {
   TRACE_DURATION("gfx", "Display::OnReadable");
 
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock lock(&read_lock_);
   readable_cvar_.Signal();
 }
 
@@ -514,25 +653,30 @@ void Display::WriteLocked(uint32_t cmd_size) {
   ZX_DEBUG_ASSERT(buffer->rw_params.consumed_size == static_cast<int32_t>(cmd_size));
 }
 
-zx_status_t Display::ReadResultLocked(uint32_t* result) {
+zx_status_t Display::ReadResultLocked(uint32_t* result, uint32_t count) {
   TRACE_DURATION("gfx", "Display::ReadResult");
 
-  while (1) {
+  fbl::AutoLock lock(&read_lock_);
+
+  size_t length = sizeof(*result) * count;
+  size_t remaining = length;
+  while (remaining) {
     auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
     buffer->id = id_;
     buffer->cmd = PIPE_CMD_CODE_READ;
     buffer->status = PIPE_ERROR_INVAL;
     buffer->rw_params.ptrs[0] = io_buffer_.phys();
-    buffer->rw_params.sizes[0] = sizeof(*result);
+    buffer->rw_params.sizes[0] = static_cast<uint32_t>(remaining);
     buffer->rw_params.buffers_count = 1;
     buffer->rw_params.consumed_size = 0;
     pipe_.Exec(id_);
 
     // Positive consumed size always indicate a successful transfer.
     if (buffer->rw_params.consumed_size) {
-      ZX_DEBUG_ASSERT(buffer->rw_params.consumed_size == sizeof(*result));
-      *result = *static_cast<uint32_t*>(io_buffer_.virt());
-      return ZX_OK;
+      memcpy(reinterpret_cast<char*>(result) + (length - remaining), io_buffer_.virt(),
+             buffer->rw_params.consumed_size);
+      remaining -= buffer->rw_params.consumed_size;
+      continue;
     }
 
     // Early out if error is not because of back-pressure.
@@ -548,15 +692,17 @@ zx_status_t Display::ReadResultLocked(uint32_t* result) {
     ZX_DEBUG_ASSERT(!buffer->status);
 
     // Wait for pipe to become readable.
-    readable_cvar_.Wait(&lock_);
+    readable_cvar_.Wait(&read_lock_);
   }
+
+  return ZX_OK;
 }
 
 zx_status_t Display::ExecuteCommandLocked(uint32_t cmd_size, uint32_t* result) {
   TRACE_DURATION("gfx", "Display::ExecuteCommand", "cnd_size", cmd_size);
 
   WriteLocked(cmd_size);
-  return ReadResultLocked(result);
+  return ReadResultLocked(result, 1);
 }
 
 int32_t Display::GetFbParamLocked(uint32_t param, int32_t default_value) {
@@ -650,7 +796,7 @@ zx_status_t Display::UpdateColorBufferLocked(uint32_t id, zx_paddr_t paddr, uint
   ZX_DEBUG_ASSERT(buffer->rw_params.consumed_size ==
                   static_cast<int32_t>(kSize_rcUpdateColorBuffer + size));
 
-  return ReadResultLocked(result);
+  return ReadResultLocked(result, 1);
 }
 
 void Display::FbPostLocked(uint32_t id) {
@@ -664,50 +810,153 @@ void Display::FbPostLocked(uint32_t id) {
   WriteLocked(kSize_rcFbPost);
 }
 
-int Display::FlushHandler() {
+zx_status_t Display::CreateDisplayLocked(uint32_t* result) {
+  TRACE_DURATION("gfx", "Display::CreateDisplay");
+
+  auto cmd = static_cast<CreateDisplayCmd*>(io_buffer_.virt());
+  cmd->op = kOP_rcCreateDisplay;
+  cmd->size = kSize_rcCreateDisplay;
+  cmd->size_display_id = sizeof(uint32_t);
+
+  WriteLocked(kSize_rcCreateDisplay);
+  return ReadResultLocked(result, 2);
+}
+
+zx_status_t Display::DestroyDisplayLocked(uint32_t display_id, uint32_t* result) {
+  TRACE_DURATION("gfx", "Display::DestroyDisplay", "display_id", display_id);
+
+  auto cmd = static_cast<DestroyDisplayCmd*>(io_buffer_.virt());
+  cmd->op = kOP_rcDestroyDisplay;
+  cmd->size = kSize_rcDestroyDisplay;
+  cmd->display_id = display_id;
+
+  return ExecuteCommandLocked(kSize_rcDestroyDisplay, result);
+}
+
+zx_status_t Display::SetDisplayColorBufferLocked(uint32_t display_id, uint32_t id,
+                                                 uint32_t* result) {
+  TRACE_DURATION("gfx", "Display::SetDisplayColorBuffer", "display_id", display_id, "id", id);
+
+  auto cmd = static_cast<SetDisplayColorBufferCmd*>(io_buffer_.virt());
+  cmd->op = kOP_rcSetDisplayColorBuffer;
+  cmd->size = kSize_rcSetDisplayColorBuffer;
+  cmd->display_id = display_id;
+  cmd->id = id;
+
+  return ExecuteCommandLocked(kSize_rcSetDisplayColorBuffer, result);
+}
+
+zx_status_t Display::SetDisplayPoseLocked(uint32_t display_id, int32_t x, int32_t y, uint32_t w,
+                                          uint32_t h, uint32_t* result) {
+  TRACE_DURATION("gfx", "Display::SetDisplayPose", "display_id", display_id);
+
+  auto cmd = static_cast<SetDisplayPoseCmd*>(io_buffer_.virt());
+  cmd->op = kOP_rcSetDisplayPose;
+  cmd->size = kSize_rcSetDisplayPose;
+  cmd->display_id = display_id;
+  cmd->x = x;
+  cmd->y = y;
+  cmd->w = w;
+  cmd->h = h;
+
+  return ExecuteCommandLocked(kSize_rcSetDisplayPose, result);
+}
+
+int Display::FlushHandler(uint64_t display_id) {
+  const Device& device = devices_[display_id];
+
+  uint32_t host_display_id = 0;
+  {
+    fbl::AutoLock lock(&lock_);
+
+    // Create secondary displays.
+    if (display_id != kPrimaryDisplayId) {
+      uint32_t result[2] = {0, 1};
+      zx_status_t status = CreateDisplayLocked(result);
+      if (status != ZX_OK || result[1]) {
+        zxlogf(ERROR, "%s: failed to create display: %d %d\n", kTag, status, result[1]);
+        return 1;
+      }
+      host_display_id = result[0];
+    }
+    uint32_t width = static_cast<uint32_t>(static_cast<float>(device.width) * device.scale);
+    uint32_t height = static_cast<uint32_t>(static_cast<float>(device.height) * device.scale);
+    uint32_t result = 1;
+    zx_status_t status =
+        SetDisplayPoseLocked(host_display_id, device.x, device.y, width, height, &result);
+    if (status != ZX_OK || result) {
+      zxlogf(ERROR, "%s: failed to set display pose: %d %d\n", kTag, status, result);
+      return 1;
+    }
+  }
+
   zx_time_t next_deadline = zx_clock_get_monotonic();
-  zx_time_t period = ZX_SEC(1) / kRefreshRateHz;
+  zx_time_t period = ZX_SEC(1) / device.refresh_rate_hz;
 
   while (1) {
     zx_nanosleep(next_deadline);
 
-    ColorBuffer* displayed_fb;
+    ColorBuffer* displayed_cb;
     {
       fbl::AutoLock lock(&flush_lock_);
 
       if (shutdown_)
         break;
 
-      displayed_fb = current_fb_;
+      displayed_cb = current_cb_[display_id];
     }
 
-    if (displayed_fb) {
+    if (displayed_cb) {
       fbl::AutoLock lock(&lock_);
 
-      if (displayed_fb->paddr) {
+      if (displayed_cb->paddr) {
         uint32_t result;
         zx_status_t status =
-            UpdateColorBufferLocked(displayed_fb->id, displayed_fb->paddr, displayed_fb->width,
-                                    displayed_fb->height, displayed_fb->size, &result);
+            UpdateColorBufferLocked(displayed_cb->id, displayed_cb->paddr, displayed_cb->width,
+                                    displayed_cb->height, displayed_cb->size, &result);
         if (status != ZX_OK || result) {
           zxlogf(ERROR, "%s: color buffer update failed\n", kTag);
           continue;
         }
       }
 
-      FbPostLocked(displayed_fb->id);
+      // Set color buffer for secondary displays.
+      if (host_display_id) {
+        uint32_t result;
+        zx_status_t status =
+            SetDisplayColorBufferLocked(host_display_id, displayed_cb->id, &result);
+        if (status != ZX_OK || result) {
+          zxlogf(ERROR, "%s: failed to set display color buffer\n", kTag);
+          continue;
+        }
+      } else {
+        // Primary display issues FB post. This will cause the frame buffer to
+        // be updated to reflect the state of all displays. Note: secondary
+        // displays can be running at different refresh rates than the primary
+        // display even if frame buffer updates are limited to the rate of the
+        // primary display.
+        FbPostLocked(displayed_cb->id);
+      }
     }
 
     {
       fbl::AutoLock lock(&flush_lock_);
 
       if (dc_intf_.is_valid()) {
-        uint64_t handles[] = {reinterpret_cast<uint64_t>(displayed_fb)};
-        dc_intf_.OnDisplayVsync(kDisplayId, next_deadline, handles, displayed_fb ? 1 : 0);
+        uint64_t handles[] = {reinterpret_cast<uint64_t>(displayed_cb)};
+        dc_intf_.OnDisplayVsync(display_id, next_deadline, handles, displayed_cb ? 1 : 0);
       }
     }
 
     next_deadline = zx_time_add_duration(next_deadline, period);
+  }
+
+  if (host_display_id) {
+    fbl::AutoLock lock(&lock_);
+    uint32_t result;
+    zx_status_t status = DestroyDisplayLocked(host_display_id, &result);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    ZX_DEBUG_ASSERT(!result);
   }
 
   return 0;
