@@ -34,7 +34,7 @@ running `fx build` by running the following scripts:
   -b machina-4.18 \
   ${ARCH}
 ./src/virtualization/packages/linux_guest/mksysroot.sh \
-  -p  prebuilt/virtualization/packages/linux_guest/images/${ARCH}/disk.img \
+  -o  prebuilt/virtualization/packages/linux_guest/images/${ARCH}/disk.img \
   -d /tmp/toybox \
   -s /tmp/dash \
   -u \
