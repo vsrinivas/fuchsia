@@ -4,12 +4,12 @@
 library fuchsia.stash;
 using fuchsia.mem;
 
-// Strings over 12 kb will be tossed. This number is chosen arbitrarily, if you
-// think it should be higher just ask.
+/// Strings over 12 kb will be tossed. This number is chosen arbitrarily, if you
+/// think it should be higher just ask.
 const uint64 MAX_STRING_SIZE = 12000;
 const uint64 MAX_KEY_SIZE = 256;
 
-// ValueType encodes a type for a field in the store
+/// ValueType encodes a type for a field in the store
 enum ValueType : uint8 {
     INT_VAL = 1;
     FLOAT_VAL = 2;
@@ -18,20 +18,20 @@ enum ValueType : uint8 {
     BYTES_VAL = 5;
 };
 
-// ListItem is returned when a series of keys are being listed.
+/// ListItem is returned when a series of keys are being listed.
 struct ListItem {
     string:MAX_KEY_SIZE key;
     ValueType type;
 };
 
-// KeyValue is used when a series of keys are being read, or the default state
-// for the store is being set.
+/// KeyValue is used when a series of keys are being read, or the default state
+/// for the store is being set.
 struct KeyValue {
     string:MAX_KEY_SIZE key;
     Value val;
 };
 
-// Value holds a value for a given key.
+/// Value holds a value for a given key.
 union Value {
     int64 intval;
     float64 floatval;
@@ -40,61 +40,61 @@ union Value {
     fuchsia.mem.Buffer bytesval;
 };
 
-// The iterator returned when a series of keys are being listed. Returns an
-// empty vector when there are no more remaining ListItems.
+/// The iterator returned when a series of keys are being listed. Returns an
+/// empty vector when there are no more remaining ListItems.
 protocol ListIterator {
     GetNext() -> (vector<ListItem> keys);
 };
 
-// The iterator returned when a series of keys are being read. Returns an
-// empty vector when there are no more remaining KeyValues.
+/// The iterator returned when a series of keys are being read. Returns an
+/// empty vector when there are no more remaining KeyValues.
 protocol GetIterator {
     GetNext() -> (vector<KeyValue> kvs);
 };
 
-// The interface returned when a new accessor is created.
+/// The interface returned when a new accessor is created.
 protocol StoreAccessor {
-    // Gets a single value from the store.
+    /// Gets a single value from the store.
     GetValue(string:MAX_KEY_SIZE key) -> (Value? val);
 
-    // Sets a single value in the store. Overwrites existing values. Commit()
-    // must be called for this change to take effect.
+    /// Sets a single value in the store. Overwrites existing values. Commit()
+    /// must be called for this change to take effect.
     SetValue(string:MAX_KEY_SIZE key, Value val);
 
-    // Deletes a single value in the store. Does nothing if the value doesn't
-    // exist. Commit() must be called for this change to take effect.
+    /// Deletes a single value in the store. Does nothing if the value doesn't
+    /// exist. Commit() must be called for this change to take effect.
     DeleteValue(string:MAX_KEY_SIZE key);
 
-    // Lists all keys under a given prefix.
+    /// Lists all keys under a given prefix.
     ListPrefix(string:MAX_KEY_SIZE prefix, request<ListIterator> it);
 
-    // Reads the values of all keys under a given prefix.
+    /// Reads the values of all keys under a given prefix.
     GetPrefix(string:MAX_KEY_SIZE prefix, request<GetIterator> it);
 
-    // Deletes the all keys under a given prefix.
+    /// Deletes the all keys under a given prefix.
     DeletePrefix(string:MAX_KEY_SIZE prefix);
 
-    // Atomically causes all of the state modifications that happened in this
-    // accessor to take place.
+    /// Atomically causes all of the state modifications that happened in this
+    /// accessor to take place.
     Commit();
 };
 
-// Interface used to interact with a given client's key/value store
+/// Interface used to interact with a given client's key/value store
 [Discoverable, FragileBase]
 protocol Store {
-    // Identify should be called at the beginning of a connection to identify
-    // which client service's store is to be accessed. In the future this will
-    // be deprecated in favor of component monikers, and each client will only
-    // be able to access its own store.
+    /// Identify should be called at the beginning of a connection to identify
+    /// which client service's store is to be accessed. In the future this will
+    /// be deprecated in favor of component monikers, and each client will only
+    /// be able to access its own store.
     Identify(string:MAX_KEY_SIZE name);
 
-    // Creates a accessor for interacting with the store. The resulting
-    // interface can be used to inspect and modify the state of the store.
+    /// Creates a accessor for interacting with the store. The resulting
+    /// interface can be used to inspect and modify the state of the store.
     CreateAccessor(bool read_only, request<StoreAccessor> accessor_request);
 };
 
-// Interface used to interact with a given client's key/value store. The bytes
-// type is disabled in this store.
+/// Interface used to interact with a given client's key/value store. The bytes
+/// type is disabled in this store.
 [Discoverable]
 protocol SecureStore {
     compose Store;
