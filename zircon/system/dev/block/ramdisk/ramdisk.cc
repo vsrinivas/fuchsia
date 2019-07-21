@@ -19,6 +19,7 @@
 #include <zircon/types.h>
 
 #include "ramdisk.h"
+#include "zircon/errors.h"
 
 namespace ramdisk {
 namespace {
@@ -265,6 +266,9 @@ void Ramdisk::ProcessRequests() {
             }
 
             if (dead) {
+                if (txn) {
+                    txn->Complete(ZX_ERR_INTERNAL);
+                }
                 return;
             }
 
