@@ -197,13 +197,12 @@ bool MultipleLayerWithCallbackTest() {
         .ctx = &queue,
     };
 
-    {
-        usb::BorrowedRequestQueue<char> queue2;
-        for (auto request = queue.pop(); request; request = queue.pop()) {
-            FirstLayerReq unowned(request->take(), complete_cb, kBaseReqSize);
-            queue2.push(std::move(unowned));
-        }
+    usb::BorrowedRequestQueue<char> queue2;
+    for (auto request = queue.pop(); request; request = queue.pop()) {
+        FirstLayerReq unowned(request->take(), complete_cb, kBaseReqSize);
+        queue2.push(std::move(unowned));
     }
+    queue2.CompleteAll(ZX_OK, 0);
 
     size_t count = 0;
     for (auto request = queue.pop(); request; request = queue.pop()) {

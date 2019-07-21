@@ -116,8 +116,6 @@ struct OperationTraits {
 struct CallbackTraits {
   using CallbackType = void(void*, zx_status_t, block_op_t*);
 
-  static std::tuple<zx_status_t> AutoCompleteArgs() { return std::make_tuple(ZX_ERR_INTERNAL); }
-
   static void Callback(CallbackType* callback, void* cookie, block_op_t* op, zx_status_t status) {
     callback(cookie, status, op);
   }

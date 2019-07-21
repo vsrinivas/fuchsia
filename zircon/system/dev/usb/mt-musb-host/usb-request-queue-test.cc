@@ -68,6 +68,7 @@ private:
         fbl::AutoLock _(&lock_);
         dispatch_ct_++;
         cond_.Signal();
+        req.Complete(ZX_OK, 0);
         return m_dispatch_.Call();
     }
 

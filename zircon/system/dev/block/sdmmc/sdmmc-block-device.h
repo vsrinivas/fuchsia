@@ -39,7 +39,9 @@ public:
         : SdmmcBlockDeviceType(parent), sdmmc_(sdmmc) {
         block_info_.max_transfer_size = static_cast<uint32_t>(sdmmc_.host_info().max_transfer_size);
     }
-    virtual ~SdmmcBlockDevice() = default;
+    virtual ~SdmmcBlockDevice() {
+        txn_list_.CompleteAll(ZX_ERR_INTERNAL);
+    }
 
     static zx_status_t Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
                               fbl::RefPtr<SdmmcBlockDevice>* out_dev);

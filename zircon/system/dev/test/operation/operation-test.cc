@@ -39,8 +39,6 @@ using TestOpCallback = void (*)(void*, zx_status_t, TestOp*);
 struct CallbackTraits {
   using CallbackType = TestOpCallback;
 
-  static std::tuple<zx_status_t> AutoCompleteArgs() { return std::make_tuple(ZX_ERR_INTERNAL); }
-
   static void Callback(const CallbackType* callback, void* cookie, TestOp* op, zx_status_t status) {
     (*callback)(cookie, status, op);
   }
@@ -106,25 +104,6 @@ TEST(OperationTest, Callback) {
 
   BorrowedOperation operation2(operation->take(), &cb, &called, kBaseOpSize);
   operation2.Complete(ZX_OK);
-  EXPECT_TRUE(called);
-}
-
-TEST(OperationTest, AutoCallback) {
-  constexpr size_t kBaseOpSize = sizeof(TestOp);
-  constexpr size_t kFirstLayerOpSize = Operation::OperationSize(kBaseOpSize);
-
-  bool called = false;
-  auto callback = [](void* ctx, zx_status_t st, TestOp* operation) {
-    *static_cast<bool*>(ctx) = true;
-    // We take ownership.
-    Operation unused(operation, kFirstLayerOpSize);
-  };
-  TestOpCallback cb = callback;
-
-  std::optional<Operation> operation = Operation::Alloc(kFirstLayerOpSize);
-  ASSERT_TRUE(operation.has_value());
-
-  { BorrowedOperation operation2(operation->take(), &cb, &called, kBaseOpSize); }
   EXPECT_TRUE(called);
 }
 

@@ -120,8 +120,6 @@ struct OperationTraits {
 struct CallbackTraits {
   using CallbackType = void(void*, zx_status_t, nand_operation_t*);
 
-  static std::tuple<zx_status_t> AutoCompleteArgs() { return std::make_tuple(ZX_ERR_INTERNAL); }
-
   static void Callback(CallbackType* callback, void* cookie, nand_operation_t* op,
                        zx_status_t status) {
     callback(cookie, status, op);

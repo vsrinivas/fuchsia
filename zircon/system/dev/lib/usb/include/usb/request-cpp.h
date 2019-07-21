@@ -285,10 +285,6 @@ class Request : public operation::Operation<Request<Storage>, OperationTraits, S
 struct CallbackTraits {
   using CallbackType = void(void*, usb_request_t*);
 
-  static std::tuple<zx_status_t, uint32_t> AutoCompleteArgs() {
-    return std::make_tuple(ZX_ERR_INTERNAL, 0);
-  }
-
   static void Callback(CallbackType* callback, void* cookie, usb_request_t* op, zx_status_t status,
                        zx_off_t actual, size_t silent_completions_count = 0) {
     usb_request_complete_t complete_cb = {

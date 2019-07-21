@@ -256,12 +256,7 @@ class BorrowedOperation : public OperationBase<D, OperationTraits, CallbackTrait
   }
 
   ~BorrowedOperation() {
-    if (!BaseClass::allow_destruct_) {
-      return;
-    }
-    // Auto-complete if it wasn't.
-    auto complete = [this](auto... args) { this->Complete(std::forward<decltype(args)>(args)...); };
-    std::apply(complete, CallbackTraits::AutoCompleteArgs());
+    ZX_ASSERT(!BaseClass::allow_destruct_ || BaseClass::operation_ == nullptr);
   }
 
   // Must be called by the processor when the operation has completed or failed.
@@ -483,11 +478,24 @@ class BaseQueue {
   fbl::DoublyLinkedList<NodeType*> queue_ __TA_GUARDED(lock_);
 };
 
-template <typename D, typename OperationTraits, typename CallbackTraits, typename Storage = void>
-using BorrowedOperationQueue = BaseQueue<D, OperationTraits, CallbackTraits, Storage>;
-
 template <typename D, typename OperationTraits, typename Storage = void>
 using OperationQueue = BaseQueue<D, OperationTraits, void, Storage>;
+
+template <typename D, typename OperationTraits, typename CallbackTraits, typename Storage = void>
+class BorrowedOperationQueue : public BaseQueue<D, OperationTraits, CallbackTraits, Storage> {
+ public:
+  using BaseClass = BaseQueue<D, OperationTraits, CallbackTraits, Storage>;
+
+  // Use constructor.
+  using BaseClass::BaseClass;
+
+  template <typename... Args>
+  void CompleteAll(Args... args) {
+    for (auto op = BaseClass::pop(); op; op = BaseClass::pop()) {
+      op->Complete(std::forward<Args>(args)...);
+    }
+  }
+};
 
 // A driver may use operation::OperationPool for recycling their own operations.
 template <typename OpType, typename OperationTraits, typename Storage = void>

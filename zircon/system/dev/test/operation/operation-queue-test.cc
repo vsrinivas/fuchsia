@@ -37,8 +37,6 @@ using TestOpCallback = void (*)(void*, zx_status_t, TestOp*);
 struct CallbackTraits {
   using CallbackType = TestOpCallback;
 
-  static std::tuple<zx_status_t> AutoCompleteArgs() { return std::make_tuple(ZX_ERR_INTERNAL); }
-
   static void Callback(const CallbackType* callback, void* cookie, TestOp* op, zx_status_t status) {
     (*callback)(cookie, status, op);
   }
@@ -241,13 +239,12 @@ TEST(OperationQueueTest, MultipleLayerWithCallback) {
   };
   TestOpCallback cb = callback;
 
-  {
-    operation::BorrowedOperationQueue<FirstLayerOp, TestOpTraits, CallbackTraits, char> queue2;
-    for (auto operation = queue.pop(); operation; operation = queue.pop()) {
-      FirstLayerOp unowned(operation->take(), &cb, &queue, kBaseOpSize);
-      queue2.push(std::move(unowned));
-    }
+  operation::BorrowedOperationQueue<FirstLayerOp, TestOpTraits, CallbackTraits, char> queue2;
+  for (auto operation = queue.pop(); operation; operation = queue.pop()) {
+    FirstLayerOp unowned(operation->take(), &cb, &queue, kBaseOpSize);
+    queue2.push(std::move(unowned));
   }
+  queue2.CompleteAll(ZX_OK);
 
   size_t count = 0;
   for (auto operation = queue.pop(); operation; operation = queue.pop()) {

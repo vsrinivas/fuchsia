@@ -79,6 +79,7 @@ public:
 
             const block_read_write_t& brw = txn->operation()->rw;
             mock_do_txn_.Call(brw.command, brw.length, brw.offset_dev);
+            txn->Complete(ZX_OK);
 
             block_ops_done_++;
             block_ops_event_.Broadcast();
@@ -96,6 +97,9 @@ private:
                        trace_async_id_t async_id) override {
         const block_read_write_t& brw = txn->operation()->rw;
         mock_block_complete_.Call(brw.command, brw.length, brw.offset_dev, status);
+        if (txn->node()->complete_cb()) {
+          txn->Complete(status);
+        }
     }
 
     MockSdmmcDevice* mock_sdmmc_;

@@ -37,8 +37,6 @@ using TestOpCallback = void (*)(void*, zx_status_t, TestOp*);
 struct CallbackTraits {
   using CallbackType = TestOpCallback;
 
-  static std::tuple<zx_status_t> AutoCompleteArgs() { return std::make_tuple(ZX_ERR_INTERNAL); }
-
   static void Callback(const CallbackType* callback, void* cookie, TestOp* op, zx_status_t status) {
     (*callback)(cookie, status, op);
   }
