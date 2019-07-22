@@ -38,12 +38,11 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 
 #include <threads.h>
-
-#include <wlan/protocol/info.h>
 #include <zircon/listnode.h>
 
+#include <wlan/protocol/info.h>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/fmac.h"  // for enum umac_scan_type
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/file.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/notif-wait.h"
@@ -480,13 +479,11 @@ enum iwl_scan_status {
 };
 
 enum iwl_mvm_scan_type {
-#if 0   // NEEDS_PORTING: duplicate with 'enum umac_scan_type'
-    IWL_SCAN_TYPE_NOT_SET,
-    IWL_SCAN_TYPE_UNASSOC,
-    IWL_SCAN_TYPE_WILD,
-    IWL_SCAN_TYPE_MILD,
-    IWL_SCAN_TYPE_FRAGMENTED,
-#endif  // NEEDS_PORTING
+  IWL_SCAN_TYPE_NOT_SET,
+  IWL_SCAN_TYPE_UNASSOC,
+  IWL_SCAN_TYPE_WILD,
+  IWL_SCAN_TYPE_MILD,
+  IWL_SCAN_TYPE_FRAGMENTED,
   IWL_SCAN_TYPE_FAST_BALANCE = IWL_SCAN_TYPE_FRAGMENTED + 1,
 };
 
