@@ -4,6 +4,7 @@
 
 import("$zx/public/gn/config/standard.gni")
 import("$zx/public/gn/toolchain/clang.gni")
+import("$zx/public/gn/toolchain/goma.gni")
 import("levels.gni")
 
 declare_args() {
@@ -192,23 +193,42 @@ config("color_diagnostics") {
 }
 
 config("relative_paths") {
-  # Make builds independent of absolute file path.  The file names embedded
-  # in debugging information will be expressed as relative to the build
-  # directory, e.g. "../.." for an "out/subdir" under //.  This is
-  # consistent with the file names in __FILE__ expansions (e.g. in
-  # assertion messages), which the compiler doesn't provide a way to remap.
-  # That way source file names in logging and symbolization can all be
-  # treated the same way.  This won't go well if $root_build_dir is not a
-  # subdirectory of //, but there isn't a better option to keep all source
-  # file name references uniformly relative to a single root.
-  absolute_path = rebase_path("//.")
-  relative_path = rebase_path("//.", root_build_dir)
+  # Make builds independent of absolute file path.  The file names
+  # embedded in debugging information will be expressed as relative to
+  # the build directory, e.g. "../.." for an "out/subdir" under //.
+  #
+  # See comment in the "relative_paths" config in //build/config/BUILD.gn
+  # for details.
+  #
+  # TODO(BLD-353): After build unification, the definitions in
+  # //build/config/BUILD.gn should be sufficient for Zircon.
 
-  # This makes sure that the DW_AT_comp_dir string (the current
-  # directory while running the compiler, which is the basis for all
-  # relative source file names in the DWARF info) is represented as
-  # relative to //.
-  compiler_flags = [ "-fdebug-prefix-map=$absolute_path=$relative_path" ]
+  if (use_goma) {
+    # TODO(TC-585): `-fdebug-prefix-map` is also used by Goma to canonicalize
+    # build commands, allowing it to reuse compilation results for users running
+    # out of different working directories. However, it only supports a single
+    # "-fdebug-prefix-map" prefix. Attempting to provide more than one causes
+    # canonicalization to fail, meaning that builds running out of different
+    # directories won't share cache results. For now, we just provide a single
+    # debug-prefix-map, even though more would be ideal.
+
+    # Map "/some/dir/fuchsia" to "../..".
+    compiler_flags = [ "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
+                       rebase_path("$zx/..", root_build_dir) ]
+  } else {
+    compiler_flags = [
+      # Map "/some/dir/fuchsia/out/my-build.my-arch" to ".".
+      "-fdebug-prefix-map=" + rebase_path(root_build_dir) + "=.",
+
+      # Map "/some/dir/fuchsia/out" to "..".
+      "-fdebug-prefix-map=" + rebase_path("$root_build_dir/..") + "=..",
+
+      # Map "/some/dir/fuchsia" to "../..".
+      "-fdebug-prefix-map=" + rebase_path("$zx/..") + "=" +
+          rebase_path("$zx/..", root_build_dir),
+    ]
+  }
+
   if (!is_gcc) {
     # This makes sure that include directories in the toolchain are
     # represented as relative to the build directory (because that's how we
