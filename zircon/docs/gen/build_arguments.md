@@ -49,7 +49,7 @@ Clang crash reports directory path. Use empty path to disable altogether.
 
 **Current value (from the default):** `"/b/s/w/ir/k/out/build-zircon/clang-crashreports"`
 
-From //public/gn/config/BUILD.gn:11
+From //public/gn/config/BUILD.gn:12
 
 ### current_cpu
 
@@ -247,7 +247,7 @@ The empty list (or empty string) means don't use `--sysroot` at all.
 }]
 ```
 
-From //public/gn/config/BUILD.gn:17
+From //public/gn/config/BUILD.gn:18
 
 ### target_cpu
 

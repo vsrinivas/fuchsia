@@ -360,7 +360,7 @@ Clang crash reports directory path. Use empty path to disable altogether.
 
 **Current value (from the default):** `"//root_build_dir/clang-crashreports"`
 
-From //build/config/BUILD.gn:9
+From //build/config/BUILD.gn:10
 
 ### crashpad_dependencies
 
@@ -644,7 +644,7 @@ remove this option when the issues are addressed.
 
 **Current value (from the default):** `true`
 
-From //build/config/BUILD.gn:19
+From //build/config/BUILD.gn:20
 
 ### enable_gfx_subsystem
 
