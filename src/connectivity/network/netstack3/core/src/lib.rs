@@ -52,6 +52,7 @@ pub use crate::transport::TransportLayerEventDispatcher;
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnetEither, Ipv4Addr, Ipv6Addr, SubnetEither};
 use packet::{Buf, BufferMut, EmptyBuf};
+use rand::{CryptoRng, RngCore};
 use std::time;
 
 use crate::device::{DeviceLayerState, DeviceLayerTimerId};
@@ -338,6 +339,28 @@ pub trait EventDispatcher:
     /// Returns true if the timeout was cancelled, false if there was no timeout
     /// for the given ID.
     fn cancel_timeout(&mut self, id: TimerId) -> Option<Self::Instant>;
+
+    // TODO(joshlf): If the CSPRNG requirement becomes a performance problem,
+    // introduce a second, non-cryptographically secure, RNG.
+
+    /// The random number generator (RNG) provided by this `EventDispatcher`.
+    ///
+    /// Code in the core is required to only obtain random values through this
+    /// RNG. This allows a deterministic RNG to be provided when useful (for
+    /// example, in tests).
+    ///
+    /// The provided RNG must be cryptographically secure in order to ensure
+    /// that random values produced within the network stack are not predictable
+    /// by outside observers. This helps to prevent certain kinds of
+    /// fingerprinting and denial of service attacks.
+    type Rng: RngCore + CryptoRng;
+
+    /// Get the random number generator (RNG).
+    ///
+    /// Code in the core is required to only obtain random values through this
+    /// RNG. This allows a deterministic RNG to be provided when useful (for
+    /// example, in tests).
+    fn rng(&mut self) -> &mut Self::Rng;
 }
 
 /// Set the IP address and subnet for a device.

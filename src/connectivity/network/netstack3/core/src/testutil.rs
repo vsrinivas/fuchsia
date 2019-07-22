@@ -16,7 +16,7 @@ use log::debug;
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4Addr, Ipv6Addr, Subnet, SubnetEither};
 use packet::{Buf, BufferMut, ParsablePacket, ParseBuffer, Serializer};
-use rand::SeedableRng;
+use rand::{self, CryptoRng, RngCore, SeedableRng};
 use rand_xorshift::XorShiftRng;
 
 use crate::device::ethernet::EtherType;
@@ -65,6 +65,33 @@ pub(crate) fn black_box<T>(dummy: T) -> T {
     #[cfg(not(feature = "benchmark"))]
     return dummy;
 }
+
+/// A wrapper which implements `RngCore` and `CryptoRng` for any `RngCore`.
+///
+/// This is used to satisfy [`EventDispatcher`]'s requirement that the
+/// associated `Rng` type implements `CryptoRng`.
+///
+/// # Security
+///
+/// This is obviously insecure. Don't use it except in testing!
+pub(crate) struct FakeCryptoRng<R>(R);
+
+impl<R: RngCore> RngCore for FakeCryptoRng<R> {
+    fn next_u32(&mut self) -> u32 {
+        self.0.next_u32()
+    }
+    fn next_u64(&mut self) -> u64 {
+        self.0.next_u64()
+    }
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        self.0.fill_bytes(dest)
+    }
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+        self.0.try_fill_bytes(dest)
+    }
+}
+
+impl<R: RngCore> CryptoRng for FakeCryptoRng<R> {}
 
 /// Create a new deterministic RNG from a seed.
 pub(crate) fn new_rng(mut seed: u64) -> XorShiftRng {
@@ -636,12 +663,24 @@ type PendingTimer = InstantAndData<TimerId>;
 /// A `DummyEventDispatcher` implements the `EventDispatcher` interface for
 /// testing purposes. It provides facilities to inspect the history of what
 /// events have been emitted to the system.
-#[derive(Default)]
 pub(crate) struct DummyEventDispatcher {
     frames_sent: Vec<(DeviceId, Vec<u8>)>,
     timer_events: BinaryHeap<PendingTimer>,
     current_time: DummyInstant,
+    rng: FakeCryptoRng<XorShiftRng>,
     icmp_replies: HashMap<u64, Vec<(u16, Vec<u8>)>>,
+}
+
+impl Default for DummyEventDispatcher {
+    fn default() -> DummyEventDispatcher {
+        DummyEventDispatcher {
+            frames_sent: Default::default(),
+            timer_events: Default::default(),
+            current_time: Default::default(),
+            rng: FakeCryptoRng(new_rng(0)),
+            icmp_replies: Default::default(),
+        }
+    }
 }
 
 impl DummyEventDispatcher {
@@ -746,6 +785,12 @@ impl EventDispatcher for DummyEventDispatcher {
             .collect::<Vec<_>>()
             .into();
         r
+    }
+
+    type Rng = FakeCryptoRng<XorShiftRng>;
+
+    fn rng(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {
+        &mut self.rng
     }
 }
 

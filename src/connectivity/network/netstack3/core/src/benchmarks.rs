@@ -9,12 +9,15 @@
 
 use packet::{Buf, BufferMut, InnerPacketBuilder, Serializer};
 use std::time::{Duration, Instant};
+use rand_xorshift::XorShiftRng;
 
 use crate::device::ethernet::EtherType;
 use crate::device::{receive_frame, DeviceId, DeviceLayerEventDispatcher};
 use crate::ip::icmp::IcmpEventDispatcher;
 use crate::ip::IpProto;
-use crate::testutil::{black_box, Bencher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4};
+use crate::testutil::{
+    black_box, Bencher, DummyEventDispatcherBuilder, FakeCryptoRng, DUMMY_CONFIG_V4,
+};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
 use crate::wire::ethernet::{
@@ -74,6 +77,12 @@ impl EventDispatcher for BenchmarkEventDispatcher {
 
     fn cancel_timeout(&mut self, id: TimerId) -> Option<Self::Instant> {
         None
+    }
+
+    type Rng = FakeCryptoRng<XorShiftRng>;
+
+    fn rng(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {
+        unimplemented!()
     }
 }
 

@@ -113,6 +113,7 @@ use log::{debug, error, info, trace};
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, AddrSubnetEither, Subnet, SubnetEither};
 use packet::{Buf, BufferMut, Serializer};
+use rand::{rngs::OsRng, Rng};
 use std::convert::TryInto;
 use util::{
     ContextCoreCompatible, ContextFidlCompatible, ConversionContext, CoreCompatible, FidlCompatible,
@@ -268,6 +269,10 @@ impl EventLoop {
                 EventLoopInner {
                     devices: Devices::default(),
                     timers: timers::TimerDispatcher::new(event_send.clone()),
+                    // TODO(joshlf): Is unwrapping safe here? Alternatively,
+                    // wait until we upgrade to rand 0.7, where OsRng is an
+                    // empty struct.
+                    rng: OsRng::new().unwrap(),
                     event_send: event_send.clone(),
                     #[cfg(test)]
                     test_events: None,
@@ -630,6 +635,7 @@ struct TimerInfo {
 struct EventLoopInner {
     devices: Devices,
     timers: timers::TimerDispatcher<TimerId, Event>,
+    rng: OsRng,
     event_send: mpsc::UnboundedSender<Event>,
     #[cfg(test)]
     test_events: Option<mpsc::UnboundedSender<TestEvent>>,
@@ -701,6 +707,12 @@ impl EventDispatcher for EventLoopInner {
 
     fn cancel_timeout(&mut self, id: TimerId) -> Option<ZxTime> {
         self.timers.cancel_timer(&id)
+    }
+
+    type Rng = OsRng;
+
+    fn rng(&mut self) -> &mut OsRng {
+        &mut self.rng
     }
 }
 
