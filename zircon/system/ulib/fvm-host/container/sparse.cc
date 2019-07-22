@@ -633,9 +633,19 @@ zx_status_t SparseContainer::CompleteWrite() {
         return status;
     }
 
-    ssize_t result = write(fd_.get(), compression_.GetData(), compression_.GetLength());
-    if (result < 0 || static_cast<size_t>(result) != compression_.GetLength()) {
-        return ZX_ERR_IO;
+    size_t remaining_length = compression_.GetLength();
+
+    while (remaining_length > 0) {
+        uintptr_t data_ptr = reinterpret_cast<uintptr_t>(compression_.GetData())
+                             + (compression_.GetLength() - remaining_length);
+        ssize_t result = write(fd_.get(), reinterpret_cast<void*>(data_ptr), remaining_length);
+
+        if (result <= 0 || static_cast<size_t>(result) > remaining_length) {
+            fprintf(stderr, "Error occurred during sparse writeback: %s\n", strerror(errno));
+            return ZX_ERR_IO;
+        }
+
+        remaining_length -= result;
     }
 
     return ZX_OK;
