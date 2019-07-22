@@ -24,7 +24,7 @@
 //     on responses from the driver.
 //  2. Allow multiple asynchronous executions and use some form of message passing
 //     and locking to handle DeviceProxy access and sharing access to the Callbacks
-//     stream. Potentially more resource intensive with 'unneccessary' locking etc,
+//     stream. Potentially more resource intensive with unnecessary locking etc,
 //     but allows for the potential to have actual parallel execution and is much
 //     simpler to write the logic.
 // The chosen option is (2) and the access to DeviceProxy is handled with an Arc<Mutex<State>>,
@@ -255,7 +255,7 @@ impl Vsock {
 
     /// Evaluates messages on a `ConnectorRequestStream` until completion or error
     ///
-    /// Takes ownership of a RequestStream that is most likely created from a ServicesServer
+    /// Takes ownership of a `RequestStream` that is most likely created from a `ServicesServer`
     /// and processes any incoming requests on it.
     pub async fn run_client_connection(
         self, request: ConnectorRequestStream,
