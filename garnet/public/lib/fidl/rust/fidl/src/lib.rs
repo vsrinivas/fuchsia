@@ -24,10 +24,4 @@ pub use bitflags::bitflags;
 #[cfg(target_os = "fuchsia")]
 pub use server::ServeInner;
 
-/*
-use {
-    fuchsia_async as fasync,
-    futures::task::{AtomicWaker, Context},
-    std::sync::atomic::{self, AtomicBool},
-};
-*/
+pub use handle::*;

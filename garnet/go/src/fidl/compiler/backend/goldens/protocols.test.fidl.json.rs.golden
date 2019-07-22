@@ -1731,9 +1731,9 @@ pub trait OvernetInternalProtocolProxyInterface: Send + Sync {
 		a: i64,
 		b: i64,
 	)-> Self::MethodBResponseFut;
-	type MutateSocketResponseFut: futures::Future<Output = Result<(zx::Socket), fidl::Error>> + Send;
+	type MutateSocketResponseFut: futures::Future<Output = Result<(fidl::Socket), fidl::Error>> + Send;
 	fn mutate_socket(&self,
-		a: zx::Socket,
+		a: fidl::Socket,
 	)-> Self::MutateSocketResponseFut;
 }
 
@@ -1762,7 +1762,7 @@ impl OvernetInternalProtocolSynchronousProxy {
 				___deadline,
 			)}
 	pub fn mutate_socket(&mut self,
-		mut a: zx::Socket,___deadline: zx::Time,) -> Result<(zx::Socket), fidl::Error> {self.client.send_query(&mut (a),
+		mut a: fidl::Socket,___deadline: zx::Time,) -> Result<(fidl::Socket), fidl::Error> {self.client.send_query(&mut (a),
 				1691201382,
 				___deadline,
 			)}
@@ -1829,8 +1829,8 @@ impl OvernetInternalProtocolProxy {
 		)
 	}
 	pub fn mutate_socket(&self,
-		mut a: zx::Socket,
-	)-> fidl::client::QueryResponseFut<(zx::Socket)> {
+		mut a: fidl::Socket,
+	)-> fidl::client::QueryResponseFut<(fidl::Socket)> {
 		OvernetInternalProtocolProxyInterface::mutate_socket(self,
 		a,
 		)
@@ -1852,9 +1852,9 @@ impl OvernetInternalProtocolProxyInterface for OvernetInternalProtocolProxy {
 	)-> Self::MethodBResponseFut {
 		self.client.send_query(&mut (a, b), 952134976)
 	}
-	type MutateSocketResponseFut = fidl::client::QueryResponseFut<(zx::Socket)>;
+	type MutateSocketResponseFut = fidl::client::QueryResponseFut<(fidl::Socket)>;
 	fn mutate_socket(&self,
-		mut a: zx::Socket,
+		mut a: fidl::Socket,
 	)-> Self::MutateSocketResponseFut {
 		self.client.send_query(&mut (a), 1691201382)
 	}}
@@ -2063,7 +2063,7 @@ impl futures::Stream for OvernetInternalProtocolRequestStream {
 							},})
 				}
 				1691201382 | 1691201382 => {
-					let mut req: (zx::Socket) = fidl::encoding::Decodable::new_empty();
+					let mut req: (fidl::Socket) = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = OvernetInternalProtocolControlHandle {
 						inner: this.inner.clone(),
@@ -2099,7 +2099,7 @@ pub enum OvernetInternalProtocolRequest {
 		responder: OvernetInternalProtocolMethodBResponder,},
 	MutateSocket {
 		
-		a: zx::Socket,
+		a: fidl::Socket,
 		responder: OvernetInternalProtocolMutateSocketResponder,},
 }
 
@@ -2144,7 +2144,7 @@ impl OvernetInternalProtocolRequest {
 	
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_mutate_socket(self) -> Option<(
-		zx::Socket,
+		fidl::Socket,
 		OvernetInternalProtocolMutateSocketResponder
 	)> {
 		if let OvernetInternalProtocolRequest::MutateSocket {
@@ -2221,7 +2221,7 @@ impl OvernetInternalProtocolEncoder {
 	pub fn encode_mutate_socket_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<zx::Handle>,
-		tx_id: u32,mut in_a: zx::Socket,) -> Result<(), fidl::Error> {
+		tx_id: u32,mut in_a: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,flags: 0,
 			ordinal: 1691201382,
@@ -2234,7 +2234,7 @@ impl OvernetInternalProtocolEncoder {
 	pub fn encode_mutate_socket_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<zx::Handle>,
-		tx_id: u32,mut in_b: zx::Socket,) -> Result<(), fidl::Error> {
+		tx_id: u32,mut in_b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,flags: 0,
 			ordinal: 1691201382,
@@ -2402,7 +2402,7 @@ impl OvernetInternalProtocolMutateSocketResponder {
 	/// Sends a response to the FIDL transaction.
 	///
 	/// Sets the channel to shutdown if an error occurs.
-	pub fn send(self,mut b: zx::Socket,) -> Result<(), fidl::Error> {
+	pub fn send(self,mut b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let r = self.send_raw(b,);
 		if r.is_err() {
 			self.control_handle.shutdown();
@@ -2413,13 +2413,13 @@ impl OvernetInternalProtocolMutateSocketResponder {
 
 	/// Similar to "send" but does not shutdown the channel if
 	/// an error occurs.
-	pub fn send_no_shutdown_on_err(self,mut b: zx::Socket,) -> Result<(), fidl::Error> {
+	pub fn send_no_shutdown_on_err(self,mut b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let r = self.send_raw(b,);
 		self.drop_without_shutdown();
 		r
 	}
 
-	fn send_raw(&self,mut b: zx::Socket,) -> Result<(), fidl::Error> {
+	fn send_raw(&self,mut b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: self.tx_id,
 			flags: 0,
@@ -2463,9 +2463,9 @@ pub trait ChannelProtocolProxyInterface: Send + Sync {
 		a: i64,
 		b: i64,
 	)-> Self::MethodBResponseFut;
-	type MutateSocketResponseFut: futures::Future<Output = Result<(zx::Socket), fidl::Error>> + Send;
+	type MutateSocketResponseFut: futures::Future<Output = Result<(fidl::Socket), fidl::Error>> + Send;
 	fn mutate_socket(&self,
-		a: zx::Socket,
+		a: fidl::Socket,
 	)-> Self::MutateSocketResponseFut;
 }
 
@@ -2494,7 +2494,7 @@ impl ChannelProtocolSynchronousProxy {
 				___deadline,
 			)}
 	pub fn mutate_socket(&mut self,
-		mut a: zx::Socket,___deadline: zx::Time,) -> Result<(zx::Socket), fidl::Error> {self.client.send_query(&mut (a),
+		mut a: fidl::Socket,___deadline: zx::Time,) -> Result<(fidl::Socket), fidl::Error> {self.client.send_query(&mut (a),
 				1258480262,
 				___deadline,
 			)}
@@ -2561,8 +2561,8 @@ impl ChannelProtocolProxy {
 		)
 	}
 	pub fn mutate_socket(&self,
-		mut a: zx::Socket,
-	)-> fidl::client::QueryResponseFut<(zx::Socket)> {
+		mut a: fidl::Socket,
+	)-> fidl::client::QueryResponseFut<(fidl::Socket)> {
 		ChannelProtocolProxyInterface::mutate_socket(self,
 		a,
 		)
@@ -2584,9 +2584,9 @@ impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
 	)-> Self::MethodBResponseFut {
 		self.client.send_query(&mut (a, b), 180770075)
 	}
-	type MutateSocketResponseFut = fidl::client::QueryResponseFut<(zx::Socket)>;
+	type MutateSocketResponseFut = fidl::client::QueryResponseFut<(fidl::Socket)>;
 	fn mutate_socket(&self,
-		mut a: zx::Socket,
+		mut a: fidl::Socket,
 	)-> Self::MutateSocketResponseFut {
 		self.client.send_query(&mut (a), 1258480262)
 	}}
@@ -2795,7 +2795,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
 							},})
 				}
 				1258480262 | 1258480262 => {
-					let mut req: (zx::Socket) = fidl::encoding::Decodable::new_empty();
+					let mut req: (fidl::Socket) = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = ChannelProtocolControlHandle {
 						inner: this.inner.clone(),
@@ -2831,7 +2831,7 @@ pub enum ChannelProtocolRequest {
 		responder: ChannelProtocolMethodBResponder,},
 	MutateSocket {
 		
-		a: zx::Socket,
+		a: fidl::Socket,
 		responder: ChannelProtocolMutateSocketResponder,},
 }
 
@@ -2876,7 +2876,7 @@ impl ChannelProtocolRequest {
 	
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_mutate_socket(self) -> Option<(
-		zx::Socket,
+		fidl::Socket,
 		ChannelProtocolMutateSocketResponder
 	)> {
 		if let ChannelProtocolRequest::MutateSocket {
@@ -2953,7 +2953,7 @@ impl ChannelProtocolEncoder {
 	pub fn encode_mutate_socket_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<zx::Handle>,
-		tx_id: u32,mut in_a: zx::Socket,) -> Result<(), fidl::Error> {
+		tx_id: u32,mut in_a: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,flags: 0,
 			ordinal: 1258480262,
@@ -2966,7 +2966,7 @@ impl ChannelProtocolEncoder {
 	pub fn encode_mutate_socket_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<zx::Handle>,
-		tx_id: u32,mut in_b: zx::Socket,) -> Result<(), fidl::Error> {
+		tx_id: u32,mut in_b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,flags: 0,
 			ordinal: 1258480262,
@@ -3134,7 +3134,7 @@ impl ChannelProtocolMutateSocketResponder {
 	/// Sends a response to the FIDL transaction.
 	///
 	/// Sets the channel to shutdown if an error occurs.
-	pub fn send(self,mut b: zx::Socket,) -> Result<(), fidl::Error> {
+	pub fn send(self,mut b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let r = self.send_raw(b,);
 		if r.is_err() {
 			self.control_handle.shutdown();
@@ -3145,13 +3145,13 @@ impl ChannelProtocolMutateSocketResponder {
 
 	/// Similar to "send" but does not shutdown the channel if
 	/// an error occurs.
-	pub fn send_no_shutdown_on_err(self,mut b: zx::Socket,) -> Result<(), fidl::Error> {
+	pub fn send_no_shutdown_on_err(self,mut b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let r = self.send_raw(b,);
 		self.drop_without_shutdown();
 		r
 	}
 
-	fn send_raw(&self,mut b: zx::Socket,) -> Result<(), fidl::Error> {
+	fn send_raw(&self,mut b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: self.tx_id,
 			flags: 0,
@@ -3195,9 +3195,9 @@ pub trait KitchenSinkProxyInterface: Send + Sync {
 		a: i64,
 		b: i64,
 	)-> Self::MethodBResponseFut;
-	type MutateSocketResponseFut: futures::Future<Output = Result<(zx::Socket), fidl::Error>> + Send;
+	type MutateSocketResponseFut: futures::Future<Output = Result<(fidl::Socket), fidl::Error>> + Send;
 	fn mutate_socket(&self,
-		a: zx::Socket,
+		a: fidl::Socket,
 	)-> Self::MutateSocketResponseFut;
 }
 
@@ -3226,7 +3226,7 @@ impl KitchenSinkSynchronousProxy {
 				___deadline,
 			)}
 	pub fn mutate_socket(&mut self,
-		mut a: zx::Socket,___deadline: zx::Time,) -> Result<(zx::Socket), fidl::Error> {self.client.send_query(&mut (a),
+		mut a: fidl::Socket,___deadline: zx::Time,) -> Result<(fidl::Socket), fidl::Error> {self.client.send_query(&mut (a),
 				115851270,
 				___deadline,
 			)}
@@ -3293,8 +3293,8 @@ impl KitchenSinkProxy {
 		)
 	}
 	pub fn mutate_socket(&self,
-		mut a: zx::Socket,
-	)-> fidl::client::QueryResponseFut<(zx::Socket)> {
+		mut a: fidl::Socket,
+	)-> fidl::client::QueryResponseFut<(fidl::Socket)> {
 		KitchenSinkProxyInterface::mutate_socket(self,
 		a,
 		)
@@ -3316,9 +3316,9 @@ impl KitchenSinkProxyInterface for KitchenSinkProxy {
 	)-> Self::MethodBResponseFut {
 		self.client.send_query(&mut (a, b), 1999489700)
 	}
-	type MutateSocketResponseFut = fidl::client::QueryResponseFut<(zx::Socket)>;
+	type MutateSocketResponseFut = fidl::client::QueryResponseFut<(fidl::Socket)>;
 	fn mutate_socket(&self,
-		mut a: zx::Socket,
+		mut a: fidl::Socket,
 	)-> Self::MutateSocketResponseFut {
 		self.client.send_query(&mut (a), 115851270)
 	}}
@@ -3527,7 +3527,7 @@ impl futures::Stream for KitchenSinkRequestStream {
 							},})
 				}
 				115851270 | 115851270 => {
-					let mut req: (zx::Socket) = fidl::encoding::Decodable::new_empty();
+					let mut req: (fidl::Socket) = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
 					let control_handle = KitchenSinkControlHandle {
 						inner: this.inner.clone(),
@@ -3563,7 +3563,7 @@ pub enum KitchenSinkRequest {
 		responder: KitchenSinkMethodBResponder,},
 	MutateSocket {
 		
-		a: zx::Socket,
+		a: fidl::Socket,
 		responder: KitchenSinkMutateSocketResponder,},
 }
 
@@ -3608,7 +3608,7 @@ impl KitchenSinkRequest {
 	
 	#[allow(irrefutable_let_patterns)]
 	pub fn into_mutate_socket(self) -> Option<(
-		zx::Socket,
+		fidl::Socket,
 		KitchenSinkMutateSocketResponder
 	)> {
 		if let KitchenSinkRequest::MutateSocket {
@@ -3685,7 +3685,7 @@ impl KitchenSinkEncoder {
 	pub fn encode_mutate_socket_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<zx::Handle>,
-		tx_id: u32,mut in_a: zx::Socket,) -> Result<(), fidl::Error> {
+		tx_id: u32,mut in_a: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,flags: 0,
 			ordinal: 115851270,
@@ -3698,7 +3698,7 @@ impl KitchenSinkEncoder {
 	pub fn encode_mutate_socket_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<zx::Handle>,
-		tx_id: u32,mut in_b: zx::Socket,) -> Result<(), fidl::Error> {
+		tx_id: u32,mut in_b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,flags: 0,
 			ordinal: 115851270,
@@ -3866,7 +3866,7 @@ impl KitchenSinkMutateSocketResponder {
 	/// Sends a response to the FIDL transaction.
 	///
 	/// Sets the channel to shutdown if an error occurs.
-	pub fn send(self,mut b: zx::Socket,) -> Result<(), fidl::Error> {
+	pub fn send(self,mut b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let r = self.send_raw(b,);
 		if r.is_err() {
 			self.control_handle.shutdown();
@@ -3877,13 +3877,13 @@ impl KitchenSinkMutateSocketResponder {
 
 	/// Similar to "send" but does not shutdown the channel if
 	/// an error occurs.
-	pub fn send_no_shutdown_on_err(self,mut b: zx::Socket,) -> Result<(), fidl::Error> {
+	pub fn send_no_shutdown_on_err(self,mut b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let r = self.send_raw(b,);
 		self.drop_without_shutdown();
 		r
 	}
 
-	fn send_raw(&self,mut b: zx::Socket,) -> Result<(), fidl::Error> {
+	fn send_raw(&self,mut b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: self.tx_id,
 			flags: 0,

@@ -570,7 +570,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 			}
 		}
 	case types.HandleType:
-		r = fmt.Sprintf("zx::%s", compileHandleSubtype(val.HandleSubtype))
+		r = fmt.Sprintf("fidl::%s", compileHandleSubtype(val.HandleSubtype))
 		if val.Nullable {
 			r = fmt.Sprintf("Option<%s>", r)
 		}

@@ -15,6 +15,22 @@ pub mod fuchsia_handles {
     pub use zx::HandleBased;
     pub use zx::AsHandleRef;
 
+    pub use zx::Channel;
+    pub use zx::Event;
+    pub use zx::EventPair;
+    pub use zx::Fifo;
+    pub use zx::Interrupt;
+    pub use zx::Job;
+    pub use zx::Log;
+    pub use zx::Port;
+    pub use zx::Process;
+    pub use zx::Resource;
+    pub use zx::Socket;
+    pub use zx::Thread;
+    pub use zx::Timer;
+    pub use zx::Vmo;
+    pub use zx::Vmar;
+
 }
 
 /// Non-Fuchsia implementation of handles
