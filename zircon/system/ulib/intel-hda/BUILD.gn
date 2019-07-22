@@ -36,6 +36,7 @@ group("test") {
 test("intel-hda-utils-test") {
   testonly = true
   sources = [
+    "utils/status_or_test.cc",
     "utils/status_test.cc",
   ]
   deps = [
