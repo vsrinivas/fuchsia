@@ -24,23 +24,21 @@ This document is a description of the Fuchsia Interface Definition Language
 [Compiler Specification]: ../reference/compiler.md
 [API Readability / Style Guide]: ../../../api/fidl.md
 [Linter to Check API Readability / Style]: ../reference/linter.md
-[C Language Bindings]: ../tutorial/tutorial-c.md#reference
-[Low-Level C++ Language Bindings]: ../tutorial/bindings-llcpp.md
-[High-Level C++ Language Bindings]: ../tutorial/tutorial-cpp.md#high_level-c_language-bindings
+[C Language Bindings]: ../tutorial/tutorial-c.md
+[Low-Level C++ Language Bindings]: ../tutorial/tutorial-llcpp.md
+[High-Level C++ Language Bindings]: ../tutorial/tutorial-cpp.md
 [C/Low-Level/High-Level C++ Bindings Comparison]: ../tutorial/c-family-comparison.md
 [Examples]: /zircon/tools/fidl/examples
 [Tutorial]: ../tutorial/README.md
 
 [TOC]
 
-## Overview
-
 The Fuchsia Interface Definition Language (FIDL) is the language used to
 describe interprocess communication (IPC) protocols used by programs running on
 the Fuchsia Operating System. FIDL is supported by a toolchain (compiler) and
 runtime support libraries (bindings) to help developers use IPC effectively.
 
-Goals
+## Goals
 
 Fuchsia extensively relies on IPC since it has a microkernel architecture
 wherein most functionality is implemented in user space outside of the kernel,
@@ -79,9 +77,9 @@ appropriately tailored bindings, eg. system programming native vs. event-driven
 dispatch vs. async calls, etc... say more things about FIDL as our system API,
 SDK concerns, etc.
 
-Requirements
+# Requirements
 
-# Purpose
+## Purpose
 
 *   Describe data structures and protocols used by IPC on Zircon.
 *   Optimized for interprocess communication only; FIDL must not be persisted to
@@ -96,7 +94,7 @@ Requirements
 *   Perform sufficient validation to maintain protocol invariants (but no more
     than that).
 
-# Efficiency
+## Efficiency
 
 *   Just as efficient (speed and memory) as using hand-rolled data structures
     would be.
@@ -116,13 +114,13 @@ Requirements
 *   No versioning of structures, but protocols can be extended with new methods
     for evolution.
 
-# Ergonomics
+## Ergonomics
 
 *   Programming language bindings maintained by Fuchsia team:
-    *   C, low-level C++, high-level C++, Dart, Go, Rust
+    *   C, Low-Level C++, High-Level C++, Dart, Go, Rust
 *   Keeping in mind we might want to support other languages in the future, such
     as:
-    *   Java, Javascript, etc.
+    *   Java, JavaScript, etc.
 *   The bindings and generated code are available in native or idiomatic flavors
     depending on the intended application.
 *   Use compile-time code generation to optimize message serialization,
@@ -135,12 +133,10 @@ Requirements
     not seek to provide a comprehensive one-to-one mapping of all types offered
     by all programming languages.
 
-# Implementation
+## Implementation
 
 *   Compiler is written in C++ to be usable by components built in Zircon.
-
 *   Compiler is portable and can be built with a host toolchain.
-
 *   We will not support FIDL bindings for any platform other than Fuchsia.
 
 ## Where to Find the Code
@@ -183,6 +179,7 @@ protocols.
 Languages-specific topics:
 
 *   [C Language Bindings]
+*   [Low-Level C++ Language Bindings]
 *   [High-Level C++ Language Bindings]
 
 Bindings are available in various flavors depending on the language:
@@ -245,8 +242,8 @@ to prevent namespace collisions.
 # Publishing FIDL
 
 The publisher of a FIDL based protocol is responsible for making FIDL libraries
-available to consumers. For example, the author may disseminate FIDL libraries in
-a public source repository or distribute them as part of an SDK.
+available to consumers. For example, the author may disseminate FIDL libraries
+in a public source repository or distribute them as part of an SDK.
 
 Consumers need only point the FIDL compiler at the directory which contains the
 FIDL files for a library (and its dependencies) to generate code for that

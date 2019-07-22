@@ -445,14 +445,14 @@ the client and server code.
 Currently, tutorials are available in the following languages:
 
 *   [C](tutorial-c.md)
-*   [C++](tutorial-cpp.md)
+*   [Low-Level C++](tutorial-llcpp.md)
+*   [High-Level C++](tutorial-cpp.md)
 *   [Dart](tutorial-dart.md)
 *   [Rust](tutorial-rust.md)
 
-Consult the [C Family Comparison](c-family-comparison.md) document for an overview
-of the similarities and differences between the C and C++ bindings.
-
-Information on [low-level C++ bindings](bindings-llcpp.md) is available separately.
+Consult the [C Family Comparison](c-family-comparison.md) document for an
+overview of the similarities and differences between the C, Low-Level C++,
+and High-Level C++ bindings.
 
 <!-- xrefs -->
 [attributes]: ../reference/attributes.md

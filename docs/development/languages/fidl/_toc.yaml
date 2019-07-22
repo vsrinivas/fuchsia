@@ -22,8 +22,8 @@ toc:
     path: /fuchsia-src/development/languages/fidl/tutorial/tutorial-c
   - title: "C++ tutorial"
     path: /fuchsia-src/development/languages/fidl/tutorial/tutorial-cpp
-  - title: "Low-level C++ language bindings tutorial"
-    path: /fuchsia-src/development/languages/fidl/tutorial/bindings-llcpp
+  - title: "Low-level C++ tutorial"
+    path: /fuchsia-src/development/languages/fidl/tutorial/tutorial-llcpp
   - title: "Dart"
     path:  /fuchsia-src/development/languages/fidl/tutorial/tutorial-dart
   - title: "Go"

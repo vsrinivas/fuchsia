@@ -41,7 +41,7 @@ Use the following steps to build:
 
 ## `Echo` server
 
-The generated server code is in [//garnet/examples/fidl/echo_server_c/echo_server.c][server]:
+The example server code is in [//garnet/examples/fidl/echo_server_c/echo_server.c][server]:
 
 ```c
 [01] // Copyright 2018 The Fuchsia Authors. All rights reserved.
