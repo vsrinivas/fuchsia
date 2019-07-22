@@ -60,7 +60,7 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
     // Fetch the NHLT resource
     ACPI_STATUS acpi_status = AcpiEvaluateObject(object, (char*)"_DSM", &params, &out);
     if (acpi_status != AE_OK) {
-        zxlogf(TRACE, "acpi: failed to fetch NHLT blob (acpi_status %u)\n", acpi_status);
+        zxlogf(ERROR, "acpi: failed to fetch NHLT blob (acpi_status 0x%x)\n", acpi_status);
         return acpi_to_zx_status(acpi_status);
     }
 
@@ -74,7 +74,7 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
     ACPI_RESOURCE* res = NULL;
     acpi_status = AcpiBufferToResource(out_obj->Buffer.Pointer, out_obj->Buffer.Length, &res);
     if (acpi_status != AE_OK) {
-        zxlogf(ERROR, "acpi: failed to parse NHLT resource (acpi_status %u)\n", acpi_status);
+        zxlogf(ERROR, "acpi: failed to parse NHLT resource (acpi_status 0x%x)\n", acpi_status);
         status = acpi_to_zx_status(acpi_status);
         goto out;
     }

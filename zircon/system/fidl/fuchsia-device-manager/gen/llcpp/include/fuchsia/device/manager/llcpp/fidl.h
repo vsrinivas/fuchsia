@@ -683,7 +683,7 @@ constexpr uint32_t SUSPEND_FLAG_POWEROFF = 3705405952u;
 constexpr uint32_t PROPERTIES_MAX = 256u;
 
 // Maximum number of bytes in a metadata payload
-constexpr uint32_t METADATA_MAX = 4096u;
+constexpr uint32_t METADATA_MAX = 8192u;
 
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceStubRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable;
@@ -2063,7 +2063,7 @@ class Coordinator final {
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorGetMetadataResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 4096;
+    static constexpr uint32_t MaxOutOfLine = 8192;
   };
   struct GetMetadataRequest final {
     FIDL_ALIGNDECL
@@ -2119,7 +2119,7 @@ class Coordinator final {
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorAddMetadataRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 4096;
+    static constexpr uint32_t MaxOutOfLine = 8192;
     using ResponseType = AddMetadataResponse;
   };
 
@@ -2143,7 +2143,7 @@ class Coordinator final {
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorPublishMetadataRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 56;
-    static constexpr uint32_t MaxOutOfLine = 5120;
+    static constexpr uint32_t MaxOutOfLine = 9216;
     using ResponseType = PublishMetadataResponse;
   };
 

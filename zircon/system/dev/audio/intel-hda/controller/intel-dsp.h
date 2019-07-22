@@ -176,7 +176,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   Mailbox mailbox_out_;
 
   // NHLT buffer.
-  uint8_t nhlt_buf_[PAGE_SIZE];
+  uint8_t nhlt_buf_[2 * PAGE_SIZE];
 
   // I2S config
   struct I2SConfig {
