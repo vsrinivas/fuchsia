@@ -5,13 +5,14 @@
 #ifndef ZIRCON_SYSTEM_ULIB_INTEL_HDA_INCLUDE_INTEL_HDA_UTILS_STATUS_OR_H_
 #define ZIRCON_SYSTEM_ULIB_INTEL_HDA_INCLUDE_INTEL_HDA_UTILS_STATUS_OR_H_
 
-#include <intel-hda/utils/status.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 
+#include <type_traits>
 #include <utility>
 #include <variant>
 
-#include "zircon/assert.h"
+#include <intel-hda/utils/status.h>
 
 namespace audio::intel_hda {
 
@@ -25,6 +26,8 @@ class [[nodiscard]] StatusOr {
   explicit StatusOr() : value_(std::in_place_index_t<0>{}, ZX_ERR_INTERNAL) {}
 
   // Create a StatusOr object with with given Status.
+  //
+  // It is an error to produce a StatusOr<> with an "Ok" status.
   //
   // Allow implicit conversion from Status objects.
   StatusOr(const Status& err)  // NOLINT(google-explicit-constructor)
@@ -78,7 +81,10 @@ class [[nodiscard]] StatusOr {
   }
 
  private:
+  // Singleton "OkStatus()" instance returned by "status()" when StatusOr<>
+  // has a non-error value.
   static inline const Status kOkStatus = OkStatus();
+
   std::variant<Status, T> value_;
 };
 
