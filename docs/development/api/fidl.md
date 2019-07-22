@@ -187,7 +187,7 @@ users might think of as "characters".
 
 For example, the string
 
-```
+```none
 á
 ```
 
@@ -205,7 +205,7 @@ In Unicode terminology, this kind of user-perceived "character" is known as a
 A single grapheme cluster can consist of arbitrarily many code points. Consider
 this longer example:
 
-```
+```none
 á🇨🇦b👮🏽‍♀️
 ```
 
