@@ -4,9 +4,9 @@
 
 #include "message_decoder.h"
 
-#include <src/lib/fxl/logging.h>
-
 #include <ostream>
+
+#include <src/lib/fxl/logging.h>
 
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -114,6 +114,11 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
   if (direction != Direction::kUnknown) {
     if ((is_request && !matched_request) || (!is_request && !matched_response)) {
       if ((is_request && matched_response) || (!is_request && matched_request)) {
+        if ((type == SyscallFidlType::kOutputRequest) ||
+            (type == SyscallFidlType::kInputResponse)) {
+          // We know the direction: we can't be wrong => we haven't been able to decode the message.
+          return false;
+        }
         // The first determination seems to be wrong. That is, we are expecting
         // a request but only a response has been successfully decoded or we are
         // expecting a response but only a request has been successfully
@@ -174,44 +179,42 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
 MessageDecoder::MessageDecoder(const uint8_t* bytes, uint32_t num_bytes,
                                const zx_handle_info_t* handles, uint32_t num_handles,
                                bool output_errors)
-    : start_byte_pos_(bytes),
-      end_byte_pos_(bytes + num_bytes),
+    : num_bytes_(num_bytes),
+      start_byte_pos_(bytes),
       end_handle_pos_(handles + num_handles),
-      byte_pos_(bytes),
       handle_pos_(handles),
       output_errors_(output_errors) {}
 
-MessageDecoder::MessageDecoder(const MessageDecoder* container, uint64_t num_bytes,
+MessageDecoder::MessageDecoder(const MessageDecoder* container, uint64_t offset, uint64_t num_bytes,
                                uint64_t num_handles)
-    : start_byte_pos_(container->byte_pos_),
-      end_byte_pos_(container->byte_pos_ + num_bytes),
+    : num_bytes_(num_bytes),
+      start_byte_pos_(container->start_byte_pos_ + offset),
       end_handle_pos_(container->handle_pos_ + num_handles),
-      byte_pos_(container->byte_pos_),
       handle_pos_(container->handle_pos_),
       output_errors_(container->output_errors_) {}
 
-void MessageDecoder::ProcessSecondaryObjects() {
-  for (size_t i = 0; i < secondary_objects_.size(); ++i) {
-    MessageDecoder decoder(this, end_byte_pos_ - byte_pos_, end_handle_pos_ - handle_pos_);
-    secondary_objects_[i]->DecodeContent(&decoder);
-    decoder.ProcessSecondaryObjects();
-    GotoNextObjectOffset(decoder.byte_pos() - byte_pos_);
-    SkipHandles(decoder.handle_pos() - handle_pos_);
-  }
-}
-
 std::unique_ptr<Object> MessageDecoder::DecodeMessage(const Struct& message_format) {
-  std::unique_ptr<Object> result = message_format.DecodeObject(this, /*name=*/"", /*type=*/nullptr,
+  // Set the offset for the next object (just after this one).
+  SkipObject(message_format.size());
+  // Decode the object.
+  std::unique_ptr<Object> object = message_format.DecodeObject(this, /*name=*/"", /*type=*/nullptr,
                                                                /*offset=*/0, /*nullable=*/false);
-  GotoNextObjectOffset(message_format.size());
-  ProcessSecondaryObjects();
-  return result;
+  // It's an error if we didn't use all the bytes in the buffer.
+  if ((next_object_offset_ != num_bytes_) && output_errors_) {
+    FXL_LOG(ERROR) << "message not fully decoded";
+  }
+  return object;
 }
 
 std::unique_ptr<Field> MessageDecoder::DecodeField(std::string_view name, const Type* type) {
+  // Set the offset for the next object (just after this one).
+  SkipObject(type->InlineSize());
+  // Decode the envelope.
   std::unique_ptr<Field> result = type->Decode(this, name, 0);
-  GotoNextObjectOffset(type->InlineSize());
-  ProcessSecondaryObjects();
+  // It's an error if we didn't use all the bytes in the buffer.
+  if ((next_object_offset_ != num_bytes_) && output_errors_) {
+    FXL_LOG(ERROR) << "message envelope not fully decoded";
+  }
   return result;
 }
 

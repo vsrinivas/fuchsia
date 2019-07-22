@@ -4,13 +4,13 @@
 
 #include "tools/fidlcat/lib/wire_parser.h"
 
-#include <fuchsia/sys/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
@@ -147,13 +147,13 @@ TEST_F(WireParserTest, ParseSingleString) {
       }                                                                                            \
     }                                                                                              \
                                                                                                    \
-    std::unique_ptr<fidlcat::Object> decoded_request;                                              \
-    ASSERT_TRUE(fidlcat::DecodeRequest(method, message.bytes().data(), message.bytes().size(),     \
-                                       handle_infos, message.handles().size(), &decoded_request))  \
-        << "Could not decode message";                                                             \
+    MessageDecoder decoder(message.bytes().data(), message.bytes().size(), handle_infos,           \
+                           message.handles().size(), /*output_errors=*/true);                      \
+    std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());                    \
+    ASSERT_FALSE(decoder.HasError()) << "Could not decode message";                                \
     rapidjson::Document actual;                                                                    \
-    if (decoded_request != nullptr) {                                                              \
-      decoded_request->ExtractJson(actual.GetAllocator(), actual);                                 \
+    if (object != nullptr) {                                                                       \
+      object->ExtractJson(actual.GetAllocator(), actual);                                          \
     }                                                                                              \
     rapidjson::StringBuffer actual_string;                                                         \
     rapidjson::Writer<rapidjson::StringBuffer> actual_w(actual_string);                            \
@@ -171,8 +171,8 @@ TEST_F(WireParserTest, ParseSingleString) {
                                 << " and actual = " << actual_string.GetString();                  \
                                                                                                    \
     std::stringstream result;                                                                      \
-    if (decoded_request != nullptr) {                                                              \
-      decoded_request->PrettyPrint(result, FakeColors, "", 0, 80, 80);                             \
+    if (object != nullptr) {                                                                       \
+      object->PrettyPrint(result, FakeColors, "", 0, 80, 80);                                      \
     }                                                                                              \
     ASSERT_EQ(result.str(), _pretty_print)                                                         \
         << "expected = " << _pretty_print << " actual = " << result.str();                         \
@@ -277,6 +277,8 @@ std::string SingleToPretty(std::string key, std::string type, T value) {
 #define TEST_SINGLE(_testname, _iface, _key, _type, _value)        \
   TEST_DECODE_WIRE(_testname, _iface, SingleToJson(#_key, _value), \
                    SingleToPretty(#_key, #_type, _value), _value)
+
+TEST_DECODE_WIRE(Empty, Empty, "{}", "{}")
 
 TEST_SINGLE(String, String, s, string, "Hello World!")
 
@@ -921,6 +923,54 @@ TEST_F(WireParserTest, ParseHandleStruct) {
   HandleStructSupport support;
   TEST_DECODE_WIRE_BODY(HandleStruct, support.GetJSON(), support.GetPretty(),
                         support.handle_struct());
+}
+
+namespace {
+
+class TraversalOrderSupport {
+ public:
+  TraversalOrderSupport() {
+    zx::channel::create(0, &sh1_, &sh2_);
+    zx::channel::create(0, &h1_, &h2_);
+    json_ = "{\"t\":{\"s\":{" + HandleToJson("sh1", sh1_.get()) + "," +
+            HandleToJson("sh2", sh2_.get()) + "}," + HandleToJson("h1", h1_.get()) + "," +
+            HandleToJson("h2", h2_.get()) + "}}";
+    pretty_ =
+        "{\n  t: #gre#test.fidlcat.examples/traversal_order#rst# = {\n    "
+        "s: #gre#test.fidlcat.examples/opt_handle_struct#rst# = {\n      " +
+        HandleToPretty("sh1", sh1_.get()) + "\n      " + HandleToPretty("sh2", sh2_.get()) +
+        "\n    }\n    " + HandleToPretty("h1", h1_.get()) + "\n    " +
+        HandleToPretty("h2", h2_.get()) + "\n  }\n}";
+  }
+  test::fidlcat::examples::traversal_order traversal_order() {
+    test::fidlcat::examples::traversal_order t;
+    auto s = std::make_unique<test::fidlcat::examples::opt_handle_struct>();
+    s->sh1 = std::move(sh1_);
+    s->sh2 = std::move(sh2_);
+    t.s = std::move(s);
+    t.h1 = std::move(h1_);
+    t.h2 = std::move(h2_);
+    return t;
+  }
+  std::string GetJSON() { return json_; }
+  std::string GetPretty() { return pretty_; }
+
+ private:
+  zx::channel sh1_;
+  zx::channel sh2_;
+  zx::channel h1_;
+  zx::channel h2_;
+
+  std::string json_;
+  std::string pretty_;
+};
+
+}  // namespace
+
+TEST_F(WireParserTest, ParseTraversalOrder) {
+  TraversalOrderSupport support;
+  TEST_DECODE_WIRE_BODY(TraversalOrder, support.GetJSON(), support.GetPretty(),
+                        support.traversal_order());
 }
 
 // Corrupt data tests

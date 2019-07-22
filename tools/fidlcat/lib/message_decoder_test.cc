@@ -4,14 +4,14 @@
 
 #include "tools/fidlcat/lib/message_decoder.h"
 
-#include <fuchsia/sys/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-
 #include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
@@ -67,6 +67,12 @@ class MessageDecoderTest : public ::testing::Test {
     ASSERT_EQ(result_.str(), _expected)                                                            \
         << "expected = " << _expected << " actual = " << result_.str();                            \
   } while (0)
+
+TEST_F(MessageDecoderTest, TestEmptyLaunched) {
+  decoder_->AddLaunchedProcess(process_koid_);
+  TEST_DECODE_MESSAGE(FidlcatTestInterface, Empty,
+                      "sent request test.fidlcat.examples/FidlcatTestInterface.Empty = {}\n");
+}
 
 TEST_F(MessageDecoderTest, TestStringLaunched) {
   decoder_->AddLaunchedProcess(process_koid_);

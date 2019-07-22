@@ -5,12 +5,12 @@
 #ifndef TOOLS_FIDLCAT_LIB_WIRE_OBJECT_H_
 #define TOOLS_FIDLCAT_LIB_WIRE_OBJECT_H_
 
-#include <lib/fidl/cpp/message.h>
-#include <src/lib/fxl/logging.h>
-
 #include <memory>
 #include <string_view>
 #include <vector>
+
+#include <lib/fidl/cpp/message.h>
+#include <src/lib/fxl/logging.h>
 
 #include "tools/fidlcat/lib/library_loader.h"
 #include "tools/fidlcat/lib/message_decoder.h"
@@ -36,7 +36,7 @@ class Field {
   virtual int DisplaySize(int remaining_size) const = 0;
 
   // Decode the extra content of the field (in a secondary object).
-  virtual void DecodeContent(MessageDecoder* decoder) = 0;
+  virtual void DecodeContent(MessageDecoder* decoder, uint64_t offset) = 0;
 
   // Extract the JSON for this field.
   virtual void ExtractJson(rapidjson::Document::AllocatorType& allocator,
@@ -58,7 +58,7 @@ class NullableField : public Field {
 
   bool is_null() const { return is_null_; }
 
-  bool DecodeNullable(MessageDecoder* decoder, uint64_t offset);
+  bool DecodeNullable(MessageDecoder* decoder, uint64_t offset, uint64_t size);
 
  private:
   bool is_null_ = false;
@@ -72,7 +72,7 @@ class InlineField : public Field {
 
   const uint8_t* data() const { return data_; }
 
-  void DecodeContent(MessageDecoder* decoder) override;
+  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
  private:
   const uint8_t* const data_;
@@ -125,7 +125,7 @@ class StringField : public NullableField {
 
   int DisplaySize(int remaining_size) const override;
 
-  void DecodeContent(MessageDecoder* decoder) override;
+  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
   void ExtractJson(rapidjson::Document::AllocatorType& allocator,
                    rapidjson::Value& result) const override;
@@ -158,7 +158,7 @@ class Object : public NullableField {
 
   int DisplaySize(int remaining_size) const override;
 
-  void DecodeContent(MessageDecoder* decoder) override;
+  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
   void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
 
@@ -185,7 +185,7 @@ class EnvelopeField : public NullableField {
 
   int DisplaySize(int remaining_size) const override;
 
-  void DecodeContent(MessageDecoder* decoder) override;
+  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
   void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
 
@@ -209,7 +209,7 @@ class TableField : public NullableField {
 
   int DisplaySize(int remaining_size) const override;
 
-  void DecodeContent(MessageDecoder* decoder) override;
+  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
   void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
 
@@ -235,7 +235,7 @@ class UnionField : public NullableField {
 
   int DisplaySize(int remaining_size) const override;
 
-  void DecodeContent(MessageDecoder* decoder) override;
+  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
   void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
 
@@ -266,7 +266,7 @@ class ArrayField : public Field {
 
   int DisplaySize(int remaining_size) const override;
 
-  void DecodeContent(MessageDecoder* decoder) override;
+  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
   void ExtractJson(rapidjson::Document::AllocatorType& allocator,
                    rapidjson::Value& result) const override;
@@ -286,7 +286,7 @@ class VectorField : public NullableField {
 
   int DisplaySize(int remaining_size) const override;
 
-  void DecodeContent(MessageDecoder* decoder) override;
+  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
   void ExtractJson(rapidjson::Document::AllocatorType& allocator,
                    rapidjson::Value& result) const override;
@@ -327,7 +327,7 @@ class HandleField : public Field {
 
   int DisplaySize(int remaining_size) const override;
 
-  void DecodeContent(MessageDecoder* decoder) override;
+  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
   void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
                    int remaining_size, int max_line_size) const override;

@@ -92,7 +92,7 @@ std::unique_ptr<UnionField> Union::DecodeUnion(MessageDecoder* decoder, std::str
                                                bool nullable) const {
   std::unique_ptr<UnionField> result = std::make_unique<UnionField>(name, type, *this);
   if (nullable) {
-    result->DecodeNullable(decoder, offset);
+    result->DecodeNullable(decoder, offset, size_);
   } else {
     result->DecodeAt(decoder, offset);
   }
@@ -142,7 +142,7 @@ std::unique_ptr<Object> Struct::DecodeObject(MessageDecoder* decoder, std::strin
                                              bool nullable) const {
   std::unique_ptr<Object> result = std::make_unique<Object>(name, type, *this);
   if (nullable) {
-    result->DecodeNullable(decoder, offset);
+    result->DecodeNullable(decoder, offset, size_);
   } else {
     result->DecodeAt(decoder, offset);
   }

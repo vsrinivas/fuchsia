@@ -47,7 +47,7 @@ std::unique_ptr<Field> StringType::Decode(MessageDecoder* decoder, std::string_v
 
   // Don't need to check return value because the effects of returning false are
   // dealt with in DecodeNullable.
-  result->DecodeNullable(decoder, offset);
+  result->DecodeNullable(decoder, offset, string_length);
   return result;
 }
 
@@ -72,7 +72,7 @@ std::unique_ptr<Field> TableType::Decode(MessageDecoder* decoder, std::string_vi
   offset += sizeof(size);
 
   auto result = std::make_unique<TableField>(name, this, table_, size);
-  if (result->DecodeNullable(decoder, offset)) {
+  if (result->DecodeNullable(decoder, offset, size * 2 * sizeof(uint64_t))) {
     if (result->is_null()) {
       FXL_LOG(ERROR) << "invalid null value for table pointer";
     }
@@ -150,7 +150,7 @@ std::unique_ptr<Field> VectorType::Decode(MessageDecoder* decoder, std::string_v
 
   // Don't need to check return value because the effects of returning false are
   // dealt with in DecodeNullable.
-  result->DecodeNullable(decoder, offset);
+  result->DecodeNullable(decoder, offset, size * component_type_->InlineSize());
   return result;
 }
 
