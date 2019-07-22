@@ -7,35 +7,45 @@
 #include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <ddktl/protocol/i2c.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
+#include <lib/device-protocol/i2c-channel.h>
 #include <zircon/types.h>
 
-namespace audio {
-namespace alc5663 {
+#include "i2c_client.h"
+
+namespace audio::alc5663 {
 
 class Alc5663Device;
 using DeviceType = ddk::Device<Alc5663Device, ddk::Unbindable>;
 
+// ALC5663 uses 8-bit register addresses.
+using Alc5663Client = I2cClient<uint8_t>;
+
 class Alc5663Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_CODEC> {
  public:
+  // Create a new device. Caller retains ownership of raw pointer arguments.
+  Alc5663Device(zx_device_t* parent, ddk::I2cChannel channel);
   ~Alc5663Device() = default;
 
-  // Create and bind a new Alc5663 with the given parent.
+  // Bind a new Alc5663 to its parent.
   //
-  // If provided, `result` will contain a pointer to the created object,
-  // but the object is owned by the DDK.
-  static zx_status_t CreateAndBind(zx_device_t* parent, Alc5663Device** result = nullptr);
+  // The DDK gains ownership of the device until DdkRelease() is called.
+  static zx_status_t Bind(fbl::unique_ptr<Alc5663Device> device);
+
+  // Initialise the hardware.
+  zx_status_t InitializeDevice();
+
+  // Shutdown the hardware.
+  void Shutdown();
 
   // Implementation of |ddk::Unbindable|.
   void DdkUnbind();
   void DdkRelease();
 
  private:
-  explicit Alc5663Device(zx_device_t* parent) : DeviceType(parent) {}
-
-  i2c_protocol_t i2c_;
+  Alc5663Client client_;
 };
 
-}  // namespace alc5663
-}  // namespace audio
+}  // namespace audio::alc5663

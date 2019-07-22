@@ -2,42 +2,47 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("alc5663") {
+source_set("alc5663_sources") {
   sources = [
     "alc5663.cc",
+    "alc5663_registers.h",
+    "i2c_client.h",
   ]
-  deps = [
+  public_deps = [
     "$zx/system/banjo/ddk.protocol.i2c",
-    "$zx/system/banjo/ddk.protocol.pci",
     "$zx/system/dev/lib/device-protocol-i2c",
-    "$zx/system/ulib/ddk",
+    "$zx/system/dev/lib/device-protocol-i2c-channel",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
 }
 
+driver("alc5663") {
+  deps = [
+    ":alc5663_sources",
+    "$zx/system/ulib/ddk",
+  ]
+}
+
 test("alc5663_test") {
   testonly = true
   output_name = "alc5663-test"
+
   sources = [
-    "alc5663.cc",
     "alc5663_test.cc",
+    "fake_i2c.cc",
+    "fake_i2c.h",
+    "i2c_client_test.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.i2c",
-    "$zx/system/banjo/ddk.protocol.pci",
-    "$zx/system/dev/lib/device-protocol-i2c",
+    ":alc5663_sources",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/mock-i2c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
 }
