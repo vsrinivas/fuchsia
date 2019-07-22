@@ -36,49 +36,6 @@ void IntelDsp::DumpRegs() {
   LOG(INFO, "ROM_INFO      0x%08x\n", REG_RD(&fw_regs()->rom_info));
 }
 
-void IntelDsp::DumpNhlt(const nhlt_table_t* table, size_t length) {
-  if (length < sizeof(*table)) {
-    LOG(ERROR, "NHLT too small (%zu bytes)\n", length);
-    return;
-  }
-
-  if (memcmp(table->header.signature, ACPI_NHLT_SIGNATURE, ACPI_NAME_SIZE) != 0) {
-    LOG(ERROR, "Invalid NHLT signature (expected '%s', got '%s')\n", ACPI_NHLT_SIGNATURE,
-        table->header.signature);
-    return;
-  }
-
-  uint8_t count = table->endpoint_desc_count;
-  const nhlt_descriptor_t* desc = table->endpoints;
-  LOG(INFO, "Got %u NHLT endpoints:\n", count);
-  while (count--) {
-    LOG(INFO, "Endpoint @ %p\n", desc);
-    LOG(INFO, "  link_type: %u\n", desc->link_type);
-    LOG(INFO, "  instance_id: %u\n", desc->instance_id);
-    LOG(INFO, "  vendor_id: 0x%x\n", desc->vendor_id);
-    LOG(INFO, "  device_id: 0x%x\n", desc->device_id);
-    LOG(INFO, "  revision_id: %u\n", desc->revision_id);
-    LOG(INFO, "  subsystem_id: %u\n", desc->subsystem_id);
-    LOG(INFO, "  device_type: %u\n", desc->device_type);
-    LOG(INFO, "  direction: %u\n", desc->direction);
-    LOG(INFO, "  virtual_bus_id: %u\n", desc->virtual_bus_id);
-    LOG(INFO, "  specific config @ %p size 0x%x\n", &desc->config, desc->config.capabilities_size);
-
-    auto formats = reinterpret_cast<const formats_config_t*>(
-        reinterpret_cast<const uint8_t*>(&desc->config) + sizeof(desc->config.capabilities_size) +
-        desc->config.capabilities_size);
-    LOG(INFO, "  formats_config  @ %p count %u\n", formats, formats->format_config_count);
-
-    desc = reinterpret_cast<const nhlt_descriptor_t*>(reinterpret_cast<const uint8_t*>(desc) +
-                                                      desc->length);
-    if (static_cast<size_t>(reinterpret_cast<const uint8_t*>(desc) -
-                            reinterpret_cast<const uint8_t*>(table)) > length) {
-      LOG(ERROR, "descriptor at %p out of bounds\n", desc);
-      break;
-    }
-  }
-}
-
 void IntelDsp::DumpFirmwareConfig(const TLVHeader* config, size_t length) {
   LOG(INFO, "===== Firmware Config =====\n");
   size_t bytes = 0;

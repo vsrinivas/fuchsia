@@ -35,6 +35,7 @@ driver("intel-hda") {
     "intel-hda-irq.cc",
     "intel-hda-stream.cc",
     "intel-hda-stream.h",
+    "nhlt.cc",
     "utils.cc",
     "utils.h",
   ]
