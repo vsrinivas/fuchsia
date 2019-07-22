@@ -1,7 +1,6 @@
 # Examples
 
-List of example apps that directly integrate with Ledger - this does not include
-apps that use Ledger through Framework fuchsia::modular::Link objects.
+List of example apps that integrate with Ledger.
 
 ## C++
 
@@ -13,14 +12,14 @@ apps that use Ledger through Framework fuchsia::modular::Link objects.
 
 ## Dart
 
- * [chat] - a chat agent that uses Ledger to store messages
- * [contacts] - Ledger-based contacts agent
- * [todo list] - a todo-list module that uses Ledger to store the todo items
+ * [todo list] – a todo-list module that uses Ledger to store the todo items
    * this is a minimal working example of a Ledger-based app
+ * [todo list (Sledge)] – a todo-list module that uses Ledger to store the todo
+   items, implemented using the [Sledge] library
 
-[chat]: https://fuchsia.googlesource.com/topaz/+/master/app/chat/
 [clipboard]: /peridot/bin/agents/clipboard/
-[contacts]: https://fuchsia.googlesource.com/topaz/+/master/app/contacts/
 [Ledger benchmarks]: /src/ledger/bin/tests/benchmark
 [story runner]: /peridot/bin/sessionmgr/story_runner/
 [todo list]: https://fuchsia.googlesource.com/topaz/+/master/examples/ledger/todo_list/
+[todo list (Sledge)]: https://fuchsia.googlesource.com/topaz/+/master/examples/ledger/todo_list_sledge/
+[Sledge]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/sledge/
