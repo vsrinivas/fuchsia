@@ -55,7 +55,7 @@ use packet::{Buf, BufferMut, EmptyBuf};
 use rand::{CryptoRng, RngCore};
 use std::time;
 
-use crate::device::{DeviceLayerState, DeviceLayerTimerId};
+use crate::device::{DeviceLayerState, DeviceLayerTimerId, DeviceStateBuilder};
 use crate::ip::{IpLayerState, IpLayerTimerId};
 use crate::transport::{TransportLayerState, TransportLayerTimerId};
 
@@ -93,6 +93,7 @@ macro_rules! map_addr_version {
 #[derive(Default)]
 pub struct StackStateBuilder {
     ip: IpStateBuilder,
+    device: DeviceStateBuilder,
 }
 
 impl StackStateBuilder {
@@ -101,12 +102,17 @@ impl StackStateBuilder {
         &mut self.ip
     }
 
+    /// Get the builder for the device state.
+    pub fn device_builder(&mut self) -> &mut DeviceStateBuilder {
+        &mut self.device
+    }
+
     /// Consume this builder and produce a `StackState`.
     pub fn build<D: EventDispatcher>(self) -> StackState<D> {
         StackState {
             transport: TransportLayerState::default(),
             ip: self.ip.build(),
-            device: DeviceLayerState::default(),
+            device: self.device.build(),
             #[cfg(test)]
             test_counters: testutil::TestCounters::default(),
         }

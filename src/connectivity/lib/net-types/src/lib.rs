@@ -107,7 +107,21 @@ pub trait BroadcastAddress {
 /// implementation of the [`UnicastAddress`]. Since that trait is not `unsafe`,
 /// `unsafe` code may NOT rely on this guarantee for its soundness.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct UnicastAddr<A: UnicastAddress>(A);
+pub struct UnicastAddr<A>(A);
+
+impl<A> UnicastAddr<A> {
+    /// Construct a new `UnicastAddr` without checking to see if `addr`
+    /// is actually a unicast address.
+    ///
+    /// # Safety
+    ///
+    /// It is up to the caller to make sure that `addr` is a unicast
+    /// address to not break the guarantee of `UnicastAddr`. See
+    /// [`UnicastAddr`] for more details.
+    pub const unsafe fn new_unchecked(addr: A) -> UnicastAddr<A> {
+        UnicastAddr(addr)
+    }
+}
 
 impl<A: UnicastAddress> UnicastAddr<A> {
     /// Constructs a new `UnicastAddr`.
@@ -154,7 +168,21 @@ impl<A: UnicastAddress + Display> Display for UnicastAddr<A> {
 /// implementation of the [`MulticastAddress`]. Since that trait is not
 /// `unsafe`, `unsafe` code may NOT rely on this guarantee for its soundness.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct MulticastAddr<A: MulticastAddress>(A);
+pub struct MulticastAddr<A>(A);
+
+impl<A> MulticastAddr<A> {
+    /// Construct a new `MulticastAddr` without checking to see if `addr`
+    /// is actually a multicast address.
+    ///
+    /// # Safety
+    ///
+    /// It is up to the caller to make sure that `addr` is a multicast
+    /// address to not break the guarantee of `MulticastAddr`. See
+    /// [`MulticastAddr`] for more details.
+    pub const unsafe fn new_unchecked(addr: A) -> MulticastAddr<A> {
+        MulticastAddr(addr)
+    }
+}
 
 impl<A: MulticastAddress> MulticastAddr<A> {
     /// Constructs a new `MulticastAddr`.
@@ -220,11 +248,19 @@ mod tests {
     fn test_unicast_addr() {
         assert_eq!(UnicastAddr::new(Address::Unicast), Some(UnicastAddr(Address::Unicast)));
         assert_eq!(UnicastAddr::new(Address::Multicast), None);
+        assert_eq!(
+            unsafe { UnicastAddr::new_unchecked(Address::Unicast) },
+            UnicastAddr(Address::Unicast)
+        );
     }
 
     #[test]
     fn test_multicast_addr() {
         assert_eq!(MulticastAddr::new(Address::Multicast), Some(MulticastAddr(Address::Multicast)));
         assert_eq!(MulticastAddr::new(Address::Unicast), None);
+        assert_eq!(
+            unsafe { MulticastAddr::new_unchecked(Address::Multicast) },
+            MulticastAddr(Address::Multicast)
+        );
     }
 }

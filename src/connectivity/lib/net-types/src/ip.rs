@@ -552,13 +552,20 @@ impl Ipv6Addr {
     ///
     /// [RFC 4291 Section 2.7.1]: https://tools.ietf.org/html/rfc4291#section-2.7.1
     #[inline]
-    pub const fn to_solicited_node_address(&self) -> Self {
+    pub const fn to_solicited_node_address(&self) -> MulticastAddr<Self> {
         // TODO(brunodalbo) benchmark this generation and evaluate if using
         //  bit operations with u128 could be faster. This is very likely
         //  going to be on a hot path.
-        Self::new([
-            0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0xff, self.0[13], self.0[14], self.0[15],
-        ])
+
+        // We know we are not breaking the guarantee that `MulticastAddr` provides
+        // when calling `new_unchecked` because the address we provide it is
+        // a multicast address as defined by RFC 4291 section 2.7.1.
+        unsafe {
+            MulticastAddr::new_unchecked(Self::new([
+                0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0xff, self.0[13], self.0[14],
+                self.0[15],
+            ]))
+        }
     }
 
     /// Checks whether `self` is a link local IPv6 address, as defined in [RFC
@@ -1072,7 +1079,7 @@ mod tests {
         ]);
         let solicited =
             Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0xff, 0xb5, 0x5a, 0xa0]);
-        assert_eq!(addr.to_solicited_node_address(), solicited);
+        assert_eq!(addr.to_solicited_node_address().get(), solicited);
     }
 
     #[test]

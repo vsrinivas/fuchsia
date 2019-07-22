@@ -19,16 +19,17 @@
 //! [RFC 4861]: https://tools.ietf.org/html/rfc4861
 
 use std::collections::HashMap;
+use std::num::NonZeroUsize;
 use std::time::Duration;
 
-use log::debug;
-use net_types::ip::{Ipv6, Ipv6Addr};
+use log::{debug, error, trace};
+use net_types::ip::{IpAddress, Ipv6, Ipv6Addr};
 use net_types::MulticastAddress;
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
 use zerocopy::ByteSlice;
 
 use crate::device::ethernet::EthernetNdpDevice;
-use crate::device::{DeviceId, DeviceLayerTimerId};
+use crate::device::{DeviceId, DeviceLayerTimerId, Tentative};
 use crate::ip::IpProto;
 use crate::wire::icmp::ndp::{
     self, options::NdpOption, NeighborAdvertisment, NeighborSolicitation, Options,
@@ -49,6 +50,12 @@ const RETRANS_TIMER_DEFAULT: Duration = Duration::from_secs(1);
 /// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
 const MAX_MULTICAST_SOLICIT: usize = 3;
 
+/// The number of NS messages to be sent to perform DAD
+/// [RFC 4862 section 5.1]
+///
+/// [RFC 4862 section 5.1]: https://tools.ietf.org/html/rfc4862#section-5.1
+pub(crate) const DUP_ADDR_DETECT_TRANSMITS: usize = 1;
+
 /// A link layer address that can be discovered using NDP.
 pub(crate) trait LinkLayerAddress: Copy + Clone {
     /// The length, in bytes, expected for the `LinkLayerAddress`
@@ -60,6 +67,32 @@ pub(crate) trait LinkLayerAddress: Copy + Clone {
     ///
     /// `bytes` is guaranteed to be **exactly** `BYTES_LENGTH` long.
     fn from_bytes(bytes: &[u8]) -> Self;
+}
+
+/// The various states an IP address can be on an interface.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum AddressState {
+    /// The address is assigned to an interface and can be considered
+    /// bound to it (all packets destined to the address will be
+    /// accepted).
+    Assigned,
+
+    /// The address is unassigned to an interface. Packets destined to
+    /// an unassigned address will be dropped, or forwarded if the
+    /// interface is acting as a router and possible to forward.
+    Unassigned,
+
+    /// The address is considered unassigned to an interface for normal
+    /// operations, but has the intention of being assigned in the future
+    /// (e.g. once NDP's Duplicate Address Detection is completed).
+    Tentative,
+}
+
+impl AddressState {
+    /// Is this address unassigned?
+    pub(crate) fn is_unassigned(self) -> bool {
+        self == AddressState::Unassigned
+    }
 }
 
 /// A device layer protocol which can support NDP.
@@ -86,23 +119,24 @@ pub(crate) trait NdpDevice: Sized {
         device_id: usize,
     ) -> Self::LinkAddress;
 
-    /// Get *an* IPv6 address for this device.
+    /// Get a (possibly tentative) IPv6 address for this device.
     ///
     /// Any **unicast** IPv6 address is a valid return value. Violating this
     /// rule may result in incorrect IP packets being sent.
     fn get_ipv6_addr<D: EventDispatcher>(
         state: &StackState<D>,
         device_id: usize,
-    ) -> Option<Ipv6Addr>;
+    ) -> Option<Tentative<Ipv6Addr>>;
 
-    /// Checks whether this device has the provided `address`.
+    /// Returns the state of `address` on the device identified
+    /// by `device_id`.
     ///
     /// `address` is guaranteed to be a valid unicast address.
-    fn has_ipv6_addr<D: EventDispatcher>(
+    fn ipv6_addr_state<D: EventDispatcher>(
         state: &StackState<D>,
         device_id: usize,
         address: &Ipv6Addr,
-    ) -> bool;
+    ) -> AddressState;
 
     /// Send a packet in a device layer frame to a destination `LinkAddress`.
     ///
@@ -150,6 +184,55 @@ pub(crate) trait NdpDevice: Sized {
         device_id: usize,
         address: &Ipv6Addr,
     );
+
+    /// Notifies the device layer that a duplicate address has been detected. The
+    /// device should want to remove the address.
+    fn duplicate_address_detected<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: usize,
+        addr: Ipv6Addr,
+    );
+
+    /// Notifies the device layer that the address is very likely (because DAD
+    /// is not reliable) to be unique, it is time to mark it to be permanent.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `addr` is not tentative on the devide identified by `device_id`.
+    fn unique_address_determined<D: EventDispatcher>(
+        state: &mut StackState<D>,
+        device_id: usize,
+        addr: Ipv6Addr,
+    );
+}
+
+/// Per interface configurations for NDP.
+#[derive(Debug, Clone)]
+pub struct NdpConfigurations {
+    /// Value for NDP's DUP_ADDR_DETECT_TRANSMITS parameter.
+    ///
+    /// As per [RFC 4862 section 5.1], the DUP_ADDR_DETECT_TRANSMITS
+    /// is configurable per interface.
+    ///
+    /// A value of `None` means DAD will not be performed on the interface.
+    ///
+    /// [RFC 4862 section 5.1]: https://tools.ietf.org/html/rfc4862#section-5.1
+    dup_addr_detect_transmits: Option<NonZeroUsize>,
+}
+
+impl Default for NdpConfigurations {
+    fn default() -> Self {
+        Self { dup_addr_detect_transmits: NonZeroUsize::new(DUP_ADDR_DETECT_TRANSMITS) }
+    }
+}
+
+impl NdpConfigurations {
+    /// Set the value for NDP's DUP_ADDR_DETECT_TRANSMITS parameter.
+    ///
+    /// A value of `None` means DAD wil not be performed on the interface.
+    pub(crate) fn set_dup_addr_detect_transmits(&mut self, v: Option<NonZeroUsize>) {
+        self.dup_addr_detect_transmits = v;
+    }
 }
 
 /// The state associated with an instance of the Neighbor Discovery Protocol
@@ -159,31 +242,52 @@ pub(crate) trait NdpDevice: Sized {
 /// operations.
 pub(crate) struct NdpState<D: NdpDevice> {
     neighbors: NeighborTable<D::LinkAddress>,
+    dad_transmits_remaining: HashMap<Ipv6Addr, usize>,
+    configs: NdpConfigurations,
 }
 
-impl<D: NdpDevice> Default for NdpState<D> {
-    fn default() -> Self {
-        NdpState { neighbors: NeighborTable::default() }
+impl<D: NdpDevice> NdpState<D> {
+    pub(crate) fn new(configs: NdpConfigurations) -> Self {
+        Self {
+            neighbors: NeighborTable::default(),
+            dad_transmits_remaining: HashMap::new(),
+            configs,
+        }
+    }
+
+    pub(crate) fn set_dad_transmits(&mut self, new_dad_transmits: Option<NonZeroUsize>) {
+        self.configs.dup_addr_detect_transmits = new_dad_transmits;
     }
 }
 
 /// The identifier for timer events in NDP operations.
-///
-/// This is used to retry sending Neighbor Discovery Protocol requests.
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
-pub(crate) struct NdpTimerId {
-    device_id: usize,
-    neighbor_addr: Ipv6Addr,
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+pub(crate) enum NdpTimerId {
+    /// This is used to retry sending Neighbor Discovery Protocol requests.
+    LinkAddressResolution { device_id: usize, neighbor_addr: Ipv6Addr },
+    /// This is used to resend Duplicate Address Detection Neighbor Solicitation
+    /// messages if `DUP_ADDR_DETECTION_TRANSMITS` is greater than one.
+    DadNsTransmit { device_id: usize, addr: Ipv6Addr },
+    // TODO: The RFC suggests that we SHOULD make a random delay to
+    // join the solicitation group. When we support MLD, we probably
+    // want one for that.
 }
 
 impl NdpTimerId {
     /// Creates a new `NdpTimerId` wrapped inside a `TimerId` with the provided
     /// `device_id` and `neighbor_addr`.
-    pub(crate) fn new_neighbor_solicitation_timer_id(
+    pub(crate) fn new_link_address_resolution_timer_id(
         device_id: usize,
         neighbor_addr: Ipv6Addr,
     ) -> TimerId {
-        Self { device_id, neighbor_addr }.into()
+        NdpTimerId::LinkAddressResolution { device_id, neighbor_addr }.into()
+    }
+
+    pub(crate) fn new_dad_ns_transmission_timer_id(
+        device_id: usize,
+        tentative_addr: Ipv6Addr,
+    ) -> TimerId {
+        NdpTimerId::DadNsTransmit { device_id, addr: tentative_addr }.into()
     }
 }
 
@@ -203,26 +307,60 @@ pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: NdpTi
 }
 
 fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(ctx: &mut Context<D>, id: NdpTimerId) {
-    let ndp_state = ND::get_ndp_state(ctx.state_mut(), id.device_id);
-    match ndp_state.neighbors.get_neighbor_state_mut(&id.neighbor_addr) {
-        Some(NeighborState {
-            link_address: LinkAddressResolutionValue::Waiting { ref mut transmit_counter },
-        }) => {
-            if *transmit_counter < MAX_MULTICAST_SOLICIT {
-                // Increase the transmit counter and send the solicitation again
-                *transmit_counter += 1;
-                send_neighbor_solicitation::<_, ND>(ctx, id.device_id, id.neighbor_addr);
-                ctx.dispatcher.schedule_timeout(RETRANS_TIMER_DEFAULT, id.into());
-            } else {
-                // To make sure we don't get stuck in this neighbor unreachable
-                // state forever, remove the neighbor from the database:
-                ndp_state.neighbors.delete_neighbor_state(&id.neighbor_addr);
-                increment_counter!(ctx, "ndp::neighbor_solicitation_timeout");
+    match id {
+        NdpTimerId::LinkAddressResolution { device_id, neighbor_addr } => {
+            let ndp_state = ND::get_ndp_state(ctx.state_mut(), device_id);
+            match ndp_state.neighbors.get_neighbor_state_mut(&neighbor_addr) {
+                Some(NeighborState {
+                    link_address: LinkAddressResolutionValue::Waiting { ref mut transmit_counter },
+                }) => {
+                    if *transmit_counter < MAX_MULTICAST_SOLICIT {
+                        // Increase the transmit counter and send the solicitation again
+                        *transmit_counter += 1;
+                        send_neighbor_solicitation::<_, ND>(ctx, device_id, neighbor_addr);
+                        ctx.dispatcher.schedule_timeout(
+                            RETRANS_TIMER_DEFAULT,
+                            NdpTimerId::new_link_address_resolution_timer_id(
+                                device_id,
+                                neighbor_addr,
+                            ),
+                        );
+                    } else {
+                        // To make sure we don't get stuck in this neighbor unreachable
+                        // state forever, remove the neighbor from the database:
+                        ndp_state.neighbors.delete_neighbor_state(&neighbor_addr);
+                        increment_counter!(ctx, "ndp::neighbor_solicitation_timeout");
 
-                ND::address_resolution_failed(ctx, id.device_id, &id.neighbor_addr);
+                        ND::address_resolution_failed(ctx, device_id, &neighbor_addr);
+                    }
+                }
+                _ => debug!("ndp timeout fired for invalid neighbor state"),
             }
         }
-        _ => debug!("ndp timeout fired for invalid neighbor state"),
+        NdpTimerId::DadNsTransmit { addr, device_id } => {
+            // Get device NDP state.
+            //
+            // We know this call to unwrap will not fail because we will only reach here
+            // if DAD has been started for some device - address pair. When we start DAD,
+            // we setup the `NdpState` so we should have a valid entry.
+            let ndp_state = ND::get_ndp_state(ctx.state_mut(), device_id);
+            let remaining = *ndp_state.dad_transmits_remaining.get(&addr).unwrap();
+
+            // We have finished.
+            if remaining == 0 {
+                // We know `unwrap` will not fail because we just succesfully
+                // called `get` then `unwrap` earlier.
+                ndp_state.dad_transmits_remaining.remove(&addr).unwrap();
+
+                // `unique_address_determined` may panic if we attempt to resolve an `addr`
+                // that is not tentative on the device with id `device_id`. However, we
+                // can only reach here if `addr` was tentative on `device_id` and we are
+                // performing DAD so we know `unique_address_determined` will not panic.
+                ND::unique_address_determined(ctx.state_mut(), device_id, addr);
+            } else {
+                do_duplicate_address_detection::<D, ND>(ctx, device_id, addr, remaining);
+            }
+        }
     }
 }
 
@@ -232,6 +370,8 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
     device_id: usize,
     lookup_addr: Ipv6Addr,
 ) -> Option<ND::LinkAddress> {
+    trace!("ndp::lookup: {:?}", lookup_addr);
+
     // An IPv6 multicast address should always be sent on a broadcast
     // link address.
     if lookup_addr.is_multicast() {
@@ -257,7 +397,7 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
             // neighbor advertisements back.
             ctx.dispatcher.schedule_timeout(
                 RETRANS_TIMER_DEFAULT,
-                NdpTimerId::new_neighbor_solicitation_timer_id(device_id, lookup_addr),
+                NdpTimerId::new_link_address_resolution_timer_id(device_id, lookup_addr),
             );
             None
         }
@@ -337,19 +477,100 @@ impl<H> Default for NeighborTable<H> {
     }
 }
 
+/// Begin the Duplicate Address Detection process.
+///
+/// If the device is configured to not do DAD, then this method will
+/// immediately assign `tentative_addr` to the device.
+pub(crate) fn start_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+    tentative_addr: Ipv6Addr,
+) {
+    let transmits = ND::get_ndp_state(ctx.state_mut(), device_id).configs.dup_addr_detect_transmits;
+
+    if let Some(transmits) = transmits {
+        do_duplicate_address_detection::<D, ND>(ctx, device_id, tentative_addr, transmits.get());
+    } else {
+        // DAD is turned off since the interface's DUP_ADDR_DETECT_TRANSMIT parameter
+        // is `None`.
+        ND::unique_address_determined(ctx.state_mut(), device_id, tentative_addr);
+    }
+}
+
+/// Cancels the Duplicate Address Detection process.
+///
+/// Note, the address will now be in a tentative state forever unless the
+/// caller assigns a new address to the device (DAD will restart), explicitly
+/// restarts DAD, or the device receives a Neighbor Solicitation or Neighbor
+/// Advertisement message (the address will be found to be a duplicate and
+/// unassigned from the device).
+///
+/// # Panics
+///
+/// Panics if we are not currently performing DAD for `tentative_addr` on `device_id`.
+pub(crate) fn cancel_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+    tentative_addr: Ipv6Addr,
+) {
+    ctx.dispatcher_mut()
+        .cancel_timeout(NdpTimerId::new_dad_ns_transmission_timer_id(device_id, tentative_addr));
+
+    // `unwrap` may panic if we have no entry in `dad_transmits_remaining` for
+    // `tentative_addr` which means that we are not performing DAD on
+    // `tentative_add`. This case is documented as a panic condition.
+    ND::get_ndp_state(ctx.state_mut(), device_id)
+        .dad_transmits_remaining
+        .remove(&tentative_addr)
+        .unwrap();
+}
+
+fn do_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+    tentative_addr: Ipv6Addr,
+    remaining: usize,
+) {
+    trace!("do_duplicate_address_detection: tentative_addr {:?}", tentative_addr);
+
+    assert!(remaining > 0);
+
+    let src_ll = ND::get_link_layer_addr(ctx.state(), device_id);
+    send_ndp_packet::<_, ND, &[u8], _>(
+        ctx,
+        device_id,
+        Ipv6Addr::new([0; 16]),
+        tentative_addr.to_solicited_node_address().get(),
+        ND::BROADCAST,
+        NeighborSolicitation::new(tentative_addr),
+        &[NdpOption::SourceLinkLayerAddress(src_ll.bytes())],
+    );
+    ND::get_ndp_state(ctx.state_mut(), device_id)
+        .dad_transmits_remaining
+        .insert(tentative_addr, remaining - 1);
+    // Uses same RETRANS_TIMER definition per RFC 4862 section-5.1
+    ctx.dispatcher_mut().schedule_timeout(
+        RETRANS_TIMER_DEFAULT,
+        NdpTimerId::new_dad_ns_transmission_timer_id(device_id, tentative_addr),
+    );
+}
+
 fn send_neighbor_solicitation<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
     device_id: usize,
     lookup_addr: Ipv6Addr,
 ) {
+    trace!("send_neighbor_solicitation: lookip_addr {:?}", lookup_addr);
+
     // TODO(brunodalbo) when we send neighbor solicitations, we SHOULD set
     //  the source IP to the same IP as the packet that triggered the
     //  solicitation, so that when we hit the neighbor they'll have us in their
     //  cache, reducing overall burden on the network.
-    if let Some(device_addr) = ND::get_ipv6_addr(ctx.state(), device_id) {
+    if let Some(tentative_device_addr) = ND::get_ipv6_addr(ctx.state(), device_id) {
+        let device_addr = tentative_device_addr.into_inner();
         debug_assert!(device_addr.is_valid_unicast());
         let src_ll = ND::get_link_layer_addr(ctx.state(), device_id);
-        let dst_ip = lookup_addr.to_solicited_node_address();
+        let dst_ip = lookup_addr.to_solicited_node_address().get();
         send_ndp_packet::<_, ND, &[u8], _>(
             ctx,
             device_id,
@@ -375,11 +596,12 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
 ) {
     debug!("send_neighbor_advertisement from {:?} to {:?}", device_addr, dst_ip);
     debug_assert!(device_addr.is_valid_unicast());
-    // TODO(brunodalbo) we're currently asserting that dst_ip is a valid unicast
-    //  as we build on other NDP features (such as unsolicited neighbor
-    //  advertisements, this assertion will become a change in the packet
-    //  building logic below.
-    debug_assert!(dst_ip.is_valid_unicast());
+    // We currently only allow the destination address to be:
+    // 1) a unicast address.
+    // 2) a multicast destination but the message should be a unsolicited neighbor
+    //    advertisement.
+    // NOTE: this assertion may need change if more messages are to be allowed in the future.
+    debug_assert!(dst_ip.is_valid_unicast() || (!solicited && dst_ip.is_multicast()));
 
     // TODO(brunodalbo) if we're a router, flags must also set FLAG_ROUTER.
     let flags = if solicited { NeighborAdvertisment::FLAG_SOLICITED } else { 0x00 };
@@ -416,6 +638,7 @@ fn send_ndp_packet<D: EventDispatcher, ND: NdpDevice, B: ByteSlice, M>(
 ) where
     M: IcmpMessage<Ipv6, B, Code = IcmpUnusedCode>,
 {
+    trace!("send_ndp_packet: src_ip={:?} dst_ip={:?}", src_ip, dst_ip);
     ND::send_ipv6_frame_to(
         ctx,
         device_id,
@@ -441,6 +664,8 @@ pub(crate) fn receive_ndp_packet<D: EventDispatcher, B>(
 ) where
     B: ByteSlice,
 {
+    trace!("receive_ndp_packet");
+
     match device {
         Some(d) => {
             // TODO(brunodalbo) we're assuming the device Id is for an ethernet
@@ -460,6 +685,17 @@ pub(crate) fn receive_ndp_packet<D: EventDispatcher, B>(
     }
 }
 
+fn duplicate_address_detected<D: EventDispatcher, ND: NdpDevice>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+    addr: Ipv6Addr,
+) {
+    cancel_duplicate_address_detection::<_, ND>(ctx, device_id, addr);
+
+    // let's notify our device
+    ND::duplicate_address_detected(ctx, device_id, addr);
+}
+
 fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
     ctx: &mut Context<D>,
     device_id: usize,
@@ -477,31 +713,88 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
             log_unimplemented!((), "NDP Router Advertisement not implemented")
         }
         Icmpv6Packet::NeighborSolicitation(p) => {
+            trace!("receive_ndp_packet_inner: Received NDP NS");
+
             let target_address = p.message().target_address();
-            if !(target_address.is_valid_unicast()
-                && ND::has_ipv6_addr(ctx.state(), device_id, target_address))
+            if !target_address.is_valid_unicast()
+                || ND::ipv6_addr_state(ctx.state(), device_id, target_address).is_unassigned()
             {
                 // just ignore packet, either it was not really meant for us or
                 // is malformed.
+                trace!("receive_ndp_packet_inner: Dropping NDP NS packet that is not meant for us or malformed");
                 return;
             }
-            increment_counter!(ctx, "ndp::rx_neighbor_solicitation");
-            // if we have a source link layer address option, we take it and
-            // save to our cache:
-            if let Some(ll) = get_source_link_layer_option::<ND, _>(p.body()) {
-                // TODO(brunodalbo) the reachability state of the neighbor
-                //  that is added to the cache by this route must be set to
-                //  STALE.
-                ND::get_ndp_state(ctx.state_mut(), device_id)
-                    .neighbors
-                    .set_link_address(src_ip, ll);
-            }
 
-            // Finally we ought to reply to the Neighbor Solicitation with a
-            // Neighbor Advertisement.
-            send_neighbor_advertisement::<_, ND>(ctx, device_id, true, *target_address, src_ip);
+            // this solicitation message is used for DAD
+            if let Some(my_addr) = ND::get_ipv6_addr(ctx.state_mut(), device_id) {
+                if my_addr.is_tentative() {
+                    // we are not allowed to respond to the solicitation
+                    if src_ip.is_unspecified() {
+                        // If the source address of the packet is the unspecified address,
+                        // the source of the packet is performing DAD for the same target
+                        // address as our `my_addr`. A duplicate address has been detected.
+                        duplicate_address_detected::<_, ND>(ctx, device_id, my_addr.into_inner());
+                    }
+                } else {
+                    increment_counter!(ctx, "ndp::rx_neighbor_solicitation");
+                    // if we have a source link layer address option, we take it and
+                    // save to our cache:
+                    if !src_ip.is_unspecified() {
+                        // we only update the cache if it is not from an unspecified address,
+                        // i.e., it is not a DAD message. (RFC 4861)
+                        if let Some(ll) = get_source_link_layer_option::<ND, _>(p.body()) {
+                            // TODO(brunodalbo) the reachability state of the neighbor
+                            //  that is added to the cache by this route must be set to
+                            //  STALE.
+                            ND::get_ndp_state(ctx.state_mut(), device_id)
+                                .neighbors
+                                .set_link_address(src_ip, ll);
+                        }
+
+                        // Finally we ought to reply to the Neighbor Solicitation with a
+                        // Neighbor Advertisement.
+                        send_neighbor_advertisement::<_, ND>(
+                            ctx,
+                            device_id,
+                            true,
+                            *target_address,
+                            src_ip,
+                        );
+                    } else {
+                        // Send out Unsolicited Advertisement in response to neighbor who's
+                        // performing DAD, as described in RFC 4861 and 4862
+                        send_neighbor_advertisement::<_, ND>(
+                            ctx,
+                            device_id,
+                            false,
+                            *target_address,
+                            Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
+                        )
+                    }
+                }
+            }
         }
         Icmpv6Packet::NeighborAdvertisment(p) => {
+            trace!("receive_ndp_packet_inner: Received NDP NA");
+
+            let target_address = p.message().target_address();
+            match ND::ipv6_addr_state(ctx.state(), device_id, target_address) {
+                AddressState::Tentative => {
+                    duplicate_address_detected::<_, ND>(ctx, device_id, *target_address);
+                    return;
+                }
+                AddressState::Assigned => {
+                    // RFC 4862 says this situation is out of the scope, so we
+                    // just log out the situation.
+                    //
+                    // TODO(ghanan): Signal to bindings that a duplicate address is detected?
+                    error!("A duplicated address found when we are not in DAD process!");
+                    return;
+                }
+                // Do nothing
+                AddressState::Unassigned => {}
+            }
+
             increment_counter!(ctx, "ndp::rx_neighbor_advertisement");
             let state = ND::get_ndp_state(ctx.state_mut(), device_id);
             match state.neighbors.get_neighbor_state_mut(&src_ip) {
@@ -515,7 +808,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                         *link_address = LinkAddressResolutionValue::Known { address };
                         // Cancel the resolution timeout.
                         ctx.dispatcher.cancel_timeout(
-                            NdpTimerId::new_neighbor_solicitation_timer_id(device_id, src_ip),
+                            NdpTimerId::new_link_address_resolution_timer_id(device_id, src_ip),
                         );
                         ND::address_resolved(ctx, device_id, &src_ip, address);
                     }
@@ -567,17 +860,21 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     use net_types::ethernet::Mac;
+    use net_types::ip::AddrSubnet;
     use packet::Buf;
 
-    use super::*;
-    use crate::device::ethernet::EthernetNdpDevice;
+    use crate::device::{
+        ethernet::EthernetNdpDevice, get_ip_addr_subnet, is_in_ip_multicast, set_ip_addr_subnet,
+    };
     use crate::ip::IPV6_MIN_MTU;
     use crate::testutil::{
         self, set_logger_for_test, DummyEventDispatcher, DummyEventDispatcherBuilder, DummyNetwork,
     };
     use crate::wire::icmp::IcmpEchoRequest;
-    use crate::StackState;
+    use crate::StackStateBuilder;
 
     const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
@@ -593,10 +890,10 @@ mod tests {
     #[test]
     fn test_send_neighbor_solicitation_on_cache_miss() {
         set_logger_for_test();
-        let mut state = StackState::default();
-        let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
-        let dispatcher = DummyEventDispatcher::default();
-        let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
+        let mut ctx = DummyEventDispatcherBuilder::default().build();
+        let dev_id = ctx.state_mut().device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        // Now we have to manually assign the ip addresses, see `EthernetNdpDevice::get_ipv6_addr`
+        set_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip(), 128).unwrap());
 
         lookup::<DummyEventDispatcher, EthernetNdpDevice>(&mut ctx, dev_id.id(), remote_ip());
 
@@ -641,6 +938,20 @@ mod tests {
         let body = Buf::new(req_body.to_vec(), ..).encapsulate(
             IcmpPacketBuilder::<Ipv6, &[u8], _>::new(local_ip(), remote_ip(), IcmpUnusedCode, req),
         );
+        // Manually assigning the addresses
+        set_ip_addr_subnet(
+            net.context("local"),
+            device_id,
+            AddrSubnet::new(local_ip(), 128).unwrap(),
+        );
+        set_ip_addr_subnet(
+            net.context("remote"),
+            device_id,
+            AddrSubnet::new(remote_ip(), 128).unwrap(),
+        );
+        assert_eq!(net.context("local").dispatcher.frames_sent().len(), 0);
+        assert_eq!(net.context("remote").dispatcher.frames_sent().len(), 0);
+
         crate::ip::send_ip_packet_from_device(
             net.context("local"),
             device_id,
@@ -710,5 +1021,241 @@ mod tests {
         // TODO(brunodalbo): we should be able to verify that remote also sends
         //  back an echo reply, but we're having some trouble with IPv6 link
         //  local addresses.
+    }
+
+    #[test]
+    fn test_dad_duplicate_address_detected_solicitation() {
+        // Tests whether a duplicate address will get detected by solicitation
+        // In this test, two nodes having the same MAC address will come up
+        // at the same time. And both of them will use the EUI address. Each
+        // of them should be able to detect each other is using the same address,
+        // so they will both give up using that address.
+        set_logger_for_test();
+        let mac = Mac::new([1, 2, 3, 4, 5, 6]);
+        let addr = AddrSubnet::new(mac.to_ipv6_link_local(), 128).unwrap();
+        let multicast_addr = mac.to_ipv6_link_local().to_solicited_node_address();
+        let mut local = DummyEventDispatcherBuilder::default();
+        local.add_device(mac);
+        let mut remote = DummyEventDispatcherBuilder::default();
+        remote.add_device(mac);
+        let device_id = DeviceId::new_ethernet(0);
+
+        // We explicitly call `build_with` when building our contexts below because `build` will
+        // set the default NDP parameter DUP_ADDR_DETECT_TRANSMITS to 0 (effectively disabling
+        // DAD) so we use our own custom `StackStateBuilder` to set it to the default value
+        // of `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
+        let mut net = DummyNetwork::new(
+            vec![
+                (
+                    "local",
+                    local.build_with(StackStateBuilder::default(), DummyEventDispatcher::default()),
+                ),
+                (
+                    "remote",
+                    remote
+                        .build_with(StackStateBuilder::default(), DummyEventDispatcher::default()),
+                ),
+            ]
+            .into_iter(),
+            |ctx, dev| {
+                if *ctx == "local" {
+                    ("remote", device_id, None)
+                } else {
+                    ("local", device_id, None)
+                }
+            },
+        );
+
+        set_ip_addr_subnet(net.context("local"), device_id, addr);
+        set_ip_addr_subnet(net.context("remote"), device_id, addr);
+        assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);
+        assert_eq!(net.context("remote").dispatcher.frames_sent().len(), 1);
+
+        // Both devices should be in the solicited-node multicast group.
+        assert!(is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
+        assert!(is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
+
+        net.step();
+
+        // they should now realize the address they intend to use has a duplicate
+        // in the local network
+        assert!(get_ip_addr_subnet::<_, Ipv6Addr>(net.context("local"), device_id).is_none());
+        assert!(get_ip_addr_subnet::<_, Ipv6Addr>(net.context("remote"), device_id).is_none());
+
+        // Both devices should not be in the multicast group
+        assert!(!is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
+        assert!(!is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
+    }
+
+    #[test]
+    fn test_dad_duplicate_address_detected_advertisement() {
+        // Tests whether a duplicate address will get detected by advertisement
+        // In this test, one of the node first assigned itself the local_ip(),
+        // then the second node comes up and it should be able to find out that
+        // it cannot use the address because someone else has already taken that
+        // address.
+        set_logger_for_test();
+        let mut local = DummyEventDispatcherBuilder::default();
+        local.add_device(TEST_LOCAL_MAC);
+        let mut remote = DummyEventDispatcherBuilder::default();
+        remote.add_device(TEST_REMOTE_MAC);
+        let device_id = DeviceId::new_ethernet(0);
+
+        // We explicitly call `build_with` when building our contexts below because `build` will
+        // set the default NDP parameter DUP_ADDR_DETECT_TRANSMITS to 0 (effectively disabling
+        // DAD) so we use our own custom `StackStateBuilder` to set it to the default value
+        // of `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
+        let mut net = DummyNetwork::new(
+            vec![
+                (
+                    "local",
+                    local.build_with(StackStateBuilder::default(), DummyEventDispatcher::default()),
+                ),
+                (
+                    "remote",
+                    remote
+                        .build_with(StackStateBuilder::default(), DummyEventDispatcher::default()),
+                ),
+            ]
+            .into_iter(),
+            |ctx, dev| {
+                if *ctx == "local" {
+                    ("remote", device_id, None)
+                } else {
+                    ("local", device_id, None)
+                }
+            },
+        );
+
+        println!("Setting new IP on local");
+
+        let addr = AddrSubnet::new(local_ip(), 128).unwrap();
+        let multicast_addr = local_ip().to_solicited_node_address();
+        set_ip_addr_subnet(net.context("local"), device_id, addr);
+        // Only local should be in the solicited node multicast group.
+        assert!(is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
+        assert!(!is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
+        assert!(testutil::trigger_next_timer(net.context("local")));
+
+        let local_addr =
+            EthernetNdpDevice::get_ipv6_addr(net.context("local").state_mut(), device_id.id())
+                .unwrap();
+        assert!(!local_addr.is_tentative());
+        assert_eq!(local_ip(), local_addr.into_inner());
+
+        println!("Set new IP on remote");
+
+        set_ip_addr_subnet(net.context("remote"), device_id, addr);
+        // local & remote should be in the multicast group.
+        assert!(is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
+        assert!(is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
+
+        net.step();
+
+        let remote_addr = get_ip_addr_subnet::<_, Ipv6Addr>(net.context("remote"), device_id);
+        assert!(remote_addr.is_none());
+        // let's make sure that our local node still can use that address
+        let local_addr =
+            EthernetNdpDevice::get_ipv6_addr(net.context("local").state_mut(), device_id.id())
+                .unwrap();
+        assert!(!local_addr.is_tentative());
+        assert_eq!(local_ip(), local_addr.into_inner());
+        // Only local should be in the solicited node multicast group.
+        assert!(is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
+        assert!(!is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
+    }
+
+    #[test]
+    fn test_dad_set_ipv6_address_when_ongoing() {
+        // Test that we can make our tentative address change when DAD is ongoing.
+
+        // We explicitly call `build_with` when building our context below because `build` will
+        // set the default NDP parameter DUP_ADDR_DETECT_TRANSMITS to 0 (effectively disabling
+        // DAD) so we use our own custom `StackStateBuilder` to set it to the default value
+        // of `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
+        let mut ctx = DummyEventDispatcherBuilder::default()
+            .build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
+        let dev_id = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        set_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip(), 128).unwrap());
+        assert_eq!(
+            EthernetNdpDevice::get_ipv6_addr(ctx.state(), dev_id.id()).unwrap(),
+            Tentative::new_tentative(local_ip())
+        );
+        set_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(remote_ip(), 128).unwrap());
+        assert_eq!(
+            EthernetNdpDevice::get_ipv6_addr(ctx.state(), dev_id.id()).unwrap(),
+            Tentative::new_tentative(remote_ip())
+        );
+    }
+
+    #[test]
+    fn test_dad_three_transmits_no_conflicts() {
+        let mut ctx = Context::with_default_state(DummyEventDispatcher::default());
+        let dev_id = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        EthernetNdpDevice::get_ndp_state(&mut ctx.state_mut(), dev_id.id())
+            .set_dad_transmits(NonZeroUsize::new(3));
+        set_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip(), 128).unwrap());
+        for i in 0..3 {
+            testutil::trigger_next_timer(&mut ctx);
+        }
+        let addr = EthernetNdpDevice::get_ipv6_addr(ctx.state(), dev_id.id()).unwrap();
+        assert_eq!(addr.try_into_permanent().unwrap(), local_ip());
+    }
+
+    #[test]
+    fn test_dad_three_transmits_with_conflicts() {
+        // test if the implementation is correct when we have more than 1
+        // NS packets to send.
+        set_logger_for_test();
+        let mac = Mac::new([1, 2, 3, 4, 5, 6]);
+        let mut local = DummyEventDispatcherBuilder::default();
+        local.add_device(mac);
+        let mut remote = DummyEventDispatcherBuilder::default();
+        remote.add_device(mac);
+        let device_id = DeviceId::new_ethernet(0);
+        let mut net = DummyNetwork::new(
+            vec![("local", local.build()), ("remote", remote.build())].into_iter(),
+            |ctx, dev| {
+                if *ctx == "local" {
+                    ("remote", device_id, None)
+                } else {
+                    ("local", device_id, None)
+                }
+            },
+        );
+
+        EthernetNdpDevice::get_ndp_state(&mut net.context("local").state_mut(), device_id.id())
+            .set_dad_transmits(NonZeroUsize::new(3));
+        EthernetNdpDevice::get_ndp_state(&mut net.context("remote").state_mut(), device_id.id())
+            .set_dad_transmits(NonZeroUsize::new(3));
+
+        set_ip_addr_subnet(
+            net.context("local"),
+            device_id,
+            AddrSubnet::new(mac.to_ipv6_link_local(), 128).unwrap(),
+        );
+        // during the first and second period, the remote host is still down.
+        assert!(testutil::trigger_next_timer(net.context("local")));
+        assert!(testutil::trigger_next_timer(net.context("local")));
+        set_ip_addr_subnet(
+            net.context("remote"),
+            device_id,
+            AddrSubnet::new(mac.to_ipv6_link_local(), 128).unwrap(),
+        );
+        // the local host should have sent out 3 packets while the remote one
+        // should only have sent out 1.
+        assert_eq!(net.context("local").dispatcher.frames_sent().len(), 3);
+        assert_eq!(net.context("remote").dispatcher.frames_sent().len(), 1);
+
+        net.step();
+
+        // lets make sure that all timers are cancelled properly
+        assert_eq!(net.context("local").dispatcher.timer_events().count(), 0);
+        assert_eq!(net.context("remote").dispatcher.timer_events().count(), 0);
+
+        // they should now realize the address they intend to use has a duplicate
+        // in the local network
+        assert!(get_ip_addr_subnet::<_, Ipv6Addr>(net.context("local"), device_id).is_none());
+        assert!(get_ip_addr_subnet::<_, Ipv6Addr>(net.context("remote"), device_id).is_none());
     }
 }

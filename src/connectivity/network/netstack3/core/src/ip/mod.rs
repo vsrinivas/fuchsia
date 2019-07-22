@@ -473,47 +473,87 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
         process_fragment!(ctx, device, frame_dst, buffer, packet, Ipv4);
 
         #[ipv6]
-        // Handle extension headers first.
-        match ipv6::handle_extension_headers(ctx, device, frame_dst, &packet, true) {
-            Ipv6PacketAction::Discard => {
-                trace!("receive_ip_packet: handled IPv6 extension headers: discarding packet");
-            }
-            Ipv6PacketAction::Continue => {
-                trace!("receive_ip_packet: handled IPv6 extension headers: dispatching packet");
-
-                // TODO(joshlf):
-                // - Do something with ICMP if we don't have a handler for that protocol?
-                // - Check for already-expired TTL?
-                let (src_ip, dst_ip, proto, meta) = drop_packet!(packet);
-                dispatch_receive_ip_packet(
-                    ctx,
-                    Some(device),
-                    frame_dst,
-                    src_ip,
-                    dst_ip,
-                    proto,
-                    buffer,
-                    Some(meta),
-                );
-            }
-            Ipv6PacketAction::ProcessFragment => {
+        {
+            // For IPv6, we need to make sure the destination address is not actually a
+            // tentative address we are performing NDP's Duplicate Address Detection on.
+            //
+            // As per RFC 4862 section 5.4:
+            // An address on which the Duplicate Address Detection procedure is
+            // applied is said to be tentative until the procedure has completed
+            // successfully.  A tentative address is not considered "assigned to an
+            // interface" in the traditional sense.  That is, the interface must
+            // accept Neighbor Solicitation and Advertisement messages containing
+            // the tentative address in the Target Address field, but processes such
+            // packets differently from those whose Target Address matches an
+            // address assigned to the interface.  Other packets addressed to the
+            // tentative address should be silently discarded.  Note that the "other
+            // packets" include Neighbor Solicitation and Advertisement messages
+            // that have the tentative (i.e., unicast) address as the IP destination
+            // address and contain the tentative address in the Target Address
+            // field.  Such a case should not happen in normal operation, though,
+            // since these messages are multicasted in the Duplicate Address
+            // Detection procedure.
+            //
+            // That is, we accept no packets destined to a tentative address. NS and NA
+            // packets should be addressed to a multicast address that we would have
+            // joined during DAD so that we can receive those packets.
+            //
+            // Here we check to see if the packet's destination address is the IPv6 address
+            // assigned to the device. If it is, we check to see if it is tentative. If the
+            // destination address is not the address assigned to the device, or it is not
+            // tentative, we are okay to proceed; else, we drop the packet.
+            if crate::device::is_addr_tentative_on_device(ctx, packet.dst_ip(), device) {
+                // Silently drop as per RFC 4862 section 5.4
                 trace!(
-                    "receive_ip_packet: handled IPv6 extension headers: handling fragmented packet"
+                    "receive_ip_packet: Dropping packet as it is destined for a tentative address"
                 );
+                return;
+            }
 
-                // Note, the `process_fragment` function (which is called by the `process_fragment!`
-                // macro) could panic if the packet does not have fragment data. However, we are
-                // guaranteed that it will not panic for an IPv6 packet because the fragment data
-                // is in an (optional) fragment extension header which we attempt to handle by calling
-                // `ipv6::handle_extension_headers`. We will only end up here if its return value is
-                // `Ipv6PacketAction::ProcessFragment` which is only possible when the packet has
-                // the fragment extension header (even if the fragment data has values that implies
-                // that the packet is not fragmented).
-                //
-                // TODO(ghanan): Handle extension headers again since there could be
-                //               some more in a reassembled packet (after the
-                //               fragment header).
-                process_fragment!(ctx, device, frame_dst, buffer, packet, Ipv6);
+            // Handle extension headers first.
+            match ipv6::handle_extension_headers(ctx, device, frame_dst, &packet, true) {
+                Ipv6PacketAction::Discard => {
+                    trace!("receive_ip_packet: handled IPv6 extension headers: discarding packet");
+                }
+                Ipv6PacketAction::Continue => {
+                    trace!("receive_ip_packet: handled IPv6 extension headers: dispatching packet");
+
+                    // TODO(joshlf):
+                    // - Do something with ICMP if we don't have a handler for that protocol?
+                    // - Check for already-expired TTL?
+                    let (src_ip, dst_ip, proto, meta) = drop_packet!(packet);
+                    dispatch_receive_ip_packet(
+                        ctx,
+                        Some(device),
+                        frame_dst,
+                        src_ip,
+                        dst_ip,
+                        proto,
+                        buffer,
+                        Some(meta),
+                    );
+                }
+                Ipv6PacketAction::ProcessFragment => {
+                    trace!(
+                        "receive_ip_packet: handled IPv6 extension headers: handling fragmented packet"
+                    );
+
+                    // Note, the `process_fragment` function (which is called by the
+                    // `process_fragment!` macro) could panic if the packet does not
+                    // have fragment data. However, we are guaranteed that it will not
+                    // panic for an IPv6 packet because the fragment data is in an
+                    // (optional) fragment extension header which we attempt to handle
+                    // by calling `ipv6::handle_extension_headers`. We will only end up
+                    // here if its return value is `Ipv6PacketAction::ProcessFragment`
+                    // which is only posisble when the packet has the fragment extension
+                    // header (even if the fragment data has values that implies that
+                    // the packet is not fragmented).
+                    //
+                    // TODO(ghanan): Handle extension headers again since there could be
+                    //               some more in a reassembled packet (after the
+                    //               fragment header).
+                    process_fragment!(ctx, device, frame_dst, buffer, packet, Ipv6);
+                }
             }
         }
     } else if let Some(dest) = forward(ctx, packet.dst_ip()) {
@@ -1013,6 +1053,10 @@ where
 {
     assert!(!A::Version::LOOPBACK_SUBNET.contains(&src_ip));
     assert!(!A::Version::LOOPBACK_SUBNET.contains(&dst_ip));
+
+    // Tentative addresses are not considered bound to an interface in the traditional sense,
+    // therefore, no packet should have a source ip set to a tentative address.
+    debug_assert!(!crate::device::is_addr_tentative_on_device(ctx, src_ip, device));
 
     let builder = <A::Version as IpExt>::PacketBuilder::new(src_ip, dst_ip, DEFAULT_TTL, proto);
     let body = body.encapsulate(builder);
@@ -1712,6 +1756,9 @@ mod tests {
         let dummy_config = get_dummy_config::<I::Addr>();
         let mut state_builder = StackStateBuilder::default();
         state_builder.ip_builder().forward(true);
+        let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
+        ndp_configs.set_dup_addr_detect_transmits(None);
+        state_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap())
             .build_with(state_builder, DummyEventDispatcher::default());
         let bob = DummyEventDispatcherBuilder::from_config(dummy_config).build();
@@ -1779,6 +1826,9 @@ mod tests {
         let dummy_config = get_dummy_config::<Ipv6Addr>();
         let mut state_builder = StackStateBuilder::default();
         state_builder.ip_builder().forward(true);
+        let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
+        ndp_configs.set_dup_addr_detect_transmits(None);
+        state_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let mut dispatcher_builder = DummyEventDispatcherBuilder::from_config(dummy_config.clone());
         let extra_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 100]);
         let extra_mac = Mac::new([13, 14, 15, 16, 17, 18]);
@@ -2308,5 +2358,60 @@ mod tests {
         let mut ctx =
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build::<DummyEventDispatcher>();
         lookup_route(&ctx.state().ip, ip_address)
+    }
+
+    #[test]
+    fn test_no_dispatch_non_ndp_packets_during_ndp_dad() {
+        // Here we make sure we are not dispatching packets destined to a tentative address
+        // (that is performing NDP's Duplicate Address Detection (DAD)) -- IPv6 only.
+
+        // We explicitly call `build_with` when building our context below because `build` will
+        // set the default NDP parameter DUP_ADDR_DETECT_TRANSMITS to 0 (effectively disabling
+        // DAD) so we use our own custom `StackStateBuilder` to set it to the default value
+        // of `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
+        let config = get_dummy_config::<Ipv6Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
+            .build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
+        let device = DeviceId::new_ethernet(0);
+        let frame_dst = FrameDestination::Unicast;
+
+        let buf = Buf::new(vec![0; 10], ..)
+            .encapsulate(Ipv6PacketBuilder::new(
+                config.remote_ip,
+                config.local_ip,
+                64,
+                IpProto::Tcp,
+            ))
+            .serialize_vec_outer()
+            .unwrap()
+            .into_inner();
+
+        // Make sure all timers are done (initial DAD to complete on the interface).
+        trigger_timers_until(&mut ctx, |_| false);
+
+        // Received packet should have been dispatched.
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+
+        // Set the new IP (this should trigger DAD).
+        let ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 10]);
+        crate::device::set_ip_addr_subnet(&mut ctx, device, AddrSubnet::new(ip, 128).unwrap());
+
+        let buf = Buf::new(vec![0; 10], ..)
+            .encapsulate(Ipv6PacketBuilder::new(config.remote_ip, ip, 64, IpProto::Tcp))
+            .serialize_vec_outer()
+            .unwrap()
+            .into_inner();
+
+        // Received packet should not have been dispatched.
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf.clone());
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+
+        // Make sure all timers are done (DAD to complete on the interface due to new IP).
+        trigger_timers_until(&mut ctx, |_| false);
+
+        // Received packet should have been dispatched.
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 2);
     }
 }

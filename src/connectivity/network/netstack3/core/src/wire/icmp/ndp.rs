@@ -130,6 +130,11 @@ impl NeighborAdvertisment {
     pub(crate) fn new(flags_rso: u8, target_address: Ipv6Addr) -> Self {
         Self { flags_rso, _reserved: [0; 3], target_address }
     }
+
+    /// Returns the target_address of an NA message.
+    pub(crate) fn target_address(&self) -> &Ipv6Addr {
+        &self.target_address
+    }
 }
 
 /// An ICMPv6 Redirect Message.

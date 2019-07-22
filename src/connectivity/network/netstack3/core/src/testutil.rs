@@ -499,13 +499,17 @@ impl DummyEventDispatcherBuilder {
         self.device_routes.push((subnet.into(), device));
     }
 
-    /// Build a `Context` from the present configuration with a default state
-    /// and dispatcher.
-    ///
-    /// `b.build()` is equivalent to `b.build_with(StackStateBuilder::default(),
-    /// D::default())`.
+    /// Build a `Context` from the present configuration with a default dispatcher,
+    /// and stack state set to disable NDP's Duplicate Address Detection by default.
     pub(crate) fn build<D: EventDispatcher + Default>(self) -> Context<D> {
-        self.build_with(StackStateBuilder::default(), D::default())
+        let mut stack_builder = StackStateBuilder::default();
+
+        // Most tests do not need NDP's DAD so disable it here.
+        let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
+        ndp_configs.set_dup_addr_detect_transmits(None);
+        stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
+
+        self.build_with(stack_builder, D::default())
     }
 
     /// Build a `Context` from the present configuration with a caller-provided

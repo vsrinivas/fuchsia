@@ -14,8 +14,8 @@ use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 
 use crate::device::arp::{self, ArpDevice, ArpHardwareType, ArpState};
-use crate::device::{ndp, ndp::NdpState};
-use crate::device::{DeviceId, FrameDestination};
+use crate::device::ndp::{self, NdpState};
+use crate::device::{DeviceId, FrameDestination, Tentative};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 use crate::{BufferDispatcher, Context, EventDispatcher, StackState};
@@ -62,29 +62,16 @@ create_protocol_enum!(
     }
 );
 
-/// The state associated with an Ethernet device.
-pub(crate) struct EthernetDeviceState {
+/// Builder for [`EthernetDeviceState`].
+pub(crate) struct EthernetDeviceStateBuilder {
     mac: Mac,
     mtu: u32,
-    ipv4_addr_sub: Option<AddrSubnet<Ipv4Addr>>,
-    ipv6_addr_sub: Option<AddrSubnet<Ipv6Addr>>,
-    ipv4_multicast_groups: HashSet<MulticastAddr<Ipv4Addr>>,
-    ipv6_multicast_groups: HashSet<MulticastAddr<Ipv6Addr>>,
-    ipv4_arp: ArpState<Ipv4Addr, EthernetArpDevice>,
-    ndp: ndp::NdpState<EthernetNdpDevice>,
-    // pending_frames stores a list of serialized frames indexed by their
-    // destination IP addresses. The frames contain an entire EthernetFrame
-    // body and the MTU check is performed before queueing them here.
-    pending_frames: HashMap<IpAddr, VecDeque<Buf<Vec<u8>>>>,
+    ndp_configs: ndp::NdpConfigurations,
 }
 
-impl EthernetDeviceState {
-    /// Construct a new `EthernetDeviceState`.
-    ///
-    /// `new` constructs a new `EthernetDeviceState` with the given MAC address
-    /// and MTU. The MTU will be taken as a limit on the size of Ethernet
-    /// payloads - the Ethernet header is not counted towards the MTU.
-    pub(crate) fn new(mac: Mac, mtu: u32) -> EthernetDeviceState {
+impl EthernetDeviceStateBuilder {
+    /// Create a new `EthernetDeviceStateBuilder`.
+    pub(crate) fn new(mac: Mac, mtu: u32) -> Self {
         // TODO(joshlf): Add a minimum MTU for all Ethernet devices such that
         //  you cannot create an `EthernetDeviceState` with an MTU smaller than
         //  the minimum. The absolute minimum needs to be at least the minimum
@@ -98,31 +85,55 @@ impl EthernetDeviceState {
         //  - How do we wire error information back up the call stack? Should
         //  this just return a Result or something?
 
+        Self { mac, mtu, ndp_configs: ndp::NdpConfigurations::default() }
+    }
+
+    /// Update the NDP configurations that will be set on the ethernet
+    /// device.
+    pub(crate) fn set_ndp_configs(&mut self, v: ndp::NdpConfigurations) {
+        self.ndp_configs = v;
+    }
+
+    /// Build the `EthernetDeviceState` from this builder.
+    pub(crate) fn build(self) -> EthernetDeviceState {
         let mut ipv6_multicast_groups = HashSet::new();
 
-        // We know the call to `unwrap` will not panic because
-        // `to_solicited_node_address` returns a multicast address,
-        // so `new` will not return `None`.
-        ipv6_multicast_groups.insert(
-            MulticastAddr::new(mac.to_ipv6_link_local().to_solicited_node_address()).unwrap(),
-        );
+        ipv6_multicast_groups.insert(self.mac.to_ipv6_link_local().to_solicited_node_address());
 
         // TODO(ghanan): Perform NDP's DAD on the link local address BEFORE receiving
         //               packets destined to it.
 
         EthernetDeviceState {
-            mac,
-            mtu,
+            mac: self.mac,
+            mtu: self.mtu,
             ipv4_addr_sub: None,
             ipv6_addr_sub: None,
             ipv4_multicast_groups: HashSet::new(),
             ipv6_multicast_groups,
             ipv4_arp: ArpState::default(),
-            ndp: NdpState::default(),
+            ndp: NdpState::new(self.ndp_configs),
             pending_frames: HashMap::new(),
         }
     }
+}
 
+/// The state associated with an Ethernet device.
+pub(crate) struct EthernetDeviceState {
+    mac: Mac,
+    mtu: u32,
+    ipv4_addr_sub: Option<AddrSubnet<Ipv4Addr>>,
+    ipv6_addr_sub: Option<Tentative<AddrSubnet<Ipv6Addr>>>,
+    ipv4_multicast_groups: HashSet<MulticastAddr<Ipv4Addr>>,
+    ipv6_multicast_groups: HashSet<MulticastAddr<Ipv6Addr>>,
+    ipv4_arp: ArpState<Ipv4Addr, EthernetArpDevice>,
+    ndp: ndp::NdpState<EthernetNdpDevice>,
+    // pending_frames stores a list of serialized frames indexed by their
+    // desintation IP addresses. The frames contain an entire EthernetFrame
+    // body and the MTU check is performed before queueing them here.
+    pending_frames: HashMap<IpAddr, VecDeque<Buf<Vec<u8>>>>,
+}
+
+impl EthernetDeviceState {
     /// Adds a pending frame `frame` associated with `local_addr` to the list
     /// of pending frames in the current device state.
     ///
@@ -302,6 +313,26 @@ pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 ) -> Option<AddrSubnet<A>> {
     #[ipv4addr]
     return get_device_state(ctx.state(), device_id).ipv4_addr_sub;
+
+    #[ipv6addr]
+    return match get_device_state(ctx.state(), device_id).ipv6_addr_sub.clone() {
+        None => None,
+        Some(a) => a.try_into_permanent(),
+    };
+}
+
+/// Get the IP address and subnet associated with this device, including tentative
+/// addresses.
+#[specialize_ip_address]
+pub(crate) fn get_ip_addr_subnet_with_tentative<D: EventDispatcher, A: IpAddress>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+) -> Option<Tentative<AddrSubnet<A>>> {
+    #[ipv4addr]
+    return get_device_state(ctx.state(), device_id)
+        .ipv4_addr_sub
+        .map(|x| Tentative::new_permanent(x));
+
     #[ipv6addr]
     return get_device_state(ctx.state(), device_id).ipv6_addr_sub;
 }
@@ -330,8 +361,45 @@ pub(crate) fn set_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 ) {
     #[ipv4addr]
     get_device_state_mut(ctx.state_mut(), device_id).ipv4_addr_sub = Some(addr_sub);
+
     #[ipv6addr]
-    get_device_state_mut(ctx.state_mut(), device_id).ipv6_addr_sub = Some(addr_sub);
+    {
+        let old_addr = get_device_state_mut(ctx.state_mut(), device_id).ipv6_addr_sub.take();
+
+        if let Some(ref addr) = old_addr {
+            if addr.is_tentative() {
+                // Cancel current duplicate address detection for `addr` because we
+                // will assign a new address to the device.
+                //
+                // `cancel_duplicate_address_detection` may panic if we are not
+                // performing DAD on `addr`. However, we will only reach here
+                // if `addr` is marked as tentative. If `addr` is marked as
+                // tentative, then we know that we are performing DAD on it.
+                // Given this, we know `cancel_duplicate_address_detection` will
+                // not panic.
+                ndp::cancel_duplicate_address_detection::<_, EthernetNdpDevice>(
+                    ctx,
+                    device_id,
+                    addr.inner().addr(),
+                );
+            }
+
+            // Leave the solicited-node multicast group for the previous address.
+            let addr = addr.inner().addr().to_solicited_node_address();
+            leave_ip_multicast(ctx, device_id, addr);
+        }
+
+        // First, join the solicited-node multicast group.
+        join_ip_multicast(ctx, device_id, addr_sub.addr().to_solicited_node_address());
+
+        let device_state = get_device_state_mut(ctx.state_mut(), device_id);
+        device_state.ipv6_addr_sub = Some(Tentative::new_tentative(addr_sub));
+        ndp::start_duplicate_address_detection::<D, EthernetNdpDevice>(
+            ctx,
+            device_id,
+            addr_sub.addr(),
+        );
+    }
 }
 
 /// Add `device` to a multicast group `multicast_addr`.
@@ -524,25 +592,41 @@ impl ndp::NdpDevice for EthernetNdpDevice {
     fn get_ipv6_addr<D: EventDispatcher>(
         state: &StackState<D>,
         device_id: usize,
-    ) -> Option<Ipv6Addr> {
+    ) -> Option<Tentative<Ipv6Addr>> {
         let state = get_device_state(state, device_id);
         // TODO(brunodalbo) just returning either the configured or EUI
         //  link_local address for now, we need a better structure to keep
         //  a list of IPv6 addresses.
         match state.ipv6_addr_sub {
-            Some(addr_sub) => Some(addr_sub.into_addr()),
-            None => Some(state.mac.to_ipv6_link_local()),
+            Some(addr_sub) => Some(addr_sub.map(|a| a.into_addr())),
+            None => Some(Tentative::new_permanent(state.mac.to_ipv6_link_local())),
         }
     }
 
-    fn has_ipv6_addr<D: EventDispatcher>(
+    fn ipv6_addr_state<D: EventDispatcher>(
         state: &StackState<D>,
         device_id: usize,
         address: &Ipv6Addr,
-    ) -> bool {
+    ) -> ndp::AddressState {
         let state = get_device_state(state, device_id);
-        state.ipv6_addr_sub.map_or(false, |addr_sub| addr_sub.into_addr() == *address)
-            || state.mac.to_ipv6_link_local() == *address
+
+        if let Some(addr) = state.ipv6_addr_sub {
+            if addr.inner().addr() == *address {
+                if addr.is_tentative() {
+                    return ndp::AddressState::Tentative;
+                } else {
+                    return ndp::AddressState::Assigned;
+                }
+            }
+        }
+
+        if state.mac.to_ipv6_link_local() == *address {
+            // TODO(ghanan): perform DAD on link local address instead of assuming
+            //               it is safe to assign.
+            ndp::AddressState::Assigned;
+        }
+
+        ndp::AddressState::Unassigned
     }
 
     fn send_ipv6_frame_to<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
@@ -588,6 +672,34 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         address: &Ipv6Addr,
     ) {
         mac_resolution_failed(ctx, device_id, IpAddr::V6(*address));
+    }
+
+    fn duplicate_address_detected<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: usize,
+        addr: Ipv6Addr,
+    ) {
+        let state = get_device_state_mut(ctx.state_mut(), device_id);
+        state.ipv6_addr_sub = None;
+
+        leave_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
+
+        // TODO: we need to pick a different address depending on what flow we are using.
+    }
+
+    fn unique_address_determined<D: EventDispatcher>(
+        state: &mut StackState<D>,
+        device_id: usize,
+        addr: Ipv6Addr,
+    ) {
+        let ipv6_addr_sub = &mut get_device_state_mut(state, device_id).ipv6_addr_sub;
+        match ipv6_addr_sub {
+            Some(ref mut tentative) => {
+                tentative.mark_permanent();
+                assert_eq!(tentative.inner().into_addr(), addr);
+            }
+            _ => panic!("Attempted to resolve an unknown tentative address"),
+        }
     }
 }
 
@@ -682,7 +794,8 @@ mod tests {
     #[test]
     fn test_pending_frames() {
         let mut state =
-            EthernetDeviceState::new(DUMMY_CONFIG_V4.local_mac, crate::ip::IPV6_MIN_MTU);
+            EthernetDeviceStateBuilder::new(DUMMY_CONFIG_V4.local_mac, crate::ip::IPV6_MIN_MTU)
+                .build();
         let ip = IpAddr::V4(DUMMY_CONFIG_V4.local_ip);
         state.add_pending_frame(ip, Buf::new(vec![1], ..));
         state.add_pending_frame(ip, Buf::new(vec![2], ..));
