@@ -552,20 +552,31 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
     }
 
     // Handle client-maintained socket options.
-    if (level == SOL_SOCKET && optname == SO_RCVTIMEO) {
-        if (optlen == NULL || *optlen < sizeof(struct timeval)) {
-            return ERRNO(EINVAL);
+    if (level == SOL_SOCKET) {
+        const zx::duration* timeout = nullptr;
+        switch (optname){
+          case SO_RCVTIMEO:
+            timeout = &socket->rcvtimeo;
+            break;
+          case SO_SNDTIMEO:
+            timeout = &socket->sndtimeo;
+            break;
         }
-        *optlen = sizeof(struct timeval);
-        struct timeval* duration_tv = static_cast<struct timeval*>(optval);
-        if (socket->rcvtimeo == zx::duration::infinite()) {
+        if (timeout) {
+          if (optlen == NULL || *optlen < sizeof(struct timeval)) {
+            return ERRNO(EINVAL);
+          }
+          *optlen = sizeof(struct timeval);
+          struct timeval* duration_tv = static_cast<struct timeval*>(optval);
+          if (*timeout == zx::duration::infinite()) {
             duration_tv->tv_sec = 0;
             duration_tv->tv_usec = 0;
-        } else {
-            duration_tv->tv_sec = socket->rcvtimeo.to_secs();
-            duration_tv->tv_usec = (socket->rcvtimeo - zx::sec(duration_tv->tv_sec)).to_usecs();
+          } else {
+            duration_tv->tv_sec = timeout->to_secs();
+            duration_tv->tv_usec = (*timeout - zx::sec(duration_tv->tv_sec)).to_usecs();
+         }
+         return 0;
         }
-        return 0;
     }
 
     auto result = socket->control.GetSockOpt(static_cast<int16_t>(level),
@@ -595,19 +606,29 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
     }
 
     // Handle client-maintained socket options.
-    if (level == SOL_SOCKET && optname == SO_RCVTIMEO) {
-        if (optlen < sizeof(struct timeval)) {
+    if (level == SOL_SOCKET) {
+        zx::duration* timeout = nullptr;
+        switch (optname){
+          case SO_RCVTIMEO:
+            timeout = &socket->rcvtimeo;
+            break;
+          case SO_SNDTIMEO:
+            timeout = &socket->sndtimeo;
+            break;
+        }
+        if (timeout) {
+          if (optlen < sizeof(struct timeval)) {
             return ERRNO(EINVAL);
+          }
+          const struct timeval* duration_tv = static_cast<const struct timeval*>(optval);
+          if (duration_tv->tv_sec || duration_tv->tv_usec) {
+            *timeout = zx::sec(duration_tv->tv_sec) + zx::usec(duration_tv->tv_usec);
+          } else {
+            *timeout = zx::duration::infinite();
+          }
+          return 0;
         }
-        const struct timeval* duration_tv = static_cast<const struct timeval*>(optval);
-        if (duration_tv->tv_sec || duration_tv->tv_usec) {
-            socket->rcvtimeo = zx::sec(duration_tv->tv_sec) + zx::usec(duration_tv->tv_usec);
-        } else {
-            socket->rcvtimeo = zx::duration::infinite();
-        }
-        return 0;
     }
-
     int16_t out_code;
     zx_status_t status = socket->control.SetSockOpt_Deprecated(
         static_cast<int16_t>(level), static_cast<int16_t>(optname),

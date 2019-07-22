@@ -1088,6 +1088,8 @@ ssize_t write(int fd, const void* buf, size_t count) {
     bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
     size_t progress = 0u;
     zx_status_t status;
+    zx_duration_t duration = fdio_get_ops(io)->get_sndtimeo(io);
+    zx_time_t deadline = zx_deadline_after(duration);
     do {
         size_t actual = 0u;
         status = zxio_write(fdio_get_zxio(io), (char*)buf + progress, count - progress, &actual);
@@ -1096,7 +1098,9 @@ ssize_t write(int fd, const void* buf, size_t count) {
             break;
         }
         if (status == ZX_ERR_SHOULD_WAIT) {
-            fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+            if (fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) == ZX_ERR_TIMED_OUT){
+              break;
+            }
             continue;
         }
         if (actual == 0u) {
@@ -1193,12 +1197,16 @@ ssize_t pwrite(int fd, const void* buf, size_t size, off_t ofs) {
     bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
     size_t actual = 0u;
     zx_status_t status;
+    zx_duration_t duration = fdio_get_ops(io)->get_sndtimeo(io);
+    zx_time_t deadline = zx_deadline_after(duration);
     for (;;) {
         status = zxio_write_at(fdio_get_zxio(io), ofs, buf, size, &actual);
         if ((status != ZX_ERR_SHOULD_WAIT) || nonblocking) {
             break;
         }
-        fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+        if (fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) == ZX_ERR_TIMED_OUT) {
+            break;
+        }
     }
     fdio_release(io);
     return status != ZX_OK ? ERROR(status) : (ssize_t)actual;
@@ -2345,12 +2353,16 @@ ssize_t sendto(int fd, const void* buf, size_t buflen, int flags, const struct s
     }
     bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
     ssize_t status_or_count;
+    zx_duration_t duration = fdio_get_ops(io)->get_sndtimeo(io);
+    zx_time_t deadline = zx_deadline_after(duration);
     for (;;) {
         status_or_count = fdio_get_ops(io)->sendto(io, buf, buflen, flags, addr, addrlen);
         if (status_or_count != ZX_ERR_SHOULD_WAIT || nonblocking) {
             break;
         }
-        fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+        if (fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) == ZX_ERR_TIMED_OUT) {
+            break;
+        }
     }
     fdio_release(io);
     return status_or_count < 0
@@ -2403,12 +2415,16 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
     // been closed by remote end.
     bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
     ssize_t status_or_count;
+    zx_duration_t duration = fdio_get_ops(io)->get_sndtimeo(io);
+    zx_time_t deadline = zx_deadline_after(duration);
     for (;;) {
         status_or_count = fdio_get_ops(io)->sendmsg(io, msg, flags);
         if (status_or_count != ZX_ERR_SHOULD_WAIT || nonblocking) {
             break;
         }
-        fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+        if (fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) == ZX_ERR_TIMED_OUT) {
+            break;
+        }
     }
     fdio_release(io);
     return status_or_count < 0

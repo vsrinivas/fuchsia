@@ -264,7 +264,12 @@ TEST(NetStreamTest, BlockingAcceptWrite) {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetStreamTest, ReceiveTimeout) {
+class TimeoutSockoptsTest : public ::testing::TestWithParam<int /* optname */> {};
+
+TEST_P(TimeoutSockoptsTest, Timeout) {
+  int optname = GetParam();
+  ASSERT_TRUE(optname == SO_RCVTIMEO || optname == SO_SNDTIMEO);
+
   int acptfd;
   ASSERT_GE(acptfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
 
@@ -285,39 +290,62 @@ TEST(NetStreamTest, ReceiveTimeout) {
   ASSERT_GE(client_fd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
   ASSERT_EQ(connect(client_fd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
-  const int64_t rcv_timeout_us = 1150000;
-
-  // Set the timeout for reading.
-  struct timeval tv = {
-      .tv_sec = rcv_timeout_us / 1000000,
-      .tv_usec = rcv_timeout_us % 1000000,
-  };
-  EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)), 0) << strerror(errno);
-
   int server_fd;
   ASSERT_GE(server_fd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
 
+  const int64_t timeout_us = 1150000;
+
+  // Set the timeout.
+  struct timeval tv = {
+      .tv_sec = timeout_us / 1000000,
+      .tv_usec = timeout_us % 1000000,
+  };
+  EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, optname, &tv, sizeof(tv)), 0) << strerror(errno);
+
+  // Filling the sending buffer so that write timeout condition could be
+  // triggered for testing.
+  if (optname == SO_SNDTIMEO) {
+    // buf size should be neither too small in which case too many writes operation is required
+    // to fill out the sending buffer nor too big in which case a big stack is needed for the buf
+    // array. Here 20k bytes are used.
+    char buf[2048 * 10];
+    int size = 0;
+    int cnt = 0;
+    while ((size = write(client_fd, buf, sizeof(buf))) > 0) {
+      cnt += size;
+    }
+    EXPECT_GT(cnt, 0);
+    ASSERT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK) << strerror(errno);
+  }
+
   std::thread timeout_thread([server_fd]() {
-    // This is long enough for the test to succeed.  If this sleep ends
-    // before the read ends, the total_seconds below will be too long and
-    // report a test failure.
-    int64_t read_timeout_ns = rcv_timeout_us * 1000 * 3;
-    struct timespec read_timeout = {
-        .tv_sec = read_timeout_ns / 1000000000,
-        .tv_nsec = read_timeout_ns % 1000000000,
+    // This is long enough for the test to succeed. If this sleep ends before the
+    // immediately following read/write ends, this thread will close the connection and cause the
+    // test to fail.
+    int64_t timeout_ns = timeout_us * 1000 * 3;
+    struct timespec timeout = {
+        .tv_sec = timeout_ns / 1000000000,
+        .tv_nsec = timeout_ns % 1000000000,
     };
-    ASSERT_EQ(nanosleep(&read_timeout, NULL), 0) << strerror(errno);
+    ASSERT_EQ(nanosleep(&timeout, NULL), 0) << strerror(errno);
     EXPECT_EQ(close(server_fd), 0) << strerror(errno);
   });
 
-  // Try to read.  There will be no data so this should eventually timeout.  If
-  // the timeout_thread closes the connection, that will also end the wait.
+  // Try to read/write, which should time out. If the timeout thread closes the connection, that
+  // will also cause the read/write to return.
   timespec current_time;
   ASSERT_EQ(clock_gettime(CLOCK_MONOTONIC, &current_time), 0) << strerror(errno);
   int64_t start_time_ns = current_time.tv_sec * 1000000000 + current_time.tv_nsec;
 
-  char buf[16];  // This buffer will never be written into.
-  EXPECT_EQ(read(client_fd, buf, sizeof(buf)), -1);
+  char buf[16];
+  switch (optname) {
+    case SO_RCVTIMEO:
+      EXPECT_EQ(read(client_fd, buf, sizeof(buf)), -1);
+      break;
+    case SO_SNDTIMEO:
+      EXPECT_EQ(write(client_fd, buf, sizeof(buf)), -1);
+      break;
+  }
   ASSERT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK) << strerror(errno);
 
   ASSERT_EQ(clock_gettime(CLOCK_MONOTONIC, &current_time), 0) << strerror(errno);
@@ -325,40 +353,58 @@ TEST(NetStreamTest, ReceiveTimeout) {
 
   int64_t total_ns = end_time_ns - start_time_ns;
   // Check that the actual time waited was within 100ms of the expectation.
-  EXPECT_LT(total_ns, 1000 * (rcv_timeout_us + 100000)) << "SO_RCVTIMEO waited too long";
-  EXPECT_GT(total_ns, 1000 * (rcv_timeout_us - 100000)) << "SO_RCVTIMEO didn't wait long enough";
+  EXPECT_LT(total_ns, 1000 * (timeout_us + 100000)) << "timeout waited too long";
+  EXPECT_GT(total_ns, 1000 * (timeout_us - 100000)) << "timeout didn't wait long enough";
 
   // Remove the timeout
   tv = {
       .tv_sec = 0,
       .tv_usec = 0,
   };
-  EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)), 0) << strerror(errno);
+  EXPECT_EQ(setsockopt(client_fd, SOL_SOCKET, optname, &tv, sizeof(tv)), 0) << strerror(errno);
 
-  // This read should never timeout.  timeout_thread should close the connection
-  // eventually.
-  EXPECT_EQ(read(client_fd, buf, sizeof(buf)), 0) << strerror(errno);
+  // This read/write should never timeout.  timeout_thread should close the connection
+  // eventually.  Note that read and write return different value when the peer
+  // is closed.
+  switch (optname) {
+    case SO_RCVTIMEO:
+      EXPECT_EQ(read(client_fd, buf, sizeof(buf)), 0) << strerror(errno);
+      break;
+    case SO_SNDTIMEO:
+      EXPECT_EQ(write(client_fd, buf, sizeof(buf)), -1);
+
+// TODO(NET-2462): Investigate why different errnos are returned
+// for Linux and Fuchsia.
+#if defined(__linux__)
+      EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
+#else
+      EXPECT_EQ(errno, EPIPE) << strerror(errno);
+#endif
+      break;
+  }
 
   timeout_thread.join();  // Clean up the thread.
 }
 
-TEST(NetStreamTest, ReceiveTimeoutSockopts) {
+TEST_P(TimeoutSockoptsTest, TimeoutSockopts) {
+  int optname = GetParam();
+  ASSERT_TRUE(optname == SO_RCVTIMEO || optname == SO_SNDTIMEO);
+
   int socket_fd;
   ASSERT_GE(socket_fd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
 
-  // Set the timeout for reading.
+  // Set the timeout.
   const struct timeval expected_tv = {
       .tv_sec = 39,
       .tv_usec = 500000,
   };
-  EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &expected_tv, sizeof(expected_tv)), 0)
+  EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, optname, &expected_tv, sizeof(expected_tv)), 0)
       << strerror(errno);
 
   // Reading it back should work.
   struct timeval actual_tv;
   socklen_t optlen = sizeof(actual_tv);
-  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &actual_tv, &optlen), 0)
-      << strerror(errno);
+  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, optname, &actual_tv, &optlen), 0) << strerror(errno);
   EXPECT_EQ(optlen, sizeof(actual_tv));
   EXPECT_EQ(actual_tv.tv_sec, expected_tv.tv_sec);
   EXPECT_EQ(actual_tv.tv_usec, expected_tv.tv_usec);
@@ -368,8 +414,7 @@ TEST(NetStreamTest, ReceiveTimeoutSockopts) {
   memset(&actual_tv2_buffer, 44, sizeof(actual_tv2_buffer));
   optlen = sizeof(actual_tv2_buffer);
   struct timeval* actual_tv2 = (struct timeval*)&actual_tv2_buffer;
-  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, actual_tv2, &optlen), 0)
-      << strerror(errno);
+  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, optname, actual_tv2, &optlen), 0) << strerror(errno);
   EXPECT_EQ(optlen, sizeof(struct timeval));
   EXPECT_EQ(actual_tv2->tv_sec, expected_tv.tv_sec);
   EXPECT_EQ(actual_tv2->tv_usec, expected_tv.tv_usec);
@@ -382,7 +427,7 @@ TEST(NetStreamTest, ReceiveTimeoutSockopts) {
   optlen = sizeof(actual_tv) - 7;  // Not enough space to store the result.
   // TODO(eyalsoha): Decide if we want to match Linux's behaviour.  It writes to
   // only the first optlen bytes of the timeval.
-  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &actual_tv, &optlen),
+  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, optname, &actual_tv, &optlen),
 #if defined(__linux__)
             0)
       << strerror(errno);
@@ -397,7 +442,7 @@ TEST(NetStreamTest, ReceiveTimeoutSockopts) {
 
   // Setting it without enough space should fail gracefully.
   optlen = sizeof(expected_tv) - 1;  // Not big enough.
-  EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &expected_tv, optlen), -1);
+  EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, optname, &expected_tv, optlen), -1);
   EXPECT_EQ(errno, EINVAL) << strerror(errno);
 
   // Setting it with too much space should work okay.
@@ -406,10 +451,9 @@ TEST(NetStreamTest, ReceiveTimeoutSockopts) {
       .tv_usec = 0,
   };
   optlen = sizeof(expected_tv2) + 1;  // Too big.
-  EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &expected_tv2, optlen), 0)
+  EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, optname, &expected_tv2, optlen), 0)
       << strerror(errno);
-  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &actual_tv, &optlen), 0)
-      << strerror(errno);
+  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, optname, &actual_tv, &optlen), 0) << strerror(errno);
   EXPECT_EQ(optlen, sizeof(expected_tv2));
   EXPECT_EQ(actual_tv.tv_sec, expected_tv2.tv_sec);
   EXPECT_EQ(actual_tv.tv_usec, expected_tv2.tv_usec);
@@ -420,17 +464,19 @@ TEST(NetStreamTest, ReceiveTimeoutSockopts) {
       .tv_usec = 0,
   };
   optlen = sizeof(zero_tv);
-  EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &zero_tv, optlen), 0) << strerror(errno);
+  EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, optname, &zero_tv, optlen), 0) << strerror(errno);
 
   // Reading back the disabled timeout should work.
   memset(&actual_tv, 55, sizeof(actual_tv));
   optlen = sizeof(actual_tv);
-  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &actual_tv, &optlen), 0)
-      << strerror(errno);
+  EXPECT_EQ(getsockopt(socket_fd, SOL_SOCKET, optname, &actual_tv, &optlen), 0) << strerror(errno);
   EXPECT_EQ(optlen, sizeof(actual_tv));
   EXPECT_EQ(actual_tv.tv_sec, zero_tv.tv_sec);
   EXPECT_EQ(actual_tv.tv_usec, zero_tv.tv_usec);
 }
+
+INSTANTIATE_TEST_SUITE_P(NetStreamTest, TimeoutSockoptsTest,
+                         ::testing::Values(SO_RCVTIMEO, SO_SNDTIMEO));
 
 const int32_t kConnections = 100;
 

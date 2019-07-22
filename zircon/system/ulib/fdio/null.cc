@@ -104,6 +104,10 @@ zx_duration_t fdio_default_get_rcvtimeo(fdio_t* io) {
     return ZX_TIME_INFINITE;
 }
 
+zx_duration_t fdio_default_get_sndtimeo(fdio_t* io) {
+    return ZX_TIME_INFINITE;
+}
+
 zx_status_t fdio_default_close(fdio_t* io) {
     return ZX_OK;
 }

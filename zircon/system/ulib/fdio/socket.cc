@@ -316,6 +316,10 @@ static zx_duration_t fdio_socket_get_rcvtimeo(fdio_t* io) {
   return fdio_get_zxio_socket(io)->socket.rcvtimeo.get();
 }
 
+static zx_duration_t fdio_socket_get_sndtimeo(fdio_t* io) {
+    return fdio_get_zxio_socket(io)->socket.sndtimeo.get();
+}
+
 static fdio_ops_t fdio_socket_stream_ops = {
     .close = zxsio_close,
     .open = fdio_default_open,
@@ -343,6 +347,7 @@ static fdio_ops_t fdio_socket_stream_ops = {
     .sendmsg = zxsio_sendmsg_stream,
     .shutdown = fdio_socket_shutdown,
     .get_rcvtimeo = fdio_socket_get_rcvtimeo,
+    .get_sndtimeo = fdio_socket_get_sndtimeo,
 };
 
 static fdio_ops_t fdio_socket_dgram_ops = {
@@ -372,6 +377,7 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .sendmsg = zxsio_sendmsg_dgram,
     .shutdown = fdio_socket_shutdown,
     .get_rcvtimeo = fdio_socket_get_rcvtimeo,
+    .get_sndtimeo = fdio_socket_get_sndtimeo,
 };
 
 zx_status_t fdio_socket_create(fsocket::Control::SyncClient control, zx::socket socket,
@@ -392,6 +398,7 @@ zx_status_t fdio_socket_create(fsocket::Control::SyncClient control, zx::socket 
                                 .socket = std::move(socket),
                                 .flags = info.options & ZX_SOCKET_DATAGRAM ? ZXS_FLAG_DATAGRAM : 0u,
                                 .rcvtimeo = zx::duration::infinite(),
+                                .sndtimeo = zx::duration::infinite(),
                             });
   if (status != ZX_OK) {
     return status;

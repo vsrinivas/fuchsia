@@ -38,6 +38,9 @@ typedef struct zxs_socket {
 
   // Used to implement SO_RCVTIMEO. See `man 7 socket` for details.
   zx::duration rcvtimeo;
+
+  // Used to implement SO_SNDTIMEO. See `man 7 socket` for details.
+  zx::duration sndtimeo;
 } zxs_socket_t;
 
 // Closes a |zxs_socket_t|.
