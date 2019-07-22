@@ -9,6 +9,7 @@ group("unit_tests") {
   testonly = true
   deps = [
     ":codec_impl_unit_tests",
+    ":decryptor_adapter_tests",
   ]
 }
 
@@ -42,8 +43,8 @@ source_set("codec_impl_tests") {
   testonly = true
 
   sources = [
-    "test_lifetime.cc",
     "test_failures.cc",
+    "test_lifetime.cc",
   ]
 
   deps = [
@@ -54,5 +55,38 @@ source_set("codec_impl_tests") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
+  ]
+}
+
+executable("decryptor_adapter_tests_bin") {
+  testonly = true
+  output_name = "decryptor_adapter_tests"
+
+  sources = [
+    "test_decryptor_adapter.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/media/codec_impl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//third_party/googletest:gtest",
+    "//zircon/public/fidl/fuchsia-sysmem",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+test_package("decryptor_adapter_tests") {
+  deps = [
+    ":decryptor_adapter_tests_bin",
+  ]
+
+  tests = [
+    {
+      name = "decryptor_adapter_tests"
+      environments = basic_envs
+    },
   ]
 }

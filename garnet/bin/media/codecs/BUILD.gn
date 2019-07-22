@@ -40,7 +40,10 @@ source_set("timestamp_extrapolator") {
 }
 
 source_set("mpsc_queue") {
-  visibility = [ "//garnet/bin/media/codecs/*" ]
+  visibility = [
+    "//garnet/bin/media/codecs/*",
+    "//garnet/lib/media/codec_impl/*",
+  ]
 
   public = [
     "mpsc_queue.h",

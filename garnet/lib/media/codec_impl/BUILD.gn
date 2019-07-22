@@ -26,6 +26,7 @@ source_set("codec_impl") {
     "codec_impl.cc",
     "codec_input_item.cc",
     "codec_packet.cc",
+    "decryptor_adapter.cc",
   ]
   include_dirs = [ "include" ]
   public = [
@@ -36,10 +37,12 @@ source_set("codec_impl") {
     "include/lib/media/codec_impl/codec_impl.h",
     "include/lib/media/codec_impl/codec_input_item.h",
     "include/lib/media/codec_impl/codec_packet.h",
+    "include/lib/media/codec_impl/decryptor_adapter.h",
   ]
   public_deps = [
     ":closure_queue",
     ":fourcc",
+    "//garnet/bin/media/codecs:mpsc_queue",
     "//sdk/fidl/fuchsia.media.drm",
     "//sdk/fidl/fuchsia.mediacodec",
     "//zircon/public/lib/async-cpp",
