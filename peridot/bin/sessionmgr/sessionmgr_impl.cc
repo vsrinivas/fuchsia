@@ -17,14 +17,15 @@
 #include <lib/fsl/types/type_converters.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
-#include <src/lib/files/directory.h>
-#include <src/lib/files/unique_fd.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
 #include <zircon/status.h>
 
 #include <memory>
 #include <string>
+
+#include <src/lib/files/directory.h>
+#include <src/lib/files/unique_fd.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/agent_runner/map_agent_service_index.h"
@@ -309,22 +310,58 @@ void SessionmgrImpl::InitializeLedger(
   });
   AtEnd(Teardown(kBasicTimeout, "Ledger", ledger_app_.get()));
 
+  auto repository_request = ledger_repository_.NewRequest();
+  ledger_client_ =
+      std::make_unique<LedgerClient>(ledger_repository_.get(), kAppId, [this](zx_status_t status) {
+        FXL_LOG(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
+        Shutdown();
+      });
+
   fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
-  std::string ledger_user_id;
-  if (account_ && (config_.cloud_provider()) != fuchsia::modular::session::CloudProvider::NONE) {
-    // If not running in Guest mode, configure the cloud provider for Ledger to
-    // use for syncing.
-
-    if ((config_.cloud_provider()) == fuchsia::modular::session::CloudProvider::FROM_ENVIRONMENT) {
-      component_context_->svc()->Connect(cloud_provider.NewRequest());
-    } else if (config_.cloud_provider() ==
-               fuchsia::modular::session::CloudProvider::LET_LEDGER_DECIDE) {
-      cloud_provider = LaunchCloudProvider(account_->profile_id, std::move(ledger_token_manager));
-    }
-
-    ledger_user_id = account_->profile_id;
+  if (!account_ || config_.cloud_provider() == fuchsia::modular::session::CloudProvider::NONE) {
+    // We are running in Guest mode.
+    InitializeLedgerWithSyncConfig(nullptr, "", std::move(repository_request));
+    return;
   }
+  // If not running in Guest mode, configure the cloud provider for Ledger to
+  // use for syncing.
+  ledger_token_manager_ = ledger_token_manager.Bind();
+  fuchsia::auth::AppConfig oauth_config;
+  oauth_config.auth_provider_type = "google";
+  // |ListProfileIds| do not require an internet connection to work.
+  ledger_token_manager_->ListProfileIds(
+      std::move(oauth_config),
+      [this, repository_request = std::move(repository_request)](
+          fuchsia::auth::Status status, std::vector<std::string> user_profile_ids) mutable {
+        if (status != fuchsia::auth::Status::OK) {
+          FXL_LOG(ERROR) << "Error while retrieving user profile IDs, shutting down.";
+          Shutdown();
+          return;
+        }
 
+        if (user_profile_ids.size() != 1) {
+          FXL_LOG(ERROR) << "There is no unique user profile ID (" << user_profile_ids.size()
+                         << " found), shutting down.";
+          Shutdown();
+          return;
+        }
+        std::string ledger_user_id = user_profile_ids[0];
+        fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
+        if ((config_.cloud_provider()) ==
+            fuchsia::modular::session::CloudProvider::FROM_ENVIRONMENT) {
+          component_context_->svc()->Connect(cloud_provider.NewRequest());
+        } else if (config_.cloud_provider() ==
+                   fuchsia::modular::session::CloudProvider::LET_LEDGER_DECIDE) {
+          cloud_provider = LaunchCloudProvider(ledger_user_id, ledger_token_manager_.Unbind());
+        }
+        InitializeLedgerWithSyncConfig(std::move(cloud_provider), std::move(ledger_user_id),
+                                       std::move(repository_request));
+      });
+}
+
+void SessionmgrImpl::InitializeLedgerWithSyncConfig(
+    fuchsia::ledger::cloud::CloudProviderPtr cloud_provider, std::string ledger_user_id,
+    fidl::InterfaceRequest<fuchsia::ledger::internal::LedgerRepository> repository_request) {
   ledger_repository_factory_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "LedgerRepositoryFactory.GetRepository() failed: "
                    << zx_status_get_string(status) << std::endl
@@ -337,8 +374,8 @@ void SessionmgrImpl::InitializeLedger(
   // The directory "/data" is the data root "/data/LEDGER" that the ledger app
   // client is configured to.
   ledger_repository_factory_->GetRepository(GetLedgerRepositoryDirectory(),
-                                            std::move(cloud_provider), ledger_user_id,
-                                            ledger_repository_.NewRequest());
+                                            std::move(cloud_provider), std::move(ledger_user_id),
+                                            std::move(repository_request));
 
   // If ledger state is erased from underneath us (happens when the cloud store
   // is cleared), ledger will close the connection to |ledger_repository_|.
@@ -350,11 +387,6 @@ void SessionmgrImpl::InitializeLedger(
   });
   AtEnd(ResetLedgerRepository(&ledger_repository_));
 
-  ledger_client_ =
-      std::make_unique<LedgerClient>(ledger_repository_.get(), kAppId, [this](zx_status_t status) {
-        FXL_LOG(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
-        Shutdown();
-      });
   AtEnd(Reset(&ledger_client_));
 }
 

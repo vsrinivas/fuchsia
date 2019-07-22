@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/environments.gni")
 import("//peridot/build/executable_package.gni")
+import("//peridot/build/tests_package.gni")
 
 executable_package("sessionmgr") {
   meta = [
@@ -13,23 +15,61 @@ executable_package("sessionmgr") {
   ]
 
   sources = [
+    "sessionmgr.cc",
+  ]
+
+  deps = [
+    ":sessionmgr_lib",
+    "//peridot/bin/basemgr/cobalt",
+    "//peridot/lib/modular_config",
+    "//peridot/public/lib/app_driver/cpp:app_driver",
+    "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/lib/fidl/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider-with-fdio",
+  ]
+}
+
+source_set("sessionmgr_lib") {
+  sources = [
     "argv_injecting_launcher.cc",
     "argv_injecting_launcher.h",
-    "sessionmgr.cc",
     "sessionmgr_impl.cc",
     "sessionmgr_impl.h",
+  ]
+
+  public_deps = [
+    ":new_modular_apis",  # Compile the new APIs to validate them while they are under review.
+    "//garnet/public/lib/component/cpp",
+    "//peridot/bin/sessionmgr/agent_runner",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/scoped_tmpfs",
+    "//sdk/fidl/fuchsia.app.discover",
+    "//sdk/fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.ledger.cloud",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.auth",
+    "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/fidl/fuchsia.net.oldhttp",
+    "//sdk/fidl/fuchsia.speech",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//src/ledger/cloud_provider_firestore/bin/fidl",
   ]
 
   deps = [
     ":component_context",
     ":focus",
-    ":new_modular_apis",  # Compile the new APIs to validate them while they are under review.
     ":presentation_provider",
     ":session_ctl",
     ":user_intelligence_provider",
     "//garnet/public/lib/fsl",
     "//peridot/bin/basemgr/cobalt",
-    "//peridot/bin/sessionmgr/agent_runner",
     "//peridot/bin/sessionmgr/entity_provider_runner",
     "//peridot/bin/sessionmgr/message_queue",
     "//peridot/bin/sessionmgr/puppet_master:make_production_impl",
@@ -49,36 +89,16 @@ executable_package("sessionmgr") {
     "//peridot/lib/fidl:view_host",
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/ledger_client:operations",
-    "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
     "//peridot/lib/modular_config:modular_config",
     "//peridot/lib/module_manifest:module_facet_reader_impl",
-    "//peridot/lib/rapidjson",
-    "//peridot/lib/scoped_tmpfs",
     "//peridot/public/lib/app_driver/cpp:app_driver",
     "//peridot/public/lib/async/cpp:operation",
-    "//sdk/fidl/fuchsia.ledger",
-    "//sdk/fidl/fuchsia.ledger.cloud",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.auth",
-    "//sdk/fidl/fuchsia.modular.internal",
-    "//sdk/fidl/fuchsia.modular.session",
-    "//sdk/fidl/fuchsia.net.oldhttp",
-    "//sdk/fidl/fuchsia.speech",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/ledger/bin/fidl",
-    "//src/ledger/cloud_provider_firestore/bin/fidl",
     "//src/lib/fxl",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/trace-provider-with-fdio",
   ]
 }
 
@@ -242,5 +262,35 @@ source_set("rate_limited_retry") {
 
   public_deps = [
     "//zircon/public/lib/zx",
+  ]
+}
+
+hermetic_tests_package("sessionmgr_unittests") {
+  deps = [
+    ":sessionmgr_impl_unittest",
+  ]
+  environments = basic_envs
+}
+
+executable("sessionmgr_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "sessionmgr_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":sessionmgr_lib",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/gtest",
+    "//peridot/lib/fidl:clone",
+    "//peridot/lib/ledger_client:constants",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }

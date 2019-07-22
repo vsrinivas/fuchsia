@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/sessionmgr_impl_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

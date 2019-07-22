@@ -20,7 +20,6 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 
 #include <memory>
 #include <string>
@@ -40,6 +39,7 @@
 #include "peridot/lib/module_manifest/module_facet_reader.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/lib/fxl/macros.h"
 
 namespace modular {
 
@@ -91,6 +91,9 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeUser(fuchsia::modular::auth::AccountPtr account,
                       fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager);
   void InitializeLedger(fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager);
+  void InitializeLedgerWithSyncConfig(
+      fuchsia::ledger::cloud::CloudProviderPtr cloud_provider, std::string ledger_user_id,
+      fidl::InterfaceRequest<fuchsia::ledger::internal::LedgerRepository> repository_request);
   void InitializeIntlPropertyProvider();
   void InitializeDeviceMap();
   void InitializeClipboard();
@@ -189,6 +192,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   fidl::BindingSet<fuchsia::modular::SessionShellContext> session_shell_context_bindings_;
 
   fuchsia::auth::TokenManagerPtr agent_token_manager_;
+  fuchsia::auth::TokenManagerPtr ledger_token_manager_;
   fuchsia::modular::internal::SessionContextPtr session_context_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> cloud_provider_app_;
   fuchsia::ledger::cloud::firestore::FactoryPtr cloud_provider_factory_;

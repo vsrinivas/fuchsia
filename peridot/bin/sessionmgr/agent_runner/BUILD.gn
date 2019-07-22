@@ -18,6 +18,7 @@ source_set("agent_runner") {
 
   public_deps = [
     ":public",
+    "//peridot/lib/ledger_client:page_client",
   ]
 
   deps = [
