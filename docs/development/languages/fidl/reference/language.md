@@ -460,7 +460,7 @@ struct Record {
 ### Structs
 
 *   Record type consisting of a sequence of typed fields.
-*   Declaration is not intended to be modified once deployed; use interface
+*   Declaration is not intended to be modified once deployed; use protocol
     extension instead.
 *   Reference may be nullable.
 *   Structs contain zero or more members.
@@ -648,11 +648,11 @@ protocol Calculator {
 Protocols are denoted by their name, directionality of the channel, and
 optionality:
 
-*   **`protocol`** : non-nullable FIDL protocol (client endpoint of channel)
-*   **`protocol?`** : nullable FIDL protocol (client endpoint of channel)
-*   **`request<Interface>`** : non-nullable FIDL protocol
+*   **`Protocol`** : non-nullable FIDL protocol (client endpoint of channel)
+*   **`Protocol?`** : nullable FIDL protocol (client endpoint of channel)
+*   **`request<Protocol>`** : non-nullable FIDL protocol
     request (server endpoint of channel)
-*   **`request<Interface>?`** : nullable FIDL protocol request
+*   **`request<Protocol>?`** : nullable FIDL protocol request
     (server endpoint of channel)
 
 ```fidl
