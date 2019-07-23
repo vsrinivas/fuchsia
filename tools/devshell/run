@@ -52,8 +52,6 @@ if [ -n "$IMAGE_FVM_RAW" ]; then
   fvmimg="${imgdir}/fvm.blk"
   fx-fvm-extend-image "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}" $fvmimg
   args+=(-d -D "${fvmimg}" --diskfmt=raw)
-  ARGS+=("-drive" "file=${fvmimg},format=raw,if=none,id=mydisk")
-  ARGS+=("-device" "ich9-ahci,id=ahci" "-device" "ide-drive,drive=mydisk,bus=ahci.0")
 fi
 
 "${FUCHSIA_DIR}/zircon/scripts/run-zircon" "${args[@]}" "$@"
