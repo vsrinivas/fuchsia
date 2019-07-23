@@ -632,6 +632,8 @@ group("overnet") {
     "//src/connectivity/overnet/deprecated/lib:overnet_unittests($host_toolchain)",
     "//src/connectivity/overnet/deprecated/lib/endpoint/integration_tests:router_endpoint_integration_fuzzer_replay($host_toolchain)",
     "//src/connectivity/overnet/deprecated/overnetstack:overnetstack_tests",
+    "//src/connectivity/overnet/lib/core:overnet-core-tests",
+    "//src/connectivity/overnet/lib/core:core_test_build($host_toolchain)",
   ]
 }
 
