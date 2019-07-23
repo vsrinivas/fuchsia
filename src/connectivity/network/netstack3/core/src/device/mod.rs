@@ -33,9 +33,14 @@ impl DeviceId {
         DeviceId { id, protocol: DeviceProtocol::Ethernet }
     }
 
-    #[allow(missing_docs)]
+    /// Get the protocol-specific ID for this `DeviceId`.
     pub fn id(self) -> usize {
         self.id
+    }
+
+    /// Get the protocol for this `DeviceId`.
+    pub fn protocol(self) -> DeviceProtocol {
+        self.protocol
     }
 }
 
@@ -65,8 +70,9 @@ impl IdMapCollectionKey for DeviceId {
     }
 }
 
+/// Type of device protocol.
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-enum DeviceProtocol {
+pub enum DeviceProtocol {
     Ethernet,
 }
 

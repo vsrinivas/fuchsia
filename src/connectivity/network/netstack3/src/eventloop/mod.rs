@@ -92,7 +92,6 @@ use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus, MacAddress};
 use fidl_fuchsia_net as fidl_net;
-use fidl_fuchsia_posix_socket::ProviderRequest;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_net_stack::{
     AdministrativeStatus, ForwardingEntry, InterfaceAddress, InterfaceInfo, InterfaceProperties,
@@ -103,6 +102,7 @@ use fidl_fuchsia_net_stack::{
     StackGetForwardingTableResponder, StackGetInterfaceInfoResponder, StackListInterfacesResponder,
     StackMarker, StackRequest, StackRequestStream,
 };
+use fidl_fuchsia_posix_socket::ProviderRequest;
 use futures::channel::mpsc;
 use futures::future::{AbortHandle, Abortable};
 use futures::prelude::*;

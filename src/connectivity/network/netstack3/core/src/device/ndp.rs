@@ -29,7 +29,7 @@ use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
 use zerocopy::ByteSlice;
 
 use crate::device::ethernet::EthernetNdpDevice;
-use crate::device::{DeviceId, DeviceLayerTimerId, Tentative};
+use crate::device::{DeviceId, DeviceLayerTimerId, DeviceProtocol, Tentative};
 use crate::ip::{is_router, IpProto};
 use crate::wire::icmp::ndp::{
     self, options::NdpOption, NeighborAdvertisement, NeighborSolicitation, Options,
@@ -262,12 +262,19 @@ impl<D: NdpDevice> NdpState<D> {
 
 /// The identifier for timer events in NDP operations.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
-pub(crate) enum NdpTimerId {
+pub(crate) struct NdpTimerId {
+    device_id: DeviceId,
+    inner: InnerNdpTimerId,
+}
+
+/// The types of NDP timers.
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+pub(crate) enum InnerNdpTimerId {
     /// This is used to retry sending Neighbor Discovery Protocol requests.
-    LinkAddressResolution { device_id: usize, neighbor_addr: Ipv6Addr },
+    LinkAddressResolution { neighbor_addr: Ipv6Addr },
     /// This is used to resend Duplicate Address Detection Neighbor Solicitation
     /// messages if `DUP_ADDR_DETECTION_TRANSMITS` is greater than one.
-    DadNsTransmit { device_id: usize, addr: Ipv6Addr },
+    DadNsTransmit { addr: Ipv6Addr },
     // TODO: The RFC suggests that we SHOULD make a random delay to
     // join the solicitation group. When we support MLD, we probably
     // want one for that.
@@ -276,18 +283,26 @@ pub(crate) enum NdpTimerId {
 impl NdpTimerId {
     /// Creates a new `NdpTimerId` wrapped inside a `TimerId` with the provided
     /// `device_id` and `neighbor_addr`.
-    pub(crate) fn new_link_address_resolution_timer_id(
+    pub(crate) fn new_link_address_resolution_timer_id<ND: NdpDevice>(
         device_id: usize,
         neighbor_addr: Ipv6Addr,
     ) -> TimerId {
-        NdpTimerId::LinkAddressResolution { device_id, neighbor_addr }.into()
+        NdpTimerId {
+            device_id: ND::get_device_id(device_id),
+            inner: InnerNdpTimerId::LinkAddressResolution { neighbor_addr },
+        }
+        .into()
     }
 
-    pub(crate) fn new_dad_ns_transmission_timer_id(
+    pub(crate) fn new_dad_ns_transmission_timer_id<ND: NdpDevice>(
         device_id: usize,
         tentative_addr: Ipv6Addr,
     ) -> TimerId {
-        NdpTimerId::DadNsTransmit { device_id, addr: tentative_addr }.into()
+        NdpTimerId {
+            device_id: ND::get_device_id(device_id),
+            inner: InnerNdpTimerId::DadNsTransmit { addr: tentative_addr },
+        }
+        .into()
     }
 }
 
@@ -303,12 +318,20 @@ impl From<NdpTimerId> for TimerId {
 /// the only case that the netstack currently handles. In the future, this may
 /// be extended to support other hardware types.
 pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: NdpTimerId) {
-    handle_timeout_inner::<D, EthernetNdpDevice>(ctx, id);
+    match id.device_id.protocol() {
+        DeviceProtocol::Ethernet => {
+            handle_timeout_inner::<_, EthernetNdpDevice>(ctx, id.device_id.id(), id.inner)
+        }
+    }
 }
 
-fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(ctx: &mut Context<D>, id: NdpTimerId) {
-    match id {
-        NdpTimerId::LinkAddressResolution { device_id, neighbor_addr } => {
+fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+    inner_id: InnerNdpTimerId,
+) {
+    match inner_id {
+        InnerNdpTimerId::LinkAddressResolution { neighbor_addr } => {
             let ndp_state = ND::get_ndp_state(ctx.state_mut(), device_id);
             match ndp_state.neighbors.get_neighbor_state_mut(&neighbor_addr) {
                 Some(NeighborState {
@@ -320,7 +343,7 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(ctx: &mut Context<D>,
                         send_neighbor_solicitation::<_, ND>(ctx, device_id, neighbor_addr);
                         ctx.dispatcher.schedule_timeout(
                             RETRANS_TIMER_DEFAULT,
-                            NdpTimerId::new_link_address_resolution_timer_id(
+                            NdpTimerId::new_link_address_resolution_timer_id::<ND>(
                                 device_id,
                                 neighbor_addr,
                             ),
@@ -337,7 +360,7 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(ctx: &mut Context<D>,
                 _ => debug!("ndp timeout fired for invalid neighbor state"),
             }
         }
-        NdpTimerId::DadNsTransmit { addr, device_id } => {
+        InnerNdpTimerId::DadNsTransmit { addr } => {
             // Get device NDP state.
             //
             // We know this call to unwrap will not fail because we will only reach here
@@ -397,7 +420,7 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
             // neighbor advertisements back.
             ctx.dispatcher.schedule_timeout(
                 RETRANS_TIMER_DEFAULT,
-                NdpTimerId::new_link_address_resolution_timer_id(device_id, lookup_addr),
+                NdpTimerId::new_link_address_resolution_timer_id::<ND>(device_id, lookup_addr),
             );
             None
         }
@@ -513,8 +536,10 @@ pub(crate) fn cancel_duplicate_address_detection<D: EventDispatcher, ND: NdpDevi
     device_id: usize,
     tentative_addr: Ipv6Addr,
 ) {
-    ctx.dispatcher_mut()
-        .cancel_timeout(NdpTimerId::new_dad_ns_transmission_timer_id(device_id, tentative_addr));
+    ctx.dispatcher_mut().cancel_timeout(NdpTimerId::new_dad_ns_transmission_timer_id::<ND>(
+        device_id,
+        tentative_addr,
+    ));
 
     // `unwrap` may panic if we have no entry in `dad_transmits_remaining` for
     // `tentative_addr` which means that we are not performing DAD on
@@ -551,7 +576,7 @@ fn do_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
     // Uses same RETRANS_TIMER definition per RFC 4862 section-5.1
     ctx.dispatcher_mut().schedule_timeout(
         RETRANS_TIMER_DEFAULT,
-        NdpTimerId::new_dad_ns_transmission_timer_id(device_id, tentative_addr),
+        NdpTimerId::new_dad_ns_transmission_timer_id::<ND>(device_id, tentative_addr),
     );
 }
 
@@ -846,7 +871,9 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                         *link_address = LinkAddressResolutionValue::Known { address };
                         // Cancel the resolution timeout.
                         ctx.dispatcher.cancel_timeout(
-                            NdpTimerId::new_link_address_resolution_timer_id(device_id, src_ip),
+                            NdpTimerId::new_link_address_resolution_timer_id::<ND>(
+                                device_id, src_ip,
+                            ),
                         );
                         ND::address_resolved(ctx, device_id, &src_ip, address);
                     }
