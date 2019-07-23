@@ -217,6 +217,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TEST_VCAM_FACTORY  14
 #define PDEV_DID_TEST_COMPOSITE_1   15
 #define PDEV_DID_TEST_COMPOSITE_2   16
+#define PDEV_DID_TEST_GDC           17
 
 // ARM
 #define PDEV_VID_ARM                18
@@ -249,13 +250,12 @@ __BEGIN_CDECLS
 // Maxim
 #define PDEV_VID_MAXIM              21
 #define PDEV_DID_MAXIM_MAX98373      1
-// clang-format on
 
 // Nordic
-#define PDEV_VID_NORDIC             21
+#define PDEV_VID_NORDIC             22
 #define PDEV_PID_NORDIC_NRF52840     1
 #define PDEV_DID_NORDIC_THREAD       1
-
+// clang-format on
 
 __END_CDECLS
 

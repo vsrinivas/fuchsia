@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <ddk/device.h>
-
-#include <ddktl/device.h>
-#include <ddktl/protocol/platform/bus.h>
-
-#include <fbl/macros.h>
+#ifndef ZIRCON_SYSTEM_DEV_BOARD_TEST_TEST_H_
+#define ZIRCON_SYSTEM_DEV_BOARD_TEST_TEST_H_
 
 #include <threads.h>
+
+#include <ddk/device.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/platform/bus.h>
+#include <fbl/macros.h>
 
 namespace board_test {
 
@@ -20,33 +19,36 @@ using TestBoardType = ddk::Device<TestBoard>;
 
 // This is the main class for the platform bus driver.
 class TestBoard : public TestBoardType {
-public:
-    explicit TestBoard(zx_device_t* parent, pbus_protocol_t* pbus)
-        : TestBoardType(parent), pbus_(pbus) {}
+ public:
+  explicit TestBoard(zx_device_t* parent, pbus_protocol_t* pbus)
+      : TestBoardType(parent), pbus_(pbus) {}
 
-    static zx_status_t Create(zx_device_t* parent);
+  static zx_status_t Create(zx_device_t* parent);
 
-    // Device protocol implementation.
-    void DdkRelease();
+  // Device protocol implementation.
+  void DdkRelease();
 
-private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(TestBoard);
+ private:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(TestBoard);
 
-    zx_status_t Start();
-    zx_status_t GpioInit();
-    zx_status_t I2cInit();
-    zx_status_t PowerInit();
-    zx_status_t ClockInit();
-    zx_status_t AudioCodecInit();
-    zx_status_t TestInit();
-    int Thread();
+  zx_status_t Start();
+  zx_status_t GpioInit();
+  zx_status_t I2cInit();
+  zx_status_t PowerInit();
+  zx_status_t ClockInit();
+  zx_status_t AudioCodecInit();
+  zx_status_t TestInit();
+  zx_status_t GdcInit();
+  int Thread();
 
-    ddk::PBusProtocolClient pbus_;
-    thrd_t thread_;
+  ddk::PBusProtocolClient pbus_;
+  thrd_t thread_;
 };
 
-} // namespace board_test
+}  // namespace board_test
 
 __BEGIN_CDECLS
 zx_status_t test_bind(void* ctx, zx_device_t* parent);
 __END_CDECLS
+
+#endif  // ZIRCON_SYSTEM_DEV_BOARD_TEST_TEST_H_

@@ -13,6 +13,7 @@
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/ethernet/board.h>
+#include <ddktl/protocol/gdc.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c.h>
 #include <ddktl/protocol/mipicsi.h>
@@ -34,6 +35,7 @@ class ComponentProxy : public ComponentProxyBase,
                        public ddk::ClockProtocol<ComponentProxy>,
                        public ddk::EthBoardProtocol<ComponentProxy>,
                        public ddk::GpioProtocol<ComponentProxy>,
+                       public ddk::GdcProtocol<ComponentProxy>,
                        public ddk::I2cProtocol<ComponentProxy>,
                        public ddk::MipiCsiProtocol<ComponentProxy>,
                        public ddk::CodecProtocol<ComponentProxy>,
@@ -71,6 +73,13 @@ class ComponentProxy : public ComponentProxyBase,
   zx_status_t ClockQuerySupportedRate(uint64_t max_rate, uint64_t* out_max_supported_rate);
   zx_status_t ClockGetRate(uint64_t* out_current_rate);
   zx_status_t EthBoardResetPhy();
+  zx_status_t GdcInitTask(const buffer_collection_info_t* input_buffer_collection,
+                          const buffer_collection_info_t* output_buffer_collection,
+                          zx::vmo config_vmo, const gdc_callback_t* callback,
+                          uint32_t* out_task_index);
+  void GdcRemoveTask(uint32_t task_index);
+  zx_status_t GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index);
+  void GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index);
   zx_status_t GpioConfigIn(uint32_t flags);
   zx_status_t GpioConfigOut(uint8_t initial_value);
   zx_status_t GpioSetAltFunction(uint64_t function);

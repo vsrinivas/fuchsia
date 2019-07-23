@@ -9,11 +9,15 @@ driver("component") {
   data_deps = [
     ":component.proxy",
   ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-sysmem:c",
+  ]
   deps = [
     "$zx/system/banjo/ddk.protocol.amlogiccanvas",
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.codec",
     "$zx/system/banjo/ddk.protocol.ethernet.board",
+    "$zx/system/banjo/ddk.protocol.gdc",
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.mipicsi",
@@ -34,11 +38,15 @@ driver("component.proxy") {
   sources = [
     "component-proxy.cc",
   ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-sysmem:c",
+  ]
   deps = [
     "$zx/system/banjo/ddk.protocol.amlogiccanvas",
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.codec",
     "$zx/system/banjo/ddk.protocol.ethernet.board",
+    "$zx/system/banjo/ddk.protocol.gdc",
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.mipicsi",

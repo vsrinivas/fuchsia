@@ -13,6 +13,7 @@
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/ethernet/board.h>
+#include <ddktl/protocol/gdc.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c.h>
 #include <ddktl/protocol/mipicsi.h>
@@ -35,6 +36,7 @@ class Component : public ComponentBase {
         canvas_(parent),
         clock_(parent),
         eth_board_(parent),
+        gdc_(parent),
         gpio_(parent),
         i2c_(parent),
         mipicsi_(parent),
@@ -108,6 +110,10 @@ class Component : public ComponentBase {
                        uint32_t* out_resp_size, const zx_handle_t* req_handles,
                        uint32_t req_handle_count, zx_handle_t* resp_handles,
                        uint32_t* resp_handle_count);
+  zx_status_t RpcGdc(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                     uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                     uint32_t req_handle_count, zx_handle_t* resp_handles,
+                     uint32_t* resp_handle_count);
 
   static void I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
                                   size_t op_count);
@@ -118,6 +124,7 @@ class Component : public ComponentBase {
   ddk::AmlogicCanvasProtocolClient canvas_;
   ddk::ClockProtocolClient clock_;
   ddk::EthBoardProtocolClient eth_board_;
+  ddk::GdcProtocolClient gdc_;
   ddk::GpioProtocolClient gpio_;
   ddk::I2cProtocolClient i2c_;
   ddk::MipiCsiProtocolClient mipicsi_;

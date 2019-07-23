@@ -119,6 +119,55 @@ zx_status_t Component::RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, ui
   }
 }
 
+zx_status_t Component::RpcGdc(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                              uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                              uint32_t req_handle_count, zx_handle_t* resp_handles,
+                              uint32_t* resp_handle_count) {
+  if (!gdc_.is_valid()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  auto* req = reinterpret_cast<const GdcProxyRequest*>(req_buf);
+  if (req_size < sizeof(*req)) {
+    zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+    return ZX_ERR_INTERNAL;
+  }
+
+  auto* resp = reinterpret_cast<ProxyResponse*>(resp_buf);
+  *out_resp_size = sizeof(*resp);
+
+  switch (req->op) {
+    case GdcOp::INIT_TASK: {
+      auto* resp = reinterpret_cast<GdcProxyResponse*>(resp_buf);
+      *out_resp_size = sizeof(*resp);
+      uint32_t handle_count = 0;
+      auto config_vmo = req_handles[handle_count++];
+      auto output_buffer_collection = req->output_buffer_collection;
+      auto input_buffer_collection = req->input_buffer_collection;
+      for (uint32_t i = 0; i < input_buffer_collection.buffer_count; i++) {
+        input_buffer_collection.vmos[i] = req_handles[handle_count++];
+      }
+
+      for (uint32_t i = 0; i < output_buffer_collection.buffer_count; i++) {
+        output_buffer_collection.vmos[i] = req_handles[handle_count++];
+      }
+
+      return gdc_.InitTask(&input_buffer_collection, &output_buffer_collection, zx::vmo(config_vmo),
+                           &req->callback, &resp->task_index);
+    }
+    case GdcOp::REMOVE_TASK:
+      gdc_.RemoveTask(req->task_index);
+      return ZX_OK;
+    case GdcOp::PROCESS_FRAME:
+      return gdc_.ProcessFrame(req->task_index, req->input_buffer_index);
+    case GdcOp::RELEASE_FRAME:
+      gdc_.ReleaseFrame(req->task_index, req->buffer_index);
+      return ZX_OK;
+    default:
+      zxlogf(ERROR, "%s: unknown GDC op %u\n", __func__, static_cast<uint32_t>(req->op));
+      return ZX_ERR_INTERNAL;
+  }
+}
+
 zx_status_t Component::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                                uint32_t* out_resp_size, const zx_handle_t* req_handles,
                                uint32_t req_handle_count, zx_handle_t* resp_handles,
@@ -725,6 +774,10 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
     case ZX_PROTOCOL_CODEC:
       status = RpcCodec(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                         resp_handles, &resp_handle_count);
+      break;
+    case ZX_PROTOCOL_GDC:
+      status = RpcGdc(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
+                      resp_handles, &resp_handle_count);
       break;
     default:
       zxlogf(ERROR, "%s: unknown protocol %u\n", __func__, req_header->proto_id);

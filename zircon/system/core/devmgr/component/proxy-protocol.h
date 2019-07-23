@@ -67,6 +67,31 @@ struct rpc_pdev_metadata_rsp_t {
   uint8_t metadata[PROXY_MAX_METADATA_SIZE];
 };
 
+// ZX_PROTOCOL_GDC proxy support.
+enum class GdcOp {
+  INIT_TASK,
+  REMOVE_TASK,
+  PROCESS_FRAME,
+  RELEASE_FRAME,
+};
+
+struct GdcProxyRequest {
+  ProxyRequest header;
+  GdcOp op;
+  buffer_collection_info_t input_buffer_collection;
+  buffer_collection_info_t output_buffer_collection;
+  gdc_callback_t callback;
+  zx::vmo config_vmo;
+  uint32_t task_index;
+  uint32_t input_buffer_index;
+  uint32_t buffer_index;
+};
+
+struct GdcProxyResponse {
+  ProxyResponse header;
+  uint32_t task_index;
+};
+
 // ZX_PROTOCOL_MIPI_CSI proxy support.
 enum class MipiCsiOp {
   INIT,

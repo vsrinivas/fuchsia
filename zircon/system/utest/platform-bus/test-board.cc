@@ -3,14 +3,6 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
-#include <fbl/algorithm.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -20,8 +12,17 @@
 
 #include <memory>
 
-#include "test-resources.h"
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/metadata.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/platform/bus.h>
+#include <fbl/algorithm.h>
+
 #include "test-metadata.h"
+#include "test-resources.h"
 #include "test.h"
 
 namespace board_test {
@@ -59,6 +60,11 @@ int TestBoard::Thread() {
   status = AudioCodecInit();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CodecInit failed: %d\n", __func__, status);
+  }
+
+  status = GdcInit();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: GdcInit failed: %d\n", __func__, status);
   }
 
   return 0;
@@ -122,6 +128,9 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   const zx_bind_inst_t codec_match[] = {
       BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
   };
+  const zx_bind_inst_t gdc_match[] = {
+      BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GDC),
+  };
   const zx_bind_inst_t child2_match[] = {
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
@@ -153,6 +162,10 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(codec_match), codec_match},
   };
+  device_component_part_t gdc_component[] = {
+      {fbl::count_of(root_match), root_match},
+      {fbl::count_of(gdc_match), gdc_match},
+  };
 
   device_component_t composite[] = {
       {fbl::count_of(gpio_component), gpio_component},
@@ -161,6 +174,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {fbl::count_of(power_component), power_component},
       {fbl::count_of(child4_component), child4_component},
       {fbl::count_of(codec_component), codec_component},
+      {fbl::count_of(gdc_component), gdc_component},
   };
 
   struct composite_test_metadata metadata_1 = {
@@ -201,6 +215,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {fbl::count_of(power_component), power_component},
       {fbl::count_of(child4_component), child4_component},
   };
+
   pbus_dev_t pdev2 = {};
   pdev2.name = "composite-dev-2";
   pdev2.vid = PDEV_VID_TEST;
@@ -230,7 +245,9 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace board_test
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(test_bus, board_test::driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST), ZIRCON_DRIVER_END(test_bus)
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
+ZIRCON_DRIVER_END(test_bus)

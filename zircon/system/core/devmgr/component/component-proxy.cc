@@ -37,6 +37,9 @@ zx_status_t ComponentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_ETH_BOARD:
       proto->ops = &eth_board_protocol_ops_;
       return ZX_OK;
+    case ZX_PROTOCOL_GDC:
+      proto->ops = &gdc_protocol_ops_;
+      return ZX_OK;
     case ZX_PROTOCOL_GPIO:
       proto->ops = &gpio_protocol_ops_;
       return ZX_OK;
@@ -224,6 +227,84 @@ zx_status_t ComponentProxy::EthBoardResetPhy() {
   req.op = EthBoardOp::RESET_PHY;
 
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+}
+
+zx_status_t ComponentProxy::GdcInitTask(const buffer_collection_info_t* input_buffer_collection,
+                                        const buffer_collection_info_t* output_buffer_collection,
+                                        zx::vmo config_vmo, const gdc_callback_t* callback,
+                                        uint32_t* out_task_index) {
+  GdcProxyRequest req = {};
+  GdcProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GDC;
+  req.op = GdcOp::INIT_TASK;
+  req.input_buffer_collection = *input_buffer_collection;
+  req.output_buffer_collection = *output_buffer_collection;
+  req.callback = *callback;
+
+  if ((input_buffer_collection->buffer_count > countof(input_buffer_collection->vmos)) ||
+      (output_buffer_collection->buffer_count > countof(output_buffer_collection->vmos))) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto total_handles = input_buffer_collection->buffer_count +
+                       output_buffer_collection->buffer_count + 1 /* Config VMO */;
+
+  auto handles = static_cast<zx_handle_t*>(new zx_handle_t[total_handles]);
+  if (!handles) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  uint32_t handle_count = 0;
+  handles[handle_count++] = config_vmo.release();
+
+  for (uint32_t i = 0; i < input_buffer_collection->buffer_count; i++) {
+    handles[handle_count++] = input_buffer_collection->vmos[i];
+  }
+
+  for (uint32_t i = 0; i < output_buffer_collection->buffer_count; i++) {
+    handles[handle_count++] = output_buffer_collection->vmos[i];
+  }
+
+  auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), handles, total_handles,
+                    nullptr, 0, nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  *out_task_index = resp.task_index;
+  return ZX_OK;
+}
+
+void ComponentProxy::GdcRemoveTask(uint32_t task_index) {
+  GdcProxyRequest req = {};
+  ProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GDC;
+  req.op = GdcOp::REMOVE_TASK;
+  req.task_index = task_index;
+
+  Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+}
+
+zx_status_t ComponentProxy::GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index) {
+  GdcProxyRequest req = {};
+  ProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GDC;
+  req.op = GdcOp::PROCESS_FRAME;
+  req.task_index = task_index;
+  req.input_buffer_index = input_buffer_index;
+
+  return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+}
+
+void ComponentProxy::GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
+  GdcProxyRequest req = {};
+  ProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GDC;
+  req.op = GdcOp::RELEASE_FRAME;
+  req.task_index = task_index;
+  req.buffer_index = buffer_index;
+
+  Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
 }
 
 zx_status_t ComponentProxy::MipiCsiInit(const mipi_info_t* mipi_info,
