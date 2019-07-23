@@ -118,7 +118,7 @@ void VirtualAudioSystemGainTest::AddDeviceForSystemGainTesting(bool is_input) {
   }
   ExpectDeviceAdded(unique_id);
 
-  uint64_t added_token = received_device_.token_id;
+  auto added_token = received_device_.token_id;
 
   // If the device is different than expected, set it up as we expect.
   if ((received_device_.gain_info.gain_db != kInitialSystemGainDb) ||
