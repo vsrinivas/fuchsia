@@ -17,6 +17,7 @@ import("//build/images/json.gni")
 import("//build/images/manifest.gni")
 import("//build/images/max_fvm_size.gni")
 import("//build/images/shell_commands.gni")
+import("//build/images/vbmeta.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
 import("//build/package.gni")
@@ -531,7 +532,12 @@ images += [
 # line file, but is read by devmgr (in addition to kernel command line
 # arguments), not by the kernel or boot loader.
 action("devmgr_config.txt") {
-  visibility = [ ":fuchsia" ]
+  visibility = [
+    ":fuchsia",
+    ":fuchsia.vbmeta",
+    ":fuchsia.vbmeta__zbi_props",
+    ":fuchsia.vbmeta__vb_desc",
+  ]
   testonly = true
 
   script = "manifest.py"
@@ -651,14 +657,17 @@ zbi("fuchsia") {
     root_manifests_manifest,
     zircon_kernel_zbi,
   ]
-  manifest = [
-    {
-      outputs = [
-        "config/devmgr",
-      ]
-      sources = get_target_outputs(":devmgr_config.txt")
-    },
-  ]
+  manifest = []
+  if (!use_vbmeta) {
+    manifest += [
+      {
+        outputs = [
+          "config/devmgr",
+        ]
+        sources = get_target_outputs(":devmgr_config.txt")
+      },
+    ]
+  }
   if (!bootfs_only) {
     deps += [ ":zxcrypt_config.txt" ]
     manifest += [
@@ -743,26 +752,6 @@ if (custom_signing_script != "") {
       ]
     },
   ]
-  if (use_vbmeta) {
-    images += [
-      {
-        deps = [
-          ":signed",
-        ]
-        sources = [
-          "$root_out_dir/fuchsia.zbi.vbmeta",
-        ]
-        json = {
-          name = "zircon-a.vbmeta"
-          type = "vbmeta"
-          bootserver_pave = [ "--vbmetaa" ]
-        }
-        public = [
-          "IMAGE_VBMETAA_RAW",
-        ]
-      },
-    ]
-  }
 } else if (use_vboot) {
   # ChromeOS vboot images.
   vboot("signed") {
@@ -785,6 +774,62 @@ if (custom_signing_script != "") {
       }
       public = [
         "IMAGE_ZIRCONA_SIGNEDZBI",
+      ]
+    },
+  ]
+}
+
+if (use_vbmeta) {
+  vbmeta("fuchsia.vbmeta") {
+    output_name = "fuchsia"
+    testonly = true
+    if (custom_signing_script != "") {
+      deps = [
+        ":signed",
+      ]
+      zbi = get_target_outputs(":signed")
+    } else {
+      deps = [
+        ":fuchsia",
+      ]
+      zbi = get_target_outputs(":fuchsia")
+    }
+    deps += [ ":devmgr_config.txt" ]
+
+    boot_args_file = get_target_outputs(":devmgr_config.txt")
+
+    # expecting a single file
+    assert([ boot_args_file[0] ] == boot_args_file,
+           "expect a single output file form 'devmgr_config.txt' target")
+
+    prop_from_file = [
+      {
+        # zbi item type w/o ZBI_TYPE_ prefix
+        type = "IMAGE_ARGS"
+        file = boot_args_file[0]
+      },
+    ]
+  }
+
+  images += [
+    {
+      deps = [
+        ":fuchsia.vbmeta",
+      ]
+      sources = [
+        "$root_out_dir/fuchsia.vbmeta",
+      ]
+      json = {
+        name = "zircon-a.vbmeta"
+        type = "vbmeta"
+
+        # TODO (dmitryya@) netsvc does not support correct
+        # flashing vbmeta images to a device.
+        # Comment out this till this will be fixed.
+        #bootserver_pave = [ "--vbmetaa" ]
+      }
+      public = [
+        "IMAGE_VBMETAA_RAW",
       ]
     },
   ]
@@ -826,6 +871,19 @@ if (custom_signing_script != "") {
         "$root_out_dir/zedboot.zbi",
       ]
       updater = "zedboot"
+    },
+  ]
+}
+if (use_vbmeta) {
+  images += [
+    {
+      deps = [
+        "zedboot:zedboot.vbmeta",
+      ]
+      sources = [
+        "$root_out_dir/zedboot.vbmeta",
+      ]
+      updater = "zedboot.vbmeta"
     },
   ]
 }

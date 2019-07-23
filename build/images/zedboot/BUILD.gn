@@ -8,6 +8,7 @@ import("//build/images/custom_signing.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/json.gni")
 import("//build/images/manifest.gni")
+import("//build/images/vbmeta.gni")
 import("//build/images/zxcrypt.gni")
 
 declare_args() {
@@ -97,7 +98,12 @@ manifest_outputs = get_target_outputs(":zedboot.manifest")
 manifest_file = manifest_outputs[0]
 
 action("devmgr_config.txt") {
-  visibility = [ ":zbi" ]
+  visibility = [
+    ":zbi",
+    ":zedboot.vbmeta",
+    ":zedboot.vbmeta__zbi_props",
+    ":zedboot.vbmeta__vb_desc",
+  ]
 
   script = "../manifest.py"
   outputs = [
@@ -146,16 +152,19 @@ zbi("zbi") {
     zircon_kernel_zbi,
     manifest_file,
   ]
-  manifest = [
-    {
-      outputs = [
-        "config/devmgr",
-      ]
-      sources = get_target_outputs(":devmgr_config.txt")
-    },
-    "config/zxcrypt=" +
-        rebase_path("$target_out_dir/zxcrypt_config.txt", root_build_dir),
-  ]
+  manifest =
+      [ "config/zxcrypt=" +
+        rebase_path("$target_out_dir/zxcrypt_config.txt", root_build_dir) ]
+  if (!use_vbmeta) {
+    manifest += [
+      {
+        outputs = [
+          "config/devmgr",
+        ]
+        sources = get_target_outputs(":devmgr_config.txt")
+      },
+    ]
+  }
   cmdline = zedboot_cmdline_args
   cmdline_inputs = zedboot_cmdline_files
 }
@@ -230,6 +239,61 @@ if (custom_signing_script != "") {
         type = "zbi.signed"
         bootserver_pave = [ "--zirconr" ]
       }
+    },
+  ]
+}
+
+if (use_vbmeta) {
+  vbmeta("zedboot.vbmeta") {
+    output_name = "zedboot"
+    testonly = true
+    if (custom_signing_script != "") {
+      deps = [
+        ":signed",
+      ]
+      zbi = get_target_outputs(":signed")
+    } else {
+      deps = [
+        ":zbi",
+      ]
+      zbi = get_target_outputs(":zbi")
+    }
+    deps += [ ":devmgr_config.txt" ]
+
+    boot_args_file = get_target_outputs(":devmgr_config.txt")
+
+    # expecting a single file
+    assert([ boot_args_file[0] ] == boot_args_file,
+           "expect a single output file form 'devmgr_config.txt' target")
+
+    prop_from_file = [
+      {
+        # zbi item type w/o ZBI_TYPE_ prefix
+        type = "IMAGE_ARGS"
+        file = boot_args_file[0]
+      },
+    ]
+  }
+  zedboot_images += [
+    {
+      deps = [
+        ":zedboot.vbmeta",
+      ]
+      sources = [
+        "$root_out_dir/zedboot.vbmeta",
+      ]
+      json = {
+        name = "zircon-r.vbmeta"
+        type = "vbmeta"
+
+        # TODO (dmitryya@) netsvc does not support correct
+        # flashing vbmeta images to a device.
+        # Comment out this till this will be fixed.
+        #bootserver_pave = [ "--vbmetar" ]
+      }
+      public = [
+        "IMAGE_VBMETAR_RAW",
+      ]
     },
   ]
 }
