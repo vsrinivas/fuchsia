@@ -31,6 +31,7 @@
 #define ZX_PANIC(fmt, ...)          \
     do {                            \
         printf(fmt, ##__VA_ARGS__); \
+        fflush(stdout);             \
         abort();                    \
     } while (0)
 
