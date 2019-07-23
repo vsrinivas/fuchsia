@@ -47,7 +47,7 @@ TEST_F(VirtMagmaTest, MagmaCreateConnection) {
 }
 
 TEST_F(VirtMagmaTest, OpenDriver) {
-  static constexpr const char* kDriverPath = "/usr/lib64/libvulkan_magma.so";
+  static constexpr const char* kDriverPath = "libvulkan_magma.so";
   driver_handle_ = dlopen(kDriverPath, RTLD_NOW);
   ASSERT_NE(driver_handle_, nullptr)
       << "Failed to open driver " << kDriverPath << " (" << errno << ")";
