@@ -7,7 +7,6 @@ library fuchsia.ui.gfx;
 using fuchsia.mem;
 
 /// Commands that are used to modify the state of a `Session`.
-// TODO(SCN-237): reorder Command definitions to match the order in this union.
 union Command {
     CreateResourceCmd create_resource;
     ReleaseResourceCmd release_resource;
@@ -158,86 +157,6 @@ struct ImportResourceCmd {
     ImportSpec spec;
 };
 
-/// Maximum length for a resource label.
-const uint32 kLabelMaxLength = 32;
-
-/// Sets/clears a label to help developers identify the purpose of the resource
-/// when using diagnostic tools.
-///
-/// The label serves no functional purpose in the scene graph.  It exists only
-/// to help developers understand its structure.  The scene manager may truncate
-/// or discard labels at will.
-///
-/// Constraints:
-/// - The label's maximum length is `kLabelMaxLength` characters.
-/// - Setting the label to an empty string clears it.
-struct SetLabelCmd {
-    uint32 id;
-    string label;
-};
-
-/// Add a node as a child to another node.
-///
-/// Constraints:
-/// - `id` refs a Node with the has_children characteristic.
-/// - `child_id` refs any Node.
-///
-/// Discussion:
-/// The child node is first removed from its existing parent, as if DetachCmd
-/// was applied first.
-struct AddChildCmd {
-    uint32 node_id;
-    uint32 child_id;
-};
-
-/// Add a node as a part of another node.  The implications of being a part
-/// rather than a child differ based on the type of the part.  However, one
-/// implication is constant: removing all of a node's children (e.g. via
-/// DetachChildrenCmd) does not affect its parts.  This is similar to the
-/// "shadow DOM" in a web browser: the controls of a <video> element are
-/// implemented as using the shadow DOM, and do no show up amongst the children
-/// of that element.
-///
-/// Constraints:
-/// - `id` refs a Node with the has_parts characteristic.
-/// - `part_id` refs any Node.
-///
-/// Discussion:
-/// The part node is first removed from its existing parent, as if DetachCmd
-/// was applied first.
-struct AddPartCmd {
-    uint32 node_id;
-    uint32 part_id;
-};
-
-protocol SnapshotCallbackHACK {
-    OnData(fuchsia.mem.Buffer data);
-};
-
-struct TakeSnapshotCmdHACK {
-    uint32 node_id;
-    SnapshotCallbackHACK callback;
-};
-
-/// Detaches a parentable object from its parent (e.g. a node from a parent node,
-/// or a layer from a layer stack).  It is illegal to apply this command to a
-/// non-parentable object.  No-op if the target object currently has no parent.
-///
-/// Constraints:
-/// - `id` refs a parentable object
-///
-/// Discussion:
-/// For nodes, this command will detach a node from its parent, regardless of
-/// whether it is a part or a child of its parent.
-struct DetachCmd {
-    uint32 id;
-};
-
-/// Detaches all of a node's children (but not its parts).
-struct DetachChildrenCmd {
-    uint32 node_id;
-};
-
 /// Sets/clears a node's tag value.
 ///
 /// A session can apply a tag value to any node to which it has access, including
@@ -255,6 +174,20 @@ struct DetachChildrenCmd {
 struct SetTagCmd {
     uint32 node_id;
     uint32 tag_value;
+};
+
+/// Detaches a parentable object from its parent (e.g. a node from a parent node,
+/// or a layer from a layer stack).  It is illegal to apply this command to a
+/// non-parentable object.  No-op if the target object currently has no parent.
+///
+/// Constraints:
+/// - `id` refs a parentable object
+///
+/// Discussion:
+/// For nodes, this command will detach a node from its parent, regardless of
+/// whether it is a part or a child of its parent.
+struct DetachCmd {
+    uint32 id;
 };
 
 /// Sets a Resource's (typically a Node's) translation.
@@ -304,6 +237,16 @@ struct SetSizeCmd {
     Vector2Value value;
 };
 
+/// Sets a node's opacity.
+///
+/// Constraints:
+/// - `node_id` refs a `Node` with the has_opacity characteristic.
+/// - `opacity` is in the range [0, 1].
+struct SetOpacityCmd {
+    uint32 node_id;
+    float32 opacity;
+};
+
 /// Sends a hint about a pending size change to the given node and all nodes
 /// below. This is generally sent before an animation.
 ///
@@ -316,14 +259,43 @@ struct SendSizeChangeHintCmdHACK {
     float32 height_change_factor;
 };
 
-/// Sets a node's opacity.
+/// Add a node as a child to another node.
 ///
 /// Constraints:
-/// - `node_id` refs a `Node` with the has_opacity characteristic.
-/// - `opacity` is in the range [0, 1].
-struct SetOpacityCmd {
+/// - `id` refs a Node with the has_children characteristic.
+/// - `child_id` refs any Node.
+///
+/// Discussion:
+/// The child node is first removed from its existing parent, as if DetachCmd
+/// was applied first.
+struct AddChildCmd {
     uint32 node_id;
-    float32 opacity;
+    uint32 child_id;
+};
+
+/// Add a node as a part of another node.  The implications of being a part
+/// rather than a child differ based on the type of the part.  However, one
+/// implication is constant: removing all of a node's children (e.g. via
+/// DetachChildrenCmd) does not affect its parts.  This is similar to the
+/// "shadow DOM" in a web browser: the controls of a <video> element are
+/// implemented as using the shadow DOM, and do no show up amongst the children
+/// of that element.
+///
+/// Constraints:
+/// - `id` refs a Node with the has_parts characteristic.
+/// - `part_id` refs any Node.
+///
+/// Discussion:
+/// The part node is first removed from its existing parent, as if DetachCmd
+/// was applied first.
+struct AddPartCmd {
+    uint32 node_id;
+    uint32 part_id;
+};
+
+/// Detaches all of a node's children (but not its parts).
+struct DetachChildrenCmd {
+    uint32 node_id;
 };
 
 /// Sets/clears a node's shape.
@@ -390,16 +362,6 @@ struct SetClipCmd {
     bool clip_to_self;
 };
 
-/// Sets the list of clip planes that apply to a Node and all of its children.  Replaces
-/// the list set by any previous SetClipPlanesCmd.
-///
-/// - `node_id` refs a `Node` with the has_clip characteristic.
-/// - `clip_planes` is the new list of oriented clip planes.
-struct SetClipPlanesCmd {
-    uint32 node_id;
-    vector<Plane3> clip_planes;
-};
-
 /// Sets a node's hit test behavior.
 ///
 /// Discussion:
@@ -417,6 +379,15 @@ struct SetHitTestBehaviorCmd {
 struct SetViewPropertiesCmd {
     uint32 view_holder_id;
     ViewProperties properties;
+};
+
+protocol SnapshotCallbackHACK {
+    OnData(fuchsia.mem.Buffer data);
+};
+
+struct TakeSnapshotCmdHACK {
+    uint32 node_id;
+    SnapshotCallbackHACK callback;
 };
 
 /// Sets a renderer's camera.
@@ -567,51 +538,10 @@ struct SetLightDirectionCmd {
     Vector3Value direction;
 };
 
-/// Sets the position of the PointLight identified by `light_id`.
-struct SetPointLightPositionCmd {
-    uint32 light_id;
-    Vector3Value position;
-};
-
-/// Sets the falloff factor of the PointLight identified by `light_id`.
-/// A value of 1.0 corresponds to the physically-based "inverse-square law"
-/// (see Wikipedia).  Other values can be used for artistic effect, e.g. a
-/// value of 0.0 means that the radiance of a surface is not dependant on
-/// its distance from the light.
-///
-// TODO(SCN-528): need to formalize the units of light intensity and distance used
-// to compute fall-off.  Currently the unit is pips; consequently a falloff of 1.0
-// causes light to attenuate far too rapidly.  Meters would be more appropriate.
-struct SetPointLightFalloffCmd {
-    uint32 light_id;
-    FloatValue falloff;
-};
-
 /// DEPRECATED
 /// Adds the light specified by `light_id` specified by `light_id` to the scene
 /// identified by `scene_id`.
 struct AddLightCmd {
-    uint32 scene_id;
-    uint32 light_id;
-};
-
-/// Adds the light specified by `light_id` specified by `light_id` to the scene
-/// identified by `scene_id`.
-struct SceneAddAmbientLightCmd {
-    uint32 scene_id;
-    uint32 light_id;
-};
-
-/// Adds the light specified by `light_id` specified by `light_id` to the scene
-/// identified by `scene_id`.
-struct SceneAddDirectionalLightCmd {
-    uint32 scene_id;
-    uint32 light_id;
-};
-
-/// Adds the light specified by `light_id` specified by `light_id` to the scene
-/// identified by `scene_id`.
-struct SceneAddPointLightCmd {
     uint32 scene_id;
     uint32 light_id;
 };
@@ -771,6 +701,24 @@ struct SetEventMaskCmd {
     uint32 event_mask;
 };
 
+/// Maximum length for a resource label.
+const uint32 kLabelMaxLength = 32;
+
+/// Sets/clears a label to help developers identify the purpose of the resource
+/// when using diagnostic tools.
+///
+/// The label serves no functional purpose in the scene graph.  It exists only
+/// to help developers understand its structure.  The scene manager may truncate
+/// or discard labels at will.
+///
+/// Constraints:
+/// - The label's maximum length is `kLabelMaxLength` characters.
+/// - Setting the label to an empty string clears it.
+struct SetLabelCmd {
+    uint32 id;
+    string label;
+};
+
 /// Set whether clipping should be disabled for the specified renderer.  For a
 /// newly-created renderer, clipping will NOT be disabled (i.e. it will be
 /// enabled).
@@ -787,6 +735,57 @@ struct SetDisableClippingCmd {
 
 // TODO(SCN-1026): Remove this.
 struct SetImportFocusCmdDEPRECATED {
+};
+
+/// Sets the list of clip planes that apply to a Node and all of its children.  Replaces
+/// the list set by any previous SetClipPlanesCmd.
+///
+/// - `node_id` refs a `Node` with the has_clip characteristic.
+/// - `clip_planes` is the new list of oriented clip planes.
+struct SetClipPlanesCmd {
+    uint32 node_id;
+    vector<Plane3> clip_planes;
+};
+
+/// Sets the position of the PointLight identified by `light_id`.
+struct SetPointLightPositionCmd {
+    uint32 light_id;
+    Vector3Value position;
+};
+
+/// Sets the falloff factor of the PointLight identified by `light_id`.
+/// A value of 1.0 corresponds to the physically-based "inverse-square law"
+/// (see Wikipedia).  Other values can be used for artistic effect, e.g. a
+/// value of 0.0 means that the radiance of a surface is not dependant on
+/// its distance from the light.
+///
+// TODO(SCN-528): need to formalize the units of light intensity and distance used
+// to compute fall-off.  Currently the unit is pips; consequently a falloff of 1.0
+// causes light to attenuate far too rapidly.  Meters would be more appropriate.
+struct SetPointLightFalloffCmd {
+    uint32 light_id;
+    FloatValue falloff;
+};
+
+/// Adds the light specified by `light_id` specified by `light_id` to the scene
+/// identified by `scene_id`.
+struct SceneAddAmbientLightCmd {
+    uint32 scene_id;
+    uint32 light_id;
+};
+
+/// Adds the light specified by `light_id` specified by `light_id` to the scene
+/// identified by `scene_id`.
+struct SceneAddDirectionalLightCmd {
+    uint32 scene_id;
+    uint32 light_id;
+};
+
+/// Adds the light specified by `light_id` specified by `light_id` to the scene
+/// identified by `scene_id`.
+struct SceneAddPointLightCmd {
+    uint32 scene_id;
+    uint32 light_id;
 };
 
 /// Set the color conversion applied to the compositor's display.
