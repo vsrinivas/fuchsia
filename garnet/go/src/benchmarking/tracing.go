@@ -6,6 +6,7 @@ package benchmarking
 
 import (
 	"encoding/json"
+	"math"
 	"sort"
 	"strconv"
 )
@@ -171,6 +172,25 @@ type Process struct {
 // A struct the represents the root of the model.
 type Model struct {
 	Processes []Process
+}
+
+// This is the time duration between the start of the first trace event
+// to the end of the last trace event.
+// If |m| contains 0 trace events, returns 0.0.
+func (m Model) getTotalTraceDurationInNanoseconds() float64 {
+	traceStartTime := math.MaxFloat64
+	traceEndTime := math.SmallestNonzeroFloat64
+	for _, process := range m.Processes {
+		for _, thread := range process.Threads {
+			for _, event := range thread.Events {
+				if event.Type != FlowEvent {
+					traceStartTime = math.Min(traceStartTime, event.Start)
+					traceEndTime = math.Max(traceEndTime, event.Start+event.Dur)
+				}
+			}
+		}
+	}
+	return math.Max(0.0, traceEndTime-traceStartTime)
 }
 
 func (m Model) getProcessById(pid uint64) *Process {

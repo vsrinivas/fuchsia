@@ -8,10 +8,16 @@ import (
 	"fmt"
 )
 
+const OneSecInNanoSeconds float64 = 1000000000
+
 // Extract the list of average cpu percentage usages from the trace model
 // under system_metrics category, and write it into testResultsFile.
 func ReportCpuMetrics(model Model, testSuite string, testResultsFile *TestResultsFile) {
 	fmt.Printf("=== CPU ===\n")
+	if model.getTotalTraceDurationInNanoseconds() < 1.1*OneSecInNanoSeconds {
+		fmt.Printf("Trace duration is too short to provide CPU information.\n")
+		return
+	}
 	cpuPercentages := extractCounterValues(
 		model, "system_metrics", "cpu_usage", []string{"average_cpu_percentage"})["average_cpu_percentage"]
 	fmt.Printf("Average CPU Load: %.4f\n", computeAverage(cpuPercentages))
@@ -27,6 +33,10 @@ func ReportCpuMetrics(model Model, testSuite string, testResultsFile *TestResult
 // from the trace model under memory_monitor category, and write it into testResultsFile.
 func ReportMemoryMetrics(model Model, testSuite string, testResultsFile *TestResultsFile) {
 	fmt.Printf("=== Memory ===\n")
+	if model.getTotalTraceDurationInNanoseconds() < 1.1*OneSecInNanoSeconds {
+		fmt.Printf("Trace duration is too short to provide Memory information.\n")
+		return
+	}
 	allocatedMemoryValues := extractCounterValues(
 		model, "memory_monitor", "allocated", []string{"vmo", "mmu_overhead", "ipc"})
 	totalMemory := extractCounterValues(
@@ -62,6 +72,10 @@ func ReportMemoryMetrics(model Model, testSuite string, testResultsFile *TestRes
 // under system_metrics category, and write it into testResultsFile.
 func ReportTemperatureMetrics(model Model, testSuite string, testResultsFile *TestResultsFile) {
 	fmt.Printf("=== Temperature ===\n")
+	if model.getTotalTraceDurationInNanoseconds() < 10.1*OneSecInNanoSeconds {
+		fmt.Printf("Trace duration is too short to provide Temperature information.\n")
+		return
+	}
 	temperatureReadings := extractCounterValues(
 		model, "system_metrics", "temperature", []string{"temperature"})["temperature"]
 	fmt.Printf("Average temperature reading: %.2f degrees Celsius\n", computeAverage(temperatureReadings))
