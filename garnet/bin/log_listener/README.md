@@ -1,6 +1,42 @@
 # `log_listener`
 
-For general usage of `log_listener`, please see `log_listener --help`.
+Reviewed on: 2019-07-22
+
+`log_listener` is a command line tool for retrieving log messages from
+[logger][logger] and either writing them to disk or printing them.
+
+## Building
+
+This project can be added to builds by including `--with
+//garnet/bin/log_listener` to the `fx set` invocation.
+
+## Running
+
+`log_listener` is typically invoked via the `fx syslog` command:
+
+```
+$ fx syslog --help
+```
+
+It can also be run directly on a Fuchsia shell:
+
+```
+$ fx shell log_listener --help
+```
+
+## Testing
+
+Unit tests for `log_listener` are available in the `log_listener_tests`
+package.
+
+```
+$ fx run-test log_listener_tests
+```
+
+## Source layout
+
+The implementation is located in `src/main.rs`. Unit tests are co-located with
+the code.
 
 ## Persisting logs to disk
 
@@ -16,3 +52,5 @@ default is set to use 0 bytes of disk space. To change how much disk space
 This will cause logs to be placed in `/data/logs.all_logs`. Once this file
 reaches half of the allowed maximum, it is renamed to `/data/logs.all_logs.old`
 and future data is written to a newly-created `/data/logs.all_logs`.
+
+[logger]: ../logger/README.md

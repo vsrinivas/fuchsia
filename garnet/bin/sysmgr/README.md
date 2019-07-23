@@ -1,4 +1,6 @@
-# System Manager Application
+# sysmgr
+
+Reviewed on: 2019-07-22
 
 This directory contains sysmgr, an application which is responsible for
 setting up an environment which provides access to global system services.
@@ -12,62 +14,36 @@ will be restarted automatically the next time an application attempts to
 connect to that service.
 
 By default, sysmgr reads all configuration files from `/config/data/sysmgr/`,
-which have one of the following formats.
+which have one of the formats detailed [here](sysmgr-configuration.md).
 
 Additional configurations can be contributed to `sysmgr` using the
 `config_data()` template defined in `//build/config.gni`.
 
-## CONFIGURATION
+## Building
 
-### Example
+This project is typically included in Fuchsia builds by default, but it can be
+added to a build by adding `--with //garnet/bin/sysmgr` to the `fx set`
+invocation.
 
-In `myexample.config`:
+## Running
 
-```json
-{
-  "services": {
-    "fuchsia.example.MyExample": "fuchsia-pkg://fuchsia.com/myexample#meta/myexample.cmx"
-  }
-}
+Sysmgr will be running on any system with [appmgr](../appmgr/README.md).
+
+## Testing
+
+Config unit tests are available in the `sysmgr_tests` package.
+
+```
+$ fx run-test sysmgr_tests
 ```
 
-In `BUILD.gn`:
+Integration tests are available in the `sysmgr_integration_tests` package.
 
-```gn
-config_data("myexample.config") {
-  for_pkg = "sysmgr"
-  sources = "myexample.config"
-}
+```
+$ fx run-test sysmgr_integration_tests
 ```
 
-### Services
+## Source layout
 
-The sysmgr services configuration is a JSON file consisting of service
-registrations.  Each entry in the "services" map consists of a service
-name and the application URL which provides it.
-
-```json
-{
-  "services": {
-    "service-name-1": "app_without_args",
-    "service-name-2": [
-        "app_with_args", "arg1", "arg2", "arg3"
-    ]
-  }
-}
-```
-
-### Apps
-
-The sysmgr apps configuration is a JSON file consisting of apps to run at
-startup.  Each entry in the "apps" list consists of either an app URL or a list
-of an app URL and its arguments.
-
-```json
-{
-  "apps": [
-    "app_without_args",
-    [ "app_with_args", "arg1", "arg2", "arg3" ]
-  ]
-}
-```
+The entrypoint is located in `main.cc`, and all code lives in top-level `.cc`
+and `.h` files.
