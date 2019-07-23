@@ -104,7 +104,7 @@ TEST_F(PlayerTest, FreshPlayer) {
   EXPECT_EQ(nullptr, player_core.metadata());
   EXPECT_EQ(nullptr, player_core.problem());
   EXPECT_NE(nullptr, player_core.graph());
-  EXPECT_EQ(NodeRef(), player_core.source_node());
+  EXPECT_TRUE(player_core.source_nodes().empty());
 }
 
 // Tests ClearSourceSegment.
@@ -495,14 +495,16 @@ TEST_F(PlayerTest, FakeSegments) {
   EXPECT_EQ(nullptr, player_core.metadata());
   EXPECT_EQ(nullptr, player_core.problem());
   EXPECT_NE(nullptr, player_core.graph());
-  EXPECT_EQ(NodeRef(), player_core.source_node());
+  EXPECT_TRUE(player_core.source_nodes().empty());
 }
 
 // Expects the player_core to have built a graph based on the fake demux and
 // renderers used with real source and sink segments.
 void ExpectRealSegmentsGraph(const PlayerCore& player_core) {
   // Check the source (demux) node.
-  NodeRef source_node_ref = player_core.source_node();
+  std::vector<NodeRef> source_node_refs = player_core.source_nodes();
+  EXPECT_EQ(1u, source_node_refs.size());
+  NodeRef source_node_ref = source_node_refs[0];
   EXPECT_TRUE(source_node_ref);
   EXPECT_EQ(0u, source_node_ref.input_count());
   EXPECT_EQ(2u, source_node_ref.output_count());

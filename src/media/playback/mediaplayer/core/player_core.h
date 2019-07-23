@@ -119,9 +119,9 @@ class PlayerCore {
   Graph* graph() { return &graph_; }
 
   // Test only.
-  // Returns a reference to the source node.
-  NodeRef source_node() const {
-    return source_segment_ ? source_segment_->source_node() : NodeRef();
+  // Returns references to the source nodes.
+  std::vector<NodeRef> source_nodes() const {
+    return source_segment_ ? source_segment_->source_nodes() : std::vector<NodeRef>{};
   }
 
   // Generates an introspection report.

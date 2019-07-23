@@ -4,12 +4,12 @@
 
 #include "src/media/playback/mediaplayer/core/player_core.h"
 
+#include <queue>
+#include <unordered_set>
+
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/clock.h>
-
-#include <queue>
-#include <unordered_set>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
@@ -423,8 +423,10 @@ void PlayerCore::Dump(std::ostream& os) const {
   std::queue<NodeRef> backlog;
   std::unordered_set<Node*> visited;
 
-  backlog.push(source_node());
-  visited.insert(source_node().GetNode());
+  for (auto source_node : source_nodes()) {
+    backlog.push(source_node);
+    visited.insert(source_node.GetNode());
+  }
 
   while (!backlog.empty()) {
     NodeRef node = backlog.front();

@@ -40,7 +40,7 @@ class DemuxSourceSegment : public SourceSegment {
 
   void Seek(int64_t position, fit::closure callback) override;
 
-  NodeRef source_node() const override { return demux_node_; }
+  std::vector<NodeRef> source_nodes() const override { return {demux_node_}; }
 
  private:
   // Builds the graph.

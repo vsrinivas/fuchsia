@@ -113,8 +113,8 @@ class SourceSegment : public Segment {
   virtual void Seek(int64_t position, fit::closure callback) = 0;
 
   // Test only.
-  // Returns a reference to the source node.
-  virtual NodeRef source_node() const { return NodeRef(); }
+  // Returns references to the source nodes.
+  virtual std::vector<NodeRef> source_nodes() const { return {}; }
 
  protected:
   // Gets a weak pointer to this |SourceSegment|.

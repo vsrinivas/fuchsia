@@ -51,8 +51,6 @@ class FakeSourceSegment : public SourceSegment {
     seek_call_param_callback_ = std::move(callback);
   }
 
-  NodeRef source_node() const override { return NodeRef(); }
-
  public:
   // Protected calls exposed for testing.
   Graph& TEST_graph() { return graph(); }
