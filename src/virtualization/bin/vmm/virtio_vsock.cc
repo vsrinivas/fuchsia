@@ -537,12 +537,6 @@ void VirtioVsock::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx:
   // From here on out the |conn| destructor will handle connection refusal upon
   // deletion.
 
-  zx_status_t status = conn->Init();
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to setup connection " << status;
-    return;
-  }
-
   std::lock_guard<std::mutex> lock(mutex_);
   AddConnectionLocked(key, std::move(conn));
 }
@@ -750,8 +744,14 @@ static void set_shutdown(virtio_vsock_hdr_t* header) {
 static zx_status_t receive(VirtioVsock::Connection* conn, VirtioQueue* queue,
                            virtio_vsock_hdr_t* header, VirtioDescriptor* desc) {
   switch (header->op) {
-    case VIRTIO_VSOCK_OP_RESPONSE:
+    case VIRTIO_VSOCK_OP_RESPONSE: {
+      zx_status_t status = conn->Init();
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to setup connection " << status;
+        return status;
+      }
       return conn->Accept();
+    }
     case VIRTIO_VSOCK_OP_RW:
       // We are writing to the socket.
       return conn->Write(queue, header, desc);

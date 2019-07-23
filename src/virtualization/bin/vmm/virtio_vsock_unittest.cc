@@ -5,6 +5,7 @@
 #include "src/virtualization/bin/vmm/virtio_vsock.h"
 
 #include <lib/gtest/test_loop_fixture.h>
+
 #include <src/lib/fxl/arraysize.h>
 
 #include "src/virtualization/bin/vmm/phys_mem_fake.h"
@@ -423,6 +424,16 @@ TEST_F(VirtioVsockTest, ConnectMultipleTimesSamePort) {
   ASSERT_EQ(1u, connection.count);
   ASSERT_EQ(ZX_ERR_ALREADY_BOUND, connection.status);
   ASSERT_TRUE(connection.remote_closed());
+}
+
+TEST_F(VirtioVsockTest, ConnectEarlyData) {
+  TestSocketConnection connection;
+
+  // Put some initial data on the connection
+  size_t actual;
+  ASSERT_EQ(connection.write(kDefaultData.data(), kDefaultData.size(), &actual), ZX_OK);
+
+  HostConnectOnPort(kVirtioVsockHostPort, &connection);
 }
 
 TEST_F(VirtioVsockTest, ConnectRefused) {
