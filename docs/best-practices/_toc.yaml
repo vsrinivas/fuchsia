@@ -11,7 +11,7 @@ toc:
   path: /fuchsia-src/best-practices/documentation_standards
 - title: "Documentation Comments"
   path: /fuchsia-src/best-practices/documentation_comments
-- title: "Web site navigation files"
+- title: "Website navigation files"
   path: /fuchsia-src/best-practices/documentation_navigation_toc
 - title: "General style guidelines"
   path: /fuchsia-src/best-practices/documentation_style_guide
