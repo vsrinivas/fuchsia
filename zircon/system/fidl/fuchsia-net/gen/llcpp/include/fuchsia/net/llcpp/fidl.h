@@ -122,7 +122,7 @@ extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableEventTabl
 
 class Connectivity final {
  public:
-  static constexpr char Name_[] = "fuchsia.net.Connectivity";
+  static constexpr char Name[] = "fuchsia.net.Connectivity";
 
   struct OnNetworkReachableResponse final {
     FIDL_ALIGNDECL
@@ -611,7 +611,7 @@ extern "C" const fidl_type_t fuchsia_net_NameLookupLookupHostnameResponseTable;
 
 class NameLookup final {
  public:
-  static constexpr char Name_[] = "fuchsia.net.NameLookup";
+  static constexpr char Name[] = "fuchsia.net.NameLookup";
 
   struct LookupIpResponse final {
     FIDL_ALIGNDECL
@@ -945,7 +945,7 @@ extern "C" const fidl_type_t fuchsia_net_SocketProviderGetAddrInfoResponseTable;
 // SocketProvider implements the POSIX sockets API.
 class SocketProvider final {
  public:
-  static constexpr char Name_[] = "fuchsia.net.SocketProvider";
+  static constexpr char Name[] = "fuchsia.net.SocketProvider";
 
   struct GetAddrInfoResponse final {
     FIDL_ALIGNDECL

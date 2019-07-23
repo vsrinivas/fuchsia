@@ -32,7 +32,7 @@ extern "C" const fidl_type_t fuchsia_posix_socket_ProviderSocketResponseTable;
 // Provider implements the POSIX sockets API.
 class Provider final {
  public:
-  static constexpr char Name_[] = "fuchsia.posix.socket.Provider";
+  static constexpr char Name[] = "fuchsia.posix.socket.Provider";
 
   struct SocketResponse final {
     FIDL_ALIGNDECL

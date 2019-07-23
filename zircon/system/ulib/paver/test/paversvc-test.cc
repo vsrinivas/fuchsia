@@ -150,7 +150,7 @@ public:
         ASSERT_OK(paver_get_service_provider()->ops->init(&provider_ctx_));
 
         ASSERT_OK(paver_get_service_provider()->ops->connect(
-            provider_ctx_, loop_.dispatcher(), ::llcpp::fuchsia::paver::Paver::Name_,
+            provider_ctx_, loop_.dispatcher(), ::llcpp::fuchsia::paver::Paver::Name,
             server.release()));
         loop_.StartThread("paver-svc-test-loop");
     }

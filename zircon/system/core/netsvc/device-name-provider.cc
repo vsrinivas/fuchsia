@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
 
   DeviceNameProviderServer server(device_name);
   outgoing.svc_dir()->AddEntry(
-      llcpp::fuchsia::device::NameProvider::Name_,
+      llcpp::fuchsia::device::NameProvider::Name,
       fbl::AdoptRef(new fs::Service([dispatcher, server](zx::channel svc_request) mutable {
         zx_status_t status = fidl::Bind(dispatcher, std::move(svc_request), &server);
         if (status != ZX_OK) {

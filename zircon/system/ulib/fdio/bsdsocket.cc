@@ -44,7 +44,7 @@ int socket(int domain, int type, int protocol) {
         static zx_status_t status;
         std::call_once(once, [&]() {
             zx::channel out;
-            status = fdio_service_connect_by_name(fsocket::Provider::Name_, &out);
+            status = fdio_service_connect_by_name(fsocket::Provider::Name, &out);
             if (status != ZX_OK) {
                 return;
             }
@@ -366,7 +366,7 @@ int getaddrinfo(const char* __restrict node, const char* __restrict service,
         static zx_status_t status;
         std::call_once(once, [&]() {
             zx::channel out;
-            status = fdio_service_connect_by_name(fnet::SocketProvider::Name_, &out);
+            status = fdio_service_connect_by_name(fnet::SocketProvider::Name, &out);
             if (status != ZX_OK) {
                 return;
             }

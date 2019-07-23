@@ -197,7 +197,7 @@ zx_status_t RealMain(Flags flags) {
         ERROR("Unable to create channels.\n");
         return status;
     }
-    const auto path = fbl::StringPrintf("/svc/%s", ::llcpp::fuchsia::paver::Paver::Name_);
+    const auto path = fbl::StringPrintf("/svc/%s", ::llcpp::fuchsia::paver::Paver::Name);
     status = fdio_service_connect(path.c_str(), paver_remote.release());
     if (status != ZX_OK) {
         ERROR("Unable to open /svc/fuchsia.paver.Paver.\n");

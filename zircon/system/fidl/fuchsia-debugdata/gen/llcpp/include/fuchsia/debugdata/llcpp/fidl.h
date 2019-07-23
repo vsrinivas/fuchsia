@@ -29,7 +29,7 @@ extern "C" const fidl_type_t fuchsia_debugdata_DebugDataLoadConfigResponseTable;
 // DebugData defines the interface for instrumentation configuration and data publishing.
 class DebugData final {
  public:
-  static constexpr char Name_[] = "fuchsia.debugdata.DebugData";
+  static constexpr char Name[] = "fuchsia.debugdata.DebugData";
 
   struct PublishRequest final {
     FIDL_ALIGNDECL

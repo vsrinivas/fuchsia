@@ -256,10 +256,10 @@ tftp_status Paver::OpenWrite(const char* filename, size_t size) {
         fprintf(stderr, "netsvc: Unable to create channel pair.\n");
         return TFTP_ERR_IO;
     }
-    status = fdio_service_connect_at(svc_root_.get(), ::llcpp::fuchsia::paver::Paver::Name_,
+    status = fdio_service_connect_at(svc_root_.get(), ::llcpp::fuchsia::paver::Paver::Name,
                                      paver_remote.release());
     if (status != ZX_OK) {
-        fprintf(stderr, "netsvc: Unable to open /svc/%s.\n", ::llcpp::fuchsia::paver::Paver::Name_);
+        fprintf(stderr, "netsvc: Unable to open /svc/%s.\n", ::llcpp::fuchsia::paver::Paver::Name);
         return TFTP_ERR_IO;
     }
 

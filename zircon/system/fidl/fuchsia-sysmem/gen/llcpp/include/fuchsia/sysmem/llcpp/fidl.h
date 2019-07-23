@@ -155,7 +155,7 @@ extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionTokenDuplicateReques
 // dying mid-create.
 class BufferCollectionToken final {
  public:
-  static constexpr char Name_[] = "fuchsia.sysmem.BufferCollectionToken";
+  static constexpr char Name[] = "fuchsia.sysmem.BufferCollectionToken";
 
   struct DuplicateRequest final {
     FIDL_ALIGNDECL
@@ -1658,7 +1658,7 @@ extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorGetProtectedMemoryInf
 // constraints from other participants.
 class DriverConnector final {
  public:
-  static constexpr char Name_[] = "fuchsia.sysmem.DriverConnector";
+  static constexpr char Name[] = "fuchsia.sysmem.DriverConnector";
 
   struct ConnectRequest final {
     FIDL_ALIGNDECL
@@ -1924,7 +1924,7 @@ extern "C" const fidl_type_t fuchsia_sysmem_AllocatorBindSharedCollectionRequest
 //
 class Allocator final {
  public:
-  static constexpr char Name_[] = "fuchsia.sysmem.Allocator";
+  static constexpr char Name[] = "fuchsia.sysmem.Allocator";
 
   struct AllocateNonSharedCollectionRequest final {
     FIDL_ALIGNDECL
@@ -3252,7 +3252,7 @@ extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnAllocateSing
 // FIDL interfaces that deliver packets to downstream participants.
 class BufferCollectionEvents final {
  public:
-  static constexpr char Name_[] = "fuchsia.sysmem.BufferCollectionEvents";
+  static constexpr char Name[] = "fuchsia.sysmem.BufferCollectionEvents";
 
   using OnDuplicatedTokensKnownByServerRequest = ::fidl::AnyZeroArgMessage;
 
@@ -4065,7 +4065,7 @@ extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForSingleBufferA
 // avoiding allocation overlap (in time).
 class BufferCollection final {
  public:
-  static constexpr char Name_[] = "fuchsia.sysmem.BufferCollection";
+  static constexpr char Name[] = "fuchsia.sysmem.BufferCollection";
 
   struct SetEventSinkRequest final {
     FIDL_ALIGNDECL

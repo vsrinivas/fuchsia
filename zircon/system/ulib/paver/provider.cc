@@ -15,7 +15,7 @@ namespace {
 
 zx_status_t Connect(void* ctx, async_dispatcher_t* dispatcher, const char* service_name,
                     zx_handle_t request) {
-    if (!strcmp(service_name, ::llcpp::fuchsia::paver::Paver::Name_)) {
+    if (!strcmp(service_name, ::llcpp::fuchsia::paver::Paver::Name)) {
         return fidl::Bind(dispatcher, zx::channel(request), reinterpret_cast<paver::Paver*>(ctx));
     }
 
@@ -33,7 +33,7 @@ void Release(void* ctx) {
 }
 
 constexpr const char* kPaverServices[] = {
-    ::llcpp::fuchsia::paver::Paver::Name_,
+    ::llcpp::fuchsia::paver::Paver::Name,
     nullptr,
 };
 

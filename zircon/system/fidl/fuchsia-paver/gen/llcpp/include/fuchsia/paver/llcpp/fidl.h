@@ -548,7 +548,7 @@ extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumesResponseTable;
 // Protocol for managing boot partitions.
 class Paver final {
  public:
-  static constexpr char Name_[] = "fuchsia.paver.Paver";
+  static constexpr char Name[] = "fuchsia.paver.Paver";
 
   struct QueryActiveConfigurationResponse final {
     FIDL_ALIGNDECL

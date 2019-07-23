@@ -112,7 +112,7 @@ extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpBindingProper
 // termination is guaranteed.
 class DebugDumper final {
  public:
-  static constexpr char Name_[] = "fuchsia.device.manager.DebugDumper";
+  static constexpr char Name[] = "fuchsia.device.manager.DebugDumper";
 
   struct DumpTreeResponse final {
     FIDL_ALIGNDECL
@@ -494,7 +494,7 @@ extern "C" const fidl_type_t fuchsia_device_manager_AdministratorSuspendResponse
 // Provides administration services for the device manager service and the device tree it controls.
 class Administrator final {
  public:
-  static constexpr char Name_[] = "fuchsia.device.manager.Administrator";
+  static constexpr char Name[] = "fuchsia.device.manager.Administrator";
 
   struct SuspendResponse final {
     FIDL_ALIGNDECL

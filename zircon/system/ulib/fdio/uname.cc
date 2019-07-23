@@ -28,7 +28,7 @@ static zx_status_t get_name_provider(llcpp::fuchsia::device::NameProvider::SyncC
         static zx_status_t status;
         std::call_once(once, [&]() {
             zx::channel out;
-            status = fdio_service_connect_by_name(llcpp::fuchsia::device::NameProvider::Name_, &out);
+            status = fdio_service_connect_by_name(llcpp::fuchsia::device::NameProvider::Name, &out);
             if (status != ZX_OK) {
                 return;
             }

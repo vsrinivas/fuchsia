@@ -1227,7 +1227,7 @@ extern "C" const fidl_type_t fuchsia_device_NameProviderGetDeviceNameResponseTab
 // Interface for getting device names.
 class NameProvider final {
  public:
-  static constexpr char Name_[] = "fuchsia.device.NameProvider";
+  static constexpr char Name[] = "fuchsia.device.NameProvider";
 
   struct GetDeviceNameResponse final {
     FIDL_ALIGNDECL

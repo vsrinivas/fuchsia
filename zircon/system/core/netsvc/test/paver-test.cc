@@ -168,7 +168,7 @@ public:
     explicit FakeSvc(async_dispatcher_t* dispatcher)
         : dispatcher_(dispatcher), vfs_(dispatcher) {
         auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-        root_dir->AddEntry(::llcpp::fuchsia::paver::Paver::Name_,
+        root_dir->AddEntry(::llcpp::fuchsia::paver::Paver::Name,
                            fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
                                return fake_paver_.Connect(dispatcher_, std::move(request));
                            }));
