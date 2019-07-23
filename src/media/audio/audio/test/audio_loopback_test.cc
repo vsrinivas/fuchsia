@@ -376,7 +376,7 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
   // Start playing right now, so that after we've delayed at least 1 leadtime,
   // we should have mixed audio available for capture.  Our playback is sized
   // to be much much larger than our capture to prevent test flakes.
-  auto play_at = zx_clock_get_monotonic();
+  auto play_at = zx::clock::get_monotonic().get();
   for (auto renderer_num = 1u; renderer_num < num_renderers; ++renderer_num) {
     audio_renderer_[renderer_num]->PlayNoReply(play_at, 0);
   }

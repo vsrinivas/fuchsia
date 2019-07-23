@@ -133,11 +133,11 @@ less tight).
 ## Performance Profiling
 
 The audio_mixer_tests test binary also contains the ability to profile the
-performance of the Mixer and OutputProducer areas. Use the __--profile__ flag
-to trigger these micro-benchmark tests, which use *zx_clock_get* to measure the
-time required for the target to execute a Mix() or ProduceOutput() call (for
-Mixer or OutputProducer objects, respectively) to generate 64k frames. The
-aggregated results that are displayed for each permutation of parameters
+performance of the Mixer and OutputProducer areas. Use the __--profile__ flag to
+trigger these micro-benchmark tests, which use *zx::clock::get_monotonic()* to
+measure the time required for the target to execute a Mix() or ProduceOutput()
+call (for Mixer or OutputProducer objects, respectively) to generate 64k frames.
+The aggregated results that are displayed for each permutation of parameters
 represent the time consumed *per-call*, although to determine a Mean that is
 relatively reliable we run these micro-benchmarks many tens or even hundreds of
 times. As is often the case with performance profiling, one should be careful

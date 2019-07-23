@@ -202,7 +202,7 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterAdd(bool is_input) {
 // Upon exit, received_default_token_ contains the newest device, and
 // received_old_token_ contains the second-newest device.
 void VirtualAudioDeviceTest::AddTwoDevices(bool is_input, bool is_plugged) {
-  zx_time_t now = zx_clock_get_monotonic();
+  auto now = zx::clock::get_monotonic().get();
 
   std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
@@ -211,12 +211,12 @@ void VirtualAudioDeviceTest::AddTwoDevices(bool is_input, bool is_plugged) {
   SetOnDeviceAddedEvent();
   if (is_input) {
     input_->SetUniqueId(unique_id);
-    input_->SetPlugProperties(now - 3, false, false, true);
+    input_->SetPlugProperties(now - ZX_NSEC(3), false, false, true);
 
     input_->Add();
   } else {
     output_->SetUniqueId(unique_id);
-    output_->SetPlugProperties(now - 3, false, false, true);
+    output_->SetPlugProperties(now - ZX_NSEC(3), false, false, true);
 
     output_->Add();
   }
@@ -229,12 +229,12 @@ void VirtualAudioDeviceTest::AddTwoDevices(bool is_input, bool is_plugged) {
 
   if (is_input) {
     input_2_->SetUniqueId(unique_id);
-    input_2_->SetPlugProperties(now - 2, false, false, true);
+    input_2_->SetPlugProperties(now - ZX_NSEC(2), false, false, true);
 
     input_2_->Add();
   } else {
     output_2_->SetUniqueId(unique_id);
-    output_2_->SetPlugProperties(now - 2, false, false, true);
+    output_2_->SetPlugProperties(now - ZX_NSEC(2), false, false, true);
 
     output_2_->Add();
   }
@@ -247,9 +247,9 @@ void VirtualAudioDeviceTest::AddTwoDevices(bool is_input, bool is_plugged) {
     // Make sure the default order is correct
     SetOnDefaultDeviceChangedEvent();
     if (is_input) {
-      input_->ChangePlugState(now - 1, true);
+      input_->ChangePlugState(now - ZX_NSEC(1), true);
     } else {
-      output_->ChangePlugState(now - 1, true);
+      output_->ChangePlugState(now - ZX_NSEC(1), true);
     }
     ExpectDefaultChanged(added_first_token);
 
@@ -333,7 +333,7 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterUnplug(bool is_input, bool most_
   uint64_t expect_default_token = (most_recent ? received_old_token_ : received_default_token_);
 
   SetOnDefaultDeviceChangedEvent();
-  zx_time_t now = zx_clock_get_monotonic();
+  auto now = zx::clock::get_monotonic().get();
   if (most_recent) {
     if (is_input) {
       input_2_->ChangePlugState(now, false);
@@ -453,7 +453,7 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterUnpluggedAdd(bool is_input
   std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
-  zx_time_t now = zx_clock_get_monotonic();
+  auto now = zx::clock::get_monotonic().get();
   if (is_input) {
     input_->SetUniqueId(unique_id);
     input_->SetPlugProperties(now, false, false, true);
@@ -511,7 +511,7 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterUnplug(bool is_input, bool
   AddTwoDevices(is_input);
   uint64_t expect_default_token = (most_recent ? received_old_token_ : received_default_token_);
 
-  zx_time_t now = zx_clock_get_monotonic();
+  auto now = zx::clock::get_monotonic().get();
   SetOnDefaultDeviceChangedEvent();
   if (most_recent) {
     if (is_input) {
@@ -780,6 +780,7 @@ void VirtualAudioDeviceTest::TestOnDeviceAddedAfterAdd(bool is_input, bool is_pl
   std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
+  auto now = zx::clock::get_monotonic().get();
   if (is_input) {
     input_->SetManufacturer(mfr);
     input_->SetProduct(product);
@@ -787,7 +788,7 @@ void VirtualAudioDeviceTest::TestOnDeviceAddedAfterAdd(bool is_input, bool is_pl
 
     input_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db, cur_gain_db, can_mute,
                               cur_mute, can_agc, cur_agc);
-    input_->SetPlugProperties(zx_clock_get_monotonic(), is_plugged, false, true);
+    input_->SetPlugProperties(now, is_plugged, false, true);
 
     input_->Add();
   } else {
@@ -797,7 +798,7 @@ void VirtualAudioDeviceTest::TestOnDeviceAddedAfterAdd(bool is_input, bool is_pl
 
     output_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db, cur_gain_db, can_mute,
                                cur_mute, can_agc, cur_agc);
-    output_->SetPlugProperties(zx_clock_get_monotonic(), is_plugged, false, true);
+    output_->SetPlugProperties(now, is_plugged, false, true);
 
     output_->Add();
   }
@@ -823,15 +824,15 @@ void VirtualAudioDeviceTest::TestOnDeviceAddedAfterPlug(bool is_input) {
   std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
-  zx_time_t now = zx_clock_get_monotonic();
+  auto now = zx::clock::get_monotonic().get();
   if (is_input) {
     input_->SetUniqueId(unique_id);
-    input_->SetPlugProperties(now - 1, false, false, true);
+    input_->SetPlugProperties(now - ZX_NSEC(1), false, false, true);
 
     input_->Add();
   } else {
     output_->SetUniqueId(unique_id);
-    output_->SetPlugProperties(now - 1, false, false, true);
+    output_->SetPlugProperties(now - ZX_NSEC(1), false, false, true);
 
     output_->Add();
   }
@@ -852,17 +853,18 @@ void VirtualAudioDeviceTest::TestOnDeviceRemovedAfterRemove(bool is_input, bool 
   std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
+  auto now = zx::clock::get_monotonic().get();
   if (is_input) {
     input_->SetUniqueId(unique_id);
     if (!is_plugged) {
-      input_->SetPlugProperties(zx_clock_get_monotonic(), false, false, true);
+      input_->SetPlugProperties(now, false, false, true);
     }
 
     input_->Add();
   } else {
     output_->SetUniqueId(unique_id);
     if (!is_plugged) {
-      output_->SetPlugProperties(zx_clock_get_monotonic(), false, false, true);
+      output_->SetPlugProperties(now, false, false, true);
     }
 
     output_->Add();
@@ -890,14 +892,15 @@ void VirtualAudioDeviceTest::TestOnDeviceRemovedAfterUnplug(bool is_input) {
   std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
 
+  auto now = zx::clock::get_monotonic().get();
   if (is_input) {
     input_->SetUniqueId(unique_id);
-    input_->SetPlugProperties(zx_clock_get_monotonic(), true, false, true);
+    input_->SetPlugProperties(now, true, false, true);
 
     input_->Add();
   } else {
     output_->SetUniqueId(unique_id);
-    output_->SetPlugProperties(zx_clock_get_monotonic(), true, false, true);
+    output_->SetPlugProperties(now, true, false, true);
 
     output_->Add();
   }
@@ -906,7 +909,7 @@ void VirtualAudioDeviceTest::TestOnDeviceRemovedAfterUnplug(bool is_input) {
 
   SetOnDeviceRemovedEvent();
 
-  zx_time_t now = zx_clock_get_monotonic();
+  now = zx::clock::get_monotonic().get();
   if (is_input) {
     input_->ChangePlugState(now, false);
   } else {
@@ -970,14 +973,14 @@ void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterPlug(bool is_input, 
   RetrieveTokenUsingGetDefault(is_input);
   uint64_t default_token = received_default_token_;
 
-  zx_time_t now = zx_clock_get_monotonic();
+  auto now = zx::clock::get_monotonic().get();
   SetOnDefaultDeviceChangedEvent();
 
   // We'll say that this first device was plugged just 1 ns ago...
   if (is_input) {
-    input_->ChangePlugState(now - 1, true);
+    input_->ChangePlugState(now - ZX_NSEC(1), true);
   } else {
-    output_->ChangePlugState(now - 1, true);
+    output_->ChangePlugState(now - ZX_NSEC(1), true);
   }
   if (default_token != token1) {
     ExpectDefaultChanged(token1);
@@ -985,7 +988,7 @@ void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterPlug(bool is_input, 
 
   // If this second device is to be Most-Recently-Plugged, make its plugged-time
   // 1 ns after the first -- otherwise make it 1 ns BEFORE the first.
-  zx_time_t plug_time = (most_recent ? now : (now - 2));
+  zx_time_t plug_time = (most_recent ? now : (now - ZX_NSEC(2)));
   if (is_input) {
     input_2_->ChangePlugState(plug_time, true);
   } else {
@@ -1035,7 +1038,7 @@ void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterUnplug(bool is_input
   uint64_t to_unplug_token = (most_recent ? received_default_token_ : received_old_token_);
   uint64_t expect_default_token = (most_recent ? received_old_token_ : received_default_token_);
 
-  zx_time_t now = zx_clock_get_monotonic();
+  auto now = zx::clock::get_monotonic().get();
   SetOnDefaultDeviceChangedEvent();
   if (most_recent) {
     if (is_input) {

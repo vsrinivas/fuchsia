@@ -5,16 +5,17 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_DEVICE_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_DEVICE_H_
 
-#include <dispatcher-pool/dispatcher-execution-domain.h>
-#include <dispatcher-pool/dispatcher-wakeup-event.h>
-#include <fbl/intrusive_wavl_tree.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/media/cpp/timeline_function.h>
 #include <zircon/device/audio.h>
 
 #include <memory>
+
+#include <dispatcher-pool/dispatcher-execution-domain.h>
+#include <dispatcher-pool/dispatcher-wakeup-event.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_device_settings.h"
@@ -30,25 +31,22 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
  public:
   // Wakeup
   //
-  // Called from outside the mixing ExecutionDomain to cause an
-  // AudioDevice's::OnWakeup handler to run from within the context of the
-  // mixing execution domain.
+  // Called from outside the mixing ExecutionDomain to cause an AudioDevice's::OnWakeup handler to
+  // run from within the context of the mixing execution domain.
   void Wakeup();
 
   // Accessors for the current plug state of the device.
   //
-  // In addition to publishing and unpublishing streams when codecs are
-  // attached/removed to/from hot pluggable buses (such as USB), some codecs
-  // have the ability to detect the plugged or unplugged state of external
-  // connectors (such as a 3.5mm audio jack).  Drivers can report this
-  // plugged/unplugged state as well as the time of the last state change.
-  // Currently this information is used in the Audio Service to implement simple
-  // routing policies for AudioRenderers and AudioCapturers.
+  // In addition to publishing and unpublishing streams when codecs are attached to or removed from
+  // hot-pluggable buses (such as USB), some codecs have the ability to detect the plugged/unplugged
+  // state of external connectors (such as a 3.5mm audio jack). Drivers can report this state as
+  // well as the time of the last state change. Currently this information is used in the Audio
+  // Service to implement simple routing policies for AudioRenderers and AudioCapturers.
   //
   // plugged   : true when an audio output/input stream is either hardwired, or
   //             believes that it has something connected to its plug.
-  // plug_time : The time (per zx_clock_get_monotonic() at which the
-  //             plugged/unplugged state of this output or input last changed.
+  // plug_time : The time (per zx::clock::get_monotonic() at which the plugged/unplugged state of
+  //             this output or input last changed.
   bool plugged() const { return plugged_; }
   zx_time_t plug_time() const { return plug_time_; }
   const std::unique_ptr<AudioDriver>& driver() const { return driver_; }
@@ -58,11 +56,9 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
 
   // NotifyDestFormatPreference
   //
-  // Called by clients who are destinations of ours to inform us of their
-  // preferred format.
+  // Called by clients who are destinations of ours, to inform us of their preferred format.
   //
-  // TODO(johngro) : Remove this once device driver format selection is under
-  // control of the policy manager layer instead of here.
+  // TODO(johngro): Remove, when driver format selection is controlled by a policy manager layer.
   virtual void NotifyDestFormatPreference(const fuchsia::media::AudioStreamTypePtr& fmt)
       FXL_LOCKS_EXCLUDED(mix_domain_->token()) {}
 

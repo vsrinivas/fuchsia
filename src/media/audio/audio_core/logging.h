@@ -5,19 +5,22 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_LOGGING_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_LOGGING_H_
 
-#include <iomanip>
 #include <lib/zx/clock.h>
+
+#include <iomanip>
 
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
-#define AUD_LOG(level) \
-  FXL_LOG(level) << zx::clock::get_monotonic().get() << " " << std::setw(25) << __func__
+#define AUD_LOG(level)                                                                          \
+  FXL_LOG(level) << (static_cast<double>(zx::clock::get_monotonic().get()) / ZX_MSEC(1)) << " " \
+                 << std::setw(25) << __func__
 #define AUD_LOG_OBJ(level, object) AUD_LOG(level) << " for " << reinterpret_cast<void*>(object)
 
-#define AUD_VLOG(level) \
-  FXL_VLOG(level) << zx::clock::get_monotonic().get() << " " << std::setw(25) << __func__
+#define AUD_VLOG(level)                                                                          \
+  FXL_VLOG(level) << (static_cast<double>(zx::clock::get_monotonic().get()) / ZX_MSEC(1)) << " " \
+                  << std::setw(25) << __func__
 #define AUD_VLOG_OBJ(level, object) AUD_VLOG(level) << " for " << reinterpret_cast<void*>(object)
 
 namespace media::audio {

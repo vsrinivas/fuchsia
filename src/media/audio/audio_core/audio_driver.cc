@@ -921,7 +921,7 @@ zx_status_t AudioDriver::ProcessStopResponse(const audio_rb_cmd_stop_resp_t& res
 // problem in the driver state machine. Issue a (debug-only) warning, eat the msg, and continue.
 zx_status_t AudioDriver::ProcessPositionNotify(const audio_rb_position_notify_t& notify) {
   FXL_DLOG(INFO) << "Unsolicited ring buffer position notification!  Time:"
-                 << zx_clock_get_monotonic() << " Pos:" << notify.ring_buffer_pos;
+                 << zx::clock::get_monotonic().get() << " Pos:" << notify.ring_buffer_pos;
 
   return ZX_OK;
 }
