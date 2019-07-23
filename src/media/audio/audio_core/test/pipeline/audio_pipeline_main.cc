@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/media/audio/audio_core/logging.h"
 #include "src/media/audio/audio_core/test/pipeline/audio_pipeline_test.h"
 
 namespace media::audio::test {
@@ -22,6 +23,8 @@ class AudioPipelineEnvironment : public testing::Environment {
   void SetUp() override {
     testing::Environment::SetUp();
 
+    Logging::Init();
+
     async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
     // This is an unchanging input for the entire component; get it once here.
@@ -31,8 +34,7 @@ class AudioPipelineEnvironment : public testing::Environment {
     // it, and to disable it afterward.
     fuchsia::virtualaudio::ControlSyncPtr control;
     startup_context->svc()->Connect(control.NewRequest());
-    AudioPipelineTest::SetControl(std::move(control));
-    AudioPipelineTest::ResetVirtualDevices();
+    control->Enable();
 
     // Unlike environment_services, each test case creates fresh FIDL instances.
     // In this one-time setup code we use a temp local var instance: it merely
@@ -41,9 +43,9 @@ class AudioPipelineEnvironment : public testing::Environment {
     // Note that we are using the Synchronous version of this interface....
     fuchsia::media::AudioCoreSyncPtr audio_core_sync;
     startup_context->svc()->Connect(audio_core_sync.NewRequest());
+    audio_core_sync->EnableDeviceSettings(false);
     audio_core_sync->SetSystemGain(kUnityGainDb);
     audio_core_sync->SetSystemMute(false);
-    audio_core_sync->EnableDeviceSettings(false);
 
     fuchsia::media::AudioDeviceEnumeratorSyncPtr audio_dev_enum_sync;
     startup_context->svc()->Connect(audio_dev_enum_sync.NewRequest());
@@ -54,15 +56,32 @@ class AudioPipelineEnvironment : public testing::Environment {
     // This is not the case for sync calls without callback (nor async calls),
     // because of the pipelining inherent in FIDL's design.
     uint64_t default_input;
-    bool connected_to_audio_device_enumerator_service =
-        (audio_dev_enum_sync->GetDefaultInputDevice(&default_input) == ZX_OK);
+    auto status = audio_dev_enum_sync->GetDefaultInputDevice(&default_input);
 
     // On assert-false, no test cases run, and they may display as passed.
     // However, the overall binary returns non-zero (fail).
-    ASSERT_TRUE(connected_to_audio_device_enumerator_service);
+    ASSERT_EQ(status, ZX_OK) << "Unable to connect to AudioDeviceEnumerator service";
 
     // Save these for all to use
     AudioTestBase::SetStartupContext(std::move(startup_context));
+  }
+
+  // When entire test binary has completed, re-enable the writing of device settings files, and
+  // disable virtualaudio.
+  void TearDown() override {
+    async::Loop loop(&kAsyncLoopConfigAttachToThread);
+    auto startup_context = sys::ComponentContext::Create();
+
+    fuchsia::media::AudioCoreSyncPtr audio_core_sync;
+    startup_context->svc()->Connect(audio_core_sync.NewRequest());
+    audio_core_sync->EnableDeviceSettings(true);
+    audio_core_sync->SetSystemMute(false);
+
+    fuchsia::virtualaudio::ControlSyncPtr control;
+    startup_context->svc()->Connect(control.NewRequest());
+    control->Disable();
+
+    testing::Environment::TearDown();
   }
 };
 

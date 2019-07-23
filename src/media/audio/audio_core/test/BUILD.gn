@@ -127,7 +127,14 @@ test_package("audio_pipeline_tests") {
   tests = [
     {
       name = "audio_pipeline_tests"
-      environments = basic_envs
+
+      # This (effectively real-time) test must be run on real hardware.
+      environments = [
+        astro_env,
+        nuc_env,
+        sherlock_env,
+        vim2_env,
+      ]
     },
   ]
 }
@@ -140,6 +147,7 @@ executable("audio_pipeline_tests_bin") {
     "pipeline/audio_pipeline_main.cc",
     "pipeline/audio_pipeline_test.cc",
     "pipeline/audio_pipeline_test.h",
+    "//src/media/audio/audio_core/logging.h"
   ]
 
   deps = [

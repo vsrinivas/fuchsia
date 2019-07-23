@@ -10,6 +10,8 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
+#include <unordered_set>
+
 #include "src/media/audio/lib/test/audio_core_test_base.h"
 
 namespace media::audio::test {
@@ -25,17 +27,17 @@ constexpr zx_duration_t kDefaultExternalDelayNs = 0;
 constexpr uint32_t kDefaultFrameSize = kDefaultSampleSize * kDefaultNumChannels;
 
 // Test-specific values
-// For shared buffer to renderer, use 10 pkts of 10 ms each
+// For our shared buffer to the renderer, use 50 pkts of 10 ms each
 constexpr uint32_t kPacketMs = 10;
-constexpr uint32_t kNumPayloads = 10;
+constexpr uint32_t kNumPayloads = 50;
 constexpr uint32_t kPacketFrames = kDefaultFrameRate / 1000 * kPacketMs;
 constexpr uint32_t kPacketBytes = kDefaultFrameSize * kPacketFrames;
 constexpr uint32_t kRendererFrames = kPacketFrames * kNumPayloads;
 constexpr uint32_t kRendererBytes = kDefaultFrameSize * kRendererFrames;
 
-// Set VAD ring buffer to 300 ms, and 30 notifs per buffer
+// Set VAD ring buffer to 1000 ms, with notifs every 10ms
 constexpr uint32_t kSectionMs = 10;
-constexpr uint32_t kNumRingSections = 30;
+constexpr uint32_t kNumRingSections = 100;
 constexpr uint32_t kSectionFrames = kDefaultFrameRate / 1000 * kSectionMs;
 constexpr uint32_t kSectionBytes = kDefaultFrameSize * kSectionFrames;
 constexpr uint32_t kRingFrames = kNumRingSections * kSectionFrames;
@@ -43,17 +45,6 @@ constexpr uint32_t kRingBytes = kDefaultFrameSize * kRingFrames;
 
 // AudioPipelineTest definition
 class AudioPipelineTest : public AudioCoreTestBase {
- public:
-  // Set up once when binary loaded; this is used at start/end of each suite.
-  static void SetControl(fuchsia::virtualaudio::ControlSyncPtr control_sync);
-  static void ResetVirtualDevices();
-  static void DisableVirtualDevices();
-
-  // "Regional" per-test-suite set-up. Called before first test in this suite.
-  //    static void SetUpTestSuite();
-  // Per-test-suite tear-down. Called after last test in this suite.
-  static void TearDownTestSuite();
-
  protected:
   void SetUp() override;
   void TearDown() override;
@@ -61,6 +52,7 @@ class AudioPipelineTest : public AudioCoreTestBase {
   void AddVirtualOutput();
   void SetVirtualAudioEvents();
   void ResetVirtualAudioEvents();
+  void WaitForVirtualDeviceDepartures();
 
   void SetAudioDeviceEvents();
   void ResetAudioDeviceEvents();
@@ -73,23 +65,37 @@ class AudioPipelineTest : public AudioCoreTestBase {
 
   uint64_t RingBufferSize() const { return kDefaultFrameSize * num_rb_frames_; }
   uint8_t* RingBufferStart() const { return reinterpret_cast<uint8_t*>(ring_buffer_.start()); }
-  void SnapshotRingBuffer();
-  uint32_t FirstSnapshotFrameSilence();
-  bool RemainingSnapshotIsSilence(uint32_t frame_num);
+
+  // Make a copy of the virtual audio device's ring buffer, into our "snapshot" buffer.
+  void CreateSnapshotOfRingBuffer();
+
+  // Starting at the frame specified, return the next subsequent frame number that is zero/non-zero.
+  // This is used in determining whether the audio system behaved as expected.
+  uint32_t NextContiguousSnapshotFrame(bool look_for_nonzero, uint32_t start_frame);
+
+  // Upon failure, we display portions of the snapshot buffer, for debugging purposes.
+  void DisplaySnapshotSection(uint32_t section);
+  void DisplaySnapshotSectionsForFrames(uint32_t first = 0, uint32_t second = 0, uint32_t third = 0,
+                                        uint32_t fourth = 0, uint32_t fifth = 0);
 
   void MapAndAddRendererBuffer(uint32_t buffer_id);
 
-  void CreateAndSendPackets(uint32_t num_packets, int64_t initial_pts, int16_t data_val);
+  // Submit timestamped packets (also with ID-tag starting with 0). Payload data vals increase by 1
+  // per sample. By default, val of first payload sample is 1, and first packet PTS is 0.
+  void CreateAndSendPackets(uint32_t num_packets, int16_t initial_data_value = 1,
+                            int64_t initial_pts = 0);
+
+  // Wait for packet with the given ID to complete.
   void WaitForPacket(uint32_t packet_num);
 
+  // Call Play(), perfectly aligned with the VAD ring buffer rollover.
   void SynchronizedPlay();
 
   //
   // virtualaudio-related members
-  static fuchsia::virtualaudio::ControlSyncPtr control_sync_;
   fuchsia::virtualaudio::OutputPtr output_;
   fuchsia::virtualaudio::InputPtr input_;
-  uint64_t output_token_ = 0;
+  std::unordered_set<uint64_t> virtual_device_tokens_;
 
   bool received_set_format_ = false;
   bool received_set_gain_ = false;

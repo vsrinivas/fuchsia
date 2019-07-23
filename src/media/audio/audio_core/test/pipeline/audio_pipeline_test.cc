@@ -5,46 +5,22 @@
 #include "src/media/audio/audio_core/test/pipeline/audio_pipeline_test.h"
 
 #include <cstdint>
+#include <set>
 
 #include "lib/media/cpp/timeline_function.h"
 #include "lib/media/cpp/timeline_rate.h"
-#include "src/lib/fxl/logging.h"
+#include "src/media/audio/audio_core/logging.h"
 
 namespace media::audio::test {
 
 constexpr char kOutputUniqueId[] = "f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0";
-constexpr bool kDisplaySnapshotBuffer = false;
 
-//
-// AudioPipelineTest static variables
-//
-fuchsia::virtualaudio::ControlSyncPtr AudioPipelineTest::control_sync_;
+// Should we pretty-print the entire ring buffer, every time we snapshot it?
+constexpr bool kDisplaySnapshotBuffer = false;
 
 //
 // AudioPipelineTest implementation
 //
-
-// static
-// TestEnvironment stashes the ControlSync for use later
-void AudioPipelineTest::SetControl(fuchsia::virtualaudio::ControlSyncPtr control_sync) {
-  AudioPipelineTest::control_sync_ = std::move(control_sync);
-}
-
-// static
-// Disable then reenable virtual audio, as baseline before running a test case
-void AudioPipelineTest::ResetVirtualDevices() {
-  DisableVirtualDevices();
-
-  ASSERT_EQ(control_sync_->Enable(), ZX_OK);
-}
-
-// static
-// Disable virtual audio, as baseline before running a test case
-void AudioPipelineTest::DisableVirtualDevices() { ASSERT_EQ(control_sync_->Disable(), ZX_OK); }
-
-// static
-// This is run once after each complete repetition of the test binary
-void AudioPipelineTest::TearDownTestSuite() { DisableVirtualDevices(); }
 
 // Before each test case, set up the needed ingredients
 void AudioPipelineTest::SetUp() {
@@ -64,6 +40,7 @@ void AudioPipelineTest::TearDown() {
   // Mute events, to avoid flakes from "unbind triggers an event elsewhere".
   ResetAudioRendererEvents();
   ResetVirtualAudioEvents();
+  ResetAudioDeviceEvents();
 
   EXPECT_TRUE(output_.is_bound());
   output_->Remove();
@@ -72,17 +49,23 @@ void AudioPipelineTest::TearDown() {
   EXPECT_TRUE(audio_renderer_.is_bound());
   audio_renderer_.Unbind();
 
-  // wait for audio device to remove, and for default to change
-  if ((received_default_device_token_ != 0) || !received_remove_device_) {
-    ExpectCondition(
-        [this]() { return received_remove_device_ && (received_default_device_token_ == 0); });
-  }
+  WaitForVirtualDeviceDepartures();
 
-  ResetAudioDeviceEvents();
   EXPECT_TRUE(audio_dev_enum_.is_bound());
   audio_dev_enum_.Unbind();
 
   AudioCoreTestBase::TearDown();
+}
+
+// This method assumes that AudioDeviceEvents have been reset, and waits for OnDeviceRemoved for any
+// remaining virtual devices in our tokens set.
+void AudioPipelineTest::WaitForVirtualDeviceDepartures() {
+  AUD_VLOG(TRACE) << virtual_device_tokens_.size() << " virtual devices outstanding";
+
+  audio_dev_enum_.events().OnDeviceRemoved =
+      CompletionCallback([this](uint64_t token_id) { virtual_device_tokens_.erase(token_id); });
+
+  ExpectCondition([this]() { return error_occurred_ || virtual_device_tokens_.empty(); });
 }
 
 // Create a virtual audio output, with the needed characteristics
@@ -132,6 +115,8 @@ void AudioPipelineTest::SetVirtualAudioEvents() {
         EXPECT_EQ(fmt, kDefaultSampleFormat);
         EXPECT_EQ(num_chans, kDefaultNumChannels);
         EXPECT_EQ(ext_delay, kDefaultExternalDelayNs);
+        AUD_VLOG(TRACE) << "OnSetFormat callback: " << fps << ", " << fmt << ", " << num_chans
+                        << ", " << ext_delay;
       });
   output_.events().OnSetGain =
       CompletionCallback([this](bool cur_mute, bool cur_agc, float cur_gain_db) {
@@ -139,6 +124,8 @@ void AudioPipelineTest::SetVirtualAudioEvents() {
         gain_db_ = cur_gain_db;
         EXPECT_FALSE(cur_mute);
         EXPECT_FALSE(cur_agc);
+        AUD_VLOG(TRACE) << "OnSetGain callback: " << cur_mute << ", " << cur_agc << ", "
+                        << cur_gain_db;
       });
   output_.events().OnBufferCreated =
       CompletionCallback([this](zx::vmo ring_buffer_vmo, uint32_t num_ring_buffer_frames,
@@ -146,15 +133,18 @@ void AudioPipelineTest::SetVirtualAudioEvents() {
         received_ring_buffer_ = true;
         rb_vmo_ = std::move(ring_buffer_vmo);
         num_rb_frames_ = num_ring_buffer_frames;
+        AUD_VLOG(TRACE) << "OnBufferCreated callback: " << num_ring_buffer_frames;
       });
   output_.events().OnStart = CompletionCallback([this](zx_time_t start_time) {
     received_start_ = true;
     start_time_ = start_time;
+    AUD_VLOG(TRACE) << "OnStart callback: " << start_time;
   });
   output_.events().OnStop = CompletionCallback([this](zx_time_t stop_time, uint32_t ring_pos) {
     received_stop_ = true;
     stop_time_ = stop_time;
     stop_pos_ = ring_pos;
+    AUD_VLOG(TRACE) << "OnStop callback: " << stop_time << ", " << ring_pos;
   });
   output_.events().OnPositionNotify =
       CompletionCallback([this](uint32_t ring_pos, zx_time_t clock_time) {
@@ -166,6 +156,7 @@ void AudioPipelineTest::SetVirtualAudioEvents() {
         running_ring_pos_ -= ring_pos_;
         ring_pos_ = ring_pos;
         latest_pos_notify_time_ = clock_time;
+        AUD_VLOG(SPEW) << "OnPositionNotify callback: " << ring_pos << ", " << clock_time;
       });
 }
 
@@ -189,9 +180,10 @@ void AudioPipelineTest::SetAudioDeviceEvents() {
           received_gain_db_ = device.gain_info.gain_db;
           received_mute_ = device.gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute;
         } else {
-          FXL_LOG(ERROR) << "Unexpected device arrival of " << device.token_id << ", unique_id '"
+          FXL_LOG(ERROR) << "Unrelated device arrival of " << device.token_id << ", unique_id '"
                          << device.unique_id << "'";
         }
+        virtual_device_tokens_.insert(device.token_id);
       });
   audio_dev_enum_.events().OnDeviceRemoved = CompletionCallback([this](uint64_t device_token) {
     if (device_token == received_add_device_token_) {
@@ -200,6 +192,7 @@ void AudioPipelineTest::SetAudioDeviceEvents() {
       FXL_LOG(ERROR) << "Unrelated device removal of " << device_token << " (ours is "
                      << received_add_device_token_ << ")";
     }
+    virtual_device_tokens_.erase(device_token);
   });
   audio_dev_enum_.events().OnDeviceGainChanged =
       CompletionCallback([this](uint64_t device_token, fuchsia::media::AudioGainInfo gain_info) {
@@ -244,6 +237,8 @@ void AudioPipelineTest::SetUpRenderer() {
                                      .frames_per_second = kDefaultFrameRate});
 
   audio_renderer_->SetPtsUnits(kDefaultFrameRate, 1);
+
+  ExpectCondition([this]() { return error_occurred_ || (min_lead_time_ > 0); });
 }
 
 // Enable audio renderer callbacks; store results from responses
@@ -252,6 +247,7 @@ void AudioPipelineTest::SetAudioRendererEvents() {
 
   audio_renderer_.events().OnMinLeadTimeChanged =
       CompletionCallback([this](int64_t min_lead_time_nsec) {
+        AUD_VLOG(TRACE) << "OnMinLeadTimeChanged: " << min_lead_time_nsec;
         received_min_lead_time_ = true;
         min_lead_time_ = min_lead_time_nsec;
       });
@@ -293,55 +289,92 @@ void AudioPipelineTest::SetUpBuffers() {
 
 // Copy the ring buffer contents into our snapshot buffer. We must do this
 // because the ring buffer is constantly updated by the device/driver.
-void AudioPipelineTest::SnapshotRingBuffer() {
+void AudioPipelineTest::CreateSnapshotOfRingBuffer() {
   for (auto section_num = 0u; section_num < kNumRingSections; ++section_num) {
     auto compare_section = compare_buff_.get() + (section_num * kSectionBytes);
     auto ring_buffer_section = RingBufferStart() + (section_num * kSectionBytes);
     memmove(compare_section, ring_buffer_section, kSectionBytes);
 
     if constexpr (kDisplaySnapshotBuffer) {
-      printf("\n\n Section %d: ", section_num);
-      int16_t* data_buff = reinterpret_cast<int16_t*>(compare_section);
-      for (auto frame_num = 0u; frame_num < kSectionFrames; ++frame_num) {
-        if (frame_num % 16 == 0) {
-          printf("\n [%4d] ", frame_num);
-        } else {
-          printf(" | ");
-        }
-        for (auto chan = 0u; chan < kDefaultNumChannels; ++chan) {
-          printf("%04x", 0x0ffff & data_buff[frame_num * kDefaultNumChannels + chan]);
-        }
-      }
-      printf("\n");
+      DisplaySnapshotSection(section_num);
     }
   }
 }
 
-// Find the first sample in the snapshot buffer that contains silence.
+void AudioPipelineTest::DisplaySnapshotSection(uint32_t section) {
+  printf("\n\n Section %d: ", section);
+  int16_t* data_buff = reinterpret_cast<int16_t*>(compare_buff_.get() + (section * kSectionBytes));
+  for (auto frame_num = 0u; frame_num < kSectionFrames; ++frame_num) {
+    if (frame_num % 16 == 0) {
+      printf("\n [%3x] ", frame_num);
+    } else {
+      printf(" | ");
+    }
+    for (auto chan = 0u; chan < kDefaultNumChannels; ++chan) {
+      printf("%04x", 0x0ffff & data_buff[frame_num * kDefaultNumChannels + chan]);
+    }
+  }
+  printf("\n");
+}
+
+void AudioPipelineTest::DisplaySnapshotSectionsForFrames(uint32_t first, uint32_t second,
+                                                         uint32_t third, uint32_t fourth,
+                                                         uint32_t fifth) {
+  std::set<uint32_t> sections;
+  sections.insert(0);
+  sections.insert(kNumRingSections - 1);
+
+  sections.insert(first / kSectionFrames);
+  if (first) {
+    sections.insert((first - 1) / kSectionFrames);
+  }
+
+  sections.insert(second / kSectionFrames);
+  if (second) {
+    sections.insert((second - 1) / kSectionFrames);
+  }
+
+  sections.insert(third / kSectionFrames);
+  if (third) {
+    sections.insert((third - 1) / kSectionFrames);
+  }
+
+  sections.insert(fourth / kSectionFrames);
+  if (fourth) {
+    sections.insert((fourth - 1) / kSectionFrames);
+  }
+
+  sections.insert(fifth / kSectionFrames);
+  if (fifth) {
+    sections.insert((fifth - 1) / kSectionFrames);
+  }
+
+  for (auto section : sections) {
+    if (section < kNumRingSections) {
+      DisplaySnapshotSection(section);
+    }
+  }
+}
+
+// Find the first frame in the snapshot buffer that contains (non)silence.
 // We expect these to be frame-aligned, but it isn't a requirement.
-uint32_t AudioPipelineTest::FirstSnapshotFrameSilence() {
+uint32_t AudioPipelineTest::NextContiguousSnapshotFrame(bool look_for_nonzero, uint32_t frame) {
   int16_t* snapshot_buffer = reinterpret_cast<int16_t*>(compare_buff_.get());
-  uint32_t sample_num;
-  for (sample_num = 0u; sample_num < kRingFrames * kDefaultNumChannels; ++sample_num) {
-    if (snapshot_buffer[sample_num] == 0) {
+
+  while (frame < kRingFrames) {
+    auto sample_num = frame * kDefaultNumChannels;
+    auto channel = 0u;
+    for (; channel < kDefaultNumChannels; ++channel) {
+      if (look_for_nonzero == (snapshot_buffer[sample_num + channel] == 0)) {
+        break;
+      }
+    }
+    if (channel == kDefaultNumChannels) {
       break;
     }
+    ++frame;
   }
-  return sample_num / kDefaultNumChannels;
-}
-
-// Starting with the given frame, is the rest of the snapshot buffer silence?
-bool AudioPipelineTest::RemainingSnapshotIsSilence(uint32_t frame_num) {
-  int16_t* snapshot_buffer = reinterpret_cast<int16_t*>(compare_buff_.get());
-  uint32_t start_sample = frame_num * kDefaultNumChannels;
-
-  for (auto sample_num = start_sample; sample_num < kRingFrames * kDefaultNumChannels;
-       ++sample_num) {
-    if (snapshot_buffer[sample_num] != 0) {
-      return false;
-    }
-  }
-  return true;
+  return frame;
 }
 
 // Use VmoMapper to create a VMO and map it. Pass this to the renderer.
@@ -360,15 +393,16 @@ void AudioPipelineTest::MapAndAddRendererBuffer(uint32_t buffer_id) {
 
 // Construct a sequence of audio packets, setting the timestamps and payload
 // offsets, write their audio data to the payload buffer, and send them down.
-void AudioPipelineTest::CreateAndSendPackets(uint32_t num_packets, int64_t initial_pts,
-                                             int16_t initial_val) {
+// initial_pts has been defaulted to 0 if no value was provided by the caller.
+void AudioPipelineTest::CreateAndSendPackets(uint32_t num_packets, int16_t initial_data_value,
+                                             int64_t initial_pts) {
   FXL_CHECK(num_packets <= kNumPayloads);
   received_packet_completion_ = false;
 
   int16_t* audio_buffer = reinterpret_cast<int16_t*>(payload_buffer_.start());
   for (uint32_t sample = 0; sample < (num_packets * kPacketFrames * kDefaultNumChannels);
        ++sample) {
-    audio_buffer[sample] = initial_val + sample;
+    audio_buffer[sample] = initial_data_value + sample;
   }
 
   for (auto packet_num = 0u; packet_num < num_packets; ++packet_num) {
@@ -377,7 +411,9 @@ void AudioPipelineTest::CreateAndSendPackets(uint32_t num_packets, int64_t initi
     packet.payload_size = kPacketBytes;
     packet.pts = initial_pts + (packet_num * kPacketFrames);
 
+    AUD_VLOG(TRACE) << " sending pkt " << packet_num;
     audio_renderer_->SendPacket(packet, [this, packet_num]() {
+      AUD_VLOG(TRACE) << " return: pkt " << packet_num;
       received_packet_completion_ = true;
       received_packet_num_ = packet_num;
     });
@@ -416,75 +452,186 @@ void AudioPipelineTest::SynchronizedPlay() {
   ASSERT_FALSE(error_occurred_);
 }
 
-// Do timestamped audio packets play through the renderer to the ring buffer?
+// Validate that timestamped audio packets play through the renderer to the ring
+// buffer as expected.
 TEST_F(AudioPipelineTest, RenderWithPts) {
-  uint32_t num_packets = 10;
-  int64_t initial_pts = 0;
-  int16_t initial_data_value = 1;
+  ASSERT_GT(min_lead_time_, 0);
+  uint32_t num_packets = ZX_NSEC(min_lead_time_) / ZX_MSEC(kPacketMs) + 1;
 
-  CreateAndSendPackets(num_packets, initial_pts, initial_data_value);
+  CreateAndSendPackets(num_packets);
   SynchronizedPlay();
 
   // Let all packets play through the system
-  WaitForPacket(9);
-  SnapshotRingBuffer();
+  WaitForPacket(num_packets - 1);
+  CreateSnapshotOfRingBuffer();
+
+  // There should be at least something in the ring buffer.
+  auto nonzero_frame = NextContiguousSnapshotFrame(true, 0);
+  if (nonzero_frame) {
+    DisplaySnapshotSectionsForFrames(nonzero_frame);
+    EXPECT_EQ(nonzero_frame, 0u) << "Initial data was delayed";
+    ASSERT_LT(nonzero_frame, kRingFrames) << "Entire ring contains silence";
+  }
 
   // TODO(mpuryear): more rigorous bit-for-bit checking
-  auto first_frame_zero = FirstSnapshotFrameSilence();
-  EXPECT_GT(first_frame_zero, 0u) << "Ring buffer contains silence";
+  auto silent_frame = NextContiguousSnapshotFrame(false, nonzero_frame);
+  if (silent_frame >= kRingFrames) {
+    DisplaySnapshotSectionsForFrames(nonzero_frame);
+    ASSERT_LT(silent_frame, kRingFrames)
+        << "Ring contains no silence after frame " << nonzero_frame;
+  }
 
-  EXPECT_TRUE(RemainingSnapshotIsSilence(first_frame_zero))
-      << "Unexpected data was found later in the ring buffer (should be "
-         "silence)";
+  // EXPECT_LE
+  if (silent_frame - nonzero_frame != num_packets * kPacketFrames) {
+    DisplaySnapshotSectionsForFrames(nonzero_frame, silent_frame);
+    ASSERT_EQ(silent_frame - nonzero_frame, num_packets * kPacketFrames)
+        << "Did not receive expected amount of data: from " << silent_frame << " to "
+        << nonzero_frame;
+  }
+
+  auto final_nonzero_frame = NextContiguousSnapshotFrame(true, silent_frame);
+  if (final_nonzero_frame != kRingFrames) {
+    DisplaySnapshotSectionsForFrames(nonzero_frame, silent_frame, final_nonzero_frame);
+    ASSERT_EQ(final_nonzero_frame, kRingFrames)
+        << "Unexpected data later in ring (" << final_nonzero_frame
+        << ") -- should be silence after " << silent_frame;
+  }
 }
 
-// When DiscardAllPackets is issued during Playback, PTS should reset to zero.
-// If it doesn't, we will observe that the second set of packets is interpreted
-// as being in the past, and thus will be dropped.
-TEST_F(AudioPipelineTest, DISABLED_DiscardDuringRenderResetsPts) {
-  uint32_t num_packets = 10;
-  int64_t initial_pts = 0;
-  int16_t initial_data_value = 1;
+// If we issue DiscardAllPackets during Playback, PTS should reset to zero. Otherwise, we would
+// observe the second set of packets interpreted as being in the past, and thus dropped.
+TEST_F(AudioPipelineTest, DiscardDuringRenderResetsPts) {
+  ASSERT_TRUE(received_min_lead_time_);
+  uint32_t num_packets = kNumPayloads;
 
-  CreateAndSendPackets(num_packets, initial_pts, initial_data_value);
+  CreateAndSendPackets(num_packets);
   SynchronizedPlay();
 
-  // Load up the renderer with lots of packets, but interrupt after one
+  // Load the renderer with lots of packets, but interrupt after the first one.
   WaitForPacket(0);
 
-  audio_renderer_->DiscardAllPackets(CompletionCallback());
-  ExpectCallback();
+  auto received_discard_all_callback = false;
+  audio_renderer_->DiscardAllPackets(CompletionCallback([&received_discard_all_callback]() {
+    received_discard_all_callback = true;
+    AUD_VLOG(TRACE) << "DiscardAllPackets #1 complete";
+  }));
+  ExpectCondition([this, &received_discard_all_callback]() {
+    return (error_occurred_ || received_discard_all_callback);
+  });
 
-  SnapshotRingBuffer();
+  CreateSnapshotOfRingBuffer();
 
-  // TODO(mpuryear): more rigorous bit-for-bit checking
-  auto pre_first_frame_zero = FirstSnapshotFrameSilence();
-  EXPECT_GT(pre_first_frame_zero, 0u) << "Ring buffer contains silence";
+  // There should be at least something in the ring buffer, since the first packet completed.
+  auto nonzero_frame = NextContiguousSnapshotFrame(true, 0);
+  if (nonzero_frame) {
+    DisplaySnapshotSectionsForFrames(nonzero_frame);
+    EXPECT_EQ(nonzero_frame, 0u) << "Initial data was delayed";
+    ASSERT_LT(nonzero_frame, kRingFrames) << "Entire ring contains silence";
+  }
 
-  EXPECT_TRUE(RemainingSnapshotIsSilence(pre_first_frame_zero))
-      << "Unexpected data was found later in the ring buffer (should be "
-         "silence)";
+  // The rest of the ring buffer should be empty, as remaining packets should have been discarded.
+  // TODO(mpuryear): more rigorous bit-for-bit checking of the non-zero values.
+  auto silent_frame = NextContiguousSnapshotFrame(false, nonzero_frame);
+  if (silent_frame >= kRingFrames) {
+    DisplaySnapshotSectionsForFrames(nonzero_frame, silent_frame);
+    ASSERT_LT(silent_frame, kRingFrames)
+        << "Ring contains no silence after frame " << nonzero_frame;
+  }
 
-  num_packets = 6;
-  initial_pts = kDefaultFrameRate / 1000 * 15;
-  initial_data_value = 0x4000;
-  CreateAndSendPackets(num_packets, initial_pts, initial_data_value);
+  auto final_nonzero_frame = NextContiguousSnapshotFrame(true, silent_frame);
+  if (final_nonzero_frame < kRingFrames) {
+    DisplaySnapshotSectionsForFrames(nonzero_frame, silent_frame, final_nonzero_frame);
+    ASSERT_EQ(final_nonzero_frame, kRingFrames)
+        << "Unexpected data later in ring (" << final_nonzero_frame
+        << ") -- should be silence after " << silent_frame;
+  }
 
-  WaitForPacket(5);
+  // We interrupted the first stream without stopping. DiscardAllPackets should reset PTS to 0. Now
+  // play a new stream, starting 40 ms after the new PTS 0. Between Left|Right, initial data values
+  // were odd|even; these are even|odd, for quick contrast when visually inspecting the buffer.
+  int16_t initial_data_value = 0x4000;
+  int64_t initial_pts = kDefaultFrameRate * 40 / 1000;
+  CreateAndSendPackets(num_packets, initial_data_value, initial_pts);
+
+  received_packet_completion_ = false;
+  received_packet_num_ = 0;
+  WaitForPacket(num_packets - 1);
 
   // Ensure all packets came back
-  audio_renderer_->DiscardAllPackets(CompletionCallback());
-  ExpectCallback();
+  received_discard_all_callback = false;
+  audio_renderer_->DiscardAllPackets(CompletionCallback([&received_discard_all_callback]() {
+    received_discard_all_callback = true;
+    AUD_VLOG(TRACE) << "DiscardAllPackets #1 complete";
+  }));
+  ExpectCondition([this, &received_discard_all_callback]() {
+    return (error_occurred_ || received_discard_all_callback);
+  });
 
-  SnapshotRingBuffer();
-  auto post_first_frame_zero = FirstSnapshotFrameSilence();
-  EXPECT_EQ(pre_first_frame_zero, post_first_frame_zero) << "Values are not equal";
-  EXPECT_GT(post_first_frame_zero, 0u) << "Ring buffer contains silence";
-  EXPECT_FALSE(RemainingSnapshotIsSilence(post_first_frame_zero))
-      << "Packets after the DiscardAll were lost";
+  CreateSnapshotOfRingBuffer();
+
+  // Start of the data previously written (before the Discard)
+  auto nonzero_frame_2 = NextContiguousSnapshotFrame(true, 0);
+  if (nonzero_frame_2 > 0 || nonzero_frame != nonzero_frame_2) {
+    DisplaySnapshotSectionsForFrames(nonzero_frame, nonzero_frame_2, silent_frame);
+    ASSERT_EQ(nonzero_frame_2, 0u) << "After Discard/refeed, initial data was delayed";
+    ASSERT_EQ(nonzero_frame, nonzero_frame_2)
+        << "Before and after Discard/refeed, starts of initial data are unequal";
+  }
+  ASSERT_LT(nonzero_frame_2, kRingFrames) << "After Discard/refeed, entire ring contains silence";
+
+  // TODO(mpuryear): more rigorous bit-for-bit checking
+  // End of the data previously written (before the Discard)
+  auto silent_frame_2 = NextContiguousSnapshotFrame(false, nonzero_frame_2);
+  if (silent_frame != silent_frame_2) {
+    DisplaySnapshotSectionsForFrames(nonzero_frame_2, silent_frame, silent_frame_2);
+    ASSERT_EQ(silent_frame, silent_frame_2)
+        << "Before and after Discard/refeed, ends of initial data are unequal";
+  }
+
+  // There will be a gap between Discard and the new stream.
+  // Start of the new data written after the Discard
+  nonzero_frame_2 = NextContiguousSnapshotFrame(true, silent_frame_2);
+  if (nonzero_frame_2 >= kRingFrames) {
+    DisplaySnapshotSectionsForFrames(nonzero_frame, silent_frame_2);
+    ASSERT_LT(nonzero_frame_2, kRingFrames)
+        << "Ring contains no data after frame " << silent_frame_2 << " ("
+        << (silent_frame_2 / kSectionFrames) << ":" << std::hex << (silent_frame_2 % kSectionFrames)
+        << ")";
+  }
+
+  // End of the new data written after the Discard
+  silent_frame_2 = NextContiguousSnapshotFrame(false, nonzero_frame_2);
+  if (silent_frame_2 >= kRingFrames) {
+    DisplaySnapshotSectionsForFrames(nonzero_frame, silent_frame, nonzero_frame_2);
+    ASSERT_LT(silent_frame_2, kRingFrames)
+        << "Ring contains no silence after frame " << nonzero_frame_2 << " ("
+        << (nonzero_frame_2 / kSectionFrames) << ":" << std::hex
+        << (nonzero_frame_2 % kSectionFrames) << ")";
+  }
+  if (silent_frame_2 - nonzero_frame_2 > num_packets * kPacketFrames) {
+    DisplaySnapshotSectionsForFrames(nonzero_frame, silent_frame, nonzero_frame_2, silent_frame_2);
+    EXPECT_LE(silent_frame_2 - nonzero_frame_2, num_packets * kPacketFrames)
+        << "Did not receive expected amount of additional data: was from " << nonzero_frame_2
+        << " (" << (nonzero_frame_2 / kSectionFrames) << ":" << std::hex
+        << (nonzero_frame_2 % kSectionFrames) << ") to " << std::dec << silent_frame_2 << " ("
+        << (silent_frame_2 / kSectionFrames) << ":" << std::hex << (silent_frame_2 % kSectionFrames)
+        << ")";
+  }
+
+  final_nonzero_frame = NextContiguousSnapshotFrame(true, silent_frame_2);
+  if (final_nonzero_frame < kRingFrames) {
+    DisplaySnapshotSectionsForFrames(nonzero_frame, silent_frame, nonzero_frame_2, silent_frame_2,
+                                     final_nonzero_frame);
+  }
+  ASSERT_EQ(final_nonzero_frame, kRingFrames)
+      << "Unexpected data later in ring (" << final_nonzero_frame << " "
+      << (final_nonzero_frame / kSectionFrames) << ":" << std::hex
+      << (final_nonzero_frame % kSectionFrames) << ") -- should be silence after " << std::dec
+      << silent_frame_2 << " (" << (silent_frame_2 / kSectionFrames) << ":" << std::hex
+      << (silent_frame_2 % kSectionFrames) << ")";
 }
 
-////// Overall, need to add tests to validate various Renderer pipeline aspects
+// /// Overall, need to add tests to validate various Renderer pipeline aspects
 // TODO(mpuryear): add bit-for-bit validation for these tests
 // TODO(mpuryear): validate the combinations of NO_TIMESTAMP (Play ref_time,
 //     Play media_time, packet PTS)
