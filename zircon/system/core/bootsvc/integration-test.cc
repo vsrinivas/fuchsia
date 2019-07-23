@@ -172,6 +172,52 @@ bool TestFactoryItems() {
   END_TEST;
 }
 
+// Make sure that bootsvc parsed and passed boot args from ZBI_ITEM_IMAGE_ARGS
+// correctly.
+//
+// As documented in TESTING, this test relies on these tests being run by using
+// following steps:
+// 1. prepare a file with bootargs
+// cat > test_image_args.txt <<EOF
+// testkey=testvalue
+// EOF
+// 2. add ZBI_ITEM_IMAGE_ARGS item to existing ZBI container
+// ./out/default.zircon/tools/zbi -o out/default.zircon/x64.zbi
+//         out/default.zircon/x64.zbi -T IMAGE_ARGS test_image_args.txt
+//
+// 3. Run bootsvc-integration-test
+//
+// TODO (dmitryya@) use zbi_test() to automate this.
+bool TestBootArgsFromImage() {
+  BEGIN_TEST;
+
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Check that we can open the fuchsia.boot.Arguments service.
+  status = fdio_service_connect(kArgumentsPath, remote.release());
+  ASSERT_EQ(ZX_OK, status);
+
+  // Check that we received a VMO from the service, each time we call it.
+  zx::vmo vmo;
+  size_t size;
+  status = fuchsia_boot_ArgumentsGet(local.get(), vmo.reset_and_get_address(), &size);
+  ASSERT_EQ(ZX_OK, status);
+  ASSERT_TRUE(vmo.is_valid());
+
+  auto buf = std::make_unique<char[]>(size);
+  status = vmo.read(buf.get(), 0, size);
+  ASSERT_EQ(ZX_OK, status);
+
+  /* Boot args from Image are at the beginning of Arguments VMO */
+  static constexpr char kExpected[] = "testkey=testvalue";
+  auto actual = reinterpret_cast<const uint8_t*>(buf.get());
+  ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(kExpected), actual, sizeof(kExpected) - 1, "");
+
+  END_TEST;
+}
+
 // Make sure the fuchsia.boot.Items service works
 bool TestBootItems() {
   BEGIN_TEST;
@@ -315,6 +361,7 @@ RUN_TEST(TestLoader)
 RUN_TEST(TestNamespace)
 RUN_TEST(TestArguments)
 RUN_TEST(TestBootArguments)
+RUN_TEST(TestBootArgsFromImage)
 RUN_TEST(TestBootItems)
 RUN_TEST(TestBootLog)
 RUN_TEST(TestBootRootJob)

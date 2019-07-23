@@ -48,46 +48,92 @@ zx_status_t SetupStdout(const zx::debuglog& log) {
   return ZX_OK;
 }
 
-// Load the boot arguments from bootfs and environment variables.
-zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs, zx::vmo* out,
-                         uint64_t* size) {
+// Parse ZBI_TYPE_IMAGE_ARGS item into boot args buffer
+zx_status_t ExtractBootArgsFromImage(fbl::Vector<char>* buf,
+                                     const zx::vmo& image_vmo,
+                                     bootsvc::ItemMap* item_map) {
+  auto it = item_map->find(bootsvc::ItemKey{ZBI_TYPE_IMAGE_ARGS, 0});
+  if (it == item_map->end()) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  auto cfg = std::make_unique<char[]>(it->second.length);
+
+  // read cfg data
+  zx_status_t status = image_vmo.read(cfg.get(), it->second.offset, it->second.length);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Parse boot arguments file from bootdata.
+  std::string_view str(cfg.get(), it->second.length);
+  status = bootsvc::ParseBootArgs(std::move(str), buf);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  item_map->erase(it);
+  return ZX_OK;
+}
+
+zx_status_t ExtractBootArgsFromBootfs(fbl::Vector<char>* buf,
+                                      const fbl::RefPtr<bootsvc::BootfsService>& bootfs) {
   // TODO(teisenbe): Rename this file
   const char* config_path = "/config/devmgr";
-  fbl::Vector<char> buf;
 
   zx::vmo config_vmo;
   uint64_t file_size;
   zx_status_t status = bootfs->Open(config_path, &config_vmo, &file_size);
-  if (status == ZX_OK) {
-    auto config = std::make_unique<char[]>(file_size);
-    status = config_vmo.read(config.get(), 0, file_size);
-    if (status != ZX_OK) {
-      return status;
-    }
+  if (status != ZX_OK) {
+    return ZX_OK;
+  }
+  auto config = std::make_unique<char[]>(file_size);
+  status = config_vmo.read(config.get(), 0, file_size);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    // Parse boot arguments file from bootfs.
-    std::string_view str(config.get(), file_size);
-    status = bootsvc::ParseBootArgs(std::move(str), &buf);
-    if (status != ZX_OK) {
-      return status;
-    }
+  // Parse boot arguments file from bootfs.
+  std::string_view str(config.get(), file_size);
+  return bootsvc::ParseBootArgs(std::move(str), buf);
+}
+
+// Load the boot arguments from bootfs/ZBI_TYPE_IMAGE_ARGS and environment variables.
+zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
+                         const zx::vmo& image_vmo,
+                         bootsvc::ItemMap* item_map,
+                         zx::vmo* out,
+                         uint64_t* size) {
+
+  fbl::Vector<char> boot_args;
+  zx_status_t status;
+
+  status = ExtractBootArgsFromImage(&boot_args, image_vmo, item_map);
+  ZX_ASSERT_MSG(((status == ZX_OK) || (status == ZX_ERR_NOT_FOUND)),
+                "Retrieving boot args failed: %s\n",
+                zx_status_get_string(status));
+
+  if (status == ZX_ERR_NOT_FOUND) {
+    status = ExtractBootArgsFromBootfs(&boot_args, bootfs);
+    ZX_ASSERT_MSG(status == ZX_OK, "Retrieving boot config failed: %s\n",
+                  zx_status_get_string(status));
   }
 
   // Add boot arguments from environment variables.
   for (char** e = environ; *e != nullptr; e++) {
     for (const char* x = *e; *x != 0; x++) {
-      buf.push_back(*x);
+      boot_args.push_back(*x);
     }
-    buf.push_back(0);
+    boot_args.push_back(0);
   }
 
   // Copy boot arguments into VMO.
   zx::vmo args_vmo;
-  status = zx::vmo::create(buf.size(), 0, &args_vmo);
+  status = zx::vmo::create(boot_args.size(), 0, &args_vmo);
   if (status != ZX_OK) {
     return status;
   }
-  status = args_vmo.write(buf.get(), 0, buf.size());
+  status = args_vmo.write(boot_args.get(), 0, boot_args.size());
   if (status != ZX_OK) {
     return status;
   }
@@ -96,7 +142,7 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs, zx::
     return status;
   }
   *out = std::move(args_vmo);
-  *size = buf.size();
+  *size = boot_args.size();
   return ZX_OK;
 }
 
@@ -237,7 +283,7 @@ int main(int argc, char** argv) {
   printf("bootsvc: Loading boot arguments...\n");
   zx::vmo args_vmo;
   uint64_t args_size = 0;
-  status = LoadBootArgs(bootfs_svc, &args_vmo, &args_size);
+  status = LoadBootArgs(bootfs_svc, image_vmo, &item_map, &args_vmo, &args_size);
   ZX_ASSERT_MSG(status == ZX_OK, "Loading boot arguments failed: %s\n",
                 zx_status_get_string(status));
 
