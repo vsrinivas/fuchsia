@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro)]
-use ct_logs;
 use fuchsia_hyper;
 use futures::compat::Future01CompatExt;
 use hyper;
@@ -129,7 +128,6 @@ async fn get_network_time_backstop(
     // us to defer trust evaluation until after we've parsed the response.
     let mut config = rustls::ClientConfig::new();
     config.root_store.add_server_trust_anchors(&webpki_roots_fuchsia::TLS_SERVER_ROOTS);
-    config.ct_logs = Some(&ct_logs::LOGS);
     config
         .dangerous()
         .set_certificate_verifier(Arc::clone(&verifier) as Arc<rustls::ServerCertVerifier>);
