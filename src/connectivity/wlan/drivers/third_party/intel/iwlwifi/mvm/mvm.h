@@ -1462,7 +1462,8 @@ struct iwl_rate_info {
 };
 
 void __iwl_mvm_mac_stop(struct iwl_mvm* mvm);
-int __iwl_mvm_mac_start(struct iwl_mvm* mvm);
+zx_status_t iwl_mvm_mac_start(struct iwl_mvm* mvm);
+zx_status_t __iwl_mvm_mac_start(struct iwl_mvm* mvm);
 
 /******************
  * MVM Methods
@@ -1564,7 +1565,7 @@ static inline uint32_t iwl_mvm_get_phy_config(struct iwl_mvm* mvm) {
   return mvm->fw->phy_config & phy_config;
 }
 
-int iwl_mvm_up(struct iwl_mvm* mvm);
+zx_status_t iwl_mvm_up(struct iwl_mvm* mvm);
 int iwl_mvm_load_d3_fw(struct iwl_mvm* mvm);
 
 int iwl_mvm_mac_setup_register(struct iwl_mvm* mvm);

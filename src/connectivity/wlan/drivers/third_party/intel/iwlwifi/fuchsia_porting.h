@@ -264,6 +264,8 @@ static inline bool IS_ERR_OR_NULL(const void* ptr) {
 
 static inline void* page_address(const struct page* page) { return page->virtual_addr; }
 
-#define min_t(type, a, b) ((type)(a) < (type)(b) ? (type)(a) : (type)(b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define min_t(type, a, b) MIN((type)(a), (type)(b))
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_

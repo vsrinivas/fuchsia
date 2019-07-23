@@ -43,7 +43,6 @@
 #define U16 uint16_t
 #define U32 uint32_t
 #define U64 uint64_t
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define INLINE inline
 
 #include "API_rates.h"

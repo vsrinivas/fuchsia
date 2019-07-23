@@ -215,25 +215,27 @@ void iwl_mvm_unref(struct iwl_mvm* mvm, enum iwl_mvm_ref_type ref_type) {
   iwl_trans_unref(mvm->trans);
 }
 
-#if 0   // NEEDS_PORTING
 static void iwl_mvm_unref_all_except(struct iwl_mvm* mvm, enum iwl_mvm_ref_type except_ref) {
-    enum iwl_mvm_ref_type i, j;
+  enum iwl_mvm_ref_type i, j;
 
-    if (!iwl_mvm_is_d0i3_supported(mvm)) { return; }
+  if (!iwl_mvm_is_d0i3_supported(mvm)) {
+    return;
+  }
 
-    mtx_lock(&mvm->refs_lock);
-    for (i = 0; i < IWL_MVM_REF_COUNT; i++) {
-        if (except_ref == i || !mvm->refs[i]) { continue; }
-
-        IWL_DEBUG_RPM(mvm, "Cleanup: remove mvm ref type %d (%d)\n", i, mvm->refs[i]);
-        for (j = 0; j < mvm->refs[i]; j++) {
-            iwl_trans_unref(mvm->trans);
-        }
-        mvm->refs[i] = 0;
+  mtx_lock(&mvm->refs_lock);
+  for (i = 0; i < IWL_MVM_REF_COUNT; i++) {
+    if (except_ref == i || !mvm->refs[i]) {
+      continue;
     }
-    mtx_unlock(&mvm->refs_lock);
+
+    IWL_DEBUG_RPM(mvm, "Cleanup: remove mvm ref type %d (%d)\n", i, mvm->refs[i]);
+    for (j = 0; j < mvm->refs[i]; j++) {
+      iwl_trans_unref(mvm->trans);
+    }
+    mvm->refs[i] = 0;
+  }
+  mtx_unlock(&mvm->refs_lock);
 }
-#endif  // NEEDS_PORTING
 
 bool iwl_mvm_ref_taken(struct iwl_mvm* mvm) {
   int i;
@@ -270,17 +272,17 @@ zx_status_t iwl_mvm_ref_sync(struct iwl_mvm* mvm, enum iwl_mvm_ref_type ref_type
   return ZX_OK;
 }
 
-#if 0  // NEEDS_PORTING
 static void iwl_mvm_reset_phy_ctxts(struct iwl_mvm* mvm) {
-    int i;
+  int i;
 
-    memset(mvm->phy_ctxts, 0, sizeof(mvm->phy_ctxts));
-    for (i = 0; i < NUM_PHY_CTX; i++) {
-        mvm->phy_ctxts[i].id = i;
-        mvm->phy_ctxts[i].ref = 0;
-    }
+  memset(mvm->phy_ctxts, 0, sizeof(mvm->phy_ctxts));
+  for (i = 0; i < NUM_PHY_CTX; i++) {
+    mvm->phy_ctxts[i].id = i;
+    mvm->phy_ctxts[i].ref = 0;
+  }
 }
 
+#if 0  // NEEDS_PORTING
 struct ieee80211_regdomain* iwl_mvm_get_regdomain(struct wiphy* wiphy, const char* alpha2,
                                                   enum iwl_mcc_source src_id, bool* changed) {
     struct ieee80211_regdomain* regd = NULL;
@@ -1081,8 +1083,10 @@ static void iwl_mvm_cleanup_iterator(void* data, uint8_t* mac, struct ieee80211_
     memset(&mvmvif->bf_data, 0, sizeof(mvmvif->bf_data));
     memset(&mvmvif->probe_resp_data, 0, sizeof(mvmvif->probe_resp_data));
 }
+#endif  // NEEDS_PORTING
 
 static void iwl_mvm_restart_cleanup(struct iwl_mvm* mvm) {
+#if 0  // NEEDS_PORTING
     /* clear the D3 reconfig, we only need it to avoid dumping a
      * firmware coredump on reconfiguration, we shouldn't do that
      * on D3->D0 transition
@@ -1095,104 +1099,113 @@ static void iwl_mvm_restart_cleanup(struct iwl_mvm* mvm) {
         iwl_dnt_dispatch_handle_nic_err(mvm->trans);
 #endif
     }
+#endif  // NEEDS_PORTING
 
-    /* cleanup all stale references (scan, roc), but keep the
-     * ucode_down ref until reconfig is complete
-     */
-    iwl_mvm_unref_all_except(mvm, IWL_MVM_REF_UCODE_DOWN);
+  /* cleanup all stale references (scan, roc), but keep the
+   * ucode_down ref until reconfig is complete
+   */
+  iwl_mvm_unref_all_except(mvm, IWL_MVM_REF_UCODE_DOWN);
 
-    iwl_mvm_stop_device(mvm);
+  iwl_mvm_stop_device(mvm);
 
-    mvm->scan_status = 0;
-    mvm->ps_disabled = false;
-    mvm->calibrating = false;
+  mvm->scan_status = 0;
+  mvm->ps_disabled = false;
+  mvm->calibrating = false;
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
-    /*
-     * In case that 2g coex was enabled - and now the FW is being
-     * restarted, we need to disable 2g coex mode in the driver as well
-     * so that the fw & driver will be synced on the mode.
-     */
-    mvm->coex_2g_enabled = false;
+  /*
+   * In case that 2g coex was enabled - and now the FW is being
+   * restarted, we need to disable 2g coex mode in the driver as well
+   * so that the fw & driver will be synced on the mode.
+   */
+  mvm->coex_2g_enabled = false;
 #endif
 
+#if 0   // NEEDS_PORTING
     /* just in case one was running */
     iwl_mvm_cleanup_roc_te(mvm);
     ieee80211_remain_on_channel_expired(mvm->hw);
+#endif  // NEEDS_PORTING
 
+#if 0   // NEEDS_PORTING
     /*
      * cleanup all interfaces, even inactive ones, as some might have
      * gone down during the HW restart
      */
     ieee80211_iterate_interfaces(mvm->hw, 0, iwl_mvm_cleanup_iterator, mvm);
+#endif  // NEEDS_PORTING
 
-    mvm->p2p_device_vif = NULL;
-    mvm->d0i3_ap_sta_id = IWL_MVM_INVALID_STA;
+  mvm->p2p_device_vif = NULL;
+  mvm->d0i3_ap_sta_id = IWL_MVM_INVALID_STA;
 
-    iwl_mvm_reset_phy_ctxts(mvm);
-    memset(mvm->fw_key_table, 0, sizeof(mvm->fw_key_table));
-    memset(&mvm->last_bt_notif, 0, sizeof(mvm->last_bt_notif));
-    memset(&mvm->last_bt_ci_cmd, 0, sizeof(mvm->last_bt_ci_cmd));
+  iwl_mvm_reset_phy_ctxts(mvm);
+  memset(mvm->fw_key_table, 0, sizeof(mvm->fw_key_table));
+  memset(&mvm->last_bt_notif, 0, sizeof(mvm->last_bt_notif));
+  memset(&mvm->last_bt_ci_cmd, 0, sizeof(mvm->last_bt_ci_cmd));
 
+#if 0   // NEEDS_PORTING
     ieee80211_wake_queues(mvm->hw);
+#endif  // NEEDS_PORTING
 
-    /* clear any stale d0i3 state */
-    clear_bit(IWL_MVM_STATUS_IN_D0I3, &mvm->status);
+  /* clear any stale d0i3 state */
+  clear_bit(IWL_MVM_STATUS_IN_D0I3, &mvm->status);
 
-    mvm->vif_count = 0;
-    mvm->rx_ba_sessions = 0;
-    mvm->fwrt.dump.conf = FW_DBG_INVALID;
-    mvm->monitor_on = false;
+  mvm->vif_count = 0;
+  mvm->rx_ba_sessions = 0;
+  mvm->fwrt.dump.conf = FW_DBG_INVALID;
+  mvm->monitor_on = false;
 
-    /* keep statistics ticking */
-    iwl_mvm_accu_radio_stats(mvm);
+  /* keep statistics ticking */
+  iwl_mvm_accu_radio_stats(mvm);
 }
 
-int __iwl_mvm_mac_start(struct iwl_mvm* mvm) {
-    int ret;
+zx_status_t __iwl_mvm_mac_start(struct iwl_mvm* mvm) {
+  zx_status_t ret;
 
-    lockdep_assert_held(&mvm->mutex);
+  lockdep_assert_held(&mvm->mutex);
 
-    if (test_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status)) {
-        /*
-         * Now convert the HW_RESTART_REQUESTED flag to IN_HW_RESTART
-         * so later code will - from now on - see that we're doing it.
-         */
-        set_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status);
-        clear_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status);
-        /* Clean up some internal and mac80211 state on restart */
-        iwl_mvm_restart_cleanup(mvm);
-    } else {
-        /* Hold the reference to prevent runtime suspend while
-         * the start procedure runs.  It's a bit confusing
-         * that the UCODE_DOWN reference is taken, but it just
-         * means "UCODE is not UP yet". ( TODO: rename this
-         * reference).
-         */
-        iwl_mvm_ref(mvm, IWL_MVM_REF_UCODE_DOWN);
-    }
-    ret = iwl_mvm_up(mvm);
+  if (test_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status)) {
+    /*
+     * Now convert the HW_RESTART_REQUESTED flag to IN_HW_RESTART
+     * so later code will - from now on - see that we're doing it.
+     */
+    set_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status);
+    clear_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status);
+    /* Clean up some internal and mac80211 state on restart */
+    iwl_mvm_restart_cleanup(mvm);
+  } else {
+    /* Hold the reference to prevent runtime suspend while
+     * the start procedure runs.  It's a bit confusing
+     * that the UCODE_DOWN reference is taken, but it just
+     * means "UCODE is not UP yet". ( TODO: rename this
+     * reference).
+     */
+    iwl_mvm_ref(mvm, IWL_MVM_REF_UCODE_DOWN);
+  }
+  ret = iwl_mvm_up(mvm);
 
+#if 0   // NEEDS_PORTING
     iwl_fw_dbg_apply_point(&mvm->fwrt, IWL_FW_INI_APPLY_POST_INIT);
+#endif  // NEEDS_PORTING
 
-    if (ret && test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
-        /* Something went wrong - we need to finish some cleanup
-         * that normally iwl_mvm_mac_restart_complete() below
-         * would do.
-         */
-        clear_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status);
+  if (ret && test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
+    /* Something went wrong - we need to finish some cleanup
+     * that normally iwl_mvm_mac_restart_complete() below
+     * would do.
+     */
+    clear_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status);
 #ifdef CONFIG_PM
-        iwl_mvm_d0i3_enable_tx(mvm, NULL);
+    iwl_mvm_d0i3_enable_tx(mvm, NULL);
 #endif
-    }
+  }
 
-    return ret;
+  return ret;
 }
 
-static int iwl_mvm_mac_start(struct ieee80211_hw* hw) {
-    struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
-    int ret;
+zx_status_t iwl_mvm_mac_start(struct iwl_mvm* mvm) {
+  zx_status_t ret;
 
+#if 0   // NEEDS_PORTING
     /* Some hw restart cleanups must not hold the mutex */
     if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
         /*
@@ -1203,14 +1216,16 @@ static int iwl_mvm_mac_start(struct ieee80211_hw* hw) {
         wait_event_timeout(mvm->d0i3_exit_waitq, !test_bit(IWL_MVM_STATUS_IN_D0I3, &mvm->status),
                            HZ);
     }
+#endif  // NEEDS_PORTING
 
-    mutex_lock(&mvm->mutex);
-    ret = __iwl_mvm_mac_start(mvm);
-    mutex_unlock(&mvm->mutex);
+  mtx_lock(&mvm->mutex);
+  ret = __iwl_mvm_mac_start(mvm);
+  mtx_unlock(&mvm->mutex);
 
-    return ret;
+  return ret;
 }
 
+#if 0  // NEEDS_PORTING
 static void iwl_mvm_restart_complete(struct iwl_mvm* mvm) {
     int ret;
 

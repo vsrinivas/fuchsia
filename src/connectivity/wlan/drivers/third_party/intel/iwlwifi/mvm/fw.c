@@ -63,31 +63,33 @@ struct iwl_mvm_alive_data {
   uint32_t scd_base_addr;
 };
 
-#if 0   // NEEDS_PORTING
 /* set device type and latency */
-static int iwl_set_soc_latency(struct iwl_mvm* mvm) {
-    struct iwl_soc_configuration_cmd cmd;
-    int ret;
+static zx_status_t iwl_set_soc_latency(struct iwl_mvm* mvm) {
+  struct iwl_soc_configuration_cmd cmd;
+  zx_status_t ret;
 
-    cmd.device_type = (mvm->trans->cfg->integrated) ? cpu_to_le32(SOC_CONFIG_CMD_INTEGRATED)
-                                                    : cpu_to_le32(SOC_CONFIG_CMD_DISCRETE);
-    cmd.soc_latency = cpu_to_le32(mvm->trans->cfg->soc_latency);
+  cmd.device_type = (mvm->trans->cfg->integrated) ? cpu_to_le32(SOC_CONFIG_CMD_INTEGRATED)
+                                                  : cpu_to_le32(SOC_CONFIG_CMD_DISCRETE);
+  cmd.soc_latency = cpu_to_le32(mvm->trans->cfg->soc_latency);
 
-    ret = iwl_mvm_send_cmd_pdu(mvm, iwl_cmd_id(SOC_CONFIGURATION_CMD, SYSTEM_GROUP, 0), 0,
-                               sizeof(cmd), &cmd);
-    if (ret) { IWL_ERR(mvm, "Failed to set soc latency: %d\n", ret); }
-    return ret;
+  ret = iwl_mvm_send_cmd_pdu(mvm, iwl_cmd_id(SOC_CONFIGURATION_CMD, SYSTEM_GROUP, 0), 0,
+                             sizeof(cmd), &cmd);
+  if (ret) {
+    IWL_ERR(mvm, "Failed to set soc latency: %d\n", ret);
+  }
+  return ret;
 }
 
 static int iwl_send_tx_ant_cfg(struct iwl_mvm* mvm, uint8_t valid_tx_ant) {
-    struct iwl_tx_ant_cfg_cmd tx_ant_cmd = {
-        .valid = cpu_to_le32(valid_tx_ant),
-    };
+  struct iwl_tx_ant_cfg_cmd tx_ant_cmd = {
+      .valid = cpu_to_le32(valid_tx_ant),
+  };
 
-    IWL_DEBUG_FW(mvm, "select valid tx ant: %u\n", valid_tx_ant);
-    return iwl_mvm_send_cmd_pdu(mvm, TX_ANT_CONFIGURATION_CMD, 0, sizeof(tx_ant_cmd), &tx_ant_cmd);
+  IWL_DEBUG_FW(mvm, "select valid tx ant: %u\n", valid_tx_ant);
+  return iwl_mvm_send_cmd_pdu(mvm, TX_ANT_CONFIGURATION_CMD, 0, sizeof(tx_ant_cmd), &tx_ant_cmd);
 }
 
+#if 0   // NEEDS_PORTING
 static int iwl_send_rss_cfg_cmd(struct iwl_mvm* mvm) {
     int i;
     struct iwl_rss_config_cmd cmd = {
@@ -136,24 +138,26 @@ static int iwl_configure_rxq(struct iwl_mvm* mvm) {
 
     return iwl_mvm_send_cmd_pdu(mvm, WIDE_ID(DATA_PATH_GROUP, RFH_QUEUE_CONFIG_CMD), 0, size, cmd);
 }
+#endif  // NEEDS_PORTING
 
-static int iwl_mvm_send_dqa_cmd(struct iwl_mvm* mvm) {
-    struct iwl_dqa_enable_cmd dqa_cmd = {
-        .cmd_queue = cpu_to_le32(IWL_MVM_DQA_CMD_QUEUE),
-    };
-    uint32_t cmd_id = iwl_cmd_id(DQA_ENABLE_CMD, DATA_PATH_GROUP, 0);
-    int ret;
+static zx_status_t iwl_mvm_send_dqa_cmd(struct iwl_mvm* mvm) {
+  struct iwl_dqa_enable_cmd dqa_cmd = {
+      .cmd_queue = cpu_to_le32(IWL_MVM_DQA_CMD_QUEUE),
+  };
+  uint32_t cmd_id = iwl_cmd_id(DQA_ENABLE_CMD, DATA_PATH_GROUP, 0);
+  zx_status_t ret;
 
-    ret = iwl_mvm_send_cmd_pdu(mvm, cmd_id, 0, sizeof(dqa_cmd), &dqa_cmd);
-    if (ret) {
-        IWL_ERR(mvm, "Failed to send DQA enabling command: %d\n", ret);
-    } else {
-        IWL_DEBUG_FW(mvm, "Working in DQA mode\n");
-    }
+  ret = iwl_mvm_send_cmd_pdu(mvm, cmd_id, 0, sizeof(dqa_cmd), &dqa_cmd);
+  if (ret) {
+    IWL_ERR(mvm, "Failed to send DQA enabling command: %d\n", ret);
+  } else {
+    IWL_DEBUG_FW(mvm, "Working in DQA mode\n");
+  }
 
-    return ret;
+  return ret;
 }
 
+#if 0   // NEEDS_PORTING
 void iwl_mvm_mfu_assert_dump_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_mfu_assert_dump_notif* mfu_dump_notif = (void*)pkt->data;
@@ -344,7 +348,7 @@ static zx_status_t iwl_mvm_load_ucode_wait_alive(struct iwl_mvm* mvm,
   return ZX_OK;
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static int iwl_run_unified_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
     struct iwl_notification_wait init_wait;
     struct iwl_nvm_access_complete_cmd nvm_complete = {};
@@ -421,86 +425,86 @@ error:
     iwl_remove_notification(&mvm->notif_wait, &init_wait);
     return ret;
 }
-
-static int iwl_send_phy_cfg_cmd(struct iwl_mvm* mvm) {
-    struct iwl_phy_cfg_cmd phy_cfg_cmd;
-    enum iwl_ucode_type ucode_type = mvm->fwrt.cur_fw_img;
-#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-    uint32_t override_mask, flow_override, flow_src;
-    uint32_t event_override, event_src;
-    const struct iwl_tlv_calib_ctrl* default_calib = &mvm->fw->default_calib[ucode_type];
-#endif
-
-    /* Set parameters */
-    phy_cfg_cmd.phy_cfg = cpu_to_le32(iwl_mvm_get_phy_config(mvm));
-
-    /* set flags extra PHY configuration flags from the device's cfg */
-    phy_cfg_cmd.phy_cfg |= cpu_to_le32(mvm->cfg->extra_phy_cfg_flags);
-
-    phy_cfg_cmd.calib_control.event_trigger = mvm->fw->default_calib[ucode_type].event_trigger;
-    phy_cfg_cmd.calib_control.flow_trigger = mvm->fw->default_calib[ucode_type].flow_trigger;
-
-#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-    override_mask = mvm->trans->dbg_cfg.MVM_CALIB_OVERRIDE_CONTROL;
-    if (override_mask) {
-        IWL_DEBUG_INFO(mvm, "calib settings overriden by user, control=0x%x\n", override_mask);
-
-        switch (ucode_type) {
-        case IWL_UCODE_INIT:
-            flow_override = mvm->trans->dbg_cfg.MVM_CALIB_INIT_FLOW;
-            event_override = mvm->trans->dbg_cfg.MVM_CALIB_INIT_EVENT;
-            IWL_DEBUG_CALIB(mvm, "INIT: flow_override %x, event_override %x\n", flow_override,
-                            event_override);
-            break;
-        case IWL_UCODE_REGULAR:
-            flow_override = mvm->trans->dbg_cfg.MVM_CALIB_D0_FLOW;
-            event_override = mvm->trans->dbg_cfg.MVM_CALIB_D0_EVENT;
-            IWL_DEBUG_CALIB(mvm, "REGULAR: flow_override %x, event_override %x\n", flow_override,
-                            event_override);
-            break;
-        case IWL_UCODE_WOWLAN:
-            flow_override = mvm->trans->dbg_cfg.MVM_CALIB_D3_FLOW;
-            event_override = mvm->trans->dbg_cfg.MVM_CALIB_D3_EVENT;
-            IWL_DEBUG_CALIB(mvm, "WOWLAN: flow_override %x, event_override %x\n", flow_override,
-                            event_override);
-            break;
-        default:
-            IWL_ERR(mvm, "ERROR: calib case isn't valid\n");
-            flow_override = 0;
-            event_override = 0;
-            break;
-        }
-
-        IWL_DEBUG_CALIB(mvm, "override_mask %x\n", override_mask);
-
-        /* find the new calib setting for the flow calibrations */
-        flow_src = le32_to_cpu(default_calib->flow_trigger);
-        IWL_DEBUG_CALIB(mvm, "flow_src %x\n", flow_src);
-
-        flow_override &= override_mask;
-        flow_src &= ~override_mask;
-        flow_override |= flow_src;
-
-        phy_cfg_cmd.calib_control.flow_trigger = cpu_to_le32(flow_override);
-        IWL_DEBUG_CALIB(mvm, "new flow calib setting = %x\n", flow_override);
-
-        /* find the new calib setting for the event calibrations */
-        event_src = le32_to_cpu(default_calib->event_trigger);
-        IWL_DEBUG_CALIB(mvm, "event_src %x\n", event_src);
-
-        event_override &= override_mask;
-        event_src &= ~override_mask;
-        event_override |= event_src;
-
-        phy_cfg_cmd.calib_control.event_trigger = cpu_to_le32(event_override);
-        IWL_DEBUG_CALIB(mvm, "new event calib setting = %x\n", event_override);
-    }
-#endif
-    IWL_DEBUG_INFO(mvm, "Sending Phy CFG command: 0x%x\n", phy_cfg_cmd.phy_cfg);
-
-    return iwl_mvm_send_cmd_pdu(mvm, PHY_CONFIGURATION_CMD, 0, sizeof(phy_cfg_cmd), &phy_cfg_cmd);
-}
 #endif  // NEEDS_PORTING
+
+static zx_status_t iwl_send_phy_cfg_cmd(struct iwl_mvm* mvm) {
+  struct iwl_phy_cfg_cmd phy_cfg_cmd;
+  enum iwl_ucode_type ucode_type = mvm->fwrt.cur_fw_img;
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+  uint32_t override_mask, flow_override, flow_src;
+  uint32_t event_override, event_src;
+  const struct iwl_tlv_calib_ctrl* default_calib = &mvm->fw->default_calib[ucode_type];
+#endif
+
+  /* Set parameters */
+  phy_cfg_cmd.phy_cfg = cpu_to_le32(iwl_mvm_get_phy_config(mvm));
+
+  /* set flags extra PHY configuration flags from the device's cfg */
+  phy_cfg_cmd.phy_cfg |= cpu_to_le32(mvm->cfg->extra_phy_cfg_flags);
+
+  phy_cfg_cmd.calib_control.event_trigger = mvm->fw->default_calib[ucode_type].event_trigger;
+  phy_cfg_cmd.calib_control.flow_trigger = mvm->fw->default_calib[ucode_type].flow_trigger;
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+  override_mask = mvm->trans->dbg_cfg.MVM_CALIB_OVERRIDE_CONTROL;
+  if (override_mask) {
+    IWL_DEBUG_INFO(mvm, "calib settings overriden by user, control=0x%x\n", override_mask);
+
+    switch (ucode_type) {
+      case IWL_UCODE_INIT:
+        flow_override = mvm->trans->dbg_cfg.MVM_CALIB_INIT_FLOW;
+        event_override = mvm->trans->dbg_cfg.MVM_CALIB_INIT_EVENT;
+        IWL_DEBUG_CALIB(mvm, "INIT: flow_override %x, event_override %x\n", flow_override,
+                        event_override);
+        break;
+      case IWL_UCODE_REGULAR:
+        flow_override = mvm->trans->dbg_cfg.MVM_CALIB_D0_FLOW;
+        event_override = mvm->trans->dbg_cfg.MVM_CALIB_D0_EVENT;
+        IWL_DEBUG_CALIB(mvm, "REGULAR: flow_override %x, event_override %x\n", flow_override,
+                        event_override);
+        break;
+      case IWL_UCODE_WOWLAN:
+        flow_override = mvm->trans->dbg_cfg.MVM_CALIB_D3_FLOW;
+        event_override = mvm->trans->dbg_cfg.MVM_CALIB_D3_EVENT;
+        IWL_DEBUG_CALIB(mvm, "WOWLAN: flow_override %x, event_override %x\n", flow_override,
+                        event_override);
+        break;
+      default:
+        IWL_ERR(mvm, "ERROR: calib case isn't valid\n");
+        flow_override = 0;
+        event_override = 0;
+        break;
+    }
+
+    IWL_DEBUG_CALIB(mvm, "override_mask %x\n", override_mask);
+
+    /* find the new calib setting for the flow calibrations */
+    flow_src = le32_to_cpu(default_calib->flow_trigger);
+    IWL_DEBUG_CALIB(mvm, "flow_src %x\n", flow_src);
+
+    flow_override &= override_mask;
+    flow_src &= ~override_mask;
+    flow_override |= flow_src;
+
+    phy_cfg_cmd.calib_control.flow_trigger = cpu_to_le32(flow_override);
+    IWL_DEBUG_CALIB(mvm, "new flow calib setting = %x\n", flow_override);
+
+    /* find the new calib setting for the event calibrations */
+    event_src = le32_to_cpu(default_calib->event_trigger);
+    IWL_DEBUG_CALIB(mvm, "event_src %x\n", event_src);
+
+    event_override &= override_mask;
+    event_src &= ~override_mask;
+    event_override |= event_src;
+
+    phy_cfg_cmd.calib_control.event_trigger = cpu_to_le32(event_override);
+    IWL_DEBUG_CALIB(mvm, "new event calib setting = %x\n", event_override);
+  }
+#endif
+  IWL_DEBUG_INFO(mvm, "Sending Phy CFG command: 0x%x\n", phy_cfg_cmd.phy_cfg);
+
+  return iwl_mvm_send_cmd_pdu(mvm, PHY_CONFIGURATION_CMD, 0, sizeof(phy_cfg_cmd), &phy_cfg_cmd);
+}
 
 zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
   struct iwl_notification_wait calib_wait;
@@ -625,17 +629,19 @@ out:
   return ret;
 }
 
-#if 0  // NEEDS_PORTING
-static int iwl_mvm_config_ltr(struct iwl_mvm* mvm) {
-    struct iwl_ltr_config_cmd cmd = {
-        .flags = cpu_to_le32(LTR_CFG_FLAG_FEATURE_ENABLE),
-    };
+static zx_status_t iwl_mvm_config_ltr(struct iwl_mvm* mvm) {
+  struct iwl_ltr_config_cmd cmd = {
+      .flags = cpu_to_le32(LTR_CFG_FLAG_FEATURE_ENABLE),
+  };
 
-    if (!mvm->trans->ltr_enabled) { return 0; }
+  if (!mvm->trans->ltr_enabled) {
+    return ZX_OK;
+  }
 
-    return iwl_mvm_send_cmd_pdu(mvm, LTR_CONFIG, 0, sizeof(cmd), &cmd);
+  return iwl_mvm_send_cmd_pdu(mvm, LTR_CONFIG, 0, sizeof(cmd), &cmd);
 }
 
+#if 0  // NEEDS_PORTING
 #ifdef CONFIG_ACPI
 static int iwl_mvm_sar_set_profile(struct iwl_mvm* mvm, union acpi_object* table,
                                    struct iwl_mvm_sar_profile* profile, bool enabled) {
@@ -967,127 +973,161 @@ static int iwl_mvm_sar_init(struct iwl_mvm* mvm) {
 
     return ret;
 }
+#endif  // NEEDS_PORTING
 
 static int iwl_mvm_load_rt_fw(struct iwl_mvm* mvm) {
-    int ret;
+  int ret;
 
-    if (iwl_mvm_has_unified_ucode(mvm)) { return iwl_run_unified_mvm_ucode(mvm, false); }
+#if 0   // NEEDS_PORTING
+  // The chip we use (7265D) doesn't have unified ucode.
+  if (iwl_mvm_has_unified_ucode(mvm)) {
+    return iwl_run_unified_mvm_ucode(mvm, false);
+  }
+#endif  // NEEDS_PORTING
 
-    ret = iwl_run_init_mvm_ucode(mvm, false);
+  ret = iwl_run_init_mvm_ucode(mvm, false);
 
-    if (ret) {
-        IWL_ERR(mvm, "Failed to run INIT ucode: %d\n", ret);
+  if (ret) {
+    IWL_ERR(mvm, "Failed to run INIT ucode: %d\n", ret);
 
-        if (iwlmvm_mod_params.init_dbg) { return 0; }
-        return ret;
+    if (iwlmvm_mod_params.init_dbg) {
+      return 0;
     }
+    return ret;
+  }
 
-    /*
-     * Stop and start the transport without entering low power
-     * mode. This will save the state of other components on the
-     * device that are triggered by the INIT firwmare (MFUART).
-     */
-    _iwl_trans_stop_device(mvm->trans, false);
-    ret = _iwl_trans_start_hw(mvm->trans, false);
-    if (ret) { return ret; }
+  /*
+   * Stop and start the transport without entering low power
+   * mode. This will save the state of other components on the
+   * device that are triggered by the INIT firwmare (MFUART).
+   */
+  _iwl_trans_stop_device(mvm->trans, false);
+  ret = _iwl_trans_start_hw(mvm->trans, false);
+  if (ret) {
+    return ret;
+  }
 
-    iwl_fw_dbg_apply_point(&mvm->fwrt, IWL_FW_INI_APPLY_EARLY);
+#if 0   // NEEDS_PORTING
+  iwl_fw_dbg_apply_point(&mvm->fwrt, IWL_FW_INI_APPLY_EARLY);
+#endif  // NEEDS_PORTING
 
-    ret = iwl_mvm_load_ucode_wait_alive(mvm, IWL_UCODE_REGULAR);
-    if (ret) { return ret; }
+  ret = iwl_mvm_load_ucode_wait_alive(mvm, IWL_UCODE_REGULAR);
+  if (ret) {
+    return ret;
+  }
 
-    iwl_fw_dbg_apply_point(&mvm->fwrt, IWL_FW_INI_APPLY_AFTER_ALIVE);
+#if 0   // NEEDS_PORTING
+  iwl_fw_dbg_apply_point(&mvm->fwrt, IWL_FW_INI_APPLY_AFTER_ALIVE);
+#endif  // NEEDS_PORTING
 
-    return iwl_init_paging(&mvm->fwrt, mvm->fwrt.cur_fw_img);
+  return iwl_init_paging(&mvm->fwrt, mvm->fwrt.cur_fw_img);
 }
 
-int iwl_mvm_up(struct iwl_mvm* mvm) {
-    int ret, i;
-    struct ieee80211_channel* chan;
-    struct cfg80211_chan_def chandef;
+zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
+  zx_status_t ret;
 
-    lockdep_assert_held(&mvm->mutex);
+  lockdep_assert_held(&mvm->mutex);
 
-    ret = iwl_trans_start_hw(mvm->trans);
-    if (ret) { return ret; }
+  ret = iwl_trans_start_hw(mvm->trans);
+  if (ret != ZX_OK) {
+    return ret;
+  }
 
-    ret = iwl_mvm_load_rt_fw(mvm);
-    if (ret) {
-        IWL_ERR(mvm, "Failed to start RT ucode: %d\n", ret);
-        iwl_fw_assert_error_dump(&mvm->fwrt);
-        goto error;
-    }
+  ret = iwl_mvm_load_rt_fw(mvm);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvm, "Failed to start RT ucode: %d\n", ret);
+#if 0   // NEEDS_PORTING
+    iwl_fw_assert_error_dump(&mvm->fwrt);
+#endif  // NEEDS_PORTING
+    goto error;
+  }
 
-    iwl_get_shared_mem_conf(&mvm->fwrt);
+  iwl_get_shared_mem_conf(&mvm->fwrt);
 
+#if 0   // NEEDS_PORTING
+    // Smart FIFO is used to aggregate the DMA transactions to optimize power usage.
     ret = iwl_mvm_sf_update(mvm, NULL, false);
-    if (ret) { IWL_ERR(mvm, "Failed to initialize Smart Fifo\n"); }
+    if (ret != ZX_OK) { IWL_ERR(mvm, "Failed to initialize Smart Fifo\n"); }
+#endif  // NEEDS_PORTING
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-    iwl_dnt_start(mvm->trans);
+  iwl_dnt_start(mvm->trans);
 #endif
 
+#if 0   // NEEDS_PORTING
     if (!mvm->trans->ini_valid) {
         mvm->fwrt.dump.conf = FW_DBG_INVALID;
         /* if we have a destination, assume EARLY START */
         if (mvm->fw->dbg.dest_tlv) { mvm->fwrt.dump.conf = FW_DBG_START_FROM_ALIVE; }
         iwl_fw_start_dbg_conf(&mvm->fwrt, FW_DBG_START_FROM_ALIVE);
     }
+#endif  // NEEDS_PORTING
 
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
-    if (iwl_fw_dbg_trigger_enabled(mvm->fw, FW_DBG_TRIGGER_TX_LATENCY)) {
-        struct iwl_fw_dbg_trigger_tlv* trig;
-        struct iwl_fw_dbg_trigger_tx_latency* thrshold_trig;
-        uint32_t thrshld;
-        uint32_t vif;
-        uint32_t iface = 0;
-        uint16_t tid;
-        uint16_t mode;
-        uint32_t window;
+  if (iwl_fw_dbg_trigger_enabled(mvm->fw, FW_DBG_TRIGGER_TX_LATENCY)) {
+    struct iwl_fw_dbg_trigger_tlv* trig;
+    struct iwl_fw_dbg_trigger_tx_latency* thrshold_trig;
+    uint32_t thrshld;
+    uint32_t vif;
+    uint32_t iface = 0;
+    uint16_t tid;
+    uint16_t mode;
+    uint32_t window;
 
-        trig = iwl_fw_dbg_get_trigger(mvm->fw, FW_DBG_TRIGGER_TX_LATENCY);
-        vif = le32_to_cpu(trig->vif_type);
-        if (vif == IWL_FW_DBG_CONF_VIF_ANY) {
-            iface = BIT(IEEE80211_TX_LATENCY_BSS);
-            iface |= BIT(IEEE80211_TX_LATENCY_P2P);
-        } else if (vif <= IWL_FW_DBG_CONF_VIF_AP) {
-            iface = BIT(IEEE80211_TX_LATENCY_BSS);
-        } else {
-            iface = BIT(IEEE80211_TX_LATENCY_P2P);
-        }
-        thrshold_trig = (void*)trig->data;
-        thrshld = le32_to_cpu(thrshold_trig->thrshold);
-        tid = le16_to_cpu(thrshold_trig->tid_bitmap);
-        mode = le16_to_cpu(thrshold_trig->mode);
-        window = le32_to_cpu(thrshold_trig->window);
-        IWL_DEBUG_INFO(mvm,
-                       "Tx latency trigger cfg: threshold = %u, tid = 0x%x, mode = 0x%x, window = "
-                       "%u vif = 0x%x\n",
-                       thrshld, tid, mode, window, iface);
-        ieee80211_tx_lat_thrshld_cfg(mvm->hw, thrshld, tid, window, mode, iface);
+    trig = iwl_fw_dbg_get_trigger(mvm->fw, FW_DBG_TRIGGER_TX_LATENCY);
+    vif = le32_to_cpu(trig->vif_type);
+    if (vif == IWL_FW_DBG_CONF_VIF_ANY) {
+      iface = BIT(IEEE80211_TX_LATENCY_BSS);
+      iface |= BIT(IEEE80211_TX_LATENCY_P2P);
+    } else if (vif <= IWL_FW_DBG_CONF_VIF_AP) {
+      iface = BIT(IEEE80211_TX_LATENCY_BSS);
+    } else {
+      iface = BIT(IEEE80211_TX_LATENCY_P2P);
     }
+    thrshold_trig = (void*)trig->data;
+    thrshld = le32_to_cpu(thrshold_trig->thrshold);
+    tid = le16_to_cpu(thrshold_trig->tid_bitmap);
+    mode = le16_to_cpu(thrshold_trig->mode);
+    window = le32_to_cpu(thrshold_trig->window);
+    IWL_DEBUG_INFO(mvm,
+                   "Tx latency trigger cfg: threshold = %u, tid = 0x%x, mode = 0x%x, window = "
+                   "%u vif = 0x%x\n",
+                   thrshld, tid, mode, window, iface);
+    ieee80211_tx_lat_thrshld_cfg(mvm->hw, thrshld, tid, window, mode, iface);
+  }
 #endif
 
-    ret = iwl_send_tx_ant_cfg(mvm, iwl_mvm_get_valid_tx_ant(mvm));
-    if (ret) { goto error; }
+  ret = iwl_send_tx_ant_cfg(mvm, iwl_mvm_get_valid_tx_ant(mvm));
+  if (ret != ZX_OK) {
+    goto error;
+  }
 
-    if (!iwl_mvm_has_unified_ucode(mvm)) {
-        /* Send phy db control command and then phy db calibration */
-        ret = iwl_send_phy_db_data(mvm->phy_db);
-        if (ret) { goto error; }
-
-        ret = iwl_send_phy_cfg_cmd(mvm);
-        if (ret) { goto error; }
+  if (!iwl_mvm_has_unified_ucode(mvm)) {
+    /* Send phy db control command and then phy db calibration */
+    ret = iwl_send_phy_db_data(mvm->phy_db);
+    if (ret != ZX_OK) {
+      goto error;
     }
 
+    ret = iwl_send_phy_cfg_cmd(mvm);
+    if (ret != ZX_OK) {
+      goto error;
+    }
+  }
+
+#if 0   // NEEDS_PORTING
     ret = iwl_mvm_send_bt_init_conf(mvm);
     if (ret) { goto error; }
+#endif  // NEEDS_PORTING
 
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_SOC_LATENCY_SUPPORT)) {
-        ret = iwl_set_soc_latency(mvm);
-        if (ret) { goto error; }
+  if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_SOC_LATENCY_SUPPORT)) {
+    ret = iwl_set_soc_latency(mvm);
+    if (ret != ZX_OK) {
+      goto error;
     }
+  }
 
+#if 0   // NEEDS_PORTING
     /* Init RSS configuration */
     if (mvm->trans->cfg->device_family >= IWL_DEVICE_FAMILY_22000) {
         ret = iwl_configure_rxq(mvm);
@@ -1097,6 +1137,7 @@ int iwl_mvm_up(struct iwl_mvm* mvm) {
         }
     }
 
+    // 7265D firmware doesn't have new RX API.
     if (iwl_mvm_has_new_rx_api(mvm)) {
         ret = iwl_send_rss_cfg_cmd(mvm);
         if (ret) {
@@ -1109,68 +1150,83 @@ int iwl_mvm_up(struct iwl_mvm* mvm) {
     for (i = 0; i < ARRAY_SIZE(mvm->fw_id_to_mac_id); i++) {
         RCU_INIT_POINTER(mvm->fw_id_to_mac_id[i], NULL);
     }
+#endif  // NEEDS_PORTING
 
-    mvm->tdls_cs.peer.sta_id = IWL_MVM_INVALID_STA;
+  mvm->tdls_cs.peer.sta_id = IWL_MVM_INVALID_STA;
 
-    /* reset quota debouncing buffer - 0xff will yield invalid data */
-    memset(&mvm->last_quota_cmd, 0xff, sizeof(mvm->last_quota_cmd));
+  /* reset quota debouncing buffer - 0xff will yield invalid data */
+  memset(&mvm->last_quota_cmd, 0xff, sizeof(mvm->last_quota_cmd));
 
-    ret = iwl_mvm_send_dqa_cmd(mvm);
-    if (ret) { goto error; }
+  ret = iwl_mvm_send_dqa_cmd(mvm);
+  if (ret != ZX_OK) {
+    goto error;
+  }
 
+#if 0   // NEEDS_PORTING
+    // TODO(WLAN-1204): port iwl_mvm_add_aux_sta later.
     /* Add auxiliary station for scanning */
     ret = iwl_mvm_add_aux_sta(mvm);
     if (ret) { goto error; }
+#endif  // NEEDS_PORTING
 
-    /* Add all the PHY contexts */
-    chan = &mvm->hw->wiphy->bands[NL80211_BAND_2GHZ]->channels[0];
-    cfg80211_chandef_create(&chandef, chan, NL80211_CHAN_NO_HT);
-    for (i = 0; i < NUM_PHY_CTX; i++) {
-        /*
-         * The channel used here isn't relevant as it's
-         * going to be overwritten in the other flows.
-         * For now use the first channel we have.
-         */
-        ret = iwl_mvm_phy_ctxt_add(mvm, &mvm->phy_ctxts[i], &chandef, 1, 1);
-        if (ret) { goto error; }
+  /* Add all the PHY contexts with a default value */
+  wlan_channel_t chandef = {
+      .primary = 1,
+      .cbw = CBW20,
+  };
+  for (size_t i = 0; i < NUM_PHY_CTX; i++) {
+    /*
+     * The channel used here isn't relevant as it's
+     * going to be overwritten in the other flows.
+     * For now use the first channel we have.
+     */
+    ret = iwl_mvm_phy_ctxt_add(mvm, &mvm->phy_ctxts[i], &chandef, 1, 1);
+    if (ret != ZX_OK) {
+      goto error;
     }
+  }
 
 #ifdef CONFIG_THERMAL
-    if (iwl_mvm_is_tt_in_fw(mvm)) {
-        /* in order to give the responsibility of ct-kill and
-         * TX backoff to FW we need to send empty temperature reporting
-         * cmd during init time
-         */
-        iwl_mvm_send_temp_report_ths_cmd(mvm);
-    } else {
-        /* Initialize tx backoffs to the minimal possible */
-        iwl_mvm_tt_tx_backoff(mvm, 0);
-    }
-
-    /* TODO: read the budget from BIOS / Platform NVM */
-
-    /*
-     * In case there is no budget from BIOS / Platform NVM the default
-     * budget should be 2000mW (cooling state 0).
+  if (iwl_mvm_is_tt_in_fw(mvm)) {
+    /* in order to give the responsibility of ct-kill and
+     * TX backoff to FW we need to send empty temperature reporting
+     * cmd during init time
      */
-    if (iwl_mvm_is_ctdp_supported(mvm)) {
-        ret = iwl_mvm_ctdp_command(mvm, CTDP_CMD_OPERATION_START, mvm->cooling_dev.cur_state);
-        if (ret) { goto error; }
-    }
-#else
+    iwl_mvm_send_temp_report_ths_cmd(mvm);
+  } else {
     /* Initialize tx backoffs to the minimal possible */
     iwl_mvm_tt_tx_backoff(mvm, 0);
+  }
+
+  /* TODO: read the budget from BIOS / Platform NVM */
+
+  /*
+   * In case there is no budget from BIOS / Platform NVM the default
+   * budget should be 2000mW (cooling state 0).
+   */
+  if (iwl_mvm_is_ctdp_supported(mvm)) {
+    ret = iwl_mvm_ctdp_command(mvm, CTDP_CMD_OPERATION_START, mvm->cooling_dev.cur_state);
+    if (ret) {
+      goto error;
+    }
+  }
+#else
+  /* Initialize tx backoffs to the minimal possible */
+  iwl_mvm_tt_tx_backoff(mvm, 0);
 #endif
 
-    WARN_ON(iwl_mvm_config_ltr(mvm));
+  WARN_ON(iwl_mvm_config_ltr(mvm) != ZX_OK);
 
-    ret = iwl_mvm_power_update_device(mvm);
-    if (ret) { goto error; }
+  ret = iwl_mvm_power_update_device(mvm);
+  if (ret != ZX_OK) {
+    goto error;
+  }
 
+#if 0   // NEEDS_PORTING
     /*
-     * RTNL is not taken during Ct-kill, but we don't need to scan/Tx
-     * anyway, so don't init MCC.
-     */
+    * RTNL is not taken during Ct-kill, but we don't need to scan/Tx
+    * anyway, so don't init MCC.
+    */
     if (!test_bit(IWL_MVM_STATUS_HW_CTKILL, &mvm->status)) {
         ret = iwl_mvm_init_mcc(mvm);
         if (ret) { goto error; }
@@ -1180,43 +1236,47 @@ int iwl_mvm_up(struct iwl_mvm* mvm) {
         mvm->scan_type = IWL_SCAN_TYPE_NOT_SET;
         mvm->hb_scan_type = IWL_SCAN_TYPE_NOT_SET;
         ret = iwl_mvm_config_scan(mvm);
-        if (ret) { goto error; }
+        if (ret != ZX_OK) {
+            goto error;
+        }
     }
+#endif  // NEEDS_PORTING
 
-    /* allow FW/transport low power modes if not during restart */
-    if (!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
-        iwl_mvm_unref(mvm, IWL_MVM_REF_UCODE_DOWN);
-    }
+  /* allow FW/transport low power modes if not during restart */
+  if (!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
+    iwl_mvm_unref(mvm, IWL_MVM_REF_UCODE_DOWN);
+  }
 
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
-    iwl_mvm_send_lte_commands(mvm);
+  iwl_mvm_send_lte_commands(mvm);
 #endif
 
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-    /* set_mode must be IWL_TX_POWER_MODE_SET_DEVICE if this was
-     * ever initialized.
-     */
-    if (le32_to_cpu(mvm->txp_cmd.v5.v3.set_mode) == IWL_TX_POWER_MODE_SET_DEVICE) {
-        int len;
+  /* set_mode must be IWL_TX_POWER_MODE_SET_DEVICE if this was
+   * ever initialized.
+   */
+  if (le32_to_cpu(mvm->txp_cmd.v5.v3.set_mode) == IWL_TX_POWER_MODE_SET_DEVICE) {
+    int len;
 
-        if (fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_REDUCE_TX_POWER)) {
-            len = sizeof(mvm->txp_cmd.v5);
-        } else if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TX_POWER_ACK)) {
-            len = sizeof(mvm->txp_cmd.v4);
-        } else {
-            len = sizeof(mvm->txp_cmd.v4.v3);
-        }
-
-        if (iwl_mvm_send_cmd_pdu(mvm, REDUCE_TX_POWER_CMD, 0, len, &mvm->txp_cmd)) {
-            IWL_ERR(mvm, "failed to update TX power\n");
-        }
+    if (fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_REDUCE_TX_POWER)) {
+      len = sizeof(mvm->txp_cmd.v5);
+    } else if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TX_POWER_ACK)) {
+      len = sizeof(mvm->txp_cmd.v4);
+    } else {
+      len = sizeof(mvm->txp_cmd.v4.v3);
     }
+
+    if (iwl_mvm_send_cmd_pdu(mvm, REDUCE_TX_POWER_CMD, 0, len, &mvm->txp_cmd)) {
+      IWL_ERR(mvm, "failed to update TX power\n");
+    }
+  }
 #endif
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
-    iwl_mvm_fm_notify_current_dcdc();
+  iwl_mvm_fm_notify_current_dcdc();
 #endif
 
+#if 0   // NEEDS_PORTING
     ret = iwl_mvm_sar_init(mvm);
     if (ret == 0) {
         ret = iwl_mvm_sar_geo_init(mvm);
@@ -1227,16 +1287,23 @@ int iwl_mvm_up(struct iwl_mvm* mvm) {
     } else {
         goto error;
     }
+#endif  // NEEDS_PORTING
 
+#if 0   // NEEDS_PORTING
     iwl_mvm_leds_sync(mvm);
+#endif  // NEEDS_PORTING
 
-    IWL_DEBUG_INFO(mvm, "RT uCode started.\n");
-    return 0;
+  IWL_DEBUG_INFO(mvm, "RT uCode started.\n");
+  return ZX_OK;
+
 error:
-    if (!iwlmvm_mod_params.init_dbg || !ret) { iwl_mvm_stop_device(mvm); }
-    return ret;
+  if (!iwlmvm_mod_params.init_dbg || ret == ZX_OK) {
+    iwl_mvm_stop_device(mvm);
+  }
+  return ret;
 }
 
+#if 0  // NEEDS_PORTING
 int iwl_mvm_load_d3_fw(struct iwl_mvm* mvm) {
     int ret, i;
 

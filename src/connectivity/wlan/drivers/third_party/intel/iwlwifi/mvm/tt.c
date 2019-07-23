@@ -158,7 +158,7 @@ void iwl_mvm_temp_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
 
         thermal_notify_framework(tz_dev->tzone, tz_dev->fw_trips_index[ths_crossed]);
     }
-#endif /* CONFIG_THERMAL */
+#endif  /* CONFIG_THERMAL */
 }
 
 void iwl_mvm_ct_kill_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
@@ -303,30 +303,32 @@ static void iwl_mvm_tt_tx_protection(struct iwl_mvm* mvm, bool enable) {
         }
     }
 }
+#endif  // NEEDS_PORTING
 
 void iwl_mvm_tt_tx_backoff(struct iwl_mvm* mvm, uint32_t backoff) {
-    struct iwl_host_cmd cmd = {
-        .id = REPLY_THERMAL_MNG_BACKOFF,
-        .len =
-            {
-                sizeof(uint32_t),
-            },
-        .data =
-            {
-                &backoff,
-            },
-    };
+  struct iwl_host_cmd cmd = {
+      .id = REPLY_THERMAL_MNG_BACKOFF,
+      .len =
+          {
+              sizeof(uint32_t),
+          },
+      .data =
+          {
+              &backoff,
+          },
+  };
 
-    backoff = max(backoff, mvm->thermal_throttle.min_backoff);
+  backoff = MAX(backoff, mvm->thermal_throttle.min_backoff);
 
-    if (iwl_mvm_send_cmd(mvm, &cmd) == 0) {
-        IWL_DEBUG_TEMP(mvm, "Set Thermal Tx backoff to: %u\n", backoff);
-        mvm->thermal_throttle.tx_backoff = backoff;
-    } else {
-        IWL_ERR(mvm, "Failed to change Thermal Tx backoff\n");
-    }
+  if (iwl_mvm_send_cmd(mvm, &cmd) == 0) {
+    IWL_DEBUG_TEMP(mvm, "Set Thermal Tx backoff to: %u\n", backoff);
+    mvm->thermal_throttle.tx_backoff = backoff;
+  } else {
+    IWL_ERR(mvm, "Failed to change Thermal Tx backoff\n");
+  }
 }
 
+#if 0  // NEEDS_PORTING
 void iwl_mvm_tt_handler(struct iwl_mvm* mvm) {
     struct iwl_tt_params* params = &mvm->thermal_throttle.params;
     struct iwl_mvm_tt_mgmt* tt = &mvm->thermal_throttle;
