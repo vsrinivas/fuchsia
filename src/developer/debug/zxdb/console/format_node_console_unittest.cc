@@ -625,4 +625,68 @@ TEST_F(FormatValueConsoleTest, RustEnum) {
       SyncFormatValue(point_value, expanded_all_types));
 }
 
+// This only tests the presentational part of Rust vectors. Vec->Node conversion is tested in
+// format_unittests.cc
+TEST_F(FormatValueConsoleTest, RustVector) {
+  // Give real values with a type from a Rust unit to trigger Rust-specific formatting. Don't need
+  // them to have actual data.
+  auto vec_type = MakeCollectionType(DwarfTag::kStructureType, "alloc::vec::Vec<i32>", {});
+  vec_type->set_parent(MakeRustUnit());
+  ExprValue vec_value(vec_type, {});
+
+  auto int_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 2, "u32");
+  int_type->set_parent(MakeRustUnit());
+  ExprValue int_value(int_type, {});
+
+  // A Vec of int.
+  FormatNode vec("", vec_value);
+  vec.set_type("alloc::vec::Vec<i32>");
+  vec.set_description_kind(FormatNode::kArray);
+  vec.set_state(FormatNode::kDescribed);
+
+  vec.children().push_back(std::make_unique<FormatNode>("[0]", int_value));
+  vec.children()[0]->set_type("i32");
+  vec.children()[0]->set_state(FormatNode::kDescribed);
+  vec.children()[0]->set_description("42");
+  vec.children().push_back(std::make_unique<FormatNode>("[1]", int_value));
+  vec.children()[1]->set_type("i32");
+  vec.children()[1]->set_state(FormatNode::kDescribed);
+  vec.children()[1]->set_description("19");
+
+  ConsoleFormatOptions options;
+
+  // Minimal verbosity gets tyep type abbreviated "vec!" which is how Rust users would typically
+  // instantiate an array.
+  options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+  EXPECT_EQ("vec![42, 19]", FormatNodeForConsole(vec, options).AsString());
+
+  // Expanded mode.
+  options.wrapping = ConsoleFormatOptions::Wrapping::kExpanded;
+  EXPECT_EQ(
+      "vec![\n"
+      "  [0]: 42\n"
+      "  [1]: 19\n"
+      "]",
+      FormatNodeForConsole(vec, options).AsString());
+
+  // Medium verbosity shows the real type.
+  options.wrapping = ConsoleFormatOptions::Wrapping::kNone;
+  options.verbosity = ConsoleFormatOptions::Verbosity::kMedium;
+  EXPECT_EQ("alloc::vec::Vec<i32>[42, 19]", FormatNodeForConsole(vec, options).AsString());
+
+  // Full type info is the same.
+  options.verbosity = ConsoleFormatOptions::Verbosity::kAllTypes;
+  EXPECT_EQ("alloc::vec::Vec<i32>[42, 19]", FormatNodeForConsole(vec, options).AsString());
+
+  // Use another type name in minimal mode. It shouldn't get abbreviated with the "vec!"
+  auto fast_vec_type = MakeCollectionType(DwarfTag::kStructureType, "FastVector<i32>", {});
+  fast_vec_type->set_parent(MakeRustUnit());
+  ExprValue fast_vec_value(fast_vec_type, {});
+
+  vec.SetValue(fast_vec_value);
+  vec.set_type("FastVector<i32>");
+  options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+  EXPECT_EQ("FastVector<i32>[42, 19]", FormatNodeForConsole(vec, options).AsString());
+}
+
 }  // namespace zxdb

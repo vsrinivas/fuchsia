@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/console/format_node_console.h"
 
 #include "src/developer/debug/zxdb/common/ref_ptr_to.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/expr/format.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
@@ -183,6 +184,12 @@ void AppendRustCollectionName(const FormatNode* node, const RecursiveState& stat
     return;
   }
 
+  // Special-case "Vec" with the macro that's normally used and omit the type.
+  if (StringBeginsWith(node->type(), "alloc::vec::Vec<")) {
+    out->Append("vec!");
+    return;
+  }
+
   // In minimal mode, extract just the last component of the identifier.
   const Identifier& ident = node->value().type()->GetIdentifier();
   if (ident.empty())
@@ -224,7 +231,11 @@ bool ShouldPrependTypeNameBeforeName(const FormatNode* node, const RecursiveStat
   if (!state.TypeForcedOn())
     return false;  // Never show types unless requested.
 
-  if ((node->description_kind() == FormatNode::kCollection && IsRust(node)) ||
+  if (!IsRust(node))
+    return true;  // Non-Rust code always gets the type.
+
+  if (node->description_kind() == FormatNode::kCollection ||
+      node->description_kind() == FormatNode::kArray ||
       node->description_kind() == FormatNode::kRustTuple ||
       node->description_kind() == FormatNode::kRustTupleStruct) {
     // Rust structs and tuple structs are special. They encode the type after the variable, so:
@@ -319,7 +330,13 @@ OutputBuffer DoFormatArrayOrTupleNode(const FormatNode* node, const RecursiveSta
     // Arrays all have the same type so don't show the type for every child.
     child_state.inhibit_one_type = true;
 
-    AppendNodeChildren(node, state, '{', '}', child_state, &out);
+    if (IsRust(node)) {
+      // Rust sequences use "[...]".
+      AppendRustCollectionName(node, state, &out);
+      AppendNodeChildren(node, state, '[', ']', child_state, &out);
+    } else {
+      AppendNodeChildren(node, state, '{', '}', child_state, &out);
+    }
   } else {
     // Rust tuple or tuple struct. These should not be empty.
     if (node->description_kind() == FormatNode::kRustTupleStruct) {
