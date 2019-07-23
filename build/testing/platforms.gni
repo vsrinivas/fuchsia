@@ -71,6 +71,11 @@ test_platforms = [
     pool = "fuchsia.tests.connectivity"
   },
   {
+    testbed = "wifi_rf_chamber_astro"
+    cpu = "arm64"
+    pool = "fuchsia.tests.connectivity"
+  },
+  {
     testbed = "wifi_rf_chamber_nuc"
     cpu = "x64"
     pool = "fuchsia.tests.connectivity"
