@@ -41,6 +41,7 @@ typedef std::map<SampleTimeNs, SampleValue> SampleStream;
 
 // This is clearer than using the raw number.
 constexpr SampleTimeNs kNanosecondsPerSecond = 1000000000;
+constexpr SampleTimeNs kSampleTimeInfinite = UINT64_MAX;
 
 // Special value for missing sample stream.
 constexpr SampleValue NO_STREAM = (SampleValue)-1ULL;
@@ -98,9 +99,58 @@ class RequestId {
   uint64_t request_id_;
 };
 
+// To delete/remove samples from a sample stream, create a DiscardSamplesRequest
+// for the desired time range (by default it will remove all samples for the
+// stream) and pass the struct to Dockyard::DiscardSamples().
+//
+// Do not delete or reuse the DiscardSamplesRequest until a corresponding
+// callback is made to your previously set OnDiscardSamplesCallback handler is
+// called.
+//
+// Note: Set an |OnDiscardSamplesCallback| with |SetDiscardSamplesHandler()|
+//       before using the request to be sure of getting the message that the
+//       request is complete.
+struct DiscardSamplesRequest {
+  DiscardSamplesRequest() = default;
+
+  // For matching against a DiscardSamplesResponse::request_id. Be sure to
+  // retain this request to properly interpret the |DiscardSamplesResponse|.
+  RequestId request_id;
+
+  // Request that samples are for time range |start_time..end_time|. Defaults to
+  // all samples (time zero to kSampleTimeInfinite). If there is no positive
+  // difference between start and end, the request will not have an effect.
+  SampleTimeNs start_time_ns = 0;
+  SampleTimeNs end_time_ns = kSampleTimeInfinite;
+
+  // Each stream is identified by a Dockyard ID. Multiple streams can be
+  // discarded.
+  std::vector<DockyardId> dockyard_ids;
+
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const DiscardSamplesRequest& request);
+};
+
+// A |DiscardSamplesResponse| is a reply for an individual
+// |DiscardSamplesRequest|.
+// See: DiscardSamplesRequest.
+struct DiscardSamplesResponse {
+  DiscardSamplesResponse() = default;
+  // For matching against a DiscardSamplesRequest::request_id.
+  uint64_t request_id;
+
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const DiscardSamplesResponse& response);
+};
+
 // A stream set is a portion of a sample stream. This request allows for
-// requesting multiple stream sets in a single request. There results will
-// arrive in the form of a |StreamSetsResponse|.
+// requesting multiple stream sets in a single request. The results will arrive
+// in the form of a |StreamSetsResponse|.
+//
+// Note: Set an |OnStreamSetsCallback| with |SetStreamSetsHandler()|
+//       before using the request to be sure of getting the message that the
+//       request is complete.
+//
 // See: StreamSetsResponse.
 struct StreamSetsRequest {
   enum RenderStyle {
@@ -175,7 +225,7 @@ struct StreamSetsRequest {
                                   const StreamSetsRequest& request);
 };
 
-// A |StreamSetsResponse| is a replay for an individual |StreamSetsRequest|.
+// A |StreamSetsResponse| is a reply for an individual |StreamSetsRequest|.
 // See: StreamSetsRequest.
 struct StreamSetsResponse {
   StreamSetsResponse() = default;
@@ -237,6 +287,12 @@ typedef std::function<void(const std::vector<PathInfo>& add,
 typedef std::function<void(const StreamSetsResponse& response)>
     OnStreamSetsCallback;
 
+// Called after (and in response to) a request is sent to |DiscardSamples()|.
+// Use SetDiscardSamplesHandler() to install a OnDiscardSamplesCallback
+// callback.
+typedef std::function<void(const DiscardSamplesResponse& response)>
+    OnDiscardSamplesCallback;
+
 class Dockyard {
  public:
   Dockyard();
@@ -270,6 +326,12 @@ class Dockyard {
     return host_time_ns + device_time_delta_ns_;
   };
 
+  // Discard the stream data. The path/ID lookup will remain intact after the
+  // discard (i.e. MatchPaths() will still find the paths).
+  //
+  // Do not free or reuse |request| until response callback is called.
+  void DiscardSamples(DiscardSamplesRequest* request);
+
   // Set the difference in clocks between the host machine and the Fuchsia
   // device, in nanoseconds.
   void SetDeviceTimeDeltaNs(SampleTimeNs delta_ns);
@@ -288,6 +350,12 @@ class Dockyard {
                        DockyardId* dockyard_id) const;
   bool GetDockyardPath(DockyardId dockyard_id,
                        std::string* dockyard_path) const;
+
+  // Search the existing paths for those that start with |starting| and end with
+  // |ending|. This is similar to having a single '*' wildcard search, something
+  // akin to find all "$starting*$ending".
+  // Returns a map of paths to IDs that is a subset of (or equal to) all known
+  // stream sets.
   DockyardPathToIdMap MatchPaths(const std::string& starting,
                                  const std::string& ending) const;
 
@@ -300,6 +368,8 @@ class Dockyard {
   // with SetStreamSetsHandler(). The |response| parameter on that callback will
   // have the same context ID that is returned from this call to
   // GetStreamSets() (i.e. that's how to match a response to a request).
+  //
+  // Do not free or reuse |request| until response callback is called.
   void GetStreamSets(StreamSetsRequest* request);
 
   // Called by server when a connection is made.
@@ -325,6 +395,15 @@ class Dockyard {
   //
   // Returns prior callback or nullptr.
   OnStreamSetsCallback SetStreamSetsHandler(OnStreamSetsCallback callback);
+
+  // Sets the function called when sample stream data arrives in response to a
+  // call to DiscardSamples(). So, first set a handler with
+  // SetDiscardSamplesHandler(), then make as many DiscardSamples() calls as
+  // desired. Pass nullptr as |callback| to stop receiving calls.
+  //
+  // Returns prior callback or nullptr.
+  OnDiscardSamplesCallback SetDiscardSamplesHandler(
+      OnDiscardSamplesCallback callback);
 
   // Generate responses and call handlers for sample requests. Not intended for
   // use by the GUI.
@@ -361,7 +440,10 @@ class Dockyard {
   OnConnectionCallback on_connection_handler_;
   OnPathsCallback on_paths_handler_;
   OnStreamSetsCallback on_stream_sets_handler_;
-  std::vector<StreamSetsRequest*> pending_requests_;
+  OnDiscardSamplesCallback on_discard_samples_handler_;
+
+  std::vector<StreamSetsRequest*> pending_get_requests_;
+  std::vector<DiscardSamplesRequest*> pending_discard_requests_;
 
   // Storage of sample data.
   SampleStreamMap sample_streams_;
@@ -371,6 +453,10 @@ class Dockyard {
   // Dockyard path <--> ID look up.
   DockyardPathToIdMap dockyard_path_to_id_;
   DockyardIdToPathMap dockyard_id_to_path_;
+
+  // Processes the requests entered by DiscardSamples().
+  void ProcessDiscardSamples(const DiscardSamplesRequest& discard,
+                             DiscardSamplesResponse* response);
 
   // Listen for incoming samples.
   void Initialize();
@@ -428,6 +514,7 @@ class Dockyard {
 
   friend class ::SystemMonitorDockyardHostTest;
   friend class ::dockyard::SystemMonitorDockyardTest;
+  friend std::ostream& operator<<(std::ostream& os, const Dockyard& dockyard);
 };
 
 // Merge and print a request and response. It can make debugging easier to have

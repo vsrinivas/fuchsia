@@ -56,7 +56,8 @@ void Dockyard::ResetHarvesterData() {
   latest_sample_time_ns_ = 0;
 
   // Maybe send error responses.
-  pending_requests_.clear();
+  pending_get_requests_.clear();
+  pending_discard_requests_.clear();
 
   sample_streams_.clear();
   sample_stream_low_high_.clear();

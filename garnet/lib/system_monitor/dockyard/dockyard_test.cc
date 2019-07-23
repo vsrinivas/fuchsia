@@ -16,14 +16,19 @@ class SystemMonitorDockyardTest : public ::testing::Test {
  public:
   void SetUp() {
     // Initialize to distinct values for testing.
-    name_call_count_ = 100;  // Arbitrary.
-    sets_call_count_ = 200;  // Arbitrary.
+    name_call_count_ = 0;
+    sets_call_count_ = 0;
+    discard_call_count_ = 0;
     EXPECT_EQ(nullptr, dockyard_.SetDockyardPathsHandler(std::bind(
                            &SystemMonitorDockyardTest::TestPathsCallback, this,
                            std::placeholders::_1, std::placeholders::_2)));
     EXPECT_EQ(nullptr, dockyard_.SetStreamSetsHandler(std::bind(
                            &SystemMonitorDockyardTest::TestStreamSetsCallback,
                            this, std::placeholders::_1)));
+    EXPECT_EQ(nullptr,
+              dockyard_.SetDiscardSamplesHandler(std::bind(
+                  &SystemMonitorDockyardTest::TestDiscardSamplesCallback, this,
+                  std::placeholders::_1)));
     // Add some samples.
     dockyard_.AddSamples(dockyard_.GetDockyardId("cpu0"),
                          {{10ULL, 8ULL}, {200ULL, 10ULL}, {300ULL, 20ULL}});
@@ -73,6 +78,11 @@ class SystemMonitorDockyardTest : public ::testing::Test {
     ++name_call_count_;
   }
 
+  void TestDiscardSamplesCallback(const DiscardSamplesResponse& response) {
+    ++discard_call_count_;
+    discard_response_ = std::move(response);
+  }
+
   void TestStreamSetsCallback(const StreamSetsResponse& response) {
     ++sets_call_count_;
     response_ = std::move(response);
@@ -80,23 +90,27 @@ class SystemMonitorDockyardTest : public ::testing::Test {
 
   int32_t name_call_count_;
   int32_t sets_call_count_;
+  int32_t discard_call_count_;
   Dockyard dockyard_;
+  DiscardSamplesResponse discard_response_;
   StreamSetsResponse response_;
 };
 
 namespace {
 
 TEST_F(SystemMonitorDockyardTest, NameCallback) {
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(200, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(0, sets_call_count_);
   dockyard_.ProcessRequests();
 }
 
 TEST_F(SystemMonitorDockyardTest, SetsCallback) {
   // No pending requests.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(200, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(0, sets_call_count_);
 }
 
 TEST_F(SystemMonitorDockyardTest, SlopeValuesMono) {
@@ -125,8 +139,9 @@ TEST_F(SystemMonitorDockyardTest, SlopeValuesMono) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
 
   EXPECT_EQ(0ULL, response_.lowest_value);
   EXPECT_EQ(dockyard::SLOPE_LIMIT, response_.highest_value);
@@ -155,8 +170,9 @@ TEST_F(SystemMonitorDockyardTest, SlopeCpu3Highest) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
 
   EXPECT_EQ(0ULL, response_.lowest_value);
   EXPECT_EQ(1000000ULL, response_.highest_value);
@@ -199,8 +215,9 @@ TEST_F(SystemMonitorDockyardTest, SlopeCpu3Average) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
 
   EXPECT_EQ(0ULL, response_.lowest_value);
   EXPECT_EQ(1000000ULL, response_.highest_value);
@@ -229,8 +246,9 @@ TEST_F(SystemMonitorDockyardTest, RawPastEndResponse) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
   EXPECT_EQ(8ULL, response_.lowest_value);
   EXPECT_EQ(20ULL, response_.highest_value);
   ASSERT_EQ(1UL, response_.data_sets.size());
@@ -260,8 +278,9 @@ TEST_F(SystemMonitorDockyardTest, RawSparseResponse) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
   EXPECT_EQ(8ULL, response_.lowest_value);
   EXPECT_EQ(20ULL, response_.highest_value);
   ASSERT_EQ(1UL, response_.data_sets.size());
@@ -292,8 +311,9 @@ TEST_F(SystemMonitorDockyardTest, RawDataSetsCpu1) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
   EXPECT_EQ(3ULL, response_.lowest_value);
   EXPECT_EQ(100ULL, response_.highest_value);
   ASSERT_EQ(1UL, response_.data_sets.size());
@@ -324,8 +344,9 @@ TEST_F(SystemMonitorDockyardTest, RawDataSetsCpu2) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
   EXPECT_EQ(3ULL, response_.lowest_value);
   EXPECT_EQ(100ULL, response_.highest_value);
   ASSERT_EQ(1UL, response_.data_sets.size());
@@ -353,8 +374,9 @@ TEST_F(SystemMonitorDockyardTest, RawDataSetsCpus012) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
   EXPECT_EQ(3ULL, response_.lowest_value);
   EXPECT_EQ(100ULL, response_.highest_value);
   ASSERT_EQ(3UL, response_.data_sets.size());
@@ -387,8 +409,9 @@ TEST_F(SystemMonitorDockyardTest, HighDataSetsCpus12) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
   EXPECT_EQ(3ULL, response_.lowest_value);
   EXPECT_EQ(100ULL, response_.highest_value);
   ASSERT_EQ(2UL, response_.data_sets.size());
@@ -416,8 +439,9 @@ TEST_F(SystemMonitorDockyardTest, LowDataSetsCpus12) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
   EXPECT_EQ(3ULL, response_.lowest_value);
   EXPECT_EQ(100ULL, response_.highest_value);
   ASSERT_EQ(2UL, response_.data_sets.size());
@@ -445,8 +469,9 @@ TEST_F(SystemMonitorDockyardTest, NormalizedDataSetsCpu2) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
   EXPECT_EQ(3ULL, response_.lowest_value);
   EXPECT_EQ(100ULL, response_.highest_value);
   ASSERT_EQ(1UL, response_.data_sets.size());
@@ -472,8 +497,9 @@ TEST_F(SystemMonitorDockyardTest, SmoothDataSetsCpu2) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
   EXPECT_EQ(3ULL, response_.lowest_value);
   EXPECT_EQ(100ULL, response_.highest_value);
   ASSERT_EQ(1UL, response_.data_sets.size());
@@ -499,8 +525,9 @@ TEST_F(SystemMonitorDockyardTest, SculptedDataSetsCpu2) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
   EXPECT_EQ(3ULL, response_.lowest_value);
   EXPECT_EQ(100ULL, response_.highest_value);
   ASSERT_EQ(1UL, response_.data_sets.size());
@@ -538,8 +565,9 @@ TEST_F(SystemMonitorDockyardTest, RandomSamples) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
   EXPECT_EQ(10ULL, response_.lowest_value);
   EXPECT_EQ(100ULL, response_.highest_value);
   ASSERT_EQ(1UL, response_.data_sets.size());
@@ -605,8 +633,9 @@ TEST_F(SystemMonitorDockyardTest, RecentDataSetsCpus12) {
 
   // Kick a process call.
   dockyard_.ProcessRequests();
-  EXPECT_EQ(100, name_call_count_);
-  EXPECT_EQ(201, sets_call_count_);
+  EXPECT_EQ(0, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
   EXPECT_EQ(3ULL, response_.lowest_value);
   EXPECT_EQ(100ULL, response_.highest_value);
   ASSERT_EQ(2UL, response_.data_sets.size());
@@ -698,6 +727,84 @@ TEST_F(SystemMonitorDockyardTest, StreamRef) {
   }
   // Requesting the same streams reuse the existing streams.
   EXPECT_EQ(stream_map.size(), 2ULL);
+}
+
+TEST_F(SystemMonitorDockyardTest, DefaultValues) {
+  RandomSampleGenerator gen;
+  EXPECT_EQ(0u, gen.dockyard_id);
+  EXPECT_EQ(0u, gen.seed);
+  EXPECT_EQ(0u, gen.start);
+  EXPECT_EQ(100U, gen.finish);
+  EXPECT_EQ(RandomSampleGenerator::TIME_STYLE_LINEAR, gen.time_style);
+  EXPECT_EQ(RandomSampleGenerator::VALUE_STYLE_SINE_WAVE, gen.value_style);
+  EXPECT_EQ(0u, gen.value_min);
+  EXPECT_EQ(dockyard::SAMPLE_MAX_VALUE, gen.value_max);
+  EXPECT_EQ(100u, gen.sample_count);
+
+  DiscardSamplesRequest discard;
+  EXPECT_EQ(0u, discard.start_time_ns);
+  EXPECT_EQ(dockyard::kSampleTimeInfinite, discard.end_time_ns);
+  EXPECT_EQ(0u, discard.dockyard_ids.size());
+
+  StreamSetsRequest request;
+  EXPECT_EQ(0u, request.start_time_ns);
+  EXPECT_EQ(0u, request.end_time_ns);
+  EXPECT_EQ(0u, request.sample_count);
+  EXPECT_EQ(StreamSetsRequest::AVERAGE_PER_COLUMN, request.render_style);
+  EXPECT_EQ(0u, request.dockyard_ids.size());
+}
+
+TEST_F(SystemMonitorDockyardTest, Discard) {
+  constexpr uint64_t SAMPLE_COUNT = 40;
+  RandomSampleGenerator gen;
+  gen.dockyard_id = dockyard_.GetDockyardId("fake0");
+  gen.seed = 1234;
+  gen.time_style = RandomSampleGenerator::TIME_STYLE_LINEAR;
+  gen.start = 100;
+  gen.finish = 500;
+  gen.value_style = RandomSampleGenerator::VALUE_STYLE_SINE_WAVE;
+  gen.value_min = 10;
+  gen.value_max = 100;
+  gen.sample_count = SAMPLE_COUNT;
+  GenerateRandomSamples(gen, &dockyard_);
+
+  // Discard some samples.
+  DiscardSamplesRequest discard;
+  discard.start_time_ns = 0;
+  discard.end_time_ns = 300;
+  discard.dockyard_ids.push_back(dockyard_.GetDockyardId("fake0"));
+  EXPECT_EQ(0, discard_call_count_);
+  dockyard_.DiscardSamples(&discard);
+  dockyard_.ProcessRequests();
+
+  EXPECT_EQ(1, discard_call_count_);
+  EXPECT_EQ(discard.request_id(), discard_response_.request_id);
+
+  // Add pending request.
+  StreamSetsRequest request;
+  request.start_time_ns = 100;
+  request.end_time_ns = 500;
+  request.sample_count = SAMPLE_COUNT;
+  request.render_style = StreamSetsRequest::RECENT;
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("fake0"));
+  dockyard_.GetStreamSets(&request);
+  dockyard_.ProcessRequests();
+
+  // Check results.
+  EXPECT_EQ(request.request_id(), response_.request_id);
+  EXPECT_EQ(1, discard_call_count_);
+  EXPECT_EQ(0, name_call_count_);
+  EXPECT_EQ(1, sets_call_count_);
+  EXPECT_EQ(10ULL, response_.lowest_value);
+  EXPECT_EQ(100ULL, response_.highest_value);
+  ASSERT_EQ(1UL, response_.data_sets.size());
+  ASSERT_EQ(SAMPLE_COUNT, response_.data_sets[0].size());
+  // Check the samples themselves.
+  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][0]);
+  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][9]);
+  EXPECT_EQ(dockyard::NO_DATA, response_.data_sets[0][19]);
+  EXPECT_EQ(29ULL, response_.data_sets[0][29]);
+  EXPECT_EQ(99ULL, response_.data_sets[0][39]);
 }
 
 }  // namespace
