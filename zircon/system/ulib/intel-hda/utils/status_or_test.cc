@@ -5,9 +5,10 @@
 #include "intel-hda/utils/status_or.h"
 
 #include <zircon/errors.h>
-#include <zxtest/zxtest.h>
 
 #include <string>
+
+#include <zxtest/zxtest.h>
 
 #include "fbl/alloc_checker.h"
 

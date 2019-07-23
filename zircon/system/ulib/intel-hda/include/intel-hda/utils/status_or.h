@@ -73,7 +73,7 @@ class [[nodiscard]] StatusOr {
   }
 
   // Move the value, or abort execution if we have an error.
-  [[nodiscard]] T&& ConsumeValueOrDie() {
+  [[nodiscard]] T ConsumeValueOrDie() {
     if (unlikely(!ok())) {
       ZX_PANIC("Attempted to get value of StatusOr in error state.");
     }
