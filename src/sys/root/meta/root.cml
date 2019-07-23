@@ -7,43 +7,46 @@
     },
   ],
   "offer": [
+    // These services and directories routed from "realm" at the root are provided by bootsvc
+    // through component_manager's namespace.
     {
       "directory": "/boot",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },
-    // TODO: Update bootsvc to export services under /svc instead of /bootsvc
     {
-      "service": "/bootsvc/fuchsia.boot.RootJob",
+      "service": "/svc/fuchsia.boot.RootJob",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },
     {
-      "service": "/bootsvc/fuchsia.boot.RootResource",
+      "service": "/svc/fuchsia.boot.RootResource",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },
     {
-      "service": "/bootsvc/fuchsia.boot.Arguments",
+      "service": "/svc/fuchsia.boot.Arguments",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },
     {
-      "service": "/bootsvc/fuchsia.boot.FactoryItems",
+      "service": "/svc/fuchsia.boot.FactoryItems",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },
     {
-      "service": "/bootsvc/fuchsia.boot.Items",
+      "service": "/svc/fuchsia.boot.Items",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },
     {
-      "service": "/bootsvc/fuchsia.boot.Log",
+      "service": "/svc/fuchsia.boot.Log",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },
-    // TODO: Implement routing from /builtin
+    // ...except for this one, which is provided by component_manager itself.
+    // TODO: Implement routing from /builtin (this doesn't actually work yet), and consider making
+    // the distinction from bootsvc services clearer.
     {
       "service": "/builtin/fuchsia.process.Launcher",
       "from": "realm",

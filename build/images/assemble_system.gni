@@ -262,6 +262,20 @@ template("assemble_system") {
     ]
   }
 
+  component_manager_label = "//src/sys/component_manager:component_manager.bootfs"
+  component_manager_target_dir =
+      get_label_info(component_manager_label, "target_out_dir")
+  component_manager_target_name = get_label_info(component_manager_label, "name")
+  component_manager_manifest =
+      component_manager_target_dir + "/" + component_manager_target_name
+
+  root_manifests_label = "//src/sys/root:root_manifests.bootfs"
+  root_manifests_target_dir =
+      get_label_info(root_manifests_label, "target_out_dir")
+  root_manifests_target_name = get_label_info(root_manifests_label, "name")
+  root_manifests_manifest =
+      root_manifests_target_dir + "/" + root_manifests_target_name
+
   zbi(image_name) {
     metadata = {
       # We insert a package barrier because the packages inside this ZBI
@@ -282,9 +296,13 @@ template("assemble_system") {
       ":devmgr_config.txt",
       ":fvm.blk",
       ":system_image.manifest",
+      component_manager_label,
+      root_manifests_label,
     ]
     inputs = [
       boot_manifest,
+      component_manager_manifest,
+      root_manifests_manifest,
       zircon_kernel_zbi,
     ]
     manifest = [
