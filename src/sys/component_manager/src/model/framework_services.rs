@@ -60,21 +60,20 @@ impl FrameworkServiceError {
 impl FrameworkServiceHost {
     /// Serve the framework_services service denoted by `path` over `server_chan`.
     pub async fn serve<'a>(
+        framework_services: Arc<dyn FrameworkServiceHost>,
         model: Model,
         realm: Arc<Realm>,
-        path: &'a CapabilityPath,
+        path: CapabilityPath,
         server_chan: zx::Channel,
     ) -> Result<(), FrameworkServiceError> {
-        if *path == *REALM_SERVICE {
+        if path == *REALM_SERVICE {
             let stream = ServerEnd::<fsys::RealmMarker>::new(server_chan)
                 .into_stream()
                 .expect("could not convert channel into stream");
             fasync::spawn(async move {
-                if let Err(e) = await!(model.framework_services.serve_realm_service(
-                    model.clone(),
-                    realm,
-                    stream
-                )) {
+                if let Err(e) =
+                    await!(framework_services.serve_realm_service(model.clone(), realm, stream))
+                {
                     // TODO: Set an epitaph to indicate this was an unexpected error.
                     warn!("serve_realm failed: {}", e);
                 }

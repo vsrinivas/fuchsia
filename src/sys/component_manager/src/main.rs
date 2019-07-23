@@ -7,7 +7,7 @@
 use {
     component_manager_lib::{
         elf_runner::{ElfRunner, ProcessLauncherConnector},
-        framework_services::RealFrameworkServiceHost,
+        framework::RealFrameworkServiceHost,
         klog,
         model::{AbsoluteMoniker, Model, ModelConfig, ModelParams},
         startup,
@@ -39,7 +39,7 @@ fn main() -> Result<(), Error> {
     let builtin_services = Arc::new(startup::BuiltinRootServices::new(&args)?);
     let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
     let mut params = ModelParams {
-        framework_services: Box::new(RealFrameworkServiceHost::new()),
+        framework_services: Arc::new(RealFrameworkServiceHost::new()),
         root_component_url: args.root_component_url,
         root_resolver_registry: resolver_registry,
         root_default_runner: Arc::new(ElfRunner::new(launcher_connector)),

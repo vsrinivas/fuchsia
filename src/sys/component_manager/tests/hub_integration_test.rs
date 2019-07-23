@@ -7,7 +7,7 @@
 use {
     component_manager_lib::{
         elf_runner::{ElfRunner, ProcessLauncherConnector},
-        framework_services::RealFrameworkServiceHost,
+        framework::RealFrameworkServiceHost,
         model::{
             self,
             testing::test_utils::{list_directory, read_file},
@@ -63,7 +63,7 @@ async fn test() -> Result<(), Error> {
     hooks.push(hub.clone());
 
     let params = ModelParams {
-        framework_services: Box::new(RealFrameworkServiceHost::new()),
+        framework_services: Arc::new(RealFrameworkServiceHost::new()),
         root_component_url: root_component_url,
         root_resolver_registry: resolver_registry,
         root_default_runner: Arc::new(runner),

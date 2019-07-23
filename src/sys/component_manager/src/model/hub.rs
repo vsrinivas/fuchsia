@@ -3,13 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    crate::directory_broker,
-    crate::model::{
-        self,
-        addable_directory::{AddableDirectory, AddableDirectoryWithResult},
-        error::ModelError,
+    crate::{
+        directory_broker,
+        framework::FrameworkCapability,
+        model::{
+            self,
+            addable_directory::{AddableDirectory, AddableDirectoryWithResult},
+            error::ModelError,
+        },
     },
-    cm_rust::UseDecl,
+    cm_rust::{CapabilityPath, UseDecl},
+    failure::format_err,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS},
     fuchsia_async as fasync,
@@ -21,6 +25,75 @@ use {
     },
     std::{collections::HashMap, sync::Arc},
 };
+
+struct HubCapability {
+    abs_moniker: model::AbsoluteMoniker,
+    capability_path: CapabilityPath,
+    instances: Arc<Mutex<HashMap<model::AbsoluteMoniker, Instance>>>,
+}
+
+impl HubCapability {
+    pub fn new(
+        abs_moniker: model::AbsoluteMoniker,
+        capability_path: CapabilityPath,
+        instances: Arc<Mutex<HashMap<model::AbsoluteMoniker, Instance>>>,
+    ) -> Self {
+        HubCapability { abs_moniker, capability_path, instances }
+    }
+
+    pub async fn open_async(
+        &self,
+        flags: u32,
+        open_mode: u32,
+        relative_path: String,
+        server_end: zx::Channel,
+    ) -> Result<(), ModelError> {
+        let mut dir_path = self.capability_path.split();
+        if dir_path.is_empty() || dir_path.remove(0) != "hub" {
+            return Err(ModelError::unsupported_hook_error(format_err!(
+                "HubCapability does not support the capability {}",
+                self.capability_path.to_string()
+            )));
+        }
+
+        dir_path.append(
+            &mut relative_path
+                .split("/")
+                .map(|s| s.to_string())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<String>>(),
+        );
+
+        let instances_map = await!(self.instances.lock());
+        if !instances_map.contains_key(&self.abs_moniker) {
+            return Err(ModelError::unsupported_hook_error(format_err!(
+                "HubCapability is unable to find Realm \"{}\"",
+                self.abs_moniker
+            )));
+        }
+        await!(instances_map[&self.abs_moniker].directory.open_node(
+            flags,
+            open_mode,
+            dir_path,
+            ServerEnd::<NodeMarker>::new(server_end),
+            &self.abs_moniker
+        ))?;
+
+        Ok(())
+    }
+}
+
+impl FrameworkCapability for HubCapability {
+    fn open(
+        &self,
+        flags: u32,
+        open_mode: u32,
+        relative_path: String,
+        server_chan: zx::Channel,
+    ) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.open_async(flags, open_mode, relative_path, server_chan))
+    }
+}
 
 /// Hub state on an instance of a component.
 struct Instance {
@@ -38,7 +111,7 @@ struct Execution {
 }
 
 pub struct Hub {
-    instances: Mutex<HashMap<model::AbsoluteMoniker, Instance>>,
+    instances: Arc<Mutex<HashMap<model::AbsoluteMoniker, Instance>>>,
     /// Called when Hub is dropped to drop pseudodirectory hosting the Hub.
     abort_handle: AbortHandle,
 }
@@ -70,7 +143,7 @@ impl Hub {
             let _ = await!(future);
         });
 
-        Ok(Hub { instances: Mutex::new(instances_map), abort_handle })
+        Ok(Hub { instances: Arc::new(Mutex::new(instances_map)), abort_handle })
     }
 
     fn add_instance_if_necessary(
@@ -133,34 +206,6 @@ impl Hub {
         Ok(())
     }
 
-    // `route_open_fn` will cause any call on the hub's inserted directory to be
-    // redirected to the component's 'dir' directory. All directory
-    // operations other than `Open` will be received by the 'dir'
-    // directory, because those calls are preceded by an `Open` on a path
-    // in the hub's insertion point.
-    fn route_open_fn(
-        dir: DirectoryProxy,
-    ) -> Box<FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Send> {
-        Box::new(
-            move |flags: u32,
-                  mode: u32,
-                  relative_path: String,
-                  server_end: ServerEnd<NodeMarker>| {
-                // If we want to open the 'dir' directory directly, then call clone.
-                // Otherwise, pass long the remaining 'relative_path' to the component
-                // hosting the out directory to resolve.
-                if !relative_path.is_empty() {
-                    // TODO(fsamuel): Currently DirectoryEntry::open does not return
-                    // a Result so we cannot propagate this error up. We probably
-                    // want to change that.
-                    let _ = dir.open(flags, mode, &relative_path, server_end);
-                } else {
-                    let _ = dir.clone(flags, server_end);
-                }
-            },
-        )
-    }
-
     fn add_resolved_url_file(
         execution_directory: &mut directory::controlled::Controlled<'static>,
         resolved_url: String,
@@ -193,7 +238,7 @@ impl Hub {
         if let Some(pkg_dir) = Self::clone_dir(pkg_dir) {
             in_dir.add_node(
                 "pkg",
-                directory_broker::DirectoryBroker::new(Self::route_open_fn(pkg_dir)),
+                directory_broker::DirectoryBroker::from_directory_proxy(pkg_dir),
                 &abs_moniker,
             )?;
         }
@@ -227,7 +272,7 @@ impl Hub {
         if let Some(out_dir) = Self::clone_dir(execution.outgoing_dir.as_ref()) {
             execution_directory.add_node(
                 "out",
-                directory_broker::DirectoryBroker::new(Self::route_open_fn(out_dir)),
+                directory_broker::DirectoryBroker::from_directory_proxy(out_dir),
                 &abs_moniker,
             )?;
         }
@@ -242,7 +287,7 @@ impl Hub {
         if let Some(runtime_dir) = Self::clone_dir(execution.runtime_dir.as_ref()) {
             execution_directory.add_node(
                 "runtime",
-                directory_broker::DirectoryBroker::new(Self::route_open_fn(runtime_dir)),
+                directory_broker::DirectoryBroker::from_directory_proxy(runtime_dir),
                 &abs_moniker,
             )?;
         }
@@ -324,42 +369,34 @@ impl Hub {
 
     async fn on_route_framework_capability_async<'a>(
         &'a self,
-        flags: u32,
-        open_mode: u32,
-        relative_path: String,
-        abs_moniker: &'a model::AbsoluteMoniker,
+        realm: Arc<model::Realm>,
         use_decl: &'a UseDecl,
-        server_chan: &'a mut Option<zx::Channel>,
-    ) -> Result<(), ModelError> {
-        let mut dir_path = match use_decl {
-            UseDecl::Directory(d) => d.source_path.split(),
-            _ => return Ok(()),
+        capability: Option<Box<dyn FrameworkCapability>>,
+    ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
+        // If there is already a capability for this capability then it's not a
+        // capability destined for the hub.
+        if capability.is_some() {
+            return Ok(capability);
+        }
+
+        // If this capability is not a directory, then it's not a hub capability.
+        let capability_path = match use_decl {
+            UseDecl::Directory(d) => d.source_path.clone(),
+            _ => return Ok(capability),
         };
+        let mut dir_path = capability_path.split();
 
+        // If this capability's source path doesn't begin with 'hub', then it's
+        // not a hub capability.
         if dir_path.is_empty() || dir_path.remove(0) != "hub" {
-            return Ok(());
+            return Ok(capability);
         }
 
-        let instances_map = await!(self.instances.lock());
-        if !instances_map.contains_key(abs_moniker) {
-            return Ok(());
-        }
-        dir_path.append(
-            &mut relative_path
-                .split("/")
-                .map(|s| s.to_string())
-                .filter(|s| !s.is_empty())
-                .collect::<Vec<String>>(),
-        );
-        let chan = server_chan.take().expect("Could not take channel.");
-        await!(instances_map[&abs_moniker].directory.open_node(
-            flags,
-            open_mode,
-            dir_path,
-            ServerEnd::<NodeMarker>::new(chan),
-            abs_moniker
-        ))?;
-        Ok(())
+        Ok(Some(Box::new(HubCapability::new(
+            realm.abs_moniker.clone(),
+            capability_path,
+            self.instances.clone(),
+        ))))
     }
 
     // TODO(fsamuel): We should probably preserve the original error messages
@@ -394,21 +431,11 @@ impl model::Hook for Hub {
 
     fn on_route_framework_capability<'a>(
         &'a self,
-        flags: u32,
-        open_mode: u32,
-        relative_path: String,
-        abs_moniker: &'a model::AbsoluteMoniker,
+        realm: Arc<model::Realm>,
         use_decl: &'a UseDecl,
-        server_chan: &'a mut Option<zx::Channel>,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.on_route_framework_capability_async(
-            flags,
-            open_mode,
-            relative_path,
-            abs_moniker,
-            use_decl,
-            server_chan,
-        ))
+        capability: Option<Box<dyn FrameworkCapability>>,
+    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
+        Box::pin(self.on_route_framework_capability_async(realm, use_decl, capability))
     }
 }
 
@@ -422,6 +449,7 @@ mod tests {
             testing::mocks,
             testing::{
                 routing_test_helpers::default_component_decl,
+                test_hook::HubInjectionTestHook,
                 test_utils::{dir_contains, list_directory, list_directory_recursive, read_file},
             },
         },
@@ -508,6 +536,14 @@ mod tests {
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
     ) -> (Arc<model::Model>, DirectoryProxy) {
+        await!(start_component_manager_with_hub_and_hooks(root_component_url, components, vec![]))
+    }
+
+    async fn start_component_manager_with_hub_and_hooks(
+        root_component_url: String,
+        components: Vec<ComponentDescriptor>,
+        mut additional_hooks: model::Hooks,
+    ) -> (Arc<model::Model>, DirectoryProxy) {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
         let mut resolver = model::ResolverRegistry::new();
         let mut runner = mocks::MockRunner::new();
@@ -526,7 +562,6 @@ mod tests {
         }
         resolver.register("test".to_string(), Box::new(mock_resolver));
 
-        let mut hooks: model::Hooks = Vec::new();
         let mut root_directory = directory::simple::empty();
 
         let (client_chan, server_chan) = zx::Channel::create().unwrap();
@@ -538,9 +573,11 @@ mod tests {
         );
 
         let hub = Arc::new(Hub::new(root_component_url.clone(), root_directory).unwrap());
+        let mut hooks: model::Hooks = Vec::new();
         hooks.push(hub);
+        hooks.append(&mut additional_hooks);
         let model = Arc::new(model::Model::new(model::ModelParams {
-            framework_services: Box::new(mocks::MockFrameworkServiceHost::new()),
+            framework_services: Arc::new(mocks::MockFrameworkServiceHost::new()),
             root_component_url,
             root_resolver_registry: resolver,
             root_default_runner: Arc::new(runner),
@@ -643,6 +680,62 @@ mod tests {
         ));
 
         assert_eq!("blah", await!(read_file(&hub_proxy, "self/exec/runtime/bleep")));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn hub_test_hook_interception() {
+        let root_component_url = "test:///root".to_string();
+        let (_model, hub_proxy) = await!(start_component_manager_with_hub_and_hooks(
+            root_component_url.clone(),
+            vec![ComponentDescriptor {
+                name: "root".to_string(),
+                decl: ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    uses: vec![UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Framework,
+                        source_path: CapabilityPath::try_from("/hub").unwrap(),
+                        target_path: CapabilityPath::try_from("/hub").unwrap(),
+                    }),],
+                    ..default_component_decl()
+                },
+                host_fn: None,
+                runtime_host_fn: None,
+            }],
+            vec![Arc::new(HubInjectionTestHook::new())]
+        ));
+
+        let in_dir = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("self/exec/in"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+        assert_eq!(vec!["hub"], await!(list_directory(&in_dir)));
+
+        let scoped_hub_dir_proxy = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("self/exec/in/hub"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+        // There are no out or runtime directories because there is no program running.
+        assert_eq!(vec!["old_hub"], await!(list_directory(&scoped_hub_dir_proxy)));
+
+        let old_hub_dir_proxy = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("self/exec/in/hub/old_hub/exec"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+        // There are no out or runtime directories because there is no program running.
+        assert_eq!(
+            vec!["expose", "in", "resolved_url"],
+            await!(list_directory(&old_hub_dir_proxy))
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

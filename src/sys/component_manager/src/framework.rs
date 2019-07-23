@@ -3,11 +3,145 @@
 // found in the LICENSE file.
 
 use {
+    cm_rust::{CapabilityPath, UseDecl},
     crate::model::*, cm_fidl_validator, cm_rust::FidlIntoNative, failure::Error,
     fidl::endpoints::ServerEnd, fidl_fuchsia_io::DirectoryMarker, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync, futures::future::FutureObj, futures::prelude::*, log::*, std::cmp,
+    fuchsia_zircon as zx,
+    futures::future::BoxFuture,
     std::sync::Arc,
 };
+
+/// The service-side of a framework capability implements this trait.
+/// Multiple FrameworkCapability objects can compose with one another for a single
+/// framework capability request. For example, a FrameworkCapabitility can be interposed
+/// between the primary FrameworkCapability and the client for the purpose of logging,
+/// and testing. A FrameworkCapability is typically provided by a corresponding Hook in
+/// response to the on_route_framework_capability event.
+pub trait FrameworkCapability: Send + Sync {
+    // Called to bind a server end of a zx::Channel to the provided framework capability.
+    // If the capability is a directory, then |flags|, |open_mode| and |relative_path|
+    // will be propagated along to open the appropriate directory.
+    fn open(
+        &self,
+        flags: u32,
+        open_mode: u32,
+        relative_path: String,
+        server_end: zx::Channel,
+    ) -> BoxFuture<Result<(), ModelError>>;
+}
+
+// The default implementation for framework services.
+pub struct DefaultFrameworkCapability {
+    model: Model,
+    framework_services: Arc<dyn FrameworkServiceHost>,
+    realm: Arc<Realm>,
+    capability_path: CapabilityPath,
+}
+
+impl DefaultFrameworkCapability {
+    pub fn new(model: Model, framework_services: Arc<dyn FrameworkServiceHost>,
+               realm: Arc<Realm>, capability_path: CapabilityPath) -> Self {
+        DefaultFrameworkCapability { model, framework_services, realm, capability_path }
+    }
+
+    pub async fn open_async(
+        &self,
+        _flags: u32,
+        _open_mode: u32,
+        _relative_path: String,
+        server_end: zx::Channel,
+    ) -> Result<(), ModelError> {
+        await!(FrameworkServiceHost::serve(
+            self.framework_services.clone(),
+            self.model.clone(),
+            self.realm.clone(),
+            self.capability_path.clone(),
+            server_end
+        ))?;
+        Ok(())
+    }
+}
+
+impl FrameworkCapability for DefaultFrameworkCapability {
+    fn open(
+        &self,
+        flags: u32,
+        open_mode: u32,
+        relative_path: String,
+        server_chan: zx::Channel,
+    ) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.open_async(flags, open_mode, relative_path, server_chan))
+    }
+}
+pub struct FrameworkServicesHook {
+    model: Model,
+    framework_services: Arc<dyn FrameworkServiceHost>,
+}
+
+// FrameworkServicesHook is a Hook that injects framework services.
+impl FrameworkServicesHook {
+    pub fn new(model: Model, framework_services: Arc<dyn FrameworkServiceHost>) -> Self {
+        FrameworkServicesHook { model, framework_services }
+    }
+
+    pub async fn on_route_framework_capability_async<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+        use_decl: &'a UseDecl,
+        capability: Option<Box<dyn FrameworkCapability>>,
+    ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
+        // If some other capability has already been installed, then there's nothing to
+        // do here.
+        if capability.is_some() {
+            return Ok(capability);
+        }
+
+        let capability_path = match &use_decl {
+            UseDecl::Service(s) => (*s).source_path.clone(),
+            _ => return Ok(capability),
+        };
+
+        if FRAMEWORK_SERVICES.iter().find(|p| ***p == capability_path).is_some() {
+            return Ok(Some(Box::new(DefaultFrameworkCapability::new(
+                self.model.clone(),
+                self.framework_services.clone(),
+                realm.clone(),
+                capability_path,
+            ))));
+        }
+
+        Ok(capability)
+    }
+}
+
+impl Hook for FrameworkServicesHook {
+    fn on_bind_instance<'a>(
+        &'a self,
+        _realm: Arc<Realm>,
+        _realm_state: &'a RealmState,
+        _routing_facade: RoutingFacade,
+    ) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn on_add_dynamic_child(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn on_remove_dynamic_child(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn on_route_framework_capability<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+        use_decl: &'a UseDecl,
+        capability: Option<Box<dyn FrameworkCapability>>,
+    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
+        Box::pin(self.on_route_framework_capability_async(realm, use_decl, capability))
+    }
+}
 
 /// Provides the implementation of `FrameworkServiceHost` which is used in production.
 pub struct RealFrameworkServiceHost {}
@@ -264,8 +398,9 @@ mod tests {
             let hook = Arc::new(TestHook::new());
             let mut config = ModelConfig::default();
             config.list_children_batch_size = 2;
+            let framework_services = Arc::new(RealFrameworkServiceHost::new());
             let model = Model::new(ModelParams {
-                framework_services: Box::new(RealFrameworkServiceHost::new()),
+                framework_services: framework_services.clone(),
                 root_component_url: "test:///root".to_string(),
                 root_resolver_registry: resolver,
                 root_default_runner: Arc::new(mock_runner),
@@ -285,7 +420,7 @@ mod tests {
                 let realm = realm.clone();
                 let model = model.clone();
                 fasync::spawn(async move {
-                    await!(model.framework_services.serve_realm_service(
+                    await!(framework_services.serve_realm_service(
                         model.clone(),
                         realm,
                         stream

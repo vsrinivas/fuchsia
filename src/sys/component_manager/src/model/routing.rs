@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::*,
+    crate::{framework::FrameworkCapability, model::*},
     cm_rust::{
         self, CapabilityPath, ExposeDecl, ExposeSource, OfferDecl, OfferDirectorySource,
         OfferServiceSource, OfferStorageSource, StorageDecl, UseDecl, UseSource,
@@ -61,15 +61,7 @@ pub async fn route_use_capability<'a>(
         ));
     }
     let source = await!(find_used_capability_source(model, use_decl, &abs_moniker))?;
-    await!(open_capability_at_source(
-        model,
-        flags,
-        open_mode,
-        relative_path,
-        abs_moniker,
-        source,
-        server_chan
-    ))
+    await!(open_capability_at_source(model, flags, open_mode, relative_path, source, server_chan))
 }
 
 /// Finds the source of the expose capability used at `source_path` by
@@ -87,15 +79,7 @@ pub async fn route_expose_capability<'a>(
         WalkPosition { capability, last_child_moniker: None, moniker: Some(abs_moniker.clone()) };
     let source = await!(walk_expose_chain(model, &mut pos))?;
     let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
-    await!(open_capability_at_source(
-        model,
-        flags,
-        open_mode,
-        String::new(),
-        abs_moniker,
-        source,
-        server_chan
-    ))
+    await!(open_capability_at_source(model, flags, open_mode, String::new(), source, server_chan))
 }
 
 /// Open the capability at the given source, binding to its component instance if necessary.
@@ -104,7 +88,6 @@ async fn open_capability_at_source<'a>(
     flags: u32,
     open_mode: u32,
     relative_path: String,
-    abs_moniker: AbsoluteMoniker,
     source: CapabilitySource,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
@@ -135,7 +118,6 @@ async fn open_capability_at_source<'a>(
                 flags,
                 open_mode,
                 relative_path,
-                &abs_moniker,
                 realm,
                 &use_,
                 server_chan
@@ -153,35 +135,22 @@ async fn open_framework_capability<'a>(
     flags: u32,
     open_mode: u32,
     relative_path: String,
-    abs_moniker: &'a AbsoluteMoniker,
     realm: Arc<Realm>,
     use_: &'a UseDecl,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
-    let mut server_chan = Some(server_chan);
+    let mut framework_capability: Option<Box<dyn FrameworkCapability>> = None;
+
     // Iterate over all the hooks until one consumes |server_chan|.
     for hook in model.hooks.iter() {
-        await!(hook.on_route_framework_capability(
-            flags,
-            open_mode,
-            relative_path.clone(),
-            &abs_moniker,
-            use_,
-            &mut server_chan
-        ))?;
-        if server_chan.is_none() {
-            return Ok(());
-        }
+        framework_capability =
+            await!(hook.on_route_framework_capability(realm.clone(), use_, framework_capability))?;
     }
-    let server_chan = server_chan.unwrap();
-    match use_ {
-        UseDecl::Service(s) => {
-            await!(FrameworkServiceHost::serve(model.clone(), realm, &s.source_path, server_chan))?;
-        }
-        _ => {
-            return Err(ModelError::unsupported("Non-service framework capability"));
-        }
+
+    if let Some(framework_capability) = framework_capability {
+        await!(framework_capability.open(flags, open_mode, relative_path, server_chan))?;
     }
+
     Ok(())
 }
 

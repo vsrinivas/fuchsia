@@ -3,9 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::framework_services::RealFrameworkServiceHost,
-    crate::model::testing::mocks::*,
-    crate::model::testing::routing_test_helpers::*,
+    crate::{
+        framework::RealFrameworkServiceHost,
+        model::testing::{
+            mocks::*,
+            routing_test_helpers::*,
+        },
+    },
     cm_rust::{
         self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
         ExposeDirectoryDecl, ExposeServiceDecl, ExposeSource, OfferDecl, OfferDirectoryDecl,

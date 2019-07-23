@@ -3,8 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::*,
-    cm_rust::UseDecl,
+    crate::{
+        directory_broker,
+        framework::FrameworkCapability,
+        model::{addable_directory::AddableDirectory, *},
+    },
+    cm_rust::{CapabilityPath, UseDecl},
+    failure::format_err,
+    fidl::endpoints::{ClientEnd, ServerEnd},
+    fidl_fuchsia_io::DirectoryMarker,
+    fuchsia_async as fasync,
+    fuchsia_vfs_pseudo_fs::directory,
+    fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
     fuchsia_zircon as zx,
     futures::{executor::block_on, future::BoxFuture, lock::Mutex, prelude::*},
     std::{cmp::Eq, collections::HashMap, fmt, ops::Deref, pin::Pin, sync::Arc},
@@ -184,14 +194,154 @@ impl Hook for TestHook {
 
     fn on_route_framework_capability<'a>(
         &'a self,
-        _flags: u32,
-        _open_mode: u32,
-        _relative_path: String,
-        _abs_moniker: &'a AbsoluteMoniker,
+        _realm: Arc<Realm>,
         _use_decl: &'a UseDecl,
-        _server_chan: &mut Option<zx::Channel>,
+        capability: Option<Box<dyn FrameworkCapability>>,
+    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
+        Box::pin(async move { Ok(capability) })
+    }
+}
+
+pub struct HubInjectionTestHook {}
+
+impl HubInjectionTestHook {
+    pub fn new() -> Self {
+        HubInjectionTestHook {}
+    }
+
+    pub async fn on_route_framework_capability_async<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+        use_decl: &'a UseDecl,
+        mut capability: Option<Box<dyn FrameworkCapability>>,
+    ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
+        // This Hook is about injecting itself between the Hub and the Model.
+        // If the Hub hasn't been installed, then there's nothing to do here.
+        if capability.is_none() {
+            return Ok(None);
+        }
+
+        let capability_path = match use_decl {
+            UseDecl::Directory(d) => d.source_path.clone(),
+            _ => return Ok(capability),
+        };
+        let mut dir_path = capability_path.split();
+
+        if dir_path.is_empty() || dir_path.remove(0) != "hub" {
+            return Ok(capability);
+        }
+
+        Ok(Some(Box::new(HubInjectionCapability::new(
+            realm.abs_moniker.clone(),
+            capability_path,
+            capability.take().expect("Unable to take original capability."),
+        ))))
+    }
+}
+
+impl Hook for HubInjectionTestHook {
+    fn on_bind_instance<'a>(
+        &'a self,
+        _realm: Arc<Realm>,
+        _realm_state: &'a RealmState,
+        _routing_facade: RoutingFacade,
     ) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async { Ok(()) })
+    }
+
+    fn on_add_dynamic_child(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn on_remove_dynamic_child(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn on_route_framework_capability<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+        use_decl: &'a UseDecl,
+        capability: Option<Box<dyn FrameworkCapability>>,
+    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
+        Box::pin(self.on_route_framework_capability_async(realm, use_decl, capability))
+    }
+}
+
+struct HubInjectionCapability {
+    abs_moniker: AbsoluteMoniker,
+    capability_path: CapabilityPath,
+    intercepted_capability: Box<dyn FrameworkCapability>,
+}
+
+impl HubInjectionCapability {
+    pub fn new(
+        abs_moniker: AbsoluteMoniker,
+        capability_path: CapabilityPath,
+        intercepted_capability: Box<dyn FrameworkCapability>,
+    ) -> Self {
+        HubInjectionCapability { abs_moniker, capability_path, intercepted_capability }
+    }
+
+    pub async fn open_async(
+        &self,
+        flags: u32,
+        open_mode: u32,
+        relative_path: String,
+        server_end: zx::Channel,
+    ) -> Result<(), ModelError> {
+        let mut dir_path = self.capability_path.split();
+        if dir_path.is_empty() || dir_path.remove(0) != "hub" {
+            return Err(ModelError::unsupported_hook_error(format_err!(
+                "HubInjectionCapability does not support the capability {}",
+                self.capability_path.to_string()
+            )));
+        }
+
+        dir_path.append(
+            &mut relative_path
+                .split("/")
+                .map(|s| s.to_string())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<String>>(),
+        );
+
+        let (client_chan, server_chan) = zx::Channel::create().unwrap();
+        await!(self.intercepted_capability.open(flags, open_mode, String::new(), server_chan))?;
+
+        let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan)
+            .into_proxy()
+            .expect("failed to create directory proxy");
+
+        let mut dir = directory::simple::empty();
+        dir.add_node(
+            "old_hub",
+            directory_broker::DirectoryBroker::from_directory_proxy(hub_proxy),
+            &self.abs_moniker,
+        )?;
+        dir.open(
+            flags,
+            open_mode,
+            &mut dir_path.iter().map(|s| s.as_str()),
+            ServerEnd::new(server_end),
+        );
+
+        fasync::spawn(async move {
+            let _ = await!(dir);
+        });
+
+        Ok(())
+    }
+}
+
+impl FrameworkCapability for HubInjectionCapability {
+    fn open(
+        &self,
+        flags: u32,
+        open_mode: u32,
+        relative_path: String,
+        server_chan: zx::Channel,
+    ) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.open_async(flags, open_mode, relative_path, server_chan))
     }
 }
 

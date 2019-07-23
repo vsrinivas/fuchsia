@@ -128,7 +128,7 @@ impl RoutingTest {
 
         let namespaces = runner.namespaces.clone();
         let model = Model::new(ModelParams {
-            framework_services,
+            framework_services: framework_services.into(),
             root_component_url: format!("test:///{}", root_component),
             root_resolver_registry: resolver,
             root_default_runner: Arc::new(runner),

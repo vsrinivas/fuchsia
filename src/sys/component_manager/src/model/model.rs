@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::*,
+    crate::{
+        framework::{FrameworkCapability, FrameworkServicesHook},
+        model::*,
+    },
     cm_rust::{data, CapabilityPath, UseDecl},
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
@@ -43,13 +46,10 @@ pub trait Hook {
     // by the framework.
     fn on_route_framework_capability<'a>(
         &'a self,
-        flags: u32,
-        open_mode: u32,
-        relative_path: String,
-        abs_moniker: &'a AbsoluteMoniker,
+        realm: Arc<Realm>,
         use_decl: &'a UseDecl,
-        server_chan: &'a mut Option<zx::Channel>,
-    ) -> BoxFuture<Result<(), ModelError>>;
+        capability: Option<Box<dyn FrameworkCapability>>,
+    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>>;
 }
 
 pub type Hooks = Vec<Arc<dyn Hook + Send + Sync + 'static>>;
@@ -58,7 +58,7 @@ pub type Hooks = Vec<Arc<dyn Hook + Send + Sync + 'static>>;
 /// instance tree.
 pub struct ModelParams {
     /// The host for services provided by the framework.
-    pub framework_services: Box<dyn FrameworkServiceHost>,
+    pub framework_services: Arc<dyn FrameworkServiceHost>,
     /// The URL of the root component.
     pub root_component_url: String,
     /// The component resolver registry used in the root realm.
@@ -83,7 +83,6 @@ pub struct ModelParams {
 #[derive(Clone)]
 pub struct Model {
     pub root_realm: Arc<Realm>,
-    pub framework_services: Arc<dyn FrameworkServiceHost>,
     pub hooks: Arc<Hooks>,
     pub config: ModelConfig,
 }
@@ -107,10 +106,9 @@ impl ModelConfig {
 
 impl Model {
     /// Creates a new component model and initializes its topology.
-    pub fn new(params: ModelParams) -> Model {
+    pub fn new(mut params: ModelParams) -> Model {
         params.config.validate();
-        Model {
-            framework_services: params.framework_services.into(),
+        let mut model = Model {
             root_realm: Arc::new(Realm {
                 resolver_registry: Arc::new(params.root_resolver_registry),
                 default_runner: params.root_default_runner,
@@ -121,9 +119,15 @@ impl Model {
                 state: Mutex::new(RealmState::new()),
                 instance_id: 0,
             }),
-            hooks: Arc::new(params.hooks),
+            hooks: Arc::new(vec![]),
             config: params.config,
-        }
+        };
+
+        params
+            .hooks
+            .push(Arc::new(FrameworkServicesHook::new(model.clone(), params.framework_services)));
+        model.hooks = Arc::new(params.hooks);
+        model
     }
 
     /// Binds to the component instance with the specified moniker, causing it to start if it is

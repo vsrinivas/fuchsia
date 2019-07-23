@@ -8,7 +8,7 @@
 
 pub mod directory_broker;
 pub mod elf_runner;
-pub mod framework_services;
+pub mod framework;
 pub mod fuchsia_boot_resolver;
 pub mod fuchsia_pkg_resolver;
 pub mod klog;

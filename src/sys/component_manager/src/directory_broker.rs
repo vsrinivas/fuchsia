@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_SERVICE, INO_UNKNOWN},
+    fidl_fuchsia_io::{DirectoryProxy, NodeMarker, DIRENT_TYPE_SERVICE, INO_UNKNOWN},
     fuchsia_vfs_pseudo_fs as fvfs,
     fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
-    //fuchsia_zircon::{self as zx, Status},
     futures::{future::FusedFuture, task::Context, Future, Poll},
     std::pin::Pin,
     void::Void,
@@ -31,13 +30,32 @@ pub struct DirectoryBroker {
 
 impl DirectoryBroker {
     /// new will create a new DirectoryBroker to forward directory open requests.
-    pub fn new(route_open: RoutingFn) -> DirectoryBroker {
+    pub fn new(route_open: RoutingFn) -> Self {
         return DirectoryBroker {
             route_open,
             entry_info: fvfs::directory::entry::EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_SERVICE),
         };
     }
+
+    pub fn from_directory_proxy(dir: DirectoryProxy) -> DirectoryBroker {
+        Self::new(Box::new(
+            move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
+                // If we want to open the 'dir' directory directly, then call clone.
+                // Otherwise, pass long the remaining 'relative_path' to the component
+                // hosting the out directory to resolve.
+                if !relative_path.is_empty() {
+                    // TODO(fsamuel): Currently DirectoryEntry::open does not return
+                    // a Result so we cannot propagate this error up. We probably
+                    // want to change that.
+                    let _ = dir.open(flags, mode, &relative_path, server_end);
+                } else {
+                    let _ = dir.clone(flags, server_end);
+                }
+            },
+        ))
+    }
 }
+
 impl DirectoryEntry for DirectoryBroker {
     fn open(
         &mut self,

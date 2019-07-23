@@ -21,7 +21,7 @@ fn new_model_with(mock_resolver: MockResolver, mock_runner: MockRunner, hooks: H
     let mut resolver = ResolverRegistry::new();
     resolver.register("test".to_string(), Box::new(mock_resolver));
     Model::new(ModelParams {
-        framework_services: Box::new(MockFrameworkServiceHost::new()),
+        framework_services: Arc::new(MockFrameworkServiceHost::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Arc::new(mock_runner),

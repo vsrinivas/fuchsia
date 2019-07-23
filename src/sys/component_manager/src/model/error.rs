@@ -55,6 +55,11 @@ pub enum ModelError {
     AddEntryError { moniker: AbsoluteMoniker, entry_name: String },
     #[fail(display = "open directory error")]
     OpenDirectoryError { moniker: AbsoluteMoniker, relative_path: String },
+    #[fail(display = "Unsupported hook")]
+    UnsupportedHookError {
+        #[fail(cause)]
+        err: Error,
+    },
 }
 
 impl ModelError {
@@ -95,6 +100,10 @@ impl ModelError {
         relative_path: impl Into<String>,
     ) -> ModelError {
         ModelError::OpenDirectoryError { moniker, relative_path: relative_path.into() }
+    }
+
+    pub fn unsupported_hook_error(err: impl Into<Error>) -> ModelError {
+        ModelError::UnsupportedHookError { err: err.into() }
     }
 }
 
