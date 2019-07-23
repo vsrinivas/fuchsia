@@ -1,0 +1,62 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use {failure::Error, fidl_fuchsia_settings::*};
+
+pub async fn command(
+    proxy: DisplayProxy,
+    brightness: Option<f32>,
+    auto_brightness: Option<bool>,
+) -> Result<String, Error> {
+    let mut output = String::new();
+
+    if let Some(auto_brightness_value) = auto_brightness {
+        let mutate_result = await!(proxy.set_auto_brightness(auto_brightness_value))?;
+        match mutate_result {
+            Ok(_) => output.push_str(&format!(
+                "Successfully set auto_brightness to {}",
+                auto_brightness_value
+            )),
+            Err(err) => output.push_str(&format!("{:?}", err)),
+        }
+    } else if let Some(brightness_value) = brightness {
+        let mutate_result = await!(proxy.set_brightness(brightness_value))?;
+        match mutate_result {
+            Ok(_) => {
+                output.push_str(&format!("Successfully set brightness to {}", brightness_value))
+            }
+            Err(err) => output.push_str(&format!("{:?}", err)),
+        }
+    } else {
+        let setting = await!(proxy.watch())?;
+
+        match setting {
+            Ok(setting_value) => {
+                let setting_string = describe_display_setting(&setting_value);
+                output.push_str(&setting_string);
+            }
+            Err(err) => output.push_str(&format!("{:?}", err)),
+        }
+    }
+
+    Ok(output)
+}
+
+fn describe_display_setting(display_setting: &DisplaySettings) -> String {
+    let mut output = String::new();
+
+    output.push_str("Display { ");
+
+    if let Some(brightness) = display_setting.brightness_value {
+        output.push_str(&format!("brightness_value: {} ", brightness))
+    }
+
+    if let Some(auto_brightness) = display_setting.auto_brightness {
+        output.push_str(&format!("auto_brightness: {} ", auto_brightness))
+    }
+
+    output.push_str("}");
+
+    return output;
+}

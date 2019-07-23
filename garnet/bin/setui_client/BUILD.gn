@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 
 rustc_binary("bin") {
@@ -12,13 +13,26 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    ":lib",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-async",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:structopt",
+  ]
+}
+
+rustc_library("lib") {
+  name = "setui_client_lib"
+  edition = "2018"
+  with_unit_tests = true
+  deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//third_party/rust_crates:failure",
@@ -26,8 +40,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:structopt",
-    "//zircon/public/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
-  ]
+    "//zircon/public/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",  ]
 }
 
 package("setui_client") {
@@ -61,9 +74,12 @@ rustc_binary("setui_client_interface_test_bin") {
   name = "setui_client_interface_test"
   edition = "2018"
   deps = [
+    ":lib",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

@@ -7,66 +7,183 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl_fuchsia_setui::*,
+    fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
 };
 
 mod client;
-
-fn serve_check_login_override_mutate(
-    stream: SetUiServiceRequestStream,
-    expected_override: LoginOverride,
-) -> impl Future<Output = ()> {
-    stream
-        .err_into::<failure::Error>()
-        .try_for_each(async move |req| {
-            match req {
-                SetUiServiceRequest::Mutate { setting_type, mutation, responder } => {
-                    assert_eq!(setting_type, SettingType::Account);
-
-                    match mutation {
-                        fidl_fuchsia_setui::Mutation::AccountMutationValue(account_mutation) => {
-                            if let (Some(login_override), Some(operation)) =
-                                (account_mutation.login_override, account_mutation.operation)
-                            {
-                                assert_eq!(login_override, expected_override);
-                                assert_eq!(operation, AccountOperation::SetLoginOverride);
-                            }
-                        }
-                        _ => {
-                            panic!("unexpected data for account mutation");
-                        }
-                    }
-                    responder
-                        .send(&mut MutationResponse { return_code: ReturnCode::Ok })
-                        .context("sending response")?;
-                }
-                _ => {}
-            };
-            Ok(())
-        })
-        .unwrap_or_else(|e: failure::Error| panic!("error running setui server: {:?}", e))
-}
+mod display;
+mod intl;
+mod system;
 
 enum Services {
-    SetUi(SetUiServiceRequestStream),
+    SetUi(fidl_fuchsia_setui::SetUiServiceRequestStream),
+    Display(DisplayRequestStream),
+    System(SystemRequestStream),
+    Intl(IntlRequestStream),
 }
 
 const ENV_NAME: &str = "setui_client_test_environment";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    await!(validate_account_mutate("autologinguest".to_string(), LoginOverride::AutologinGuest))?;
-    await!(validate_account_mutate("auth".to_string(), LoginOverride::AuthProvider))?;
-    await!(validate_account_mutate("none".to_string(), LoginOverride::None))?;
+    println!("account mutation tests");
+    await!(validate_account_mutate(
+        "autologinguest".to_string(),
+        fidl_fuchsia_setui::LoginOverride::AutologinGuest
+    ))?;
+    await!(validate_account_mutate(
+        "auth".to_string(),
+        fidl_fuchsia_setui::LoginOverride::AuthProvider
+    ))?;
+    await!(validate_account_mutate("none".to_string(), fidl_fuchsia_setui::LoginOverride::None))?;
+
+    println!("display service tests");
+    println!("  client calls display watch");
+    await!(validate_display(None, None))?;
+
+    println!("  client calls set brightness");
+    await!(validate_display(Some(0.5), None))?;
+
+    println!("  client calls set auto brightness");
+    await!(validate_display(None, Some(true)))?;
+
+    println!("intl service tests");
+    println!("  client calls set temperature unit");
+    await!(validate_temperature_unit())?;
+
+    println!("system service tests");
+    println!("  client calls set login mode");
+    await!(validate_system_override())?;
+
+
+    Ok(())
+}
+
+// Creates a service in an environment for a given setting type.
+// Usage: create_service!(service_enum_name,
+//          request_name => {code block},
+//          request2_name => {code_block}
+//          ... );
+macro_rules! create_service  {
+    ($setting_type:path, $( $request:pat => $callback:block ),*) => {{
+
+        let mut fs = ServiceFs::new();
+        fs.add_fidl_service($setting_type);
+        let env = fs.create_nested_environment(ENV_NAME)?;
+
+        fasync::spawn(fs.for_each_concurrent(None, move |connection| {
+            async move {
+                #![allow(unreachable_patterns)]
+                match connection {
+                    $setting_type(stream) => {
+                        await!(stream
+                            .err_into::<failure::Error>()
+                            .try_for_each(async move |req| {
+                                match req {
+                                    $($request => $callback)*
+                                    _ => panic!("Incorrect command to service"),
+                                }
+                                Ok(())
+                            })
+                            .unwrap_or_else(|e: failure::Error| panic!(
+                                "error running setui server: {:?}",
+                                e
+                            )));
+                    }
+                    _ => {
+                        panic!("Unexpected service");
+                    }
+                }
+            }
+        }));
+        env
+    }};
+}
+
+async fn validate_system_override() -> Result<(), Error> {
+
+    let env = create_service!(Services::System,
+        SystemRequest::SetLoginOverride { login_override, responder } => {
+            assert_eq!(login_override, LoginOverride::AuthProvider);
+            responder.send(&mut Ok(()))?;
+    });
+
+    let system_service =
+        env.connect_to_service::<SystemMarker>().context("Failed to connect to intl service")?;
+
+    await!(system::command(system_service, Some("auth".to_string())))?;
+
+    Ok(())
+}
+
+async fn validate_temperature_unit() -> Result<(), Error> {
+
+    let env = create_service!(Services::Intl,
+        IntlRequest::SetTemperatureUnit { temperature_unit, responder } => {
+            assert_eq!(
+                temperature_unit,
+                fidl_fuchsia_intl::TemperatureUnit::Celsius
+            );
+            responder.send(&mut Ok(()))?;
+    });
+
+    let intl_service =
+        env.connect_to_service::<IntlMarker>().context("Failed to connect to intl service")?;
+
+    await!(intl::command(
+        intl_service,
+        None,
+        Some(fidl_fuchsia_intl::TemperatureUnit::Celsius),
+        vec![]
+    ))?;
+
+    Ok(())
+}
+
+// Can only check one mutate option at once
+async fn validate_display(
+    expected_brightness: Option<f32>,
+    expected_auto_brightness: Option<bool>,
+) -> Result<(), Error> {
+
+    let env = create_service!(
+        Services::Display, DisplayRequest::SetBrightness { brightness_value, responder, } => {
+            if let Some(expected_brightness_value) = expected_brightness {
+                assert_eq!(brightness_value, expected_brightness_value);
+                responder.send(&mut Ok(()))?;
+            } else {
+                panic!("Unexpected call to set brightness");
+        }},
+        DisplayRequest::SetAutoBrightness { auto_brightness, responder, } => {
+            if let Some(expected_auto_brightness_value) = expected_auto_brightness {
+                assert_eq!(auto_brightness, expected_auto_brightness_value);
+                responder.send(&mut Ok(()))?;
+            } else {
+                panic!("Unexpected call to set auto brightness");
+        }},
+        DisplayRequest::Watch { responder } => {
+            responder.send(&mut Ok(DisplaySettings {
+                auto_brightness: Some(false),
+                brightness_value: Some(0.5),
+            }))?;
+        }
+    );
+
+    let display_service = env
+        .connect_to_service::<DisplayMarker>()
+        .context("Failed to connect to display service")?;
+
+    await!(display::command(display_service, expected_brightness, expected_auto_brightness))?;
+
     Ok(())
 }
 
 async fn validate_account_mutate(
     specified_type: String,
-    expected_override: LoginOverride,
+    expected_override: fidl_fuchsia_setui::LoginOverride,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.add_fidl_service(Services::SetUi);
@@ -78,14 +195,59 @@ async fn validate_account_mutate(
                 Services::SetUi(stream) => {
                     await!(serve_check_login_override_mutate(stream, expected_override))
                 }
+                _ => {}
             }
         }
     }));
 
     let setui = env
-        .connect_to_service::<SetUiServiceMarker>()
+        .connect_to_service::<fidl_fuchsia_setui::SetUiServiceMarker>()
         .context("Failed to connect to setui service")?;
 
     await!(client::mutate(setui, "login".to_string(), specified_type))?;
     Ok(())
+}
+
+fn serve_check_login_override_mutate(
+    stream: fidl_fuchsia_setui::SetUiServiceRequestStream,
+    expected_override: fidl_fuchsia_setui::LoginOverride,
+) -> impl Future<Output = ()> {
+    stream
+        .err_into::<failure::Error>()
+        .try_for_each(async move |req| {
+            match req {
+                fidl_fuchsia_setui::SetUiServiceRequest::Mutate {
+                    setting_type,
+                    mutation,
+                    responder,
+                } => {
+                    assert_eq!(setting_type, fidl_fuchsia_setui::SettingType::Account);
+
+                    match mutation {
+                        fidl_fuchsia_setui::Mutation::AccountMutationValue(account_mutation) => {
+                            if let (Some(login_override), Some(operation)) =
+                                (account_mutation.login_override, account_mutation.operation)
+                            {
+                                assert_eq!(login_override, expected_override);
+                                assert_eq!(
+                                    operation,
+                                    fidl_fuchsia_setui::AccountOperation::SetLoginOverride
+                                );
+                            }
+                        }
+                        _ => {
+                            panic!("unexpected data for account mutation");
+                        }
+                    }
+                    responder
+                        .send(&mut fidl_fuchsia_setui::MutationResponse {
+                            return_code: fidl_fuchsia_setui::ReturnCode::Ok,
+                        })
+                        .context("sending response")?;
+                }
+                _ => {}
+            };
+            Ok(())
+        })
+        .unwrap_or_else(|e: failure::Error| panic!("error running setui server: {:?}", e))
 }
