@@ -540,7 +540,7 @@ mod tests {
     #[test]
     fn empty_directory() {
         let (_, root) = controlled(simple::empty());
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             assert_close!(root);
         });
     }
@@ -548,7 +548,7 @@ mod tests {
     #[test]
     fn simple_open() {
         let (controller, root) = controlled(simple::empty());
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |_root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |_root| async move {
             let (proxy, server_end) =
                 create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
@@ -567,7 +567,7 @@ mod tests {
     #[test]
     fn simple_add_file() {
         let (controller, root) = controlled(simple::empty());
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             {
                 let file = read_only(|| Ok(b"Content".to_vec()));
                 await!(controller.add_entry("file", file)).unwrap();
@@ -586,7 +586,7 @@ mod tests {
             "etc" => controlled_pseudo_directory!(controller -> {}),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
             open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
@@ -613,7 +613,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let (proxy, server_end) =
                 create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
@@ -645,7 +645,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let (proxy, server_end) =
                 create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
@@ -677,7 +677,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let (proxy, server_end) =
                 create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
@@ -709,7 +709,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
             open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
@@ -738,7 +738,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
             open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
@@ -770,7 +770,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
             open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
@@ -802,7 +802,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
             open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
@@ -847,7 +847,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
             open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");

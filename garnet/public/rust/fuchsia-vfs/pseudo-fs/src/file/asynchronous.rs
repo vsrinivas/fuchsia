@@ -591,7 +591,7 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             read_only(|| fast_future!(Ok(b"Read only test".to_vec()))),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "Read only test");
                 assert_close!(proxy);
             },
@@ -606,7 +606,7 @@ mod tests {
         run_server_client_with_open_requests_channel_and_executor(
             exec,
             read_only(|| fast_future!(Ok(b"Read only test".to_vec()))),
-            async move |mut open_sender| {
+            |mut open_sender| async move {
                 let (proxy, server_end) =
                     create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
@@ -629,7 +629,7 @@ mod tests {
     fn read_only_read_with_describe() {
         run_server_client_with_open_requests_channel(
             read_only(|| fast_future!(Ok(b"Read only test".to_vec()))),
-            async move |mut open_sender| {
+            |mut open_sender| async move {
                 let (proxy, server_end) =
                     create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
@@ -653,7 +653,7 @@ mod tests {
                     Ok(())
                 })
             }),
-            async move |proxy| {
+            |proxy| async move {
                 assert_write!(proxy, "Write only test");
                 assert_close!(proxy);
             },
@@ -674,7 +674,7 @@ mod tests {
                     })
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "Hello");
                 assert_write!(proxy, ", world!");
                 assert_close!(proxy);
@@ -698,7 +698,7 @@ mod tests {
                     }
                 })
             }),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "State one");
                 assert_seek!(proxy, 0, Start);
                 assert_read!(proxy, "State one");
@@ -728,7 +728,7 @@ mod tests {
                     }
                 })
             }),
-            async move |proxy| {
+            |proxy| async move {
                 assert_write!(proxy, "Write one");
                 assert_write!(proxy, " and two");
                 assert_close!(proxy);
@@ -755,7 +755,7 @@ mod tests {
             })
         });
 
-        run_server_client_with_open_requests_channel(server, async move |mut open_sender| {
+        run_server_client_with_open_requests_channel(server, |mut open_sender| async move {
             {
                 let (proxy, server_end) =
                     create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
@@ -796,7 +796,7 @@ mod tests {
                     })
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "Can read");
                 assert_write_err!(proxy, "Can write", Status::ACCESS_DENIED);
                 assert_write_at_err!(proxy, 0, "Can write", Status::ACCESS_DENIED);
@@ -823,7 +823,7 @@ mod tests {
                     })
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read_err!(proxy, Status::ACCESS_DENIED);
                 assert_read_at_err!(proxy, 0, Status::ACCESS_DENIED);
                 assert_write!(proxy, "Can write");
@@ -849,7 +849,7 @@ mod tests {
                     })
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "Read");
                 assert_seek!(proxy, 0, Start);
                 // Need to write something, otherwise write handler will not be called.
@@ -870,7 +870,7 @@ mod tests {
                     Err(Status::INVALID_ARGS)
                 })
             }),
-            async move |proxy| {
+            |proxy| async move {
                 assert_write!(proxy, "Wrong");
                 assert_write!(proxy, " format");
                 assert_close_err!(proxy, Status::INVALID_ARGS);
@@ -892,7 +892,7 @@ mod tests {
                     Ok(())
                 }
             }),
-            async move |proxy| {
+            |proxy| async move {
                 assert_write!(proxy, "Updated content");
                 drop(proxy);
                 await!(write_call_receiver).unwrap();
@@ -914,7 +914,7 @@ mod tests {
                     })
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_write!(proxy, "File content");
                 assert_close!(proxy);
             },
@@ -935,7 +935,7 @@ mod tests {
                     })
                 },
             ),
-            async move |first_proxy| {
+            |first_proxy| async move {
                 assert_read!(first_proxy, "Initial content");
                 assert_truncate!(first_proxy, 0);
                 assert_seek!(first_proxy, 0, Start);
@@ -969,7 +969,7 @@ mod tests {
                     })
                 },
             ),
-            async move |first_proxy| {
+            |first_proxy| async move {
                 assert_read!(first_proxy, "Initial content");
                 assert_write_err!(first_proxy, "Write attempt", Status::ACCESS_DENIED);
 
@@ -996,7 +996,7 @@ mod tests {
         run_server_client(
             OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE,
             read_only(|| fast_future!(panic!("Not supposed to read!"))),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read_err!(proxy, Status::ACCESS_DENIED);
                 assert_close!(proxy);
             },
@@ -1008,7 +1008,7 @@ mod tests {
         run_server_client(
             OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_WRITABLE,
             write_only(100, |_content| fast_future!(panic!("Not supposed to write!"))),
-            async move |proxy| {
+            |proxy| async move {
                 assert_write_err!(proxy, "Can write", Status::ACCESS_DENIED);
                 assert_close!(proxy);
             },
@@ -1077,7 +1077,7 @@ mod tests {
                     Ok(format!("Content {}", count).into_bytes())
                 })
             }),
-            async move |open_sender| {
+            |open_sender| async move {
                 let client1 = get_client1(open_sender.clone());
                 let client2 = get_client2(open_sender.clone());
 
@@ -1144,7 +1144,7 @@ mod tests {
                     Ok(b"content".to_vec())
                 }
             }),
-            async move |proxy| {
+            |proxy| async move {
                 client_count.fetch_add(1, Ordering::Relaxed);
 
                 assert_read!(proxy, "content");
@@ -1200,7 +1200,7 @@ mod tests {
                     Ok(())
                 }
             }),
-            async move |proxy| {
+            |proxy| async move {
                 client_count.fetch_add(1, Ordering::Relaxed);
 
                 assert_write!(proxy, "content");

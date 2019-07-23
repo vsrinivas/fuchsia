@@ -1009,7 +1009,7 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             lazy(|_p, _sink| (AlphabeticalTraversal::End, Ok(())), |_name| Err(Status::NOT_FOUND)),
-            async move |root| {
+            |root| async move {
                 assert_close!(root);
             },
         );
@@ -1020,7 +1020,7 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             lazy(|_p, _sink| (AlphabeticalTraversal::End, Ok(())), |_name| Err(Status::NOT_FOUND)),
-            async move |root| {
+            |root| async move {
                 assert_get_attr!(
                     root,
                     NodeAttributes {
@@ -1047,7 +1047,7 @@ mod tests {
                 |_p, _sink| (AlphabeticalTraversal::End, Ok(())),
                 |_name| Err(Status::NOT_FOUND),
             ),
-            async move |root| {
+            |root| async move {
                 assert_get_attr!(
                     root,
                     NodeAttributes {
@@ -1077,7 +1077,7 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             lazy(get_entry_names, |_name| Err(Status::NOT_FOUND)),
-            async move |root| {
+            |root| async move {
                 {
                     let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
                     // Note that the build_sorted_static_get_entry_names() will sort entries
@@ -1119,7 +1119,7 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             lazy(get_entry_names, get_entry),
-            async move |root| {
+            |root| async move {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 open_as_file_assert_content!(&root, flags, "one", "File one content");
                 open_as_file_assert_content!(&root, flags, "two", "File two content");
@@ -1155,7 +1155,7 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             lazy(get_entry_names, get_entry),
-            async move |root| {
+            |root| async move {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 {
                     let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
@@ -1232,7 +1232,7 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             lazy(get_entry_names, |_name| Err(Status::NOT_FOUND)),
-            async move |root| {
+            |root| async move {
                 {
                     let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
                     // Note that the build_sorted_static_get_entry_names() will sort entries
@@ -1299,7 +1299,7 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             lazy(get_entry_names, get_entry),
-            async move |root| {
+            |root| async move {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
                 open_as_file_assert_content!(&root, flags, "file1", "Content: 1");
@@ -1325,7 +1325,7 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             lazy(get_entry_names, |_name| Err(Status::NOT_FOUND)),
-            async move |root| {
+            |root| async move {
                 {
                     let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
                     // Entry header is 10 bytes + length of the name in bytes.
@@ -1364,7 +1364,7 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             lazy(get_entry_names, |_name| Err(Status::NOT_FOUND)),
-            async move |root| {
+            |root| async move {
                 // Entry header is 10 bytes, so this read should not be able to return a single entry.
                 assert_read_dirents_err!(root, 8, Status::BUFFER_TOO_SMALL);
 
@@ -1387,7 +1387,7 @@ mod tests {
             |_name| Err(Status::NOT_FOUND),
             watcher_stream,
         );
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let mask =
                 WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher_client = assert_watch!(root, mask);
@@ -1410,7 +1410,7 @@ mod tests {
         let root =
             lazy_with_watchers(get_entry_names, |_name| Err(Status::NOT_FOUND), watcher_stream);
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let mask =
                 WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher_client = assert_watch!(root, mask);
@@ -1440,7 +1440,7 @@ mod tests {
         let root =
             lazy_with_watchers(get_entry_names, |_name| Err(Status::NOT_FOUND), watcher_stream);
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let mask =
                 WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher1_client = assert_watch!(root, mask);
@@ -1482,7 +1482,7 @@ mod tests {
         let root =
             lazy_with_watchers(get_entry_names, |_name| Err(Status::NOT_FOUND), watcher_stream);
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let mask = WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher_client = assert_watch!(root, mask);
 
@@ -1502,7 +1502,7 @@ mod tests {
         let root =
             lazy_with_watchers(get_entry_names, |_name| Err(Status::NOT_FOUND), watcher_stream);
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher_client = assert_watch!(root, mask);
 
@@ -1539,7 +1539,7 @@ mod tests {
         let root =
             lazy_with_watchers(get_entry_names, |_name| Err(Status::NOT_FOUND), watcher_stream);
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher_client = assert_watch!(root, mask);
 
@@ -1574,7 +1574,7 @@ mod tests {
         let root =
             lazy_with_watchers(get_entry_names, |_name| Err(Status::NOT_FOUND), watcher_stream);
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE;
             assert_watch_err!(root, mask, Status::NOT_SUPPORTED);
 
@@ -1594,7 +1594,7 @@ mod tests {
         let root =
             lazy_with_watchers(get_entry_names, |_name| Err(Status::NOT_FOUND), watcher_stream);
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher_client = assert_watch!(root, mask);
 

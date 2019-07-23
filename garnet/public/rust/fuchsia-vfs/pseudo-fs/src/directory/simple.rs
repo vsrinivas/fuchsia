@@ -617,14 +617,14 @@ mod tests {
 
     #[test]
     fn empty_directory() {
-        run_server_client(OPEN_RIGHT_READABLE, empty(), async move |proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, empty(), |proxy| async move {
             assert_close!(proxy);
         });
     }
 
     #[test]
     fn empty_directory_get_attr() {
-        run_server_client(OPEN_RIGHT_READABLE, empty(), async move |proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, empty(), |proxy| async move {
             assert_get_attr!(
                 proxy,
                 NodeAttributes {
@@ -646,7 +646,7 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             empty_attr(S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR),
-            async move |proxy| {
+            |proxy| async move {
                 assert_get_attr!(
                     proxy,
                     NodeAttributes {
@@ -667,7 +667,7 @@ mod tests {
 
     #[test]
     fn empty_directory_describe() {
-        run_server_client(OPEN_RIGHT_READABLE, empty(), async move |proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, empty(), |proxy| async move {
             assert_describe!(proxy, NodeInfo::Directory(DirectoryObject));
             assert_close!(proxy);
         });
@@ -675,7 +675,7 @@ mod tests {
 
     #[test]
     fn open_empty_directory_with_describe() {
-        run_server_client_with_open_requests_channel(empty(), async move |mut open_sender| {
+        run_server_client_with_open_requests_channel(empty(), |mut open_sender| async move {
             let (proxy, server_end) =
                 create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
@@ -694,7 +694,7 @@ mod tests {
             "file" => read_only(|| Ok(b"Content".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |first_proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |first_proxy| async move {
             async fn assert_read_file(root: &DirectoryProxy) {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
@@ -725,7 +725,7 @@ mod tests {
             "file" => read_only(|| Ok(b"Content".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |first_proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |first_proxy| async move {
             async fn assert_read_file(root: &DirectoryProxy) {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
@@ -754,7 +754,7 @@ mod tests {
             "file" => read_only(|| Ok(b"Content".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             async fn assert_read_file(root: &DirectoryProxy) {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
@@ -783,7 +783,7 @@ mod tests {
             "file" => read_only(|| Ok(b"Content".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |proxy| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             let file = open_get_file_proxy_assert_ok!(&proxy, flags, "file");
 
@@ -806,7 +806,7 @@ mod tests {
             "file" => read_only(|| Ok(b"Content".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
 
@@ -823,7 +823,7 @@ mod tests {
             "file" => read_only(|| Ok(b"Content".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             open_as_file_assert_err!(&root, flags, "file2", Status::NOT_FOUND);
 
@@ -843,7 +843,7 @@ mod tests {
             "uname" => read_only(|| Ok(b"Fuchsia".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             async fn open_read_close<'a>(
                 from_dir: &'a DirectoryProxy,
                 path: &'a str,
@@ -890,7 +890,7 @@ mod tests {
             }
         };
 
-        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| async move {
             async fn open_read_write_close<'a>(
                 from_dir: &'a DirectoryProxy,
                 path: &'a str,
@@ -952,7 +952,7 @@ mod tests {
             }
         };
 
-        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| async move {
             async fn open_write_close<'a>(
                 from_dir: &'a DirectoryProxy,
                 new_content: &'a str,
@@ -983,7 +983,7 @@ mod tests {
             "file2" => read_only(|| Ok(b"Content 2".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             open_as_file_assert_err!(&root, flags, "non-existing", Status::NOT_FOUND);
             open_as_file_assert_err!(&root, flags, "dir/file10", Status::NOT_FOUND);
@@ -1000,7 +1000,7 @@ mod tests {
             "file_foo" => read_only(|| Ok(b"Content".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             open_as_file_assert_err!(&root, flags, "", Status::BAD_PATH);
 
@@ -1017,7 +1017,7 @@ mod tests {
             "file2" => read_only(|| Ok(b"Content 2".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             open_as_file_assert_err!(&root, flags, "file2/file1", Status::NOT_DIR);
             open_as_file_assert_err!(&root, flags, "dir/file1/file3", Status::NOT_DIR);
@@ -1035,7 +1035,7 @@ mod tests {
             "file2" => read_only(|| Ok(b"Content 2".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             let mode = MODE_TYPE_DIRECTORY;
             {
@@ -1065,7 +1065,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             let mode = MODE_TYPE_FILE;
             {
@@ -1094,7 +1094,7 @@ mod tests {
             "dir" => pseudo_directory! {},
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
             open_as_file_assert_err!(&root, flags, "file/", Status::NOT_DIR);
@@ -1123,7 +1123,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::INVALID_ARGS);
             open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::INVALID_ARGS);
@@ -1141,7 +1141,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::INVALID_ARGS);
             open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::INVALID_ARGS);
@@ -1162,7 +1162,7 @@ mod tests {
             },
         };
 
-        run_server_client(0, root, async move |root| {
+        run_server_client(0, root, |root| async move {
             open_as_file_assert_err!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
@@ -1184,7 +1184,7 @@ mod tests {
             },
         };
 
-        run_server_client(0, root, async move |root| {
+        run_server_client(0, root, |root| async move {
             open_as_file_assert_err!(
                 &root,
                 OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
@@ -1212,7 +1212,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| async move {
             let nested = open_get_directory_proxy_assert_ok!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX | OPEN_FLAG_DESCRIBE,
@@ -1255,7 +1255,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let nested = open_get_directory_proxy_assert_ok!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX | OPEN_FLAG_DESCRIBE,
@@ -1302,7 +1302,7 @@ mod tests {
             "uname" => read_only(|| Ok(b"Fuchsia".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             {
                 let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
                 expected
@@ -1355,7 +1355,7 @@ mod tests {
             "uname" => read_only(|| Ok(b"Fuchsia".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             {
                 let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
                 // Entry header is 10 bytes + length of the name in bytes.
@@ -1391,7 +1391,7 @@ mod tests {
             "file" => read_only(|| Ok(b"Content".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             // Entry header is 10 bytes, so this read should not be able to return a single entry.
             assert_read_dirents_err!(root, 8, Status::BUFFER_TOO_SMALL);
             assert_close!(root);
@@ -1407,7 +1407,7 @@ mod tests {
             "uname" => read_only(|| Ok(b"Fuchsia".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             {
                 let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
                 // Entry header is 10 bytes + length of the name in bytes.
@@ -1457,7 +1457,7 @@ mod tests {
         run_server_client(
             OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE,
             root,
-            async move |root| {
+            |root| async move {
                 open_as_file_assert_err!(
                     &root,
                     OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
@@ -1485,7 +1485,7 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_WRITABLE | OPEN_FLAG_NODE_REFERENCE,
             root,
-            async move |root| {
+            |root| async move {
                 open_as_file_assert_err!(
                     &root,
                     OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
@@ -1516,7 +1516,7 @@ mod tests {
             "files" => read_only(|| Ok(b"Content".to_vec())),
         };
 
-        run_server_client(OPEN_FLAG_NODE_REFERENCE, root, async move |root| {
+        run_server_client(OPEN_FLAG_NODE_REFERENCE, root, |root| async move {
             {
                 let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
                 expected
@@ -1558,7 +1558,7 @@ mod tests {
 
     #[test]
     fn watch_empty() {
-        run_server_client(OPEN_RIGHT_READABLE, empty(), async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, empty(), |root| async move {
             let mask =
                 WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher_client = assert_watch!(root, mask);
@@ -1583,7 +1583,7 @@ mod tests {
             "files" => read_only(|| Ok(b"Content".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let mask =
                 WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher_client = assert_watch!(root, mask);
@@ -1613,7 +1613,7 @@ mod tests {
             "files" => read_only(|| Ok(b"Content".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let mask =
                 WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher1_client = assert_watch!(root, mask);
@@ -1654,7 +1654,7 @@ mod tests {
             "files" => read_only(|| Ok(b"Content".to_vec())),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let mask = WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher_client = assert_watch!(root, mask);
 
