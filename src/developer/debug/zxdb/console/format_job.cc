@@ -64,7 +64,7 @@ OutputBuffer FormatJobList(ConsoleContext* context, int indent) {
     // "Current process" marker (or nothing). This pads by the indent to push
     // everything over.
     if (pair.first == active_job_context_id)
-      row.emplace_back(indent_str + GetRightArrow());
+      row.emplace_back(indent_str + GetCurrentRowMarker());
     else
       row.push_back(indent_str);
 

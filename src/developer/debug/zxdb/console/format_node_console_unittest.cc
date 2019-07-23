@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/console/async_output_buffer_test_util.h"
+#include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
@@ -199,21 +200,21 @@ TEST(FormatNodeConsole, Pointer) {
 
   // Print with the pointed-to value.
   out = FormatNodeForConsole(node, options);
-  EXPECT_EQ("(*)0x12345678 🡺 42", out.AsString());
+  EXPECT_EQ("(*)0x12345678 " + GetRightArrow() + " 42", out.AsString());
 
   // Print with type information. Should only show on the pointer and not be duplicated on the
   // pointed-to value.
   ConsoleFormatOptions type_options;
   type_options.verbosity = ConsoleFormatOptions::Verbosity::kAllTypes;
   out = FormatNodeForConsole(node, type_options);
-  EXPECT_EQ("(int*) 0x12345678 🡺 42", out.AsString());
+  EXPECT_EQ("(int*) 0x12345678 " + GetRightArrow() + " 42", out.AsString());
 
   // Add a name.
   node.set_name("a");
   out = FormatNodeForConsole(node, options);
-  EXPECT_EQ("a = (*)0x12345678 🡺 42", out.AsString());
+  EXPECT_EQ("a = (*)0x12345678 " + GetRightArrow() + " 42", out.AsString());
   out = FormatNodeForConsole(node, type_options);
-  EXPECT_EQ("(int*) a = 0x12345678 🡺 42", out.AsString());
+  EXPECT_EQ("(int*) a = 0x12345678 " + GetRightArrow() + " 42", out.AsString());
 
   // Report an error for the pointed-to value, it should now be omitted.
   node.children()[0]->set_err(Err("Bad pointer"));
@@ -348,9 +349,12 @@ TEST_F(FormatValueConsoleTest, NestingLimits) {
   opts.max_depth = 1000;
   EXPECT_EQ("{c = {b = (*)0x2200}}", SyncFormatValue(c_value, opts));
   opts.pointer_expand_depth = 1;
-  EXPECT_EQ("{c = {b = (*)0x2200 🡺 {a = (*)0x1100}}}", SyncFormatValue(c_value, opts));
+  EXPECT_EQ("{c = {b = (*)0x2200 " + GetRightArrow() + " {a = (*)0x1100}}}",
+            SyncFormatValue(c_value, opts));
   opts.pointer_expand_depth = 2;
-  EXPECT_EQ("{c = {b = (*)0x2200 🡺 {a = (*)0x1100 🡺 12}}}", SyncFormatValue(c_value, opts));
+  EXPECT_EQ(
+      "{c = {b = (*)0x2200 " + GetRightArrow() + " {a = (*)0x1100 " + GetRightArrow() + " 12}}}",
+      SyncFormatValue(c_value, opts));
 
   // Now test max recursion levels (independent of pointers).
   opts.max_depth = 0;
@@ -362,11 +366,14 @@ TEST_F(FormatValueConsoleTest, NestingLimits) {
   opts.max_depth = 3;
   EXPECT_EQ("{c = {b = (*)0x2200}}", SyncFormatValue(c_value, opts));
   opts.max_depth = 4;
-  EXPECT_EQ("{c = {b = (*)0x2200 🡺 {…}}}", SyncFormatValue(c_value, opts));
+  EXPECT_EQ("{c = {b = (*)0x2200 " + GetRightArrow() + " {…}}}", SyncFormatValue(c_value, opts));
   opts.max_depth = 5;
-  EXPECT_EQ("{c = {b = (*)0x2200 🡺 {a = (*)0x1100}}}", SyncFormatValue(c_value, opts));
+  EXPECT_EQ("{c = {b = (*)0x2200 " + GetRightArrow() + " {a = (*)0x1100}}}",
+            SyncFormatValue(c_value, opts));
   opts.max_depth = 6;
-  EXPECT_EQ("{c = {b = (*)0x2200 🡺 {a = (*)0x1100 🡺 12}}}", SyncFormatValue(c_value, opts));
+  EXPECT_EQ(
+      "{c = {b = (*)0x2200 " + GetRightArrow() + " {a = (*)0x1100 " + GetRightArrow() + " 12}}}",
+      SyncFormatValue(c_value, opts));
 
   // Tests max recursion for the expanded case. The elided structs should not be expanded.
   opts.max_depth = 2;
@@ -411,58 +418,68 @@ TEST_F(FormatValueConsoleTest, Wrapping) {
   opts.max_depth = 1000;
   opts.wrapping = ConsoleFormatOptions::Wrapping::kNone;
 
-  EXPECT_EQ("{nested = (*)0x1100 🡺 {variable1 = 12, variable2 = 34}, empty = {}}",
-            SyncFormatValue(outer_value, opts));
+  EXPECT_EQ(
+      "{nested = (*)0x1100 " + GetRightArrow() + " {variable1 = 12, variable2 = 34}, empty = {}}",
+      SyncFormatValue(outer_value, opts));
 
   // Expanded mode.
   opts.wrapping = ConsoleFormatOptions::Wrapping::kExpanded;
   EXPECT_EQ(
       "{\n"
-      "  nested = (*)0x1100 🡺 {\n"
-      "    variable1 = 12\n"
-      "    variable2 = 34\n"
-      "  }\n"
-      "  empty = {}\n"
-      "}",
+      "  nested = (*)0x1100 " +
+          GetRightArrow() +
+          " {\n"
+          "    variable1 = 12\n"
+          "    variable2 = 34\n"
+          "  }\n"
+          "  empty = {}\n"
+          "}",
       SyncFormatValue(outer_value, opts));
 
   // Smart mode. First give it a really wide limit, everything should be one line.
   opts.wrapping = ConsoleFormatOptions::Wrapping::kSmart;
   opts.smart_indent_cols = 1000;
-  EXPECT_EQ("{nested = (*)0x1100 🡺 {variable1 = 12, variable2 = 34}, empty = {}}",
-            SyncFormatValue(outer_value, opts));
+  EXPECT_EQ(
+      "{nested = (*)0x1100 " + GetRightArrow() + " {variable1 = 12, variable2 = 34}, empty = {}}",
+      SyncFormatValue(outer_value, opts));
 
   // Super narrow limit should force an expansion of everything.
   opts.smart_indent_cols = 2;
   EXPECT_EQ(
       "{\n"
-      "  nested = (*)0x1100 🡺 {\n"
-      "    variable1 = 12\n"
-      "    variable2 = 34\n"
-      "  }\n"
-      "  empty = {}\n"
-      "}",
+      "  nested = (*)0x1100 " +
+          GetRightArrow() +
+          " {\n"
+          "    variable1 = 12\n"
+          "    variable2 = 34\n"
+          "  }\n"
+          "  empty = {}\n"
+          "}",
       SyncFormatValue(outer_value, opts));
 
   // Intermediate state where "nested" fits in one line but the outer part doesn't.
   opts.smart_indent_cols = 55;
   EXPECT_EQ(
       "{\n"
-      "  nested = (*)0x1100 🡺 {variable1 = 12, variable2 = 34}\n"  // 55-char line.
-      "  empty = {}\n"
-      "}",
+      "  nested = (*)0x1100 " +
+          GetRightArrow() +
+          " {variable1 = 12, variable2 = 34}\n"  // 55-char line.
+          "  empty = {}\n"
+          "}",
       SyncFormatValue(outer_value, opts));
 
   // Test the boundary condition one below the previous.
   opts.smart_indent_cols = 54;
   EXPECT_EQ(
       "{\n"
-      "  nested = (*)0x1100 🡺 {\n"
-      "    variable1 = 12\n"
-      "    variable2 = 34\n"
-      "  }\n"
-      "  empty = {}\n"
-      "}",
+      "  nested = (*)0x1100 " +
+          GetRightArrow() +
+          " {\n"
+          "    variable1 = 12\n"
+          "    variable2 = 34\n"
+          "  }\n"
+          "  empty = {}\n"
+          "}",
       SyncFormatValue(outer_value, opts));
 }
 

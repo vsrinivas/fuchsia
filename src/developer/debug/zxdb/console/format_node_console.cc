@@ -7,6 +7,7 @@
 #include "src/developer/debug/zxdb/common/ref_ptr_to.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
+#include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/expr/format.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/lib/fxl/memory/ref_counted.h"
@@ -405,7 +406,7 @@ OutputBuffer DoFormatPointerNode(const FormatNode* node, const RecursiveState& s
     child_state.inhibit_one_name = true;
     child_state.inhibit_one_type = true;
 
-    out.Append(Syntax::kComment, node->description() + " 🡺 ");
+    out.Append(Syntax::kComment, node->description() + " " + GetRightArrow() + " ");
     // Use the "one way" version to propagate our formatting mode. This node cant't get different
     // formatting than its child.
     out.Append(DoFormatNodeOneWay(node->children()[0].get(), child_state, 0));

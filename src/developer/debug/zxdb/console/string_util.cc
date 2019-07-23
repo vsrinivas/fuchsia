@@ -6,7 +6,7 @@
 
 namespace zxdb {
 
-std::string GetRightArrow() {
+std::string GetCurrentRowMarker() {
   // U+25B6 BLACK RIGHT-POINTING TRIANGLE.
   return std::string("\xe2\x96\xb6");
 }
@@ -34,6 +34,17 @@ std::string GetExclamation() {
   // (Without the variation selector this looks like a small black-and-white
   // version. The variation selector selects the colored emoji variant.)
   return std::string("⚠️ ");
+}
+
+std::string GetRightArrow() {
+#if defined(__APPLE__)
+  // U+2794 HEAVY WIDE-HEADED RIGHTWARDS ARROW
+  // (Apple doesn't have the slightly heavier and better-looking one below.)
+  return "➔";
+#else
+  // U+1F87A WIDE-HEADED RIGHTWARDS HEAVY BARB ARROW
+  return "🡺";
+#endif
 }
 
 size_t UnicodeCharWidth(const std::string& str) {

@@ -170,7 +170,7 @@ void ListFilters(ConsoleContext* context, JobContext* job) {
 
     // "Current thread" marker.
     if (id == active_filter_id)
-      row.push_back(GetRightArrow());
+      row.push_back(GetCurrentRowMarker());
     else
       row.emplace_back();
 
@@ -278,7 +278,7 @@ void ListThreads(ConsoleContext* context, Process* process) {
 
     // "Current thread" marker.
     if (pair.first == active_thread_id)
-      row.push_back(GetRightArrow());
+      row.push_back(GetCurrentRowMarker());
     else
       row.emplace_back();
 
@@ -539,7 +539,7 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
 
     // "Current breakpoint" marker.
     if (pair.first == active_breakpoint_id)
-      row.emplace_back(GetRightArrow());
+      row.emplace_back(GetCurrentRowMarker());
     else
       row.emplace_back();
 
@@ -668,7 +668,7 @@ void ListSymbolServers(ConsoleContext* context) {
 
     // "Current symbol_server" marker.
     if (id == active_symbol_server_id)
-      row.emplace_back(GetRightArrow());
+      row.emplace_back(GetCurrentRowMarker());
     else
       row.emplace_back();
 

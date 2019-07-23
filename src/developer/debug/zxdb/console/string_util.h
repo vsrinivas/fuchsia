@@ -10,10 +10,9 @@
 
 namespace zxdb {
 
-// Returns a string containing the right arrow marker for marking the current
-// line. May be UTF-8 so size() could be > 1, but it will only be one Unicode
-// character.
-std::string GetRightArrow();
+// Returns a string containing the marker for marking the current line. May be UTF-8 so size() could
+// be > 1, but it will only be one Unicode character.
+std::string GetCurrentRowMarker();
 
 // Returns a circle symbol suitable for marking breakpoints in code listings.
 std::string GetBreakpointMarker();
@@ -25,6 +24,9 @@ std::string GetBullet();
 // Returns the exclamation-point-in-triangle emoji. This includes a space
 // after it since this character is a wide emoji.
 std::string GetExclamation();
+
+// Rightward pointing arrow used for pointers and such.
+std::string GetRightArrow();
 
 // Returns the number of Unicode characters in the given UTF-8 string. This
 // attempts to predict how many spaces the given string will take up when

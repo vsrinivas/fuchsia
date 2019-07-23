@@ -70,7 +70,7 @@ OutputBuffer FormatTargetList(ConsoleContext* context, int indent) {
 
     // "Current process" marker (or nothing).
     if (pair.first == active_target_id)
-      row.push_back(indent_str + GetRightArrow());
+      row.push_back(indent_str + GetCurrentRowMarker());
     else
       row.push_back(indent_str);
 

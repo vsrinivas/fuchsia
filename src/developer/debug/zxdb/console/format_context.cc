@@ -173,7 +173,7 @@ Err FormatSourceContext(const std::string& file_name_for_errors, const std::stri
       if (line_number == opts.active_line) {
         // Active + breakpoint.
         margin.Append(Syntax::kError, breakpoint_marker);
-        margin.Append(Syntax::kHeading, GetRightArrow());
+        margin.Append(Syntax::kHeading, GetCurrentRowMarker());
       } else {
         // Breakpoint.
         margin.Append(Syntax::kError, " " + breakpoint_marker);
@@ -181,7 +181,7 @@ Err FormatSourceContext(const std::string& file_name_for_errors, const std::stri
     } else {
       if (line_number == opts.active_line) {
         // Active line.
-        margin.Append(Syntax::kHeading, " " + GetRightArrow());
+        margin.Append(Syntax::kHeading, " " + GetCurrentRowMarker());
       } else {
         // Inactive line with no breakpoint.
         margin.Append("  ");
@@ -236,7 +236,7 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const Fo
       if (row.address == opts.active_address) {
         // Active + breakpoint.
         margin.Append(Syntax::kError, breakpoint_marker);
-        margin.Append(Syntax::kHeading, GetRightArrow());
+        margin.Append(Syntax::kHeading, GetCurrentRowMarker());
       } else {
         // Breakpoint.
         margin.Append(Syntax::kError, " " + breakpoint_marker);
@@ -244,7 +244,7 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const Fo
     } else {
       if (row.address == opts.active_address) {
         // Active line.
-        margin.Append(Syntax::kHeading, " " + GetRightArrow());
+        margin.Append(Syntax::kHeading, " " + GetCurrentRowMarker());
       } else {
         // Inactive line with no breakpoint.
         margin.Append("  ");

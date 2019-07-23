@@ -53,7 +53,7 @@ fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread, bool include_
   } else {
     for (int i = 0; i < static_cast<int>(stack.size()); i++) {
       if (i == active_frame_id)
-        out->Append(GetRightArrow() + " ");
+        out->Append(GetCurrentRowMarker() + " ");
       else
         out->Append("  ");
 
