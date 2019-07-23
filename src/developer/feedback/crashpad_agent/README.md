@@ -27,7 +27,7 @@ For the helper programs, you first need to add the package wrapping the config
 telling Crashpad to upload to a crash server and which server to upload to.
 
 ```sh
-(host)$ fx set core.x64 --with garnet/packages/config:crashpad_upload_to_prod_server
+(host)$ fx set core.x64 --with-base //src/developer/feedback/crashpad_agent:upload_to_prod_server_config
 ```
 
 Then, after running each one of the helper programs (see commands in sections
@@ -46,10 +46,10 @@ annotation is set to the expected value.
 
 ### Unit tests
 
-To run the unit tests:
+To run the unit and integration tests:
 
 ```sh
-(host) $ fx run-test crashpad_analyzer_tests
+(host) $ fx run-test crashpad_agent_tests
 ```
 
 ### Kernel crash
