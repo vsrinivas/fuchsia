@@ -328,7 +328,7 @@ mod tests {
 
     #[test]
     fn simple_write() {
-        let file_name = "/tmp/FileBlockingTargetTestFile".to_string();
+        let file_name = "/tmp/odu-file_target-simple_write-file01".to_string();
 
         let target = setup(&file_name);
         let mut io_packet =
@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn write_failure() {
-        let file_name = "/tmp/FileBlockingTargetTestFile2".to_string();
+        let file_name = "/tmp/odu-file_target-write_failure-file01".to_string();
 
         let target = setup(&file_name);
 

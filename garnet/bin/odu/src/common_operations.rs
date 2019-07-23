@@ -58,9 +58,14 @@ mod tests {
 
     #[test]
     fn test_pwrite_error_write_to_read_only_file() {
-        let file_name = "/tmp/FileBlockingTargetTestFile".to_string();
+        let file_name =
+            "/tmp/odu-common_operations-test_pwrite_error_write_to_read_only_file-file01"
+                .to_string();
 
+        // Create a file in rw mode if it doesn't exists.
         File::create(&file_name).unwrap();
+
+        // Open the file in read-only mode and try to write to it.
         let f = OpenOptions::new().read(true).write(false).open(file_name).unwrap();
         let mut buffer = vec![0; 100];
 
