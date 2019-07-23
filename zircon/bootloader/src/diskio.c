@@ -200,10 +200,7 @@ fail_open_devpath:
     return found ? 0 : -1;
 }
 
-static uint8_t GUID_ZIRCON_A[] = GUID_ZIRCON_A_VALUE;
-static uint8_t GUID_ZIRCON_B[] = GUID_ZIRCON_B_VALUE;
-
-static int disk_find_kernel(disk_t* disk, bool verbose) {
+static int disk_find_kernel(disk_t* disk, bool verbose, const uint8_t* guid_value, const char* guid_name) {
     gpt_header_t gpt;
     efi_status status = disk_read(disk, disk->blksz, &gpt, sizeof(gpt));
     if (status != EFI_SUCCESS) {
@@ -260,13 +257,11 @@ static int disk_find_kernel(disk_t* disk, bool verbose) {
         }
 
         const char* type;
-        if (!memcmp(table[n].type, GUID_ZIRCON_A, sizeof(GUID_ZIRCON_A))) {
-            type = "zircon-a";
+        if (!memcmp(table[n].type, guid_value, GPT_GUID_LEN)) {
+            type = guid_name;
             disk->first = table[n].first;
             disk->last = table[n].last;
             found = true;
-        } else if (!memcmp(table[n].type, GUID_ZIRCON_B, sizeof(GUID_ZIRCON_B))) {
-            type = "zircon-b";
         } else {
             type = "unknown";
         }
@@ -290,7 +285,7 @@ static int disk_find_kernel(disk_t* disk, bool verbose) {
     return found ? 0 : -1;
 }
 
-void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* _sz) {
+void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* _sz, const uint8_t* guid_value, const char* guid_name) {
     static bool verbose = false;
     static uint8_t sector[512];
     efi_boot_services* bs = sys->BootServices;
@@ -301,8 +296,8 @@ void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* _sz) {
         return NULL;
     }
 
-    if (disk_find_kernel(&disk, verbose)) {
-        printf("Cannot find ZIRCON partition on bootloader disk.\n");
+    if (disk_find_kernel(&disk, verbose, guid_value, guid_name)) {
+        printf("Cannot find %s partition on bootloader disk.\n", guid_name);
         goto fail0;
     }
 
@@ -313,7 +308,7 @@ void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* _sz) {
 
     size_t sz = image_getsize(sector, 512);
     if (sz == 0) {
-        printf("ZIRCON partition has no valid header\n");
+        printf("%s partition has no valid header\n", guid_name);
         goto fail0;
     }
 
@@ -321,18 +316,18 @@ void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* _sz) {
     void* image;
     status = bs->AllocatePages(AllocateAnyPages, EfiLoaderData, pages, (efi_physical_addr*) &image);
     if (status != EFI_SUCCESS) {
-        printf("Failed to allocate %zu bytes to load ZIRCON image\n", sz);
+        printf("Failed to allocate %zu bytes to load %s image\n", sz, guid_name);
         goto fail0;
     }
 
     status = disk_read(&disk, 0, image, sz);
     if (status != EFI_SUCCESS) {
-        printf("Failed to read image from ZIRCON partition\n");
+        printf("Failed to read image from %s partition\n", guid_name);
         goto fail1;
     }
 
     if (identify_image(image, sz) != IMAGE_COMBO) {
-        printf("ZIRCON partition has no valid image\n");
+        printf("%s partition has no valid image\n", guid_name);
         goto fail1;
     }
 

@@ -54,7 +54,7 @@ unsigned identify_image(void* image, size_t sz);
 size_t image_getsize(void* imageheader, size_t sz);
 
 
-void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* sz);
+void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* sz, const uint8_t* guid_value, const char* guid_name);
 
 
 // Where to start the kernel from

@@ -19,6 +19,8 @@
 #include <inet6.h>
 #include <xefi.h>
 
+#include <zircon/hw/gpt.h>
+
 #include "osboot.h"
 
 #include <zircon/boot/netboot.h>
@@ -433,57 +435,74 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     printf("\n\n");
     print_cmdline();
 
-    // First look for a self-contained zircon boot image
+    // TODO(jonmayo): loading these images before making a decision is very wasteful.
+
     size_t zedboot_size = 0;
     void* zedboot_kernel = NULL;
-
-    zedboot_kernel = xefi_load_file(L"zedboot.bin", &zedboot_size, 0);
-    switch (identify_image(zedboot_kernel, zedboot_size)) {
-    case IMAGE_COMBO:
-        printf("zedboot.bin is a valid kernel+ramdisk combo image\n");
-        break;
-    case IMAGE_EMPTY:
-        break;
-    default:
-        zedboot_kernel = NULL;
-        zedboot_size = 0;
-    }
-
-    // Look for a kernel image on disk
+    unsigned zedboot_ktype = IMAGE_INVALID;
     size_t ksz = 0;
-    unsigned ktype = IMAGE_INVALID;
     void* kernel = NULL;
+    unsigned ktype = IMAGE_INVALID;
+    size_t ksz_b = 0;
+    void* kernel_b = NULL;
+    unsigned ktype_b = IMAGE_INVALID;
 
-    kernel = image_load_from_disk(img, sys, &ksz);
-    if (kernel != NULL) {
-        printf("zircon image loaded from zircon partition\n");
-        ktype = IMAGE_COMBO;
-    } else {
-        kernel = xefi_load_file(L"zircon.bin", &ksz, 0);
-        switch ((ktype = identify_image(kernel, ksz))) {
-        case IMAGE_EMPTY:
-            break;
-        case IMAGE_KERNEL:
-            printf("zircon.bin is a kernel image\n");
-            break;
-        case IMAGE_COMBO:
-            printf("zircon.bin is a kernel+ramdisk combo image\n");
-            break;
-        case IMAGE_RAMDISK:
-            printf("zircon.bin is a ramdisk?!\n");
-        case IMAGE_INVALID:
-            printf("zircon.bin is not a valid kernel or combo image\n");
-            ktype = IMAGE_INVALID;
-            ksz = 0;
-            kernel = NULL;
+    const struct {
+        const char16_t* wfilename;
+        const char* filename;
+        uint8_t guid_value[GPT_GUID_LEN];
+        const char *guid_name;
+        void** kernel;
+        size_t* size;
+        unsigned *ktype;
+    } boot_list[] = {
+        // ZIRCON-A with legacy fallback filename on EFI partition
+        { L"zircon.bin", "zircon.bin", GUID_ZIRCON_A_VALUE, GUID_ZIRCON_A_NAME, &kernel, &ksz,
+            &ktype },
+        // Recovery / ZIRCON-R
+        { L"zedboot.bin", "zedboot.bin", GUID_ZIRCON_R_VALUE, GUID_ZIRCON_R_NAME, &zedboot_kernel,
+            &zedboot_size, &zedboot_ktype },
+        // no filename fallback for ZIRCON-B
+        { NULL, NULL, GUID_ZIRCON_B_VALUE, GUID_ZIRCON_B_NAME, &kernel_b, &ksz_b, &ktype_b },
+    };
+    unsigned i;
+
+    // Look for ZIRCON-A/B/R partitions
+    for (i = 0; i < sizeof(boot_list) / sizeof(*boot_list); i++) {
+        *boot_list[i].ktype = IMAGE_INVALID;
+        *boot_list[i].kernel = image_load_from_disk(img, sys, boot_list[i].size,
+                                                    boot_list[i].guid_value,
+                                                    boot_list[i].guid_name);
+        if (*boot_list[i].kernel != NULL) {
+            printf("zircon image loaded from zircon partition %s\n", boot_list[i].guid_name);
+            *boot_list[i].ktype = IMAGE_COMBO;
+        } else if (boot_list[i].wfilename != NULL) {
+            *boot_list[i].kernel = xefi_load_file(boot_list[i].wfilename, boot_list[i].size, 0);
+            switch ((*boot_list[i].ktype = identify_image(*boot_list[i].kernel, *boot_list[i].size))) {
+            case IMAGE_EMPTY:
+                break;
+            case IMAGE_KERNEL:
+                printf("%s is a kernel image\n", boot_list[i].filename);
+                break;
+            case IMAGE_COMBO:
+                printf("%s is a kernel+ramdisk combo image\n", boot_list[i].filename);
+                break;
+            case IMAGE_RAMDISK:
+                printf("%s is a ramdisk?!\n", boot_list[i].filename);
+            case IMAGE_INVALID:
+                printf("%s is not a valid kernel or combo image\n", boot_list[i].filename);
+                *boot_list[i].ktype = IMAGE_INVALID;
+                *boot_list[i].size = 0;
+                *boot_list[i].kernel = NULL;
+            }
         }
     }
 
-    if (!have_network && zedboot_kernel == NULL && kernel == NULL) {
+    if (!have_network && zedboot_kernel == NULL && kernel == NULL && kernel_b == NULL) {
         goto fail;
     }
 
-    char valid_keys[5];
+    char valid_keys[8];
     memset(valid_keys, 0, sizeof(valid_keys));
     size_t key_idx = 0;
 
@@ -492,9 +511,14 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     }
     if (kernel != NULL) {
         valid_keys[key_idx++] = 'm';
+        valid_keys[key_idx++] = '1';
+    }
+    if (kernel_b != NULL) {
+        valid_keys[key_idx++] = '2';
     }
     if (zedboot_kernel) {
         valid_keys[key_idx++] = 'z';
+        valid_keys[key_idx++] = 'r';
     }
 
     // The first entry in valid_keys will be the default after the timeout.
@@ -526,11 +550,12 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         }
         if (kernel) {
             printf(", ");
+            // TODO(jonmayo): remove obsolete term 'zircon.bin'. use ZIRCON-A
             printf("or (m) to boot the zircon.bin on the device");
         }
         if (zedboot_kernel) {
             printf(", ");
-            printf("or (z) to launch zedboot");
+            printf("or (z)/(r) to launch recovery");
         }
         printf(" ...");
 
@@ -544,6 +569,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         case 'n':
             do_netboot();
             break;
+        case '1':
         case 'm':
             if (ktype == IMAGE_COMBO) {
                 zedboot(img, sys, kernel, ksz);
@@ -564,8 +590,17 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
                 boot_kernel(gImg, gSys, kernel, ksz, ramdisk, rsz);
             }
             goto fail;
+        case '2':
+            if (ktype_b == IMAGE_COMBO) {
+                zedboot(img, sys, kernel_b, ksz_b);
+            }
+        case 'r':
         case 'z':
-            zedboot(img, sys, zedboot_kernel, zedboot_size);
+            if (zedboot_ktype == IMAGE_COMBO) {
+                zedboot(img, sys, zedboot_kernel, zedboot_size);
+            } else {
+                printf("%s, wrong image type\n", GUID_ZIRCON_R_NAME);
+            }
             goto fail;
         default:
             goto fail;
