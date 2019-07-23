@@ -627,11 +627,11 @@ group("overnet") {
   public_deps = [
     # FIXME(FLK-187, FLK-188): Disabled because of flakes.
     # "//src/connectivity/overnet/examples:overnet_examples_tests",
-    "//src/connectivity/overnet/lib:overnet_fuzzers",
-    "//src/connectivity/overnet/lib:overnet_tests",
-    "//src/connectivity/overnet/lib:overnet_unittests($host_toolchain)",
-    "//src/connectivity/overnet/lib/endpoint/integration_tests:router_endpoint_integration_fuzzer_replay($host_toolchain)",
-    "//src/connectivity/overnet/overnetstack:overnetstack_tests",
+    "//src/connectivity/overnet/deprecated/lib:overnet_fuzzers",
+    "//src/connectivity/overnet/deprecated/lib:overnet_tests",
+    "//src/connectivity/overnet/deprecated/lib:overnet_unittests($host_toolchain)",
+    "//src/connectivity/overnet/deprecated/lib/endpoint/integration_tests:router_endpoint_integration_fuzzer_replay($host_toolchain)",
+    "//src/connectivity/overnet/deprecated/overnetstack:overnetstack_tests",
   ]
 }
 

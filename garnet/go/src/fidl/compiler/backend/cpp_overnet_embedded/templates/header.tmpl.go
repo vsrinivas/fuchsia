@@ -10,7 +10,7 @@ const Header = `
 
 #pragma once
 
-#include "src/connectivity/overnet/lib/embedded/header.h"
+#include "src/connectivity/overnet/deprecated/lib/embedded/header.h"
 
 #include <{{- range $index, $library := .Library }}{{ if $index }}/{{ end }}{{ $library }}{{ end }}/cpp/fidl.h>
 {{ range .Headers -}}

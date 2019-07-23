@@ -1,0 +1,86 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+###############################################################################
+# AGGREGATE LIBRARIES
+
+source_set("lib") {
+  public_deps = [
+    ":node_id",
+    ":seq_num",
+    ":stream_id",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+  deps = [
+    ":node_id_test",
+    ":seq_num_test",
+  ]
+}
+
+###############################################################################
+
+# node_id
+source_set("node_id") {
+  sources = [
+    "node_id.cc",
+    "node_id.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.overnet.protocol",
+  ]
+  deps = [
+    "//src/connectivity/overnet/deprecated/lib/protocol:serialization_helpers",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:status",
+  ]
+}
+
+source_set("node_id_test") {
+  testonly = true
+  sources = [
+    "node_id_test.cc",
+  ]
+  deps = [
+    ":node_id",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# seq_num
+source_set("seq_num") {
+  sources = [
+    "seq_num.cc",
+    "seq_num.h",
+  ]
+  deps = [
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:status",
+  ]
+}
+
+source_set("seq_num_test") {
+  testonly = true
+  sources = [
+    "seq_num_test.cc",
+  ]
+  deps = [
+    ":seq_num",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# stream_id
+source_set("stream_id") {
+  sources = [
+    "stream_id.cc",
+    "stream_id.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.overnet.protocol",
+  ]
+  deps = [
+    "//src/connectivity/overnet/deprecated/lib/protocol:varint",
+  ]
+}

@@ -72,6 +72,6 @@ group("tests") {
     ":overnet_examples_tests",
     "//src/connectivity/network/mdns/service:mdns",
     "//src/connectivity/network/testing/netemul",
-    "//src/connectivity/overnet/overnetstack",
+    "//src/connectivity/overnet/deprecated/overnetstack",
   ]
 }

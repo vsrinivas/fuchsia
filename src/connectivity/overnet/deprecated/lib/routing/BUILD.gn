@@ -1,0 +1,105 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/fuzzing/fuzzer.gni")
+
+###############################################################################
+# AGGREGATE LIBRARIES
+
+source_set("lib") {
+  public_deps = []
+}
+
+source_set("tests") {
+  testonly = true
+  deps = [
+    ":router_test",
+  ]
+}
+
+###############################################################################
+
+# router
+source_set("router") {
+  sources = [
+    "router.cc",
+    "router.h",
+  ]
+  public_deps = [
+    ":routing_table",
+  ]
+  deps = [
+    "//src/connectivity/overnet/deprecated/lib/environment:timer",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace",
+    "//src/connectivity/overnet/deprecated/lib/protocol:fidl",
+    "//src/connectivity/overnet/deprecated/lib/protocol:routable_message",
+    "//src/connectivity/overnet/deprecated/lib/stats:link",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:callback",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:closed_ptr",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:lazy_slice",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:slice",
+  ]
+}
+
+source_set("router_test") {
+  testonly = true
+  sources = [
+    "router_test.cc",
+  ]
+  deps = [
+    ":router",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/testing:flags",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# routing_table
+source_set("routing_table") {
+  sources = [
+    "routing_table.cc",
+    "routing_table.h",
+  ]
+  public_deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.overnet.protocol",
+    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol_overnet_internal",
+  ]
+  deps = [
+    "//src/connectivity/overnet/deprecated/lib/environment:timer",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace",
+    "//src/connectivity/overnet/deprecated/lib/labels:node_id",
+    "//src/connectivity/overnet/deprecated/lib/protocol:varint",  # TODO(ctiller): remove once we can take a FIDL dependency
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:bandwidth",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:internal_list",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:optional",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:slice",
+  ]
+}
+
+fidl("fuchsia.overnet.routingtablefuzzer") {
+  sources = [
+    "routing_table_fuzzer.test.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.overnet.protocol",
+  ]
+}
+
+fuzzer("routing_table_fuzzer") {
+  sources = [
+    "routing_table_fuzzer.cc",
+  ]
+  deps = [
+    ":fuchsia.overnet.routingtablefuzzer",
+    ":routing_table",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/protocol:fidl",
+    "//src/connectivity/overnet/deprecated/lib/protocol:varint",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+  ]
+}

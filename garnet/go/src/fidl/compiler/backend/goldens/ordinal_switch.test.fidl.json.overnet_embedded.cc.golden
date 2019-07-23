@@ -2,7 +2,7 @@
 
 #include <ordinal_switch.test.fidl.json.overnet_embedded.h>
 
-#include "src/connectivity/overnet/lib/embedded/implementation.h"
+#include "src/connectivity/overnet/deprecated/lib/embedded/implementation.h"
 namespace test {
 namespace name {
 namespace embedded {

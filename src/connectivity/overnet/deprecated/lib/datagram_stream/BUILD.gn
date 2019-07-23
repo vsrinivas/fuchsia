@@ -1,0 +1,187 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+
+###############################################################################
+# AGGREGATE LIBRARIES
+
+source_set("lib") {
+}
+
+source_set("tests") {
+  testonly = true
+  deps = [
+    ":datagram_stream_test",
+    ":linearizer_test",
+    ":receive_mode_test",
+  ]
+}
+
+###############################################################################
+
+# datagram_stream
+source_set("datagram_stream") {
+  sources = [
+    "datagram_stream.cc",
+    "datagram_stream.h",
+  ]
+  public_deps = [
+    ":linearizer",
+    ":receive_mode",
+    ":stream_state",
+    "//sdk/fidl/fuchsia.overnet.protocol",
+    "//src/connectivity/overnet/deprecated/lib/environment:timer",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace",
+    "//src/connectivity/overnet/deprecated/lib/labels:seq_num",
+    "//src/connectivity/overnet/deprecated/lib/packet_protocol",
+    "//src/connectivity/overnet/deprecated/lib/routing:router",
+    "//src/connectivity/overnet/deprecated/lib/stats:stream",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:internal_list",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:slice",
+  ]
+}
+
+source_set("datagram_stream_test") {
+  testonly = true
+  sources = [
+    "datagram_stream_test.cc",
+  ]
+  deps = [
+    ":datagram_stream",
+    "//sdk/fidl/fuchsia.overnet.protocol",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/testing:flags",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# linearizer
+source_set("linearizer") {
+  sources = [
+    "linearizer.cc",
+    "linearizer.h",
+  ]
+  deps = [
+    "//src/connectivity/overnet/deprecated/lib/environment:trace",
+    "//src/connectivity/overnet/deprecated/lib/stats:stream",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:callback",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:optional",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:slice",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:status",
+  ]
+}
+
+source_set("linearizer_fuzzer_lib") {
+  testonly = true
+  sources = [
+    "linearizer_fuzzer.cc",
+    "linearizer_fuzzer.h",
+  ]
+  deps = [
+    ":linearizer",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:optional",
+  ]
+}
+
+source_set("linearizer_test") {
+  testonly = true
+  sources = [
+    "linearizer_test.cc",
+  ]
+  deps = [
+    ":linearizer",
+    ":linearizer_fuzzer_lib",
+    "//src/connectivity/overnet/deprecated/lib/testing:flags",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuzzer("linearizer_fuzzer") {
+  sources = [
+    "linearizer_fuzzer_main.cc",
+  ]
+  deps = [
+    ":linearizer_fuzzer_lib",
+  ]
+}
+
+# receive_mode
+source_set("receive_mode") {
+  sources = [
+    "receive_mode.cc",
+    "receive_mode.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.overnet.protocol",
+  ]
+  deps = [
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:callback",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:optional",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:status",
+  ]
+}
+
+source_set("receive_mode_fuzzer_helpers") {
+  testonly = true
+  sources = [
+    "receive_mode_fuzzer_helpers.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.overnet.protocol",
+  ]
+  deps = [
+    ":receive_mode",
+  ]
+}
+
+source_set("receive_mode_test") {
+  testonly = true
+  sources = [
+    "receive_mode_test.cc",
+  ]
+  deps = [
+    ":receive_mode",
+    ":receive_mode_fuzzer_helpers",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuzzer("receive_mode_fuzzer") {
+  sources = [
+    "receive_mode_fuzzer.cc",
+  ]
+  deps = [
+    ":receive_mode_fuzzer_helpers",
+    "//src/connectivity/overnet/deprecated/lib/protocol:varint",
+  ]
+}
+
+# stream_state
+
+source_set("stream_state") {
+  sources = [
+    "stream_state.cc",
+    "stream_state.h",
+  ]
+  deps = [
+    "//src/connectivity/overnet/deprecated/lib/environment:trace",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:callback",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:status",
+  ]
+}
+
+fuzzer("stream_state_fuzzer") {
+  sources = [
+    "stream_state_fuzzer.cc",
+  ]
+  deps = [
+    ":stream_state",
+  ]
+}

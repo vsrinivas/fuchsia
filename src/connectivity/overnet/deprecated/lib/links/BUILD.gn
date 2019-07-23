@@ -1,0 +1,224 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/fuzzing/fuzzer.gni")
+
+###############################################################################
+# AGGREGATE LIBRARIES
+
+source_set("lib") {
+  public_deps = [
+    ":packet_link",
+    ":packet_nub",
+    ":stream_link",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+  deps = [
+    ":packet_link_test",
+    ":packet_nub_test",
+    ":packet_stuffer_test",
+    ":stream_link_test",
+  ]
+}
+
+###############################################################################
+
+# packet_link
+source_set("packet_link") {
+  sources = [
+    "packet_link.cc",
+    "packet_link.h",
+  ]
+  public_deps = [
+    "//src/connectivity/overnet/deprecated/lib/routing:router",
+  ]
+  deps = [
+    ":packet_stuffer",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace",
+    "//src/connectivity/overnet/deprecated/lib/packet_protocol",
+  ]
+}
+
+source_set("packet_link_test") {
+  testonly = true
+  sources = [
+    "packet_link_test.cc",
+  ]
+  deps = [
+    ":packet_link",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/testing:flags",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# stream_link
+source_set("stream_link") {
+  sources = [
+    "stream_link.cc",
+    "stream_link.h",
+  ]
+  public_deps = [
+    ":packet_stuffer",
+    "//src/connectivity/overnet/deprecated/lib/protocol:stream_framer",
+    "//src/connectivity/overnet/deprecated/lib/routing:router",
+  ]
+  deps = [
+    "//src/connectivity/overnet/deprecated/lib/environment:trace",
+  ]
+}
+
+source_set("stream_link_test") {
+  testonly = true
+  sources = [
+    "stream_link_test.cc",
+  ]
+  deps = [
+    ":stream_link",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/protocol:reliable_framer",
+    "//src/connectivity/overnet/deprecated/lib/protocol:unreliable_framer",
+    "//src/connectivity/overnet/deprecated/lib/testing:flags",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fidl("fuchsia.overnet.streamlinkfuzzer") {
+  sources = [
+    "stream_link_fuzzer.test.fidl",
+  ]
+}
+
+fuzzer("stream_link_untrusted_fuzzer") {
+  sources = [
+    "stream_link_untrusted_fuzzer.cc",
+  ]
+  deps = [
+    ":fuchsia.overnet.streamlinkfuzzer",
+    ":stream_link",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/protocol:fidl",
+    "//src/connectivity/overnet/deprecated/lib/protocol:reliable_framer",
+    "//src/connectivity/overnet/deprecated/lib/protocol:unreliable_framer",
+    "//src/connectivity/overnet/deprecated/lib/protocol:varint",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+  ]
+}
+
+fuzzer("stream_link_peer_to_peer_fuzzer") {
+  sources = [
+    "stream_link_peer_to_peer_fuzzer.cc",
+  ]
+  deps = [
+    ":fuchsia.overnet.streamlinkfuzzer",
+    ":stream_link",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/protocol:fidl",
+    "//src/connectivity/overnet/deprecated/lib/protocol:reliable_framer",
+    "//src/connectivity/overnet/deprecated/lib/protocol:unreliable_framer",
+    "//src/connectivity/overnet/deprecated/lib/protocol:varint",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+  ]
+}
+
+# packet_nub
+source_set("packet_nub") {
+  sources = [
+    "packet_nub.h",
+  ]
+  public_deps = [
+    ":packet_link",
+    "//src/connectivity/overnet/deprecated/lib/environment:timer",
+    "//src/connectivity/overnet/deprecated/lib/labels:node_id",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:slice",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+source_set("packet_nub_fuzzer_lib") {
+  testonly = true
+  sources = [
+    "packet_nub_fuzzer.cc",
+    "packet_nub_fuzzer.h",
+  ]
+  public_deps = [
+    ":packet_nub",
+  ]
+  deps = [
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+  ]
+}
+
+source_set("packet_nub_test") {
+  testonly = true
+  sources = [
+    "packet_nub_test.cc",
+  ]
+  deps = [
+    ":packet_nub",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/testing:flags",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuzzer("packet_nub_fuzzer") {
+  sources = [
+    "packet_nub_fuzzer_main.cc",
+  ]
+  deps = [
+    ":packet_nub_fuzzer_lib",
+  ]
+}
+
+fuzzer("packet_nub_connection_fuzzer") {
+  sources = [
+    "packet_nub_connection_fuzzer.cc",
+  ]
+  deps = [
+    ":packet_nub",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+  ]
+}
+
+# packet_stuffer
+source_set("packet_stuffer") {
+  sources = [
+    "packet_stuffer.cc",
+    "packet_stuffer.h",
+  ]
+  public_deps = [
+    "//src/connectivity/overnet/deprecated/lib/routing:router",
+  ]
+  deps = [
+    "//src/connectivity/overnet/deprecated/lib/environment:trace",
+  ]
+}
+
+source_set("packet_stuffer_test") {
+  testonly = true
+  sources = [
+    "packet_stuffer_test.cc",
+  ]
+  deps = [
+    ":packet_stuffer",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/testing:flags",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}

@@ -10,7 +10,7 @@ const Implementation = `
 
 #include <{{ .PrimaryHeader }}>
 
-#include "src/connectivity/overnet/lib/embedded/implementation.h"
+#include "src/connectivity/overnet/deprecated/lib/embedded/implementation.h"
 
 {{- range .Library }}
 namespace {{ . }} {

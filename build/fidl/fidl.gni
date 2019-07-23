@@ -175,7 +175,7 @@ template("fidl") {
           output_stem = "cpp/overnet_internal"
           additional_public_deps =
               hlcpp_public_deps + [
-                "//src/connectivity/overnet/lib/protocol:fidl_stream",
+                "//src/connectivity/overnet/deprecated/lib/protocol:fidl_stream",
                 ":$target_name",
               ]
         },
@@ -185,7 +185,7 @@ template("fidl") {
           fidlgen_generator = "overnet_embedded"
           output_stem = "cpp/overnet_embedded"
           additional_public_deps = [
-            "//src/connectivity/overnet/lib/embedded:runtime",
+            "//src/connectivity/overnet/deprecated/lib/embedded:runtime",
             ":$target_name",
           ]
         },

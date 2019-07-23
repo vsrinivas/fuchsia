@@ -1,0 +1,250 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/fuzzing/fuzzer.gni")
+
+###############################################################################
+# AGGREGATE LIBRARIES
+
+source_set("lib") {
+  public_deps = [
+    ":fidl",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+  deps = [
+    ":ack_frame_test",
+    ":routable_message_test",
+    ":stream_framer_test",
+    ":unreliable_framer_test",
+    ":varint_test",
+  ]
+}
+
+###############################################################################
+
+# ack_frame
+source_set("ack_frame") {
+  sources = [
+    "ack_frame.cc",
+    "ack_frame.h",
+  ]
+  deps = [
+    ":varint",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:slice",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:status",
+  ]
+}
+
+source_set("ack_frame_test") {
+  testonly = true
+  sources = [
+    "ack_frame_test.cc",
+  ]
+  deps = [
+    ":ack_frame",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuzzer("ack_frame_fuzzer") {
+  sources = [
+    "ack_frame_fuzzer.cc",
+  ]
+  deps = [
+    ":ack_frame",
+  ]
+}
+
+# coding
+source_set("coding") {
+  sources = [
+    "coding.cc",
+    "coding.h",
+  ]
+  deps = [
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:slice",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:status",
+    "//third_party/snappy",
+  ]
+}
+
+fuzzer("overnet_encoding_fuzzer") {
+  sources = [
+    "encoding_fuzzer.cc",
+  ]
+  deps = [
+    ":coding",
+  ]
+}
+
+fuzzer("overnet_decoding_fuzzer") {
+  sources = [
+    "decoding_fuzzer.cc",
+  ]
+  deps = [
+    ":coding",
+  ]
+}
+
+# fidl
+source_set("fidl") {
+  sources = [
+    "fidl.h",
+  ]
+  deps = [
+    ":coding",
+    "//sdk/lib/fidl/cpp:cpp_base",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:slice",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:status",
+  ]
+}
+
+# fidl_stream
+source_set("fidl_stream") {
+  sources = [
+    "fidl_stream.cc",
+    "fidl_stream.h",
+  ]
+  deps = [
+    "//sdk/lib/fidl/cpp:cpp_base",
+  ]
+}
+
+# reliable_framer
+source_set("reliable_framer") {
+  sources = [
+    "reliable_framer.cc",
+    "reliable_framer.h",
+  ]
+  public_deps = [
+    ":stream_framer",
+  ]
+  deps = [
+    "//src/connectivity/overnet/deprecated/lib/environment:trace",
+  ]
+}
+
+# routable_message
+source_set("routable_message") {
+  sources = [
+    "routable_message.cc",
+    "routable_message.h",
+  ]
+  public_deps = [
+    "//src/connectivity/overnet/deprecated/lib/labels:node_id",
+    "//src/connectivity/overnet/deprecated/lib/labels:seq_num",
+    "//src/connectivity/overnet/deprecated/lib/labels:stream_id",
+  ]
+  deps = [
+    ":varint",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:optional",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:slice",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:status",
+  ]
+}
+
+source_set("routable_message_test") {
+  testonly = true
+  sources = [
+    "routable_message_test.cc",
+  ]
+  deps = [
+    ":routable_message",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuzzer("routable_message_fuzzer") {
+  sources = [
+    "routable_message_fuzzer.cc",
+  ]
+  deps = [
+    ":routable_message",
+  ]
+}
+
+# serialization_helpers
+source_set("serialization_helpers") {
+  sources = [
+    "serialization_helpers.h",
+  ]
+}
+
+# stream_framer
+source_set("stream_framer") {
+  sources = [
+    "stream_framer.h",
+  ]
+  public_deps = [
+    "//src/connectivity/overnet/deprecated/lib/environment:trace",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:optional",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:slice",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:status",
+  ]
+}
+
+source_set("stream_framer_test") {
+  testonly = true
+  sources = [
+    "stream_framer_test.cc",
+  ]
+  public_deps = [
+    ":reliable_framer",
+    ":unreliable_framer",
+  ]
+  deps = [
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# unreliable_framer
+source_set("unreliable_framer") {
+  sources = [
+    "unreliable_framer.cc",
+    "unreliable_framer.h",
+  ]
+  public_deps = [
+    ":stream_framer",
+  ]
+  deps = [
+    "//third_party/zlib:zlib_static",
+  ]
+}
+
+source_set("unreliable_framer_test") {
+  testonly = true
+  sources = [
+    "unreliable_framer_test.cc",
+  ]
+  public_deps = [
+    ":unreliable_framer",
+  ]
+  deps = [
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# varint
+source_set("varint") {
+  sources = [
+    "varint.cc",
+    "varint.h",
+  ]
+}
+
+source_set("varint_test") {
+  testonly = true
+  sources = [
+    "varint_test.cc",
+  ]
+  deps = [
+    ":varint",
+    "//third_party/googletest:gtest",
+  ]
+}

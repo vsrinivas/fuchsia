@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "src/connectivity/overnet/lib/embedded/header.h"
+#include "src/connectivity/overnet/deprecated/lib/embedded/header.h"
 
 #include <test/name/cpp/fidl.h>
 

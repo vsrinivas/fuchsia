@@ -1,0 +1,154 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+
+###############################################################################
+# AGGREGATE LIBRARIES
+
+source_set("lib") {
+}
+
+source_set("tests") {
+  testonly = true
+  deps = [
+    ":aead_codec_test",
+    ":bbr_test",
+    ":packet_protocol_test",
+  ]
+}
+
+###############################################################################
+
+# aead_codec
+source_set("aead_codec") {
+  sources = [
+    "aead_codec.cc",
+    "aead_codec.h",
+  ]
+  public_deps = [
+    ":packet_protocol",
+    "//src/connectivity/overnet/deprecated/lib/protocol:serialization_helpers",
+    "//third_party/boringssl:crypto",
+  ]
+}
+
+source_set("aead_codec_test") {
+  testonly = true
+  sources = [
+    "aead_codec_test.cc",
+  ]
+  deps = [
+    ":aead_codec",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# bbr
+source_set("bbr") {
+  sources = [
+    "bbr.cc",
+    "bbr.h",
+  ]
+  deps = [
+    ":windowed_filter",
+    "//src/connectivity/overnet/deprecated/lib/environment:timer",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:bandwidth",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:callback",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:internal_list",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:optional",
+  ]
+}
+
+source_set("bbr_test") {
+  testonly = true
+  sources = [
+    "bbr_test.cc",
+  ]
+  deps = [
+    ":bbr",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/testing:csv_writer",
+    "//src/connectivity/overnet/deprecated/lib/testing:flags",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# packet_protocol
+source_set("packet_protocol") {
+  sources = [
+    "packet_protocol.cc",
+    "packet_protocol.h",
+  ]
+  public_deps = [
+    ":bbr",
+    "//src/connectivity/overnet/deprecated/lib/environment:timer",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace",
+    "//src/connectivity/overnet/deprecated/lib/labels:seq_num",
+    "//src/connectivity/overnet/deprecated/lib/protocol:ack_frame",
+    "//src/connectivity/overnet/deprecated/lib/protocol:varint",
+    "//src/connectivity/overnet/deprecated/lib/stats:link",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:callback",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:lazy_slice",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:once_fn",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:optional",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:slice",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:status",
+    "//third_party/zlib:zlib_static",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("packet_protocol_fuzzer_lib") {
+  testonly = true
+  sources = [
+    "packet_protocol_fuzzer.cc",
+    "packet_protocol_fuzzer.h",
+  ]
+  deps = [
+    ":packet_protocol",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:closed_ptr",
+  ]
+}
+
+source_set("packet_protocol_test") {
+  testonly = true
+  sources = [
+    "packet_protocol_test.cc",
+  ]
+  deps = [
+    ":aead_codec",
+    ":packet_protocol",
+    ":packet_protocol_fuzzer_lib",
+    "//src/connectivity/overnet/deprecated/lib/environment:trace_cout",
+    "//src/connectivity/overnet/deprecated/lib/protocol:serialization_helpers",
+    "//src/connectivity/overnet/deprecated/lib/testing:flags",
+    "//src/connectivity/overnet/deprecated/lib/testing:test_timer",
+    "//src/connectivity/overnet/deprecated/lib/vocabulary:closed_ptr",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuzzer("packet_protocol_fuzzer") {
+  sources = [
+    "packet_protocol_fuzzer_main.cc",
+  ]
+  deps = [
+    ":packet_protocol_fuzzer_lib",
+  ]
+}
+
+# windowed_filter
+source_set("windowed_filter") {
+  sources = [
+    "windowed_filter.h",
+  ]
+}
