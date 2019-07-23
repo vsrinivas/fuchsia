@@ -26,4 +26,6 @@ source_set("cpp") {
     "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
   ]
+
+  public_configs = [ "//garnet/public:config" ]
 }

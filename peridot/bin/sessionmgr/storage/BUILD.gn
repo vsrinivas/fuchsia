@@ -138,6 +138,7 @@ source_set("story_storage_xdr") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
     "//peridot/lib/base64url",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/module_manifest:json_xdr",

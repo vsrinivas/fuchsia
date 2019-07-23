@@ -24,6 +24,8 @@ source_set("future") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
   ]
+
+  public_configs = [ "//peridot/public:config" ]
 }
 
 source_set("operation") {
@@ -41,6 +43,8 @@ source_set("operation") {
   deps = [
     "//zircon/public/lib/trace",
   ]
+
+  public_configs = [ "//peridot/public:config" ]
 }
 
 group("unittests") {

@@ -52,7 +52,6 @@ source_set("src") {
     "model",
     "//garnet/lib/cmx:cmx",
     "//garnet/lib/process",
-    "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/json",
     "//garnet/public/lib/syslog/cpp",
@@ -77,6 +76,7 @@ source_set("src") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/async_promise",
     "//sdk/lib/sys/cpp",
     "//src/connectivity/network/testing/netemul/lib/network:network_service",
     "//zircon/public/fidl/fuchsia-io",

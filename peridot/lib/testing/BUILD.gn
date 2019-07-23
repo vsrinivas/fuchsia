@@ -82,6 +82,10 @@ source_set("entity_resolver_fake") {
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fxl",
   ]
+
+  deps = [
+    "//garnet/public/lib/fsl"
+  ]
 }
 
 source_set("module_resolver_fake") {

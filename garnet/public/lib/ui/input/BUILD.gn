@@ -25,4 +25,6 @@ source_set("input") {
     "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",
   ]
+
+  public_configs = [ "//garnet/public:config" ]
 }

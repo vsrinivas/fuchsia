@@ -14,8 +14,6 @@ source_set("common") {
     "fxl_export.h",
     "macros.h",
   ]
-
-  public_configs = [ "//garnet/public:config" ]
 }
 
 if (is_fuchsia) {
@@ -68,8 +66,6 @@ source_set("memory") {
     ":common",
     ":fxl_logging",
   ]
-
-  public_configs = [ "//garnet/public:config" ]
 }
 
 source_set("strings") {
@@ -106,8 +102,6 @@ source_set("strings") {
     ":common",
     ":fxl_logging",
   ]
-
-  public_configs = [ "//garnet/public:config" ]
 }
 
 source_set("time") {
@@ -125,8 +119,6 @@ source_set("time") {
     ":common",
     ":fxl_logging",
   ]
-
-  public_configs = [ "//garnet/public:config" ]
 }
 
 source_set("functional") {
@@ -142,8 +134,6 @@ source_set("functional") {
     ":fxl_logging",
     ":memory",
   ]
-
-  public_configs = [ "//garnet/public:config" ]
 }
 
 static_library("fxl") {
@@ -182,7 +172,6 @@ source_set("printers") {
   deps = [
     ":fxl",
   ]
-  public_configs = [ "//garnet/public:config" ]
 }
 
 group("fxl_printers") {

@@ -16,4 +16,6 @@ source_set("cpp") {
     "//sdk/fidl/fuchsia.ui.input",
     "//src/lib/fxl",
   ]
+
+  public_configs = [ "//garnet/public:config" ]
 }

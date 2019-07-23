@@ -251,6 +251,7 @@ source_set("display") {
     "displays/display_manager.h",
   ]
   public_deps = [
+    "//garnet/public/lib/fsl",
     "//zircon/public/fidl/fuchsia-hardware-display",
     "//zircon/public/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
   ]

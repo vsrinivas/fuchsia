@@ -49,13 +49,13 @@ source_set("page_client") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:clone",
-    "//peridot/public/lib/async/cpp:operation",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/fidl",
     "//src/lib/fxl",
   ]
 
   public_deps = [
+    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.ledger",
     "//src/ledger/bin/fidl",
   ]
