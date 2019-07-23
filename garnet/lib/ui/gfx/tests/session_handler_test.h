@@ -13,8 +13,8 @@
 #include "garnet/lib/ui/gfx/tests/error_reporting_test.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
-#include "garnet/lib/ui/scenic/tests/scenic_test.h"
 #include "lib/gtest/test_loop_fixture.h"
+#include "lib/sys/cpp/component_context.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -22,7 +22,7 @@ namespace test {
 
 // For testing SessionHandler without having to manually provide all the state
 // necessary for SessionHandler to run
-class SessionHandlerTest : public ErrorReportingTest, public EventReporter, public SessionUpdater {
+class SessionHandlerTest : public ErrorReportingTest, public SessionUpdater {
  public:
   SessionHandlerTest();
 
@@ -30,11 +30,6 @@ class SessionHandlerTest : public ErrorReportingTest, public EventReporter, publ
   // | ::testing::Test |
   void SetUp() override;
   void TearDown() override;
-
-  // |EventReporter|
-  void EnqueueEvent(fuchsia::ui::gfx::Event event) override;
-  void EnqueueEvent(fuchsia::ui::input::InputEvent event) override;
-  void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override;
 
   void InitializeScenic();
   void InitializeDisplayManager();
@@ -45,6 +40,10 @@ class SessionHandlerTest : public ErrorReportingTest, public EventReporter, publ
   SessionHandler* session_handler() {
     FXL_DCHECK(command_dispatcher_);
     return static_cast<SessionHandler*>(command_dispatcher_.get());
+  }
+
+  Session* session() {
+    return session_handler()->session();
   }
 
   // |SessionUpdater|
@@ -62,8 +61,6 @@ class SessionHandlerTest : public ErrorReportingTest, public EventReporter, publ
   std::unique_ptr<scenic_impl::Session> scenic_session_;
   CommandDispatcherUniquePtr command_dispatcher_;
   std::unique_ptr<SessionManagerForTest> session_manager_;
-
-  std::vector<fuchsia::ui::scenic::Event> events_;
 
   fxl::WeakPtrFactory<SessionHandlerTest> weak_factory_;  // must be last
 };

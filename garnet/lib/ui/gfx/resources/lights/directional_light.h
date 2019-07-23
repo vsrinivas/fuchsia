@@ -18,7 +18,7 @@ class DirectionalLight final : public Light {
 
   // The direction will be normalized before storing.  Returns false if the
   // length of |direction| is nearly zero.
-  bool SetDirection(const glm::vec3& direction);
+  bool SetDirection(const glm::vec3& direction, ErrorReporter* reporter);
 
   // The normalized direction of the light source.
   const glm::vec3& direction() const { return direction_; }

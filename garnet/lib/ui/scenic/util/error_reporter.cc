@@ -43,9 +43,9 @@ ErrorReporter::Report::Report(Report&& other)
 
 ErrorReporter::Report::~Report() { owner_->ReportError(severity_, stream_.str()); }
 
-ErrorReporter* ErrorReporter::Default() {
-  static DefaultErrorReporter reporter;
-  return &reporter;
+const std::shared_ptr<ErrorReporter>& ErrorReporter::Default() {
+  static const std::shared_ptr<ErrorReporter> kReporter = std::make_shared<DefaultErrorReporter>();
+  return kReporter;
 }
 
 }  // namespace scenic_impl

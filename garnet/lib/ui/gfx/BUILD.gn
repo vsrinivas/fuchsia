@@ -73,6 +73,8 @@ source_set("gfx") {
     "engine/hit.h",
     "engine/hit_tester.cc",
     "engine/hit_tester.h",
+    "engine/image_pipe_updater.cc",
+    "engine/image_pipe_updater.h",
     "engine/resource_linker.cc",
     "engine/resource_linker.h",
     "engine/resource_map.cc",

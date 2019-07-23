@@ -7,7 +7,8 @@
 namespace scenic_impl {
 namespace gfx {
 
-ResourceMap::ResourceMap(ErrorReporter* error_reporter) : error_reporter_(error_reporter) {}
+ResourceMap::ResourceMap(std::shared_ptr<ErrorReporter> error_reporter)
+    : error_reporter_(std::move(error_reporter)) {}
 
 ResourceMap::~ResourceMap() {}
 

@@ -402,7 +402,7 @@ void DumpVisitor::VisitResource(Resource* r) {
   }
 
   if (context_.visited) {
-    context_.visited->emplace(GlobalId(r->session()->id(), r->id()));
+    context_.visited->emplace(r->global_id());
   }
 }
 

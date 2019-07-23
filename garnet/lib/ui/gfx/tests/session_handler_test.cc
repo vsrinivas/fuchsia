@@ -13,6 +13,8 @@ namespace test {
 SessionHandlerTest::SessionHandlerTest() : weak_factory_(this) {}
 
 void SessionHandlerTest::SetUp() {
+  ErrorReportingTest::SetUp();
+
   InitializeScenic();
   InitializeDisplayManager();
   InitializeEngine();
@@ -28,8 +30,9 @@ void SessionHandlerTest::TearDown() {
   display_manager_.reset();
   scenic_.reset();
   app_context_.reset();
-  events_.clear();
   session_manager_.reset();
+
+  ErrorReportingTest::TearDown();
 }
 
 void SessionHandlerTest::InitializeScenic() {
@@ -45,7 +48,8 @@ void SessionHandlerTest::InitializeSessionHandler() {
 
   InitializeScenicSession(session_id);
 
-  session_manager_ = std::make_unique<SessionManagerForTest>(this, this->error_reporter()),
+  session_manager_ = std::make_unique<SessionManagerForTest>(this->shared_event_reporter(),
+                                                             this->shared_error_reporter()),
   command_dispatcher_ = session_manager_->CreateCommandDispatcher(
       CommandDispatcherContext(scenic_.get(), scenic_session_.get()), std::move(session_context));
 }
@@ -76,24 +80,6 @@ void SessionHandlerTest::InitializeEngine() {
 void SessionHandlerTest::InitializeScenicSession(SessionId session_id) {
   fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener;
   scenic_session_ = std::make_unique<scenic_impl::Session>(session_id, std::move(listener));
-}
-
-void SessionHandlerTest::EnqueueEvent(fuchsia::ui::gfx::Event event) {
-  fuchsia::ui::scenic::Event scenic_event;
-  scenic_event.set_gfx(std::move(event));
-  events_.push_back(std::move(scenic_event));
-}
-
-void SessionHandlerTest::EnqueueEvent(fuchsia::ui::input::InputEvent event) {
-  fuchsia::ui::scenic::Event scenic_event;
-  scenic_event.set_input(std::move(event));
-  events_.push_back(std::move(scenic_event));
-}
-
-void SessionHandlerTest::EnqueueEvent(fuchsia::ui::scenic::Command unhandled) {
-  fuchsia::ui::scenic::Event scenic_event;
-  scenic_event.set_unhandled(std::move(unhandled));
-  events_.push_back(std::move(scenic_event));
 }
 
 SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(

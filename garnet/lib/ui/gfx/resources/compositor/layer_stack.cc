@@ -29,9 +29,9 @@ std::vector<Hit> LayerStack::HitTest(const escher::ray4& ray, HitTester* hit_tes
   return hits;
 }
 
-bool LayerStack::AddLayer(LayerPtr layer) {
+bool LayerStack::AddLayer(LayerPtr layer, ErrorReporter* reporter) {
   if (layer->layer_stack_) {
-    error_reporter()->ERROR() << "LayerStack::AddLayer(): layer already belongs to a LayerStack.";
+    reporter->ERROR() << "LayerStack::AddLayer(): layer already belongs to a LayerStack.";
     return false;
   }
   layer->layer_stack_ = this;
@@ -39,9 +39,9 @@ bool LayerStack::AddLayer(LayerPtr layer) {
   return true;
 }
 
-bool LayerStack::RemoveLayer(LayerPtr layer) {
+bool LayerStack::RemoveLayer(LayerPtr layer, ErrorReporter* reporter) {
   if (layer->layer_stack_ != this) {
-    error_reporter()->ERROR() << "LayerStack::RemoveLayer(): layer doesn't belong to this stack.";
+    reporter->ERROR() << "LayerStack::RemoveLayer(): layer doesn't belong to this stack.";
     return false;
   }
   layer->layer_stack_ = nullptr;

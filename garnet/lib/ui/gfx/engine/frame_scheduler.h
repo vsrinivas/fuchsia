@@ -51,10 +51,6 @@ class SessionUpdater {
   // the time to do any necessary work before the frame is rendered.  For example, animations might
   // be run now.
   virtual void PrepareFrame(zx_time_t presentation_time, uint64_t trace_id) = 0;
-
-  // Helper function to move callbacks from one queue to another.
-  static void MoveCallbacksFromTo(std::queue<OnPresentedCallback>* src,
-                                  std::queue<OnPresentedCallback>* dst);
 };
 
 // Interface for rendering frames.
@@ -110,16 +106,6 @@ class FrameScheduler {
   // Called when the frame drawn by RenderFrame() has finished rendering.
   virtual void OnFrameRendered(const FrameTimings& timings) = 0;
 };
-
-// Inline function definitions.
-
-inline void SessionUpdater::MoveCallbacksFromTo(std::queue<OnPresentedCallback>* src,
-                                                std::queue<OnPresentedCallback>* dst) {
-  while (!src->empty()) {
-    dst->push(std::move(src->front()));
-    src->pop();
-  }
-}
 
 }  // namespace gfx
 }  // namespace scenic_impl

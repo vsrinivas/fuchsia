@@ -47,13 +47,13 @@ class Memory : public Resource {
     // don't need additional logic here.
     return shared_vmo_->Map();
   }
-  const escher::GpuMemPtr& GetGpuMem() {
+  const escher::GpuMemPtr& GetGpuMem(ErrorReporter* reporter) {
     // TODO(SCN-999): Passive lazy instantiation may not be ideal, either from a
     // performance standpoint, or from an external logic standpoint. Consider
     // acquire/release semantics. This would also map well to vkCopyBuffer
     // commands and shadow buffers.
     if (!escher_gpu_mem_) {
-      escher_gpu_mem_ = ImportGpuMemory();
+      escher_gpu_mem_ = ImportGpuMemory(reporter);
     }
     return escher_gpu_mem_;
   }
@@ -68,7 +68,7 @@ class Memory : public Resource {
  private:
   Memory(Session* session, ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args);
 
-  escher::GpuMemPtr ImportGpuMemory();
+  escher::GpuMemPtr ImportGpuMemory(ErrorReporter* reporter);
   zx::vmo DuplicateVmo();
 
   const bool is_host_;

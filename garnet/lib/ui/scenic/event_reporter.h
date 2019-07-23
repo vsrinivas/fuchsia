@@ -14,6 +14,8 @@ namespace scenic_impl {
 // Interface for a class that submits events to the SessionListener.
 class EventReporter {
  public:
+  virtual ~EventReporter() = default;
+
   // Add a GFX event to our queue; schedule a flush by the event reporter.
   virtual void EnqueueEvent(fuchsia::ui::gfx::Event event) = 0;
 
@@ -27,7 +29,7 @@ class EventReporter {
   void EnqueueEvent(fuchsia::ui::scenic::Event event);
 
   // A handy backup implementation. Logs an error and drops events.
-  static EventReporter* Default();
+  static const std::shared_ptr<EventReporter>& Default();
 };
 
 }  // namespace scenic_impl

@@ -110,7 +110,7 @@ MemoryPtr Memory::New(Session* session, ResourceId id, ::fuchsia::ui::gfx::Memor
   auto retval = fxl::AdoptRef(new Memory(session, id, std::move(args)));
 
   if (!retval->is_host()) {
-    if (!retval->GetGpuMem()) {
+    if (!retval->GetGpuMem(error_reporter)) {
       // Device memory must be able to be imported to the GPU. If not, this
       // command is an error and the client should be notified. GetGpuMem() will
       // provide a valid error message, but this factory must fail in order to
@@ -122,10 +122,10 @@ MemoryPtr Memory::New(Session* session, ResourceId id, ::fuchsia::ui::gfx::Memor
   return retval;
 }
 
-escher::GpuMemPtr Memory::ImportGpuMemory() {
+escher::GpuMemPtr Memory::ImportGpuMemory(ErrorReporter* reporter) {
   TRACE_DURATION("gfx", "Memory::ImportGpuMemory");
 
-  auto vk_device = session()->resource_context().vk_device;
+  auto vk_device = resource_context().vk_device;
 
   // TODO(SCN-151): If we're allowed to import the same vmo twice to two
   // different resources, we may need to change driver semantics so that you
@@ -134,25 +134,24 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
   vk::MemoryZirconHandlePropertiesFUCHSIA handle_properties;
   vk::Result err = vk_device.getMemoryZirconHandlePropertiesFUCHSIA(
       vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, shared_vmo_->vmo().get(),
-      &handle_properties, session()->resource_context().vk_loader);
+      &handle_properties, resource_context().vk_loader);
   if (err != vk::Result::eSuccess) {
-    error_reporter()->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
-                                 "VkGetMemoryFuchsiaHandlePropertiesKHR failed.";
+    reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
+                         "VkGetMemoryFuchsiaHandlePropertiesKHR failed.";
     return nullptr;
   }
   if (handle_properties.memoryTypeBits == 0) {
     if (!is_host_) {
-      error_reporter()->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
-                                   "VkGetMemoryFuchsiaHandlePropertiesKHR "
-                                   "returned zero valid memory types.";
+      reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
+                           "VkGetMemoryFuchsiaHandlePropertiesKHR "
+                           "returned zero valid memory types.";
     } else {
       // Importing read-only host memory into the Vulkan driver should not work,
       // but it is not an error to try to do so. Returning a nullptr here should
       // not result in a closed session channel, as this flow should only happen
       // when Scenic is attempting to optimize image importation. See SCN-1012
       // for other issues this this flow.
-      FXL_LOG(INFO) << "Host memory VMO could not be imported to any valid "
-                       "Vulkan memory types.";
+      FXL_LOG(INFO) << "Host memory VMO could not be imported to any valid Vulkan memory types.";
     }
     return nullptr;
   }
@@ -165,7 +164,7 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
       is_host_ ? vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible
                : vk::MemoryPropertyFlagBits::eDeviceLocal;
 
-  auto vk_physical_device = session()->resource_context().vk_physical_device;
+  auto vk_physical_device = resource_context().vk_physical_device;
 
   uint32_t memory_type_bits = handle_properties.memoryTypeBits;
 
@@ -188,8 +187,8 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
       // Because vkGetMemoryZirconHandlePropertiesFUCHSIA may work on normal CPU
       // memory on UMA platforms, importation failure is only an error for
       // device memory.
-      error_reporter()->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): could not find a "
-                                   "valid memory type for importation.";
+      reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): could not find a "
+                           "valid memory type for importation.";
     } else {
       // TODO(SCN-1012): Error message is UMA specific.
       FXL_LOG(INFO) << "Host memory VMO could not find a UMA-style memory type.";
@@ -207,8 +206,8 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
   vk::DeviceMemory memory = nullptr;
   err = vk_device.allocateMemory(&memory_allocate_info, nullptr, &memory);
   if (err != vk::Result::eSuccess) {
-    error_reporter()->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
-                                 "VkAllocateMemory failed.";
+    reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
+                         "VkAllocateMemory failed.";
     return nullptr;
   }
 

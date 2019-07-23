@@ -26,8 +26,11 @@ class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
 
 class SessionManagerForTest : public SessionManager {
  public:
-  SessionManagerForTest(EventReporter* event_reporter = nullptr,
-                        ErrorReporter* error_reporter = nullptr);
+  // |event_reporter| and |error_reporter| default to nullptr because of the way that
+  // CreateSessionHandler() works: if either of these is non-null then it will override the
+  // corresponding argument passed to CreateSessionHandler().
+  SessionManagerForTest(std::shared_ptr<EventReporter> event_reporter = nullptr,
+                        std::shared_ptr<ErrorReporter> error_reporter = nullptr);
   ~SessionManagerForTest() override = default;
 
   // Publicly accessible for tests.
@@ -41,11 +44,12 @@ class SessionManagerForTest : public SessionManager {
       SessionId session_id,
       // If tests instances of reporters were provided at SessionManager
       // creation, those are used instead of the ones provided here
-      EventReporter* error_reporter, ErrorReporter* event_reporter) override;
+      std::shared_ptr<EventReporter> event_reporter,
+      std::shared_ptr<ErrorReporter> error_reporter) override;
 
  private:
-  EventReporter* event_reporter_;
-  ErrorReporter* error_reporter_;
+  std::shared_ptr<EventReporter> event_reporter_;
+  std::shared_ptr<ErrorReporter> error_reporter_;
 };
 
 class GfxSystemForTest : public GfxSystem {

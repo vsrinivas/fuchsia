@@ -12,6 +12,7 @@
 #include <memory>
 #include <utility>
 
+#include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/gfx_command_applier.h"
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
@@ -36,11 +37,13 @@ namespace {
 
 }  // anonymous namespace
 
-Session::Session(SessionId id, SessionContext session_context, EventReporter* event_reporter,
-                 ErrorReporter* error_reporter, inspect_deprecated::Node inspect_node)
+Session::Session(SessionId id, SessionContext session_context,
+                 std::shared_ptr<EventReporter> event_reporter,
+                 std::shared_ptr<ErrorReporter> error_reporter,
+                 inspect_deprecated::Node inspect_node)
     : id_(id),
-      error_reporter_(error_reporter),
-      event_reporter_(event_reporter),
+      error_reporter_(std::move(error_reporter)),
+      event_reporter_(std::move(event_reporter)),
       session_context_(std::move(session_context)),
       resource_context_(
           /* Sessions can be used in integration tests, with and without Vulkan.
@@ -55,10 +58,12 @@ Session::Session(SessionId id, SessionContext session_context, EventReporter* ev
            session_context_.escher != nullptr ? session_context_.escher->device()->caps()
                                               : escher::VulkanDeviceQueues::Caps(),
            session_context_.escher_resource_recycler, session_context_.escher_image_factory}),
-      resources_(error_reporter),
+      resources_(error_reporter_),
+      image_pipe_updater_(std::make_shared<ImagePipeUpdater>(id, session_context_.frame_scheduler)),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
-  FXL_DCHECK(error_reporter);
+  FXL_DCHECK(error_reporter_);
+  FXL_DCHECK(event_reporter_);
 
   inspect_resource_count_ = inspect_node_.CreateUIntMetric("resource_count", 0);
   inspect_last_applied_target_presentation_time_ =
@@ -71,7 +76,6 @@ Session::Session(SessionId id, SessionContext session_context, EventReporter* ev
 
 Session::~Session() {
   resources_.Clear();
-  scheduled_image_pipe_updates_ = {};
 
   // We assume the channel for the associated gfx::Session is closed by
   // SessionHandler before this point, since |scheduled_updates_| contains
@@ -81,20 +85,15 @@ Session::~Session() {
   fences_to_release_on_next_update_.clear();
 
   if (resource_count_ != 0) {
-    auto exported_count = session_context_.resource_linker->NumExportsForSession(this);
+    auto exported_count = session_context_.resource_linker->NumExportsForSession(id());
     FXL_CHECK(resource_count_ == 0)
         << "Session::~Session(): Not all resources have been collected. "
            "Exported resources: "
         << exported_count << ", total outstanding resources: " << resource_count_;
   }
-  error_reporter_ = nullptr;
 }
 
-ErrorReporter* Session::error_reporter() const {
-  return error_reporter_ ? error_reporter_ : ErrorReporter::Default();
-}
-
-EventReporter* Session::event_reporter() const { return event_reporter_; }
+EventReporter* Session::event_reporter() const { return event_reporter_.get(); }
 
 bool Session::ScheduleUpdate(uint64_t requested_presentation_time,
                              std::vector<::fuchsia::ui::gfx::Command> commands,
@@ -138,13 +137,6 @@ bool Session::ScheduleUpdate(uint64_t requested_presentation_time,
   inspect_last_requested_presentation_time_.Set(requested_presentation_time);
 
   return true;
-}
-
-void Session::ScheduleImagePipeUpdate(uint64_t presentation_time, ImagePipePtr image_pipe) {
-  FXL_DCHECK(image_pipe);
-  scheduled_image_pipe_updates_.push({presentation_time, std::move(image_pipe)});
-
-  session_context_.frame_scheduler->ScheduleUpdateForSession(presentation_time, id_);
 }
 
 Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* command_context,
@@ -201,42 +193,13 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* comman
     inspect_resource_count_.Set(resource_count_);
   }
 
-  // TODO(SCN-1219): Unify with other session updates.
-  std::unordered_map<ResourceId, ImagePipePtr> image_pipe_updates_to_upload;
-  while (!scheduled_image_pipe_updates_.empty() &&
-         scheduled_image_pipe_updates_.top().presentation_time <= target_presentation_time) {
-    auto& update = scheduled_image_pipe_updates_.top();
-    if (update.image_pipe) {
-      auto image_pipe_update_results = update.image_pipe->Update(
-          session_context_.release_fence_signaller, target_presentation_time);
+  ImagePipeUpdater::ApplyScheduledUpdatesResult image_pipe_update_results =
+      image_pipe_updater_->ApplyScheduledUpdates(command_context, target_presentation_time,
+                                                 session_context_.release_fence_signaller);
 
-      // Collect callbacks to be returned by |Engine::UpdateSessions()| as part
-      // of the |Session::UpdateResults| struct.
-      while (!image_pipe_update_results.callbacks.empty()) {
-        update_results.image_pipe_callbacks.push(
-            std::move(image_pipe_update_results.callbacks.front()));
-        image_pipe_update_results.callbacks.pop();
-      }
-
-      // Only upload images that were updated and are currently dirty, and only
-      // do one upload per ImagePipe.
-      if (image_pipe_update_results.image_updated) {
-        image_pipe_updates_to_upload.try_emplace(update.image_pipe->id(),
-                                                 std::move(update.image_pipe));
-      }
-    }
-    scheduled_image_pipe_updates_.pop();
-  }
-
-  // Stage GPU uploads for the latest dirty image on each updated ImagePipe.
-  for (const auto& entry : image_pipe_updates_to_upload) {
-    ImagePipePtr image_pipe = entry.second;
-    image_pipe->UpdateEscherImage(command_context->batch_gpu_uploader());
-    // Image was updated so the image in the scene is dirty.
-    update_results.needs_render = true;
-  }
-  image_pipe_updates_to_upload.clear();
-
+  update_results.needs_render =
+      update_results.needs_render || image_pipe_update_results.needs_render;
+  update_results.image_pipe_callbacks = std::move(image_pipe_update_results.callbacks);
   update_results.success = true;
   return update_results;
 }

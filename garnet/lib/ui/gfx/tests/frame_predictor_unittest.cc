@@ -16,11 +16,15 @@ class FramePredictorTest : public ErrorReportingTest {
  protected:
   // | ::testing::Test |
   void SetUp() override {
+    ErrorReportingTest::SetUp();
     predictor_ = std::make_unique<FramePredictor>(kInitialRenderTimePrediction,
                                                   kInitialUpdateTimePrediction);
   }
   // | ::testing::Test |
-  void TearDown() override { predictor_.reset(); }
+  void TearDown() override {
+    predictor_.reset();
+    ErrorReportingTest::TearDown();
+  }
 
   zx::time ms_to_time(uint64_t ms) { return zx::time(0) + zx::msec(ms); }
 

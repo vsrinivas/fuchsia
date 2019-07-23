@@ -217,12 +217,12 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
   // handle delivery of other kinds of events.  We should probably also
   // have some kind of backpointer from a session to its handler.
   for (auto node : updated_nodes) {
-    if (node->session()) {
+    if (auto event_reporter = node->event_reporter()) {
       fuchsia::ui::gfx::Event event;
       event.set_metrics(::fuchsia::ui::gfx::MetricsEvent());
       event.metrics().node_id = node->id();
       event.metrics().metrics = node->reported_metrics();
-      node->session()->EnqueueEvent(std::move(event));
+      event_reporter->EnqueueEvent(std::move(event));
     }
   }
 }

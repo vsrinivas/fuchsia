@@ -23,7 +23,6 @@ void ScenicTest::SetUp() {
 }
 
 void ScenicTest::TearDown() {
-  reported_errors_.clear();
   events_.clear();
   scenic_.reset();
   app_context_.reset();
@@ -38,28 +37,6 @@ std::unique_ptr<::scenic::Session> ScenicTest::CreateSession() {
       listener_handle.NewRequest();
   scenic()->CreateSession(session_ptr.NewRequest(), std::move(listener_handle));
   return std::make_unique<::scenic::Session>(std::move(session_ptr), std::move(listener_request));
-}
-
-void ScenicTest::ReportError(fxl::LogSeverity severity, std::string error_string) {
-// Typically, we don't want to log expected errors when running the tests.
-// However, it is useful to print these errors while writing the tests.
-#if 0
-  switch (severity) {
-    case ::fxl::LOG_INFO:
-      FXL_LOG(INFO) << error_string;
-      break;
-    case ::fxl::LOG_WARNING:
-      FXL_LOG(WARNING) << error_string;
-      break;
-    case ::fxl::LOG_ERROR:
-      FXL_LOG(ERROR) << error_string;
-      break;
-    case ::fxl::LOG_FATAL:
-      FXL_LOG(FATAL) << error_string;
-      break;
-  }
-#endif
-  reported_errors_.push_back(error_string);
 }
 
 void ScenicTest::EnqueueEvent(fuchsia::ui::gfx::Event event) {

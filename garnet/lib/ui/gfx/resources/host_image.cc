@@ -92,7 +92,7 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
   if (image_info.pixel_format == fuchsia::images::PixelFormat::NV12 &&
       image_info.stride % kYuvStrideRequirement == 0) {
     // If we are not on a UMA platform, GetGpuMem will return a null pointer.
-    auto gpu_memory = memory->GetGpuMem();
+    auto gpu_memory = memory->GetGpuMem(error_reporter);
     if (gpu_memory) {
       escher::ImageInfo escher_image_info;
       escher_image_info.format = vk::Format::eG8B8R82Plane420Unorm;

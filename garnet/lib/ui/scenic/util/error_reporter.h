@@ -15,6 +15,8 @@ namespace scenic_impl {
 // implement ReportError().
 class ErrorReporter {
  public:
+  virtual ~ErrorReporter() = default;
+
   // Helper class with RAII semantics.  Invokes ErrorReporter::ReportError()
   // upon destruction.
   class Report {
@@ -50,7 +52,7 @@ class ErrorReporter {
 
   // Return a default ErrorReporter that is always available, which simply logs
   // the error using FXL_LOG(severity).
-  static ErrorReporter* Default();
+  static const std::shared_ptr<ErrorReporter>& Default();
 
  private:
   virtual void ReportError(fxl::LogSeverity severity, std::string error_string) = 0;

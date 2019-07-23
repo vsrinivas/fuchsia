@@ -5,13 +5,14 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_SESSION_H_
 #define GARNET_LIB_UI_GFX_ENGINE_SESSION_H_
 
+#include <vector>
+
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/inspect_deprecated/inspect.h>
 
-#include <vector>
-
 #include "garnet/lib/ui/gfx/engine/gfx_command_applier.h"
+#include "garnet/lib/ui/gfx/engine/image_pipe_updater.h"
 #include "garnet/lib/ui/gfx/engine/resource_map.h"
 #include "garnet/lib/ui/gfx/engine/session_context.h"
 #include "garnet/lib/ui/gfx/engine/session_manager.h"
@@ -26,10 +27,7 @@
 namespace scenic_impl {
 namespace gfx {
 
-class ImagePipe;
-using ImagePipePtr = fxl::RefPtr<ImagePipe>;
 using PresentCallback = fuchsia::ui::scenic::Session::PresentCallback;
-using PresentImageCallback = fuchsia::images::ImagePipe::PresentImageCallback;
 
 class CommandContext;
 class Engine;
@@ -49,8 +47,8 @@ class Session {
   };
 
   Session(SessionId id, SessionContext context,
-          EventReporter* event_reporter = EventReporter::Default(),
-          ErrorReporter* error_reporter = ErrorReporter::Default(),
+          std::shared_ptr<EventReporter> event_reporter = EventReporter::Default(),
+          std::shared_ptr<ErrorReporter> error_reporter = ErrorReporter::Default(),
           inspect_deprecated::Node inspect_node = inspect_deprecated::Node());
   virtual ~Session();
 
@@ -67,6 +65,10 @@ class Session {
   const SessionContext& session_context() const { return session_context_; }
   const ResourceContext& resource_context() const { return resource_context_; }
 
+  const std::shared_ptr<ImagePipeUpdater>& image_pipe_updater() const {
+    return image_pipe_updater_;
+  }
+
   // Return the total number of existing resources associated with this Session.
   size_t GetTotalResourceCount() const { return resource_count_; }
 
@@ -76,7 +78,8 @@ class Session {
   // exist if it is referenced by other resources.
   size_t GetMappedResourceCount() const { return resources_.size(); }
 
-  ErrorReporter* error_reporter() const;  // Never nullptr.
+  std::shared_ptr<ErrorReporter> shared_error_reporter() const { return error_reporter_; }
+  ErrorReporter* error_reporter() const { return error_reporter_.get(); }
   EventReporter* event_reporter() const;  // Never nullptr.
 
   ResourceMap* resources() { return &resources_; }
@@ -87,10 +90,6 @@ class Session {
   bool ScheduleUpdate(uint64_t presentation_time, std::vector<::fuchsia::ui::gfx::Command> commands,
                       std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
                       PresentCallback callback);
-
-  // Called by ImagePipe::PresentImage(). Stashes the arguments without
-  // applying them; they will later be applied by ApplyScheduledUpdates().
-  void ScheduleImagePipeUpdate(uint64_t presentation_time, ImagePipePtr image_pipe);
 
   // Called by Engine() when it is notified by the FrameScheduler that
   // a frame should be rendered for the specified |actual_presentation_time|.
@@ -138,22 +137,11 @@ class Session {
   uint64_t last_applied_update_presentation_time_ = 0;
   uint64_t last_presentation_time_ = 0;
 
-  struct ImagePipeUpdate {
-    uint64_t presentation_time;
-    ImagePipePtr image_pipe;
-
-    bool operator>(const ImagePipeUpdate& rhs) const {
-      return presentation_time > rhs.presentation_time;
-    }
-  };
-  // The least element should be on top.
-  std::priority_queue<ImagePipeUpdate, std::vector<ImagePipeUpdate>, std::greater<ImagePipeUpdate>>
-      scheduled_image_pipe_updates_;
-
   const SessionId id_;
   std::string debug_name_;
-  ErrorReporter* error_reporter_ = nullptr;
-  EventReporter* event_reporter_ = nullptr;
+
+  const std::shared_ptr<ErrorReporter> error_reporter_;
+  const std::shared_ptr<EventReporter> event_reporter_;
 
   // Context objects should be above ResourceMap so they are destroyed after
   // Resources; their lifecycle must exceed that of the Resources.
@@ -173,6 +161,8 @@ class Session {
   // Tracks the number of method calls for tracing.
   uint64_t scheduled_update_count_ = 0;
   uint64_t applied_update_count_ = 0;
+
+  std::shared_ptr<ImagePipeUpdater> image_pipe_updater_;
 
   inspect_deprecated::Node inspect_node_;
   inspect_deprecated::UIntMetric inspect_resource_count_;

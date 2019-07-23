@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_UTIL_COLLECTION_UTILS_H_
 #define GARNET_LIB_UI_GFX_UTIL_COLLECTION_UTILS_H_
 
+#include <queue>
 #include <utility>
 #include <vector>
 
@@ -37,6 +38,18 @@ size_t ApplyToCompactedVector(std::vector<fxl::WeakPtr<T>>* vect_in, ClosureT cl
     vect.resize(size);
   }
   return num_compacted;
+}
+
+// Move all of the elements from one queue into the other, so that they appear in the
+// same order in the target queue.
+template <typename T>
+void MoveAllItemsFromQueueToQueue(std::queue<T>* from, std::queue<T>* to) {
+  FXL_DCHECK(from);
+  FXL_DCHECK(to);
+  while (!from->empty()) {
+    to->push(std::move(from->front()));
+    from->pop();
+  }
 }
 
 }  // namespace gfx

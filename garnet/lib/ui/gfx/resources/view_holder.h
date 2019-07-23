@@ -35,7 +35,7 @@ class ViewHolder final : public Node {
   // |Resource|
   void Accept(class ResourceVisitor* visitor) override;
   // |Resource| ViewHolders don't support imports.
-  void AddImport(Import* import) override {}
+  void AddImport(Import* import, ErrorReporter* error_reporter) override {}
   void RemoveImport(Import* import) override {}
 
   // Connection management.  Call once the ViewHolder is created to initiate the
@@ -48,7 +48,7 @@ class ViewHolder final : public Node {
   View* view() const { return view_; }
 
   // ViewProperties management.
-  void SetViewProperties(fuchsia::ui::gfx::ViewProperties props);
+  void SetViewProperties(fuchsia::ui::gfx::ViewProperties props, ErrorReporter* error_reporter);
   const fuchsia::ui::gfx::ViewProperties& GetViewProperties() { return view_properties_; }
   escher::BoundingBox GetLocalBoundingBox() const;
 

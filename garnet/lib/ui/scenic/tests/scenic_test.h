@@ -11,7 +11,6 @@
 #include <lib/ui/scenic/cpp/session.h>
 
 #include "garnet/lib/ui/scenic/scenic.h"
-#include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "gtest/gtest.h"
 
 namespace scenic_impl {
@@ -19,7 +18,8 @@ namespace test {
 
 // Base class that can be specialized to configure a Scenic with the systems
 // required for a set of tests.
-class ScenicTest : public ::gtest::TestLoopFixture, public ErrorReporter, public EventReporter {
+class ScenicTest : public ::gtest::TestLoopFixture,
+                   public EventReporter {
  public:
   std::unique_ptr<::scenic::Session> CreateSession();
 
@@ -36,27 +36,13 @@ class ScenicTest : public ::gtest::TestLoopFixture, public ErrorReporter, public
   // none are installed by default.
   virtual void InitializeScenic(Scenic* scenic);
 
-  // |ErrorReporter|
-  void ReportError(fxl::LogSeverity severity, std::string error_string) override;
-
   // |EventReporter|
   void EnqueueEvent(fuchsia::ui::gfx::Event event) override;
   void EnqueueEvent(fuchsia::ui::input::InputEvent event) override;
   void EnqueueEvent(fuchsia::ui::scenic::Command event) override;
 
-  // Verify that the last reported error is as expected.  If no error is
-  // expected, use nullptr as |expected_error_string|.
-  void ExpectLastReportedError(const char* expected_error_string) {
-    if (!expected_error_string) {
-      EXPECT_TRUE(reported_errors_.empty());
-    } else {
-      EXPECT_EQ(reported_errors_.back(), expected_error_string);
-    }
-  }
-
   static std::unique_ptr<sys::ComponentContext> app_context_;
   std::unique_ptr<Scenic> scenic_;
-  std::vector<std::string> reported_errors_;
   std::vector<fuchsia::ui::scenic::Event> events_;
 };
 

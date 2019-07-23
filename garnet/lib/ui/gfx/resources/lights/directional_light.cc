@@ -15,12 +15,11 @@ const ResourceTypeInfo DirectionalLight::kTypeInfo = {
 DirectionalLight::DirectionalLight(Session* session, ResourceId id)
     : Light(session, id, DirectionalLight::kTypeInfo) {}
 
-bool DirectionalLight::SetDirection(const glm::vec3& direction) {
+bool DirectionalLight::SetDirection(const glm::vec3& direction, ErrorReporter* reporter) {
   float length = glm::length(direction);
   if (length < 0.001f) {
-    error_reporter()->ERROR() << "scenic::gfx::DirectionalLight::"
-                                 "SetDirection(): length of direction vector "
-                                 "is near zero.";
+    reporter->ERROR() << "scenic::gfx::DirectionalLight::SetDirection(): length of direction "
+                         "vector is near zero.";
     return false;
   }
   direction_ = direction / length;

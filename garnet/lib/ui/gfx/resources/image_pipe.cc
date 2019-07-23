@@ -17,29 +17,35 @@ namespace gfx {
 const ResourceTypeInfo ImagePipe::kTypeInfo = {ResourceType::kImagePipe | ResourceType::kImageBase,
                                                "ImagePipe"};
 
-ImagePipe::ImagePipe(Session* session, ResourceId id, FrameScheduler* frame_scheduler)
+ImagePipe::ImagePipe(Session* session, ResourceId id,
+                     std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
+                     std::shared_ptr<ErrorReporter> error_reporter)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
-      frame_scheduler_(frame_scheduler),
+      image_pipe_updater_(std::move(image_pipe_updater)),
+      error_reporter_(std::move(error_reporter)),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(frame_scheduler);
+  FXL_CHECK(image_pipe_updater_);
+  FXL_CHECK(error_reporter_);
 }
 
 ImagePipe::ImagePipe(Session* session, ResourceId id,
                      ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
-                     FrameScheduler* frame_scheduler)
+                     std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
+                     std::shared_ptr<ErrorReporter> error_reporter)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
       handler_(std::make_unique<ImagePipeHandler>(std::move(request), this)),
-      frame_scheduler_(frame_scheduler),
+      image_pipe_updater_(std::move(image_pipe_updater)),
+      error_reporter_(std::move(error_reporter)),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(frame_scheduler);
+  FXL_CHECK(image_pipe_updater_);
+  FXL_CHECK(error_reporter_);
 }
 
 void ImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info, zx::vmo vmo,
                          uint64_t offset_bytes, uint64_t size_bytes,
                          fuchsia::images::MemoryType memory_type) {
   if (image_id == 0) {
-    session()->error_reporter()->ERROR()
-        << "ImagePipe::AddImage: Image can not be assigned an ID of 0.";
+    error_reporter_->ERROR() << "ImagePipe::AddImage: Image can not be assigned an ID of 0.";
     CloseConnectionAndCleanUp();
     return;
   }
@@ -47,8 +53,8 @@ void ImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_inf
   auto status = vmo.get_size(&vmo_size);
 
   if (status != ZX_OK) {
-    session()->error_reporter()->ERROR()
-        << "ImagePipe::AddImage(): zx_vmo_get_size failed (err=" << status << ").";
+    error_reporter_->ERROR() << "ImagePipe::AddImage(): zx_vmo_get_size failed (err=" << status
+                             << ").";
     CloseConnectionAndCleanUp();
     return;
   }
@@ -57,19 +63,17 @@ void ImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_inf
   memory_args.vmo = std::move(vmo);
   memory_args.allocation_size = vmo_size;
   MemoryPtr memory =
-      Memory::New(session(), 0u, std::move(memory_args), session()->error_reporter());
+      Memory::New(session_DEPRECATED(), 0u, std::move(memory_args), error_reporter_.get());
   if (!memory) {
-    session()->error_reporter()->ERROR()
-        << "ImagePipe::AddImage: Unable to create a memory object.";
+    error_reporter_->ERROR() << "ImagePipe::AddImage: Unable to create a memory object.";
     CloseConnectionAndCleanUp();
     return;
   }
-  auto image = CreateImage(session(), image_id, memory, image_info, offset_bytes,
-                           session()->error_reporter());
+  auto image = CreateImage(session_DEPRECATED(), image_id, memory, image_info, offset_bytes);
   auto result = images_.insert({image_id, std::move(image)});
   if (!result.second) {
-    session()->error_reporter()->ERROR()
-        << "ImagePipe::AddImage(): resource with ID " << image_id << " already exists.";
+    error_reporter_->ERROR() << "ImagePipe::AddImage(): resource with ID " << image_id
+                             << " already exists.";
     CloseConnectionAndCleanUp();
     return;
   }
@@ -82,23 +86,23 @@ void ImagePipe::CloseConnectionAndCleanUp() {
   images_.clear();
 
   // Schedule a new frame.
-  frame_scheduler_->ScheduleUpdateForSession(0, session()->id());
+  image_pipe_updater_->ScheduleImagePipeUpdate(0, ImagePipePtr());
 }
 
 void ImagePipe::OnConnectionError() { CloseConnectionAndCleanUp(); }
 
 ImagePtr ImagePipe::CreateImage(Session* session, ResourceId id, MemoryPtr memory,
                                 const fuchsia::images::ImageInfo& image_info,
-                                uint64_t memory_offset, ErrorReporter* error_reporter) {
-  return Image::New(session, id, memory, image_info, memory_offset, error_reporter);
+                                uint64_t memory_offset) {
+  return Image::New(session, id, memory, image_info, memory_offset, error_reporter_.get());
 }
 
 void ImagePipe::RemoveImage(uint32_t image_id) {
   TRACE_DURATION("gfx", "ImagePipe::RemoveImage", "image_id", image_id);
   size_t erased_count = images_.erase(image_id);
   if (erased_count == 0) {
-    session()->error_reporter()->ERROR()
-        << "ImagePipe::RemoveImage(): Could not find image with id=" << image_id << ".";
+    error_reporter_->ERROR() << "ImagePipe::RemoveImage(): Could not find image with id="
+                             << image_id << ".";
     CloseConnectionAndCleanUp();
   }
 };
@@ -111,10 +115,9 @@ void ImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
   TRACE_FLOW_END("gfx", "image_pipe_present_image", image_id);
 
   if (!frames_.empty() && presentation_time < frames_.back().presentation_time) {
-    session()->error_reporter()->ERROR()
-        << "ImagePipe: Present called with out-of-order "
-           "presentation time."
-        << "presentation_time=" << presentation_time
+    error_reporter_->ERROR()
+        << "ImagePipe: Present called with out-of-order presentation time. presentation_time="
+        << presentation_time
         << ", last scheduled presentation time=" << frames_.back().presentation_time;
     CloseConnectionAndCleanUp();
     return;
@@ -123,8 +126,8 @@ void ImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
   // Verify that image_id is valid.
   auto image_it = images_.find(image_id);
   if (image_it == images_.end()) {
-    session()->error_reporter()->ERROR()
-        << "ImagePipe::PresentImage could not find Image with ID: " << image_id;
+    error_reporter_->ERROR() << "ImagePipe::PresentImage could not find Image with ID: "
+                             << image_id;
     CloseConnectionAndCleanUp();
     return;
   }
@@ -134,7 +137,8 @@ void ImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
   acquire_fences_listener->WaitReadyAsync(
       [weak = weak_ptr_factory_.GetWeakPtr(), presentation_time] {
         if (weak) {
-          weak->session()->ScheduleImagePipeUpdate(presentation_time, ImagePipePtr(weak.get()));
+          weak->image_pipe_updater_->ScheduleImagePipeUpdate(presentation_time,
+                                                             ImagePipePtr(weak.get()));
         }
       });
   TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image_to_update", image_id);

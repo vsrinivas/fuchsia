@@ -112,8 +112,8 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   // Make a pointer to a subregion of the memory, if necessary.
   escher::GpuMemPtr gpu_mem =
       (memory_offset > 0 || memory_reqs.size < memory->size())
-          ? memory->GetGpuMem()->Suballocate(memory_reqs.size, memory_offset)
-          : memory->GetGpuMem();
+          ? memory->GetGpuMem(error_reporter)->Suballocate(memory_reqs.size, memory_offset)
+          : memory->GetGpuMem(error_reporter);
 
   return fxl::AdoptRef(new GpuImage(session, id, std::move(gpu_mem), escher_image_info, vk_image));
 }

@@ -69,7 +69,7 @@ void Material::UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader) {
   if (!escher_texture || escher_image != escher_texture->image()) {
     escher::TexturePtr texture;
     if (escher_image) {
-      auto recycler = session()->resource_context().escher_resource_recycler;
+      auto recycler = resource_context().escher_resource_recycler;
       // TODO(SCN-1403): Technically, eG8B8R82Plane420Unorm is not enough to
       // assume NV12, but it's currently the only format we support at the
       // sampler level.

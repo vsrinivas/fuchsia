@@ -84,7 +84,7 @@ VK_TEST_F(VkMemoryTest, ImportDeviceMemory) {
 
   // Confirm that the resource has a valid Vulkan memory object and cleanup.
   auto memory_resource = FindResource<Memory>(kMemoryId);
-  ASSERT_TRUE(memory_resource->GetGpuMem());
+  ASSERT_TRUE(memory_resource->GetGpuMem(session()->error_reporter()));
   device.freeMemory(memory);
 }
 
@@ -103,7 +103,7 @@ VK_TEST_F(VkMemoryTest, ImportReadOnlyHostMemory) {
 
   // Importing read-only host memory into the Vulkan driver should not work,
   // but it is not an error to try to do so.
-  ASSERT_FALSE(memory->GetGpuMem());
+  ASSERT_FALSE(memory->GetGpuMem(session()->error_reporter()));
   ExpectLastReportedError(nullptr);
 }  // namespace gfx
 

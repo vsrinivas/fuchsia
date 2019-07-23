@@ -53,25 +53,25 @@ class Node : public Resource {
 
   virtual ~Node() override;
 
-  bool AddChild(NodePtr child_node);
-  bool AddPart(NodePtr part_node);
-  bool DetachChildren();
+  bool AddChild(NodePtr child_node, ErrorReporter* error_reporter);
+  bool AddPart(NodePtr part_node, ErrorReporter* error_reporter);
+  bool DetachChildren(ErrorReporter* error_reporter);
 
   bool SetTagValue(uint32_t tag_value);
   uint32_t tag_value() const { return tag_value_; }
 
-  bool SetTransform(const escher::Transform& transform);
-  bool SetTranslation(const escher::vec3& translation);
-  bool SetTranslation(Vector3VariablePtr translation);
-  bool SetScale(const escher::vec3& scale);
-  bool SetScale(Vector3VariablePtr scale);
-  bool SetRotation(const escher::quat& rotation);
-  bool SetRotation(QuaternionVariablePtr rotation);
-  bool SetAnchor(const escher::vec3& anchor);
-  bool SetAnchor(Vector3VariablePtr anchor);
-  bool SetClipToSelf(bool clip_to_self);
-  bool SetClipPlanes(std::vector<escher::plane3> clip_planes);
-  bool SetClipPlanesFromBBox(const escher::BoundingBox& box);
+  bool SetTransform(const escher::Transform& transform, ErrorReporter* error_reporter);
+  bool SetTranslation(const escher::vec3& translation, ErrorReporter* error_reporter);
+  bool SetTranslation(Vector3VariablePtr translation, ErrorReporter* error_reporter);
+  bool SetScale(const escher::vec3& scale, ErrorReporter* error_reporter);
+  bool SetScale(Vector3VariablePtr scale, ErrorReporter* error_reporter);
+  bool SetRotation(const escher::quat& rotation, ErrorReporter* error_reporter);
+  bool SetRotation(QuaternionVariablePtr rotation, ErrorReporter* error_reporter);
+  bool SetAnchor(const escher::vec3& anchor, ErrorReporter* error_reporter);
+  bool SetAnchor(Vector3VariablePtr anchor, ErrorReporter* error_reporter);
+  bool SetClipToSelf(bool clip_to_self, ErrorReporter* error_reporter);
+  bool SetClipPlanes(std::vector<escher::plane3> clip_planes, ErrorReporter* error_reporter);
+  bool SetClipPlanesFromBBox(const escher::BoundingBox& box, ErrorReporter* error_reporter);
   bool SetHitTestBehavior(::fuchsia::ui::gfx::HitTestBehavior behavior);
   bool SendSizeChangeHint(float width_change_factor, float height_change_factor);
 
@@ -91,7 +91,7 @@ class Node : public Resource {
   void set_reported_metrics(::fuchsia::ui::gfx::Metrics metrics) { reported_metrics_ = metrics; }
 
   // |Resource|, DetachCmd.
-  bool Detach() override;
+  bool Detach(ErrorReporter* error_reporter) override;
 
   Node* parent() const { return parent_; }
 
@@ -105,7 +105,7 @@ class Node : public Resource {
 
   bool SetEventMask(uint32_t event_mask) override;
 
-  void AddImport(Import* import) override;
+  void AddImport(Import* import, ErrorReporter* error_reporter) override;
   void RemoveImport(Import* import) override;
 
   // Computes the closest point of intersection between the ray's origin

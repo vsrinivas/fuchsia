@@ -77,7 +77,7 @@ escher::BoundingBox ViewHolder::GetWorldBoundingBox() const {
   return GetGlobalTransform() * GetLocalBoundingBox();
 }
 
-void ViewHolder::SetViewProperties(fuchsia::ui::gfx::ViewProperties props) {
+void ViewHolder::SetViewProperties(fuchsia::ui::gfx::ViewProperties props, ErrorReporter* error_reporter) {
   if (!fidl::Equals(props, view_properties_)) {
     view_properties_ = std::move(props);
     // This code transforms the bounding box given to the view holder
@@ -85,7 +85,8 @@ void ViewHolder::SetViewProperties(fuchsia::ui::gfx::ViewProperties props) {
     // then be applied to all children of this view holder. This is
     // to ensure that all geometry gets clipped to the view bounds and
     // does not extend past its allowed extent.
-    SetClipPlanesFromBBox(GetLocalBoundingBox());
+    SetClipPlanesFromBBox(GetLocalBoundingBox(), error_reporter);
+
     SendViewPropertiesChangedEvent();
   }
 }
@@ -179,19 +180,19 @@ void ViewHolder::SendViewPropertiesChangedEvent() {
   }
   fuchsia::ui::gfx::Event event;
   event.set_view_properties_changed({.view_id = view_->id(), .properties = view_properties_});
-  view_->session()->EnqueueEvent(std::move(event));
+  view_->event_reporter()->EnqueueEvent(std::move(event));
 }
 
 void ViewHolder::SendViewConnectedEvent() {
   fuchsia::ui::gfx::Event event;
   event.set_view_connected({.view_holder_id = id()});
-  session()->EnqueueEvent(std::move(event));
+  event_reporter()->EnqueueEvent(std::move(event));
 }
 
 void ViewHolder::SendViewDisconnectedEvent() {
   fuchsia::ui::gfx::Event event;
   event.set_view_disconnected({.view_holder_id = id()});
-  session()->EnqueueEvent(std::move(event));
+  event_reporter()->EnqueueEvent(std::move(event));
 }
 
 void ViewHolder::SendViewAttachedToSceneEvent() {
@@ -200,7 +201,7 @@ void ViewHolder::SendViewAttachedToSceneEvent() {
   }
   fuchsia::ui::gfx::Event event;
   event.set_view_attached_to_scene({.view_id = view_->id(), .properties = view_properties_});
-  view_->session()->EnqueueEvent(std::move(event));
+  view_->event_reporter()->EnqueueEvent(std::move(event));
 }
 
 void ViewHolder::SendViewDetachedFromSceneEvent() {
@@ -209,13 +210,13 @@ void ViewHolder::SendViewDetachedFromSceneEvent() {
   }
   fuchsia::ui::gfx::Event event;
   event.set_view_detached_from_scene({.view_id = view_->id()});
-  view_->session()->EnqueueEvent(std::move(event));
+  view_->event_reporter()->EnqueueEvent(std::move(event));
 }
 
 void ViewHolder::SendViewStateChangedEvent() {
   fuchsia::ui::gfx::Event event;
   event.set_view_state_changed({.view_holder_id = id(), .state = view_state_});
-  session()->EnqueueEvent(std::move(event));
+  event_reporter()->EnqueueEvent(std::move(event));
 }
 
 }  // namespace gfx

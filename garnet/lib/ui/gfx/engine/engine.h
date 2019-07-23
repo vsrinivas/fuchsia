@@ -84,7 +84,7 @@ class Engine : public FrameRenderer {
                           escher_image_factory(),
                           escher_rounded_rect_factory(),
                           release_fence_signaller(),
-                          frame_scheduler_.get(),
+                          frame_scheduler_,
                           display_manager_,
                           scene_graph(),
                           &resource_linker_,

@@ -7,6 +7,7 @@
 #include <lib/async/default.h>
 
 #include "garnet/lib/ui/gfx/resources/import.h"
+#include "garnet/lib/ui/scenic/util/error_reporter.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -91,7 +92,8 @@ void ResourceLinker::OnImportResolvedForResource(Import* import, Resource* expor
                                                  ImportResolutionResult resolution_result) {
   switch (resolution_result) {
     case ImportResolutionResult::kSuccess:
-      exported_resource->AddImport(import);
+      // TODO(SCN-1509): ErrorReporter::Default() is OK because this code will be deleted ASAP.
+      exported_resource->AddImport(import, ErrorReporter::Default().get());
       break;
     case ImportResolutionResult::kExportHandleDiedBeforeBind:
       import->UnbindImportedResource();
@@ -232,10 +234,10 @@ void ResourceLinker::SetOnImportResolvedCallback(OnImportResolvedCallback callba
   import_resolved_callback_ = std::move(callback);
 }
 
-size_t ResourceLinker::NumExportsForSession(Session* session) {
+size_t ResourceLinker::NumExportsForSession(SessionId session_id) {
   size_t count = 0;
   for (auto& pair : export_entries_) {
-    if (session == pair.second.resource->session()) {
+    if (session_id == pair.second.resource->session_id()) {
       ++count;
     }
   }

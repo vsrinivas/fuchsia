@@ -16,7 +16,7 @@ namespace gfx {
 
 class ResourceMap {
  public:
-  explicit ResourceMap(ErrorReporter* error_reporter = ErrorReporter::Default());
+  explicit ResourceMap(std::shared_ptr<ErrorReporter> error_reporter = ErrorReporter::Default());
   ~ResourceMap();
 
   void Clear();
@@ -96,7 +96,7 @@ class ResourceMap {
 
  private:
   std::unordered_map<ResourceId, ResourcePtr> resources_;
-  ErrorReporter* const error_reporter_;
+  const std::shared_ptr<ErrorReporter> error_reporter_;
 };
 
 }  // namespace gfx

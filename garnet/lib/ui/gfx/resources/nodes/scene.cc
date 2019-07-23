@@ -25,7 +25,7 @@ void Scene::OnSceneChanged() {
       << "Scene cannot be changed to a different Scene.";
 }
 
-bool Scene::AddLight(const LightPtr& light) {
+bool Scene::AddLight(const LightPtr& light, ErrorReporter* error_reporter) {
   if (light->IsKindOf<AmbientLight>()) {
     // TODO(SCN-1217): check for duplicates.
     ambient_lights_.push_back(light->As<AmbientLight>());
@@ -39,7 +39,7 @@ bool Scene::AddLight(const LightPtr& light) {
     point_lights_.push_back(light->As<PointLight>());
     return true;
   }
-  error_reporter()->ERROR() << "scenic::gfx::Scene::AddLight(): unrecognized light type.";
+  error_reporter->ERROR() << "scenic::gfx::Scene::AddLight(): unrecognized light type.";
   return false;
 }
 
@@ -58,9 +58,9 @@ bool Scene::AddPointLight(const PointLightPtr& light) {
   return true;
 }
 
-bool Scene::Detach() {
+bool Scene::Detach(ErrorReporter* error_reporter) {
   // Skip Node's default implementation; use Resource's instead.
-  return Resource::Detach();
+  return Resource::Detach(error_reporter);
 }
 
 }  // namespace gfx

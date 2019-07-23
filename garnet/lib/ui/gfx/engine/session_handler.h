@@ -28,7 +28,8 @@ namespace gfx {
 class SessionHandler : public TempSessionDelegate {
  public:
   SessionHandler(CommandDispatcherContext context, SessionContext session_context,
-                 EventReporter* event_reporter, ErrorReporter* error_reporter,
+                 std::shared_ptr<EventReporter> event_reporter,
+                 std::shared_ptr<ErrorReporter> error_reporter,
                  inspect_deprecated::Node inspect_node = inspect_deprecated::Node());
   // TODO(SCN-1485): along with ~Session(), this ensures that the contents are
   // properly removed from the scene-graph.  However, it doens't trigger another

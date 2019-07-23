@@ -26,7 +26,8 @@ class MeshShape final : public Shape {
   bool BindBuffers(BufferPtr index_buffer, ::fuchsia::ui::gfx::MeshIndexFormat index_format,
                    uint64_t index_offset, uint32_t index_count, BufferPtr vertex_buffer,
                    const ::fuchsia::ui::gfx::MeshVertexFormat& vertex_format,
-                   uint64_t vertex_offset, uint32_t vertex_count, escher::BoundingBox bounding_box);
+                   uint64_t vertex_offset, uint32_t vertex_count, escher::BoundingBox bounding_box,
+                   ErrorReporter* error_reporter);
 
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;

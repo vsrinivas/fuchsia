@@ -15,6 +15,8 @@ class FrameTimingsTest : public ErrorReportingTest {
  protected:
   // | ::testing::Test |
   void SetUp() override {
+    ErrorReportingTest::SetUp();
+
     frame_scheduler_ = std::make_unique<MockFrameScheduler>();
     frame_timings_ = fxl::MakeRefCounted<FrameTimings>(frame_scheduler_.get(),
                                                        /* frame number */ 1,
@@ -23,7 +25,12 @@ class FrameTimingsTest : public ErrorReportingTest {
                                                        /* render started time */ 0);
     swapchain_index_ = frame_timings_->RegisterSwapchain();
   }
-  void TearDown() override { frame_scheduler_.reset(); }
+  void TearDown() override {
+    frame_scheduler_.reset();
+    frame_timings_ = nullptr;
+
+    ErrorReportingTest::TearDown();
+  }
 
   fxl::RefPtr<FrameTimings> frame_timings_;
   std::unique_ptr<MockFrameScheduler> frame_scheduler_;

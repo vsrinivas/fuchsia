@@ -16,6 +16,7 @@
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "garnet/lib/ui/gfx/resources/dump_visitor.h"
 #include "garnet/lib/ui/gfx/screenshotter.h"
+#include "garnet/lib/ui/gfx/util/collection_utils.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "src/ui/lib/escher/escher_process_init.h"
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
@@ -413,10 +414,9 @@ SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
         // callbacks.
       }
       //  Collect the callbacks to be passed back in the |UpdateResults|.
-      SessionUpdater::MoveCallbacksFromTo(&apply_results.callbacks,
-                                          &update_results.present_callbacks);
-      SessionUpdater::MoveCallbacksFromTo(&apply_results.image_pipe_callbacks,
-                                          &update_results.present_callbacks);
+      MoveAllItemsFromQueueToQueue(&apply_results.callbacks, &update_results.present_callbacks);
+      MoveAllItemsFromQueueToQueue(&apply_results.image_pipe_callbacks,
+                                   &update_results.present_callbacks);
     }
 
     if (apply_results.needs_render) {

@@ -35,9 +35,9 @@ class LayerStack : public Resource {
   std::vector<Hit> HitTest(const escher::ray4& ray, HitTester* hit_tester) const;
 
   // AddLayerCmd.
-  bool AddLayer(LayerPtr layer);
+  bool AddLayer(LayerPtr layer, ErrorReporter* reporter);
   // RemoveLayerCmd.
-  bool RemoveLayer(LayerPtr layer);
+  bool RemoveLayer(LayerPtr layer, ErrorReporter* reporter);
   // RemoveAllLayersCmd.
   bool RemoveAllLayers();
 

@@ -42,7 +42,7 @@ class Layer : public Resource {
   const RendererPtr& renderer() const { return renderer_; }
 
   // SetSizeCmd.
-  bool SetSize(const escher::vec2& size);
+  bool SetSize(const escher::vec2& size, ErrorReporter* reporter);
   const escher::vec2& size() const { return size_; }
 
   // SetColorCmd.
@@ -50,7 +50,7 @@ class Layer : public Resource {
   const escher::vec4& color() const { return color_; }
 
   // |Resource|, DetachCmd.
-  bool Detach() override;
+  bool Detach(ErrorReporter* reporter) override;
 
   // Add the scene rendered by this layer, if any, to |scenes_out|.
   void CollectScenes(std::set<Scene*>* scenes_out);

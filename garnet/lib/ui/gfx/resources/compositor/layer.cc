@@ -29,10 +29,10 @@ bool Layer::SetRenderer(RendererPtr renderer) {
   return true;
 }
 
-bool Layer::SetSize(const escher::vec2& size) {
+bool Layer::SetSize(const escher::vec2& size, ErrorReporter* reporter) {
   if (size.x <= 0 || size.y <= 0) {
     if (size != escher::vec2(0, 0)) {
-      error_reporter()->ERROR() << "scenic::gfx::Layer::SetSize(): size must be positive";
+      reporter->ERROR() << "scenic::gfx::Layer::SetSize(): size must be positive";
       return false;
     }
   }
@@ -45,7 +45,7 @@ bool Layer::SetColor(const escher::vec4& color) {
   return true;
 }
 
-bool Layer::Detach() {
+bool Layer::Detach(ErrorReporter* reporter) {
   if (layer_stack_) {
     layer_stack_->RemoveLayer(this);
     FXL_DCHECK(!layer_stack_);  // removed by RemoveLayer().

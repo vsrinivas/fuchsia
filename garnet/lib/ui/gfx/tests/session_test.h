@@ -18,7 +18,7 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-class SessionTest : public ErrorReportingTest, public EventReporter {
+class SessionTest : public ErrorReportingTest {
  protected:
   // Subclasses that override SetUp() and TearDown() should be sure to call
   // their parent class's implementations.
@@ -27,11 +27,6 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
   void SetUp() override;
   // | ::testing::Test |
   void TearDown() override;
-
-  // |EventReporter|
-  void EnqueueEvent(fuchsia::ui::gfx::Event event) override;
-  void EnqueueEvent(fuchsia::ui::input::InputEvent event) override;
-  void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override;
 
   std::unique_ptr<Session> CreateSession();
 
@@ -45,7 +40,7 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
   }
 
   Session* session() { return session_.get(); }
-  const std::vector<fuchsia::ui::scenic::Event>& events() { return events_; }
+
   DisplayManager* display_manager() { return display_manager_.get(); }
 
  protected:
@@ -60,9 +55,8 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
   SessionContext session_context_;
 
   std::unique_ptr<DisplayManager> display_manager_;
-  std::unique_ptr<FrameScheduler> frame_scheduler_;
+  std::shared_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<Session> session_;
-  std::vector<fuchsia::ui::scenic::Event> events_;
 };
 
 }  // namespace test

@@ -55,7 +55,8 @@ class SessionManager {
   // Virtual for testing purposes
   virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
       CommandDispatcherContext dispatcher_context, SessionContext session_context,
-      SessionId session_id, EventReporter* event_reporter, ErrorReporter* error_reporter);
+      SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
+      std::shared_ptr<ErrorReporter> error_reporter);
 
   // Map of all the sessions.
   std::unordered_map<SessionId, SessionHandler*> session_handlers_;

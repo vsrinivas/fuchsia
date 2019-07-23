@@ -13,14 +13,15 @@ namespace scenic_impl {
 namespace gfx {
 
 SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
-                               SessionContext session_context, EventReporter* event_reporter,
-                               ErrorReporter* error_reporter,
+                               SessionContext session_context,
+                               std::shared_ptr<EventReporter> event_reporter,
+                               std::shared_ptr<ErrorReporter> error_reporter,
                                inspect_deprecated::Node inspect_object)
     : TempSessionDelegate(std::move(dispatcher_context)),
 
       session_(std::make_unique<Session>(command_dispatcher_context()->session_id(),
-                                         std::move(session_context), event_reporter, error_reporter,
-                                         std::move(inspect_object))) {}
+                                         std::move(session_context), std::move(event_reporter),
+                                         std::move(error_reporter), std::move(inspect_object))) {}
 
 void SessionHandler::Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
                              std::vector<zx::event> release_fences,

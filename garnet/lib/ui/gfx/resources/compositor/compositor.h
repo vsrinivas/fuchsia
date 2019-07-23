@@ -66,7 +66,7 @@ class Compositor : public Resource {
 
   // Setter and getter for rotation in degrees, currently used for
   // screenshotting.
-  bool SetLayoutRotation(uint32_t rotation);
+  bool SetLayoutRotation(uint32_t rotation, ErrorReporter* reporter);
 
   const uint32_t& layout_rotation() const { return layout_rotation_; }
 

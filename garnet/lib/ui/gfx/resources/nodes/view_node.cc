@@ -13,11 +13,11 @@ namespace gfx {
 const ResourceTypeInfo ViewNode::kTypeInfo = {ResourceType::kNode | ResourceType::kView,
                                               "ViewNode"};
 
-ViewNode::ViewNode(Session* session, ResourceId view_id)
-    : Node(session, /* node_id */ 0, ViewNode::kTypeInfo), view_id_(view_id) {}
+ViewNode::ViewNode(Session* session, fxl::WeakPtr<View> view)
+    : Node(session, /* node_id */ 0, ViewNode::kTypeInfo), view_(std::move(view)) {}
 
 ViewPtr ViewNode::FindOwningView() const {
-  return session()->resources()->FindResource<View>(view_id_);
+  return ViewPtr(view_.get());
 }
 
 // Test the ray against the bounding box of the view, which is

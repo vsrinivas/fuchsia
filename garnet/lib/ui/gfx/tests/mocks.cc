@@ -21,13 +21,14 @@ void ReleaseFenceSignallerForTest::AddCPUReleaseFence(zx::event fence) {
   fence.signal(0u, escher::kFenceSignalled);
 }
 
-SessionManagerForTest::SessionManagerForTest(EventReporter* event_reporter,
-                                             ErrorReporter* error_reporter)
+SessionManagerForTest::SessionManagerForTest(std::shared_ptr<EventReporter> event_reporter,
+                                             std::shared_ptr<ErrorReporter> error_reporter)
     : event_reporter_(event_reporter), error_reporter_(error_reporter) {}
 
 std::unique_ptr<SessionHandler> SessionManagerForTest::CreateSessionHandler(
     CommandDispatcherContext dispatcher_context, SessionContext session_context,
-    SessionId session_id, EventReporter* event_reporter, ErrorReporter* error_reporter) {
+    SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
+    std::shared_ptr<ErrorReporter> error_reporter) {
   return std::make_unique<SessionHandler>(std::move(dispatcher_context), std::move(session_context),
                                           event_reporter_ ? event_reporter_ : event_reporter,
                                           error_reporter_ ? error_reporter_ : error_reporter);

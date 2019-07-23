@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "gtest/gtest.h"
 #include "lib/gtest/test_loop_fixture.h"
@@ -32,13 +33,35 @@ class TestErrorReporter : public ErrorReporter {
   std::vector<std::string> reported_errors_;
 };
 
+class TestEventReporter : public EventReporter {
+ public:
+  const std::vector<fuchsia::ui::scenic::Event>& events() const { return events_; }
+
+ private:
+  // |EventReporter|
+  void EnqueueEvent(fuchsia::ui::gfx::Event event) override;
+  void EnqueueEvent(fuchsia::ui::input::InputEvent event) override;
+  void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override;
+
+  std::vector<fuchsia::ui::scenic::Event> events_;
+};
+
 class ErrorReportingTest : public ::gtest::TestLoopFixture {
  protected:
-  ErrorReporter* error_reporter() { return &error_reporter_; }
+  ErrorReportingTest();
+  virtual ~ErrorReportingTest();
+
+  ErrorReporter* error_reporter() const;
+  EventReporter* event_reporter() const;
+  std::shared_ptr<ErrorReporter> shared_error_reporter() const;
+  std::shared_ptr<EventReporter> shared_event_reporter() const;
+
+  // Return the events that were enqueued on the EventReporter returned by |event_reporter()|.
+  const std::vector<fuchsia::ui::scenic::Event>& events() const;
 
   // Verify that the expected number of errors were reported.
   void ExpectErrorCount(size_t errors_expected) {
-    EXPECT_EQ(errors_expected, error_reporter_.errors().size());
+    EXPECT_EQ(errors_expected, error_reporter_->errors().size());
   }
 
   // Verify that the error at position |pos| in the list is as expected.  If
@@ -50,8 +73,18 @@ class ErrorReportingTest : public ::gtest::TestLoopFixture {
   // expected, use nullptr as |expected_error_string|.
   void ExpectLastReportedError(const char* expected_error_string);
 
+  // | ::testing::Test |
+  void SetUp() override;
+  // | ::testing::Test |
+  void TearDown() override;
+
  private:
-  TestErrorReporter error_reporter_;
+  std::shared_ptr<TestErrorReporter> error_reporter_;
+  std::shared_ptr<TestEventReporter> event_reporter_;
+
+  // Help subclasses remember to call SetUp() and TearDown() on superclass.
+  bool setup_called_ = false;
+  bool teardown_called_ = false;
 };
 
 }  // namespace test

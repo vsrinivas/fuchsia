@@ -78,15 +78,14 @@ std::vector<Layer*> Compositor::GetDrawableLayers() const {
 // Rotation values can only be multiples of 90 degrees. Logs an
 // error and returns false, without setting the rotation, if this
 // condition is not met.
-bool Compositor::SetLayoutRotation(uint32_t rotation) {
+bool Compositor::SetLayoutRotation(uint32_t rotation, ErrorReporter* error_reporter) {
   if (rotation == 0 || rotation == 90 || rotation == 180 || rotation == 270) {
     layout_rotation_ = rotation;
     return true;
   }
 
-  session()->error_reporter()->ERROR()
-      << "Compositor::SetLayoutRotation() rotation must be 0, 90, 180, or 270 "
-         "degrees";
+  error_reporter->ERROR()
+      << "Compositor::SetLayoutRotation() rotation must be 0, 90, 180, or 270 degrees";
   return false;
 }
 

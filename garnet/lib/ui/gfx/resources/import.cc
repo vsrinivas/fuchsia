@@ -57,7 +57,7 @@ void Import::UnbindImportedResource() {
   auto event = ::fuchsia::ui::gfx::Event();
   event.set_import_unbound(::fuchsia::ui::gfx::ImportUnboundEvent());
   event.import_unbound().resource_id = id();
-  session()->EnqueueEvent(std::move(event));
+  event_reporter()->EnqueueEvent(std::move(event));
 }
 
 }  // namespace gfx

@@ -26,7 +26,7 @@ class ViewNode final : public Node {
   ViewPtr FindOwningView() const override;
 
   // Returns pointer to the View that owns this node.
-  View* GetView() const { return FindOwningView().get(); }
+  View* GetView() const { return view_.get(); }
 
   // |Node|
   IntersectionInfo GetIntersection(const escher::ray4& ray,
@@ -34,10 +34,10 @@ class ViewNode final : public Node {
 
  private:
   friend class View;
-  ViewNode(Session* session, ResourceId view_id);
+  ViewNode(Session* session, fxl::WeakPtr<View> view);
 
   // The ID of the View owning this ViewNode.
-  ResourceId view_id_;
+  fxl::WeakPtr<View> view_;
 };
 
 }  // namespace gfx

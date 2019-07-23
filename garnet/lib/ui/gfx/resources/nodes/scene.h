@@ -29,7 +29,7 @@ class Scene final : public Node {
   Scene(Session* session, ResourceId node_id);
   ~Scene() override;
 
-  bool AddLight(const LightPtr& light);
+  bool AddLight(const LightPtr& light, ErrorReporter* error_reporter);
   bool AddAmbientLight(const AmbientLightPtr& light);
   bool AddDirectionalLight(const DirectionalLightPtr& light);
   bool AddPointLight(const PointLightPtr& light);
@@ -38,7 +38,7 @@ class Scene final : public Node {
   void Accept(class ResourceVisitor* visitor) override;
 
   // |Resource|.
-  bool Detach() override;
+  bool Detach(ErrorReporter* error_reporter) override;
 
   const std::vector<AmbientLightPtr>& ambient_lights() const { return ambient_lights_; }
 

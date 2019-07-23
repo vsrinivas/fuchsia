@@ -25,6 +25,7 @@ namespace gfx {
 class Import;
 class ResourceLinker;
 class Session;
+struct ResourceContext;
 
 // Resource is the base class for all client-created objects (i.e. those that
 // are created in response to a CreateResourceCmd).
@@ -41,13 +42,17 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   const char* type_name() const { return type_info_.name; }
 
   // The session this Resource lives in and the id it was created with there.
-  Session* session() const { return session_; }
-  ResourceId id() const { return id_; }
+  Session* session_DEPRECATED() const { return session_DEPRECATED_; }
+  ResourceId id() const { return global_id_.resource_id; }
+  SessionId session_id() const { return global_id_.session_id; }
   GlobalId global_id() const { return global_id_; }
 
-  // An error reporter associated with the Resource's session. When operating
-  // on this resource, always log errors to the ErrorReporter before failing.
-  ErrorReporter* error_reporter() const;
+  // TODO(SCN-1504): this blocks the removal of Session* from resource.
+  EventReporter* event_reporter() const;
+
+  // TODO(SCN-1504): this blocks the removal of Session* from resource.  Should we stash one of
+  // these in the resource?  Only for some resources?
+  const ResourceContext& resource_context() const;
 
   // The diagnostic label.
   const std::string label() const { return label_; }
@@ -88,7 +93,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   bool is_exported() const { return exported_; }
 
   /// Adds the import resource to the list of importers of this resource.
-  virtual void AddImport(Import* import);
+  virtual void AddImport(Import* import, ErrorReporter* error_reporter);
 
   /// Removes the import resource from the list of importers of this resource.
   virtual void RemoveImport(Import* import);
@@ -96,7 +101,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   // Detach the resource from its parent.  Return false if this fails for some
   // reason (including if this is an object for which the command makes no
   // sense).
-  virtual bool Detach();
+  virtual bool Detach(ErrorReporter* error_reporter);
 
  protected:
   Resource(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
@@ -116,8 +121,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   void SetExported(bool exported, const fxl::WeakPtr<ResourceLinker>& resource_linker_weak);
 
  private:
-  Session* const session_;
-  const ResourceId id_;
+  Session* const session_DEPRECATED_;
   const GlobalId global_id_;
   const ResourceTypeInfo& type_info_;
   std::string label_;

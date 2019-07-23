@@ -76,7 +76,7 @@ class ResourceLinker {
   using OnImportResolvedCallback = fit::function<void(Import*, Resource*, ImportResolutionResult)>;
   void SetOnImportResolvedCallback(OnImportResolvedCallback callback);
 
-  size_t NumExportsForSession(Session* session);
+  size_t NumExportsForSession(SessionId session_id);
 
   // To prevent making any requirements about the lifecycle of ResourceLinker
   // compared to resources, always refer to ResourceLinker with a weak pointer.

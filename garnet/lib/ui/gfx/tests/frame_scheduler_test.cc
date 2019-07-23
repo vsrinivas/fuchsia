@@ -14,6 +14,8 @@ namespace gfx {
 namespace test {
 
 void FrameSchedulerTest::SetUp() {
+  ErrorReportingTest::SetUp();
+
   fake_display_ = std::make_unique<FakeDisplay>();
   mock_updater_ = std::make_unique<MockSessionUpdater>();
   mock_renderer_ = std::make_unique<MockFrameRenderer>();
@@ -24,6 +26,8 @@ void FrameSchedulerTest::TearDown() {
   fake_display_.reset();
   mock_updater_.reset();
   mock_renderer_.reset();
+
+  ErrorReportingTest::TearDown();
 }
 
 std::unique_ptr<DefaultFrameScheduler> FrameSchedulerTest::CreateDefaultFrameScheduler() {

@@ -13,10 +13,12 @@ namespace gfx {
 namespace test {
 
 void SessionTest::SetUp() {
+  ErrorReportingTest::SetUp();
+
   display_manager_ = std::make_unique<DisplayManager>();
   display_manager_->SetDefaultDisplayForTests(std::make_unique<Display>(
       /*id*/ 0, /*px-width*/ 0, /*px-height*/ 0));
-  frame_scheduler_ = std::make_unique<DefaultFrameScheduler>(
+  frame_scheduler_ = std::make_shared<DefaultFrameScheduler>(
       display_manager_->default_display(),
       std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
                                        DefaultFrameScheduler::kInitialUpdateDuration));
@@ -29,7 +31,8 @@ void SessionTest::TearDown() {
   session_.reset();
   frame_scheduler_.reset();
   display_manager_.reset();
-  events_.clear();
+
+  ErrorReportingTest::TearDown();
 }
 
 SessionContext SessionTest::CreateSessionContext() {
@@ -43,7 +46,7 @@ SessionContext SessionTest::CreateSessionContext() {
       nullptr,                 // escher::ImageFactory*
       nullptr,                 // escher::RoundedRectFactory*
       nullptr,                 // escher::ReleaseFenceSignaller*
-      frame_scheduler_.get(),  // FrameScheduler*
+      frame_scheduler_,        // shared_ptr<FrameScheduler>
       display_manager_.get(),  // DisplayManager*
       SceneGraphWeakPtr(),     // SceneGraphWeakPtr
       nullptr,                 // ResourceLinker*
@@ -59,7 +62,8 @@ CommandContext SessionTest::CreateCommandContext() {
 
 std::unique_ptr<Session> SessionTest::CreateSession() {
   static uint32_t next_id = 1;
-  return std::make_unique<Session>(next_id++, session_context_, this, error_reporter());
+  return std::make_unique<Session>(next_id++, session_context_, shared_event_reporter(),
+                                   shared_error_reporter());
 }
 
 bool SessionTest::Apply(::fuchsia::ui::gfx::Command command) {
@@ -67,24 +71,6 @@ bool SessionTest::Apply(::fuchsia::ui::gfx::Command command) {
   auto retval = session_->ApplyCommand(&command_context, std::move(command));
   command_context.Flush();
   return retval;
-}
-
-void SessionTest::EnqueueEvent(fuchsia::ui::gfx::Event event) {
-  fuchsia::ui::scenic::Event scenic_event;
-  scenic_event.set_gfx(std::move(event));
-  events_.push_back(std::move(scenic_event));
-}
-
-void SessionTest::EnqueueEvent(fuchsia::ui::input::InputEvent event) {
-  fuchsia::ui::scenic::Event scenic_event;
-  scenic_event.set_input(std::move(event));
-  events_.push_back(std::move(scenic_event));
-}
-
-void SessionTest::EnqueueEvent(fuchsia::ui::scenic::Command unhandled) {
-  fuchsia::ui::scenic::Event scenic_event;
-  scenic_event.set_unhandled(std::move(unhandled));
-  events_.push_back(std::move(scenic_event));
 }
 
 }  // namespace test

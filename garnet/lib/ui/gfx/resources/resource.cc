@@ -16,10 +16,10 @@ namespace gfx {
 const ResourceTypeInfo Resource::kTypeInfo = {0, "Resource"};
 
 Resource::Resource(Session* session, ResourceId id, const ResourceTypeInfo& type_info)
-    : session_(session), id_(id), global_id_(session_->id(), id_), type_info_(type_info) {
+    : session_DEPRECATED_(session), global_id_(session->id(), id), type_info_(type_info) {
   FXL_DCHECK(session);
   FXL_DCHECK(type_info.IsKindOf(Resource::kTypeInfo));
-  session_->IncrementResourceCount();
+  session_DEPRECATED_->IncrementResourceCount();
 }
 
 Resource::~Resource() {
@@ -30,10 +30,16 @@ Resource::~Resource() {
   if (resource_linker_weak_ && exported_) {
     resource_linker_weak_->OnExportedResourceDestroyed(this);
   }
-  session_->DecrementResourceCount();
+  session_DEPRECATED_->DecrementResourceCount();
 }
 
-ErrorReporter* Resource::error_reporter() const { return session_->error_reporter(); }
+EventReporter* Resource::event_reporter() const {
+  return session_DEPRECATED_->event_reporter();
+}
+
+const ResourceContext& Resource::resource_context() const {
+  return session_DEPRECATED_->resource_context();
+}
 
 bool Resource::SetLabel(const std::string& label) {
   label_ = label.substr(0, ::fuchsia::ui::gfx::kLabelMaxLength);
@@ -45,10 +51,10 @@ bool Resource::SetEventMask(uint32_t event_mask) {
   return true;
 }
 
-void Resource::AddImport(Import* import) {
+void Resource::AddImport(Import* import, ErrorReporter* error_reporter) {
   // Make sure the types of the resource and the import are compatible.
   if (type_info_.IsKindOf(import->type_info())) {
-    error_reporter()->WARN() << "Type mismatch on import resolution.";
+    error_reporter->WARN() << "Type mismatch on import resolution.";
     return;
   }
 
@@ -63,8 +69,8 @@ void Resource::RemoveImport(Import* import) {
   imports_.erase(it);
 }
 
-bool Resource::Detach() {
-  error_reporter()->ERROR() << "Resources of type: " << type_name() << " do not support Detach().";
+bool Resource::Detach(ErrorReporter* error_reporter) {
+  error_reporter->ERROR() << "Resources of type: " << type_name() << " do not support Detach().";
   return false;
 }
 

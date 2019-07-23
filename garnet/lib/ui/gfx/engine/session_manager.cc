@@ -28,9 +28,9 @@ SessionHandler* SessionManager::FindSessionHandler(SessionId id) const {
 CommandDispatcherUniquePtr SessionManager::CreateCommandDispatcher(
     CommandDispatcherContext dispatcher_context, SessionContext session_context) {
   scenic_impl::Session* session = dispatcher_context.session();
-  auto handler =
-      this->CreateSessionHandler(std::move(dispatcher_context), std::move(session_context),
-                                 session->id(), session, session->error_reporter());
+  auto handler = this->CreateSessionHandler(std::move(dispatcher_context),
+                                            std::move(session_context), session->id(),
+                                            session->event_reporter(), session->error_reporter());
   InsertSessionHandler(session->id(), handler.get());
 
   return CommandDispatcherUniquePtr(handler.release(),
@@ -43,7 +43,8 @@ CommandDispatcherUniquePtr SessionManager::CreateCommandDispatcher(
 
 std::unique_ptr<SessionHandler> SessionManager::CreateSessionHandler(
     CommandDispatcherContext dispatcher_context, SessionContext session_context,
-    SessionId session_id, EventReporter* event_reporter, ErrorReporter* error_reporter) {
+    SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
+    std::shared_ptr<ErrorReporter> error_reporter) {
   auto inspect_node = inspect_node_.CreateChild("Session-" + std::to_string(session_id));
   return std::make_unique<SessionHandler>(std::move(dispatcher_context), std::move(session_context),
                                           event_reporter, error_reporter, std::move(inspect_node));

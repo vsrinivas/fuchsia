@@ -666,7 +666,7 @@ TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
   uint32_t next_event_id = events().size();
 
   // Detach ViewHolder from the scene.
-  view_holder->Detach();
+  view_holder->Detach(session()->error_reporter());
 
   // The "stopped rendering" event should have emitted before the "detached from
   // scene" event.

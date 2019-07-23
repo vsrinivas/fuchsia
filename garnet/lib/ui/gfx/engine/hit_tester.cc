@@ -69,7 +69,7 @@ SessionHitTester::SessionHitTester(Session* session) : session_(session) { FXL_C
 
 bool SessionHitTester::should_participate(Node* node) {
   FXL_DCHECK(node);
-  return node->tag_value() != 0 && node->session() == session_;
+  return node->tag_value() != 0 && node->session_id() == session_->id();
 }
 
 std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {

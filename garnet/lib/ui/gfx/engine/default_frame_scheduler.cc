@@ -312,7 +312,7 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx_time_t presentation_time,
     update_results.sessions_to_reschedule.insert(session_results.sessions_to_reschedule.begin(),
                                                  session_results.sessions_to_reschedule.end());
 
-    SessionUpdater::MoveCallbacksFromTo(&session_results.present_callbacks, &callbacks_this_frame_);
+    MoveAllItemsFromQueueToQueue(&session_results.present_callbacks, &callbacks_this_frame_);
   });
 
   // Push updates that (e.g.) had unreached fences back onto the queue to be retried next frame.
@@ -333,7 +333,7 @@ void DefaultFrameScheduler::UpdateManager::ScheduleUpdate(zx_time_t presentation
 
 void DefaultFrameScheduler::UpdateManager::RatchetPresentCallbacks(zx_time_t presentation_time,
                                                                    uint64_t frame_number) {
-  SessionUpdater::MoveCallbacksFromTo(&callbacks_this_frame_, &pending_callbacks_);
+  MoveAllItemsFromQueueToQueue(&callbacks_this_frame_, &pending_callbacks_);
   ApplyToCompactedVector(&session_updaters_,
                          [presentation_time, frame_number](SessionUpdater* updater) {
                            updater->PrepareFrame(presentation_time, frame_number);

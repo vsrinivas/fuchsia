@@ -181,7 +181,7 @@ void RemoveHitsFromSameSession(SessionId session_id, size_t start_idx,
                                std::vector<gfx::ViewPtr>* views) {
   FXL_DCHECK(views);
   for (size_t k = start_idx; k < views->size(); ++k) {
-    if ((*views)[k] && ((*views)[k]->session()->id() == session_id)) {
+    if ((*views)[k] && ((*views)[k]->session_id() == session_id)) {
       (*views)[k] = nullptr;
     }
   }
@@ -357,7 +357,7 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd comm
             break;
           }
           // Don't do this. Refer to comment on RemoveHitsFromSameSession.
-          RemoveHitsFromSameSession(view->session()->id(), i + 1, &views);
+          RemoveHitsFromSameSession(view->session_id(), i + 1, &views);
         }
       }
 

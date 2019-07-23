@@ -48,8 +48,13 @@ class View final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
+  // TODO(SCN-1504):  The caller must ensure that |error_reporter| and |event_reporter| outlive the
+  // constructed |View|.  Currently, these both have the same lifetime as |session|; this invariant
+  // must be maintained.  However, it would be better to pass strong pointers.
   View(Session* session, ResourceId id, ViewLinker::ImportLink link,
-       fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref);
+       fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref,
+       std::shared_ptr<ErrorReporter> error_reporter, EventReporter* event_reporter);
+
   ~View() override;
 
   fxl::WeakPtr<View> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -118,6 +123,10 @@ class View final : public Resource {
   // Determines if view should render its bounding box and those of its embedded
   // view/view holders.
   bool should_render_bounding_box_ = false;
+
+  // TODO(SCN-1504): better for these to not be raw pointers.
+  const std::shared_ptr<ErrorReporter> error_reporter_;
+  EventReporter* const event_reporter_;
 
   fxl::WeakPtrFactory<View> weak_factory_;  // must be last
 };

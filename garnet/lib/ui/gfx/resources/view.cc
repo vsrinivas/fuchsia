@@ -17,13 +17,19 @@ namespace gfx {
 const ResourceTypeInfo View::kTypeInfo = {ResourceType::kView, "View"};
 
 View::View(Session* session, ResourceId id, ViewLinker::ImportLink link,
-           fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref)
+           fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref,
+           std::shared_ptr<ErrorReporter> error_reporter, EventReporter* event_reporter)
     : Resource(session, id, View::kTypeInfo),
       link_(std::move(link)),
       control_ref_(std::move(control_ref)),
       view_ref_(std::move(view_ref)),
+      error_reporter_(std::move(error_reporter)),
+      event_reporter_(event_reporter),
       weak_factory_(this) {
-  node_ = fxl::AdoptRef<ViewNode>(new ViewNode(session, id));
+  FXL_DCHECK(error_reporter_);
+  FXL_DCHECK(event_reporter_);
+
+  node_ = fxl::AdoptRef<ViewNode>(new ViewNode(session, weak_factory_.GetWeakPtr()));
 
   FXL_DCHECK(link_.valid());
   FXL_DCHECK(!link_.initialized());
@@ -32,7 +38,7 @@ View::View(Session* session, ResourceId id, ViewLinker::ImportLink link,
 
 View::~View() {
   // Explicitly detach the phantom node to ensure it is cleaned up.
-  node_->Detach();
+  node_->Detach(error_reporter_.get());
 }
 
 void View::Connect() {
@@ -57,7 +63,10 @@ void View::SignalRender() {
 void View::LinkResolved(ViewHolder* view_holder) {
   FXL_DCHECK(!view_holder_);
   view_holder_ = view_holder;
-  view_holder_->AddChild(node_);
+
+  // Attaching our node to the holder should never fail.
+  FXL_CHECK(view_holder_->AddChild(node_, ErrorReporter::Default().get()))
+      << "View::LinkResolved(): error while adding ViewNode as child of ViewHolder";
 
   SendViewHolderConnectedEvent();
 }
@@ -65,7 +74,7 @@ void View::LinkResolved(ViewHolder* view_holder) {
 void View::LinkDisconnected() {
   // The connection ViewHolder no longer exists, detach the phantom node from
   // the ViewHolder.
-  node_->Detach();
+  node_->Detach(error_reporter_.get());
 
   view_holder_ = nullptr;
   // ViewHolder was disconnected. There are no guarantees on liveness of the
@@ -78,13 +87,13 @@ void View::LinkDisconnected() {
 void View::SendViewHolderConnectedEvent() {
   fuchsia::ui::gfx::Event event;
   event.set_view_holder_connected({.view_id = id()});
-  session()->EnqueueEvent(std::move(event));
+  event_reporter_->EnqueueEvent(std::move(event));
 }
 
 void View::SendViewHolderDisconnectedEvent() {
   fuchsia::ui::gfx::Event event;
   event.set_view_holder_disconnected({.view_id = id()});
-  session()->EnqueueEvent(std::move(event));
+  event_reporter_->EnqueueEvent(std::move(event));
 }
 
 }  // namespace gfx

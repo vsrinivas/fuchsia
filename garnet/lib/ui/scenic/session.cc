@@ -12,7 +12,15 @@ namespace scenic_impl {
 
 Session::Session(SessionId id,
                  ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
-    : id_(id), listener_(listener.Bind()), weak_factory_(this) {}
+    : id_(id),
+      listener_(listener.Bind()),
+      reporter_(std::make_shared<EventAndErrorReporter>(this)),
+      weak_factory_(this) {}
+
+Session::~Session() {
+  valid_ = false;
+  reporter_->Reset();
+}
 
 void Session::Enqueue(::std::vector<fuchsia::ui::scenic::Command> cmds) {
   // TODO(SCN-1265): Come up with a better solution to avoid children
@@ -27,7 +35,7 @@ void Session::Enqueue(::std::vector<fuchsia::ui::scenic::Command> cmds) {
     if (dispatcher) {
       dispatcher->DispatchCommand(std::move(cmd));
     } else {
-      EnqueueEvent(std::move(cmd));
+      reporter_->EnqueueEvent(std::move(cmd));
     }
   }
 }
@@ -67,22 +75,25 @@ void Session::SetDebugName(std::string debug_name) {
   delegate->SetDebugName(debug_name);
 }
 
-void Session::PostFlushTask() {
+Session::EventAndErrorReporter::EventAndErrorReporter(Session* session) : session_(session) {
+  FXL_DCHECK(session_);
+}
+
+void Session::EventAndErrorReporter::Reset() { session_ = nullptr; }
+
+void Session::EventAndErrorReporter::PostFlushTask() {
+  FXL_DCHECK(session_);
+
   // If this is the first EnqueueEvent() since the last FlushEvent(), post a
   // task to ensure that FlushEvents() is called.
   if (buffered_events_.empty()) {
-    async::PostTask(async_get_default_dispatcher(), [weak = weak_factory_.GetWeakPtr()] {
-      if (weak) {
-        weak->FlushEvents();
-      }
-    });
+    async::PostTask(async_get_default_dispatcher(),
+                    [shared_this = session_->reporter_] { shared_this->FlushEvents(); });
   }
 }
 
-void Session::EnqueueEvent(fuchsia::ui::gfx::Event event) {
-  // TODO(SCN-1265): Come up with a better solution to avoid children
-  // calling into us during destruction.
-  if (!valid_)
+void Session::EventAndErrorReporter::EnqueueEvent(fuchsia::ui::gfx::Event event) {
+  if (!session_)
     return;
   PostFlushTask();
 
@@ -91,10 +102,8 @@ void Session::EnqueueEvent(fuchsia::ui::gfx::Event event) {
   buffered_events_.push_back(std::move(scenic_event));
 }
 
-void Session::EnqueueEvent(fuchsia::ui::scenic::Command unhandled_command) {
-  // TODO(SCN-1265): Come up with a better solution to avoid children
-  // calling into us during destruction.
-  if (!valid_)
+void Session::EventAndErrorReporter::EnqueueEvent(fuchsia::ui::scenic::Command unhandled_command) {
+  if (!session_)
     return;
   PostFlushTask();
 
@@ -103,11 +112,8 @@ void Session::EnqueueEvent(fuchsia::ui::scenic::Command unhandled_command) {
   buffered_events_.push_back(std::move(scenic_event));
 }
 
-void Session::EnqueueEvent(fuchsia::ui::input::InputEvent event) {
-  // TODO(SCN-1265): Come up with a better solution to avoid
-  // children calling
-  // into us during destruction.
-  if (!valid_)
+void Session::EventAndErrorReporter::EnqueueEvent(fuchsia::ui::input::InputEvent event) {
+  if (!session_)
     return;
 
   // Force an immediate flush, preserving event order.
@@ -118,13 +124,16 @@ void Session::EnqueueEvent(fuchsia::ui::input::InputEvent event) {
   FlushEvents();
 }
 
-void Session::FlushEvents() {
+void Session::EventAndErrorReporter::FlushEvents() {
+  if (!session_)
+    return;
+
   if (!buffered_events_.empty()) {
-    if (listener_) {
-      listener_->OnScenicEvent(std::move(buffered_events_));
+    if (session_->listener_) {
+      session_->listener_->OnScenicEvent(std::move(buffered_events_));
     } else if (event_callback_) {
       // Only use the callback if there is no listener.  It is difficult to do
-      // better because we std::move the argument into OnEvent().
+      // better because we std::move the argument into OnScenicEvent().
       for (auto& evt : buffered_events_) {
         event_callback_(std::move(evt));
       }
@@ -133,11 +142,14 @@ void Session::FlushEvents() {
   }
 }
 
-void Session::ReportError(fxl::LogSeverity severity, std::string error_string) {
+void Session::EventAndErrorReporter::ReportError(fxl::LogSeverity severity,
+                                                 std::string error_string) {
   // TODO(SCN-1265): Come up with a better solution to avoid children
   // calling into us during destruction.
-  if (!valid_)
+  if (!session_) {
+    FXL_LOG(ERROR) << "Reporting Scenic Session error after session destroyed: " << error_string;
     return;
+  }
 
   switch (severity) {
     case fxl::LOG_INFO:
@@ -147,13 +159,15 @@ void Session::ReportError(fxl::LogSeverity severity, std::string error_string) {
       FXL_LOG(WARNING) << error_string;
       return;
     case fxl::LOG_ERROR:
-      FXL_LOG(ERROR) << error_string;
-      if (listener_) {
-        listener_->OnScenicError(std::move(error_string));
-      } else if (error_callback_) {
-        // Only use the callback if there is no listener.  It is difficult to do
-        // better because we std::move the argument into OnEvent().
-        error_callback_(std::move(error_string));
+      FXL_LOG(ERROR) << "Scenic session error (session_id: " << session_->id()
+                     << "): " << error_string;
+
+      if (error_callback_) {
+        error_callback_(error_string);
+      }
+
+      if (session_->listener_) {
+        session_->listener_->OnScenicError(std::move(error_string));
       }
       return;
     case fxl::LOG_FATAL:
