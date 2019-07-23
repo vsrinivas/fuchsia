@@ -171,7 +171,6 @@ macro_rules! bench {
         // TODO(joshlf): Remove the `#[ignore]` once all benchmark tests pass.
         #[cfg(not(feature = "benchmark"))]
         #[test]
-        #[ignore]
         fn $name() {
             $fn(&mut crate::testutil::benchmarks::TestBencher);
         }

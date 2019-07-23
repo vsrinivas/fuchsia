@@ -777,13 +777,16 @@ mod tests {
             NonZeroU16::new(UDP_DST_PORT).unwrap(),
         );
         let header_len = builder.constraints().header_len();
-        let mut buf = vec![0; header_len + UDP_BODY.len()];
+        let total_len = header_len + UDP_BODY.len();
+        let mut buf = vec![0; total_len];
         buf[header_len..].copy_from_slice(UDP_BODY);
 
         b.iter(|| {
             black_box(
-                black_box((&mut buf[..]).into_serializer().encapsulate(builder.clone()))
-                    .serialize_no_alloc_outer(),
+                black_box(
+                    Buf::new(&mut buf[..], header_len..total_len).encapsulate(builder.clone()),
+                )
+                .serialize_no_alloc_outer(),
             )
             .unwrap();
         })
