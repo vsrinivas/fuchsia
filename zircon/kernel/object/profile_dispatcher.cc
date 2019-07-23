@@ -8,6 +8,7 @@
 
 #include <err.h>
 #include <lib/counters.h>
+#include <zircon/errors.h>
 #include <zircon/rights.h>
 
 #include <fbl/alloc_checker.h>
@@ -18,6 +19,13 @@ KCOUNTER(dispatcher_profile_create_count, "dispatcher.profile.create")
 KCOUNTER(dispatcher_profile_destroy_count, "dispatcher.profile.destroy")
 
 zx_status_t validate_profile(const zx_profile_info_t& info) {
+  // Ensure reserved fields have not been set.
+  if (info.flags != 0) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Ensure that we are specifying scheduler fields; other values are
+  // unsupported.
   if (info.type != ZX_PROFILE_INFO_SCHEDULER)
     return ZX_ERR_NOT_SUPPORTED;
   if ((info.scheduler.priority < LOWEST_PRIORITY) || (info.scheduler.priority > HIGHEST_PRIORITY))

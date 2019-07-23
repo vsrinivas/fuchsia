@@ -195,6 +195,9 @@ typedef struct zx_info_thread {
     // specified channel.
     // The value is one of ZX_EXCEPTION_CHANNEL_TYPE_*.
     uint32_t wait_exception_channel_type;
+
+    // CPUs this thread may be scheduled on.
+    zx_cpu_set_t cpu_affinity_mask;
 } zx_info_thread_t;
 ```
 
@@ -269,9 +272,14 @@ an exception response.
 typedef struct zx_info_thread_stats {
     // Total accumulated running time of the thread.
     zx_duration_t total_runtime;
+
+    // CPU number that this thread was last scheduled on, or ZX_INFO_INVALID_CPU
+    // if the thread has never been scheduled on a CPU. By the time this call
+    // returns, the thread may have been scheduled elsewhere, so this
+    // information should only be used as a hint or for statistics.
+    uint32_t last_scheduled_cpu;
 } zx_info_thread_stats_t;
 ```
-
 
 ### ZX_INFO_CPU_STATS
 

@@ -7,6 +7,7 @@
 #include <lib/zx/job.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls/profile.h>
 #include <zircon/syscalls/types.h>
 #include <zxtest/zxtest.h>
@@ -181,6 +182,20 @@ TEST(ProfileTest, CreateProfileWithNullProfileIsInvalidArgs) {
 #pragma GCC diagnostic ignored "-Wnonnull"
     ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx_profile_create(root_job->get(), 0u, &profile_info, nullptr));
 #pragma GCC diagnostic pop
+}
+
+TEST(ProfileTest, CreateProfileWithNonZeroFlags) {
+    zx::unowned_job root_job(zx::job::default_job());
+    ASSERT_TRUE(root_job->is_valid());
+    zx::job child_job;
+    ASSERT_OK(zx::job::create(*root_job, 0u, &child_job));
+
+    // Create a valid scheduling profile, but with a non-zero |flags| field.
+    zx_profile_info_t info = MakeSchedulerProfileInfo(ZX_PRIORITY_DEFAULT);
+    info.flags = 1;
+
+    zx::profile profile;
+    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zx::profile::create(*root_job, 0u, &info, &profile));
 }
 
 } // namespace

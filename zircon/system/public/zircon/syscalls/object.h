@@ -49,6 +49,9 @@ typedef uint32_t zx_obj_props_t;
 #define ZX_TASK_RETCODE_VDSO_KILL       ((int64_t) -1027)   // by the VDSO.
 #define ZX_TASK_RETCODE_EXCEPTION_KILL  ((int64_t) -1028)   // Exception not handled.
 
+// Sentinel indicating an invalid or missing CPU.
+#define ZX_INFO_INVALID_CPU             ((uint32_t)0xFFFFFFFFu)
+
 
 typedef struct zx_info_handle_basic {
     // The unique id assigned by kernel to the object referenced by the
@@ -134,11 +137,20 @@ typedef struct zx_info_thread {
         // TODO(ZX-4031): remove this once everyone is switched to channels.
         uint32_t wait_exception_port_type;
     };
+
+    // CPUs this thread may be scheduled on.
+    zx_cpu_set_t cpu_affinity_mask;
 } zx_info_thread_t;
 
 typedef struct zx_info_thread_stats {
     // Total accumulated running time of the thread.
     zx_duration_t total_runtime;
+
+    // CPU number that this thread was last scheduled on, or ZX_INFO_INVALID_CPU
+    // if the thread has never been scheduled on a CPU. By the time this call
+    // returns, the thread may have been scheduled elsewhere, so this
+    // information should only be used as a hint or for statistics.
+    uint32_t last_scheduled_cpu;
 } zx_info_thread_stats_t;
 
 // Statistics about resources (e.g., memory) used by a task. Can be relatively

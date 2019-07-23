@@ -410,6 +410,20 @@ typedef struct zx_channel_call_args {
 #define ZX_VM_FLAG_MAP_RANGE              ((uint32_t)1u << 10)
 #define ZX_VM_FLAG_REQUIRE_NON_RESIZABLE  ((uint32_t)1u << 11)
 
+// CPU masks specifying sets of CPUs.
+//
+// We currently are limited to systems with 512 CPUs or less.
+#define ZX_CPU_SET_MAX_CPUS 512
+
+typedef struct zx_cpu_set {
+    // The |N|'th CPU is considered in the CPU set if the bit:
+    //
+    //   cpu_mask[N / 32] & (1 << (N % 32))
+    //
+    // is set.
+    uint32_t mask[ZX_CPU_SET_MAX_CPUS / 32];
+} zx_cpu_set_t;
+
 #ifdef __cplusplus
 // We cannot use <stdatomic.h> with C++ code as _Atomic qualifier defined by
 // C11 is not valid in C++11. There is not a single standard name that can

@@ -5,6 +5,7 @@
 #include <lib/profile/profile.h>
 
 #include <algorithm>
+#include "zircon/syscalls/profile.h"
 
 #include <fuchsia/scheduler/c/fidl.h>
 #include <lib/fidl-async/bind.h>
@@ -21,15 +22,10 @@ zx_status_t GetProfileSimple(void* ctx, uint32_t priority, const char* name_data
     zx_handle_t root_job = static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(ctx));
 
     // TODO(scottmg): More things here.
-    zx_profile_info_t info = {
-        .type = ZX_PROFILE_INFO_SCHEDULER,
-        {.scheduler = {
-             .priority = std::min(std::max(static_cast<int32_t>(priority), ZX_PRIORITY_LOWEST),
-                                  ZX_PRIORITY_HIGHEST),
-             .boost = 0,
-             .deboost = 0,
-             .quantum = 0,
-         }}};
+    zx_profile_info_t info = {};
+    info.type = ZX_PROFILE_INFO_SCHEDULER;
+    info.scheduler.priority =
+        std::min(std::max(static_cast<int32_t>(priority), ZX_PRIORITY_LOWEST), ZX_PRIORITY_HIGHEST);
 
     zx::profile profile;
     zx_status_t status = zx_profile_create(root_job, 0u, &info, profile.reset_and_get_address());
