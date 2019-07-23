@@ -9,8 +9,7 @@
 
 namespace sys {
 
-std::string TerminationReasonToString(
-    fuchsia::sys::TerminationReason termination_reason) {
+std::string TerminationReasonToString(fuchsia::sys::TerminationReason termination_reason) {
   switch (termination_reason) {
     case fuchsia::sys::TerminationReason::UNKNOWN:
       return "UNKNOWN";
@@ -33,8 +32,7 @@ std::string TerminationReasonToString(
   }
 }
 
-std::string HumanReadableTerminationReason(
-    fuchsia::sys::TerminationReason termination_reason) {
+std::string HumanReadableTerminationReason(fuchsia::sys::TerminationReason termination_reason) {
   switch (termination_reason) {
     case fuchsia::sys::TerminationReason::EXITED:
       return "exited";
@@ -50,8 +48,7 @@ std::string HumanReadableTerminationReason(
       return "runner failed to execute";
     default:
       std::ostringstream out;
-      out << "failed to create component ("
-          << TerminationReasonToString(termination_reason) << ")";
+      out << "failed to create component (" << TerminationReasonToString(termination_reason) << ")";
       return out.str();
   }
 }

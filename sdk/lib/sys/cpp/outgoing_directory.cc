@@ -19,19 +19,15 @@ OutgoingDirectory::~OutgoingDirectory() = default;
 
 zx_status_t OutgoingDirectory::Serve(zx::channel directory_request,
                                      async_dispatcher_t* dispatcher) {
-  return root_->Serve(
-      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-      std::move(directory_request), dispatcher);
+  return root_->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                      std::move(directory_request), dispatcher);
 }
 
-zx_status_t OutgoingDirectory::ServeFromStartupInfo(
-    async_dispatcher_t* dispatcher) {
-  return Serve(zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)),
-               dispatcher);
+zx_status_t OutgoingDirectory::ServeFromStartupInfo(async_dispatcher_t* dispatcher) {
+  return Serve(zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)), dispatcher);
 }
 
-vfs::PseudoDir* OutgoingDirectory::GetOrCreateDirectory(
-    const std::string& name) {
+vfs::PseudoDir* OutgoingDirectory::GetOrCreateDirectory(const std::string& name) {
   vfs::internal::Node* node;
   zx_status_t status = root_->Lookup(name, &node);
   if (status != ZX_OK) {
@@ -47,8 +43,8 @@ vfs::PseudoDir* OutgoingDirectory::AddNewEmptyDirectory(std::string name) {
   return ptr;
 }
 
-zx_status_t OutgoingDirectory::AddPublicService(
-    std::unique_ptr<vfs::Service> service, std::string service_name) const {
+zx_status_t OutgoingDirectory::AddPublicService(std::unique_ptr<vfs::Service> service,
+                                                std::string service_name) const {
   return svc_->AddEntry(std::move(service_name), std::move(service));
 }
 

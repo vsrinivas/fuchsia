@@ -6,9 +6,10 @@
 #ifndef LIB_SYS_CPP_TESTS_ECHO_SERVER_H_
 #define LIB_SYS_CPP_TESTS_ECHO_SERVER_H_
 
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
+
+#include <fidl/examples/echo/cpp/fidl.h>
 
 namespace {
 
@@ -24,9 +25,7 @@ class EchoImpl : public fidl::examples::echo::Echo {
 
   void AddBinding(zx::channel request, async_dispatcher_t* dispatcher) {
     bindings_.AddBinding(
-        this,
-        fidl::InterfaceRequest<fidl::examples::echo::Echo>(std::move(request)),
-        dispatcher);
+        this, fidl::InterfaceRequest<fidl::examples::echo::Echo>(std::move(request)), dispatcher);
   }
 
  private:

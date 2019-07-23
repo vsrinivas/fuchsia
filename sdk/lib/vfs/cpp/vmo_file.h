@@ -80,16 +80,14 @@ class VmoFile final : public vfs::internal::File {
   // The data read should be copied to |out_data|, which should be empty when
   // passed as an argument. When |ReadAt| returns, |out_data| should contain no
   // more than |count| bytes.
-  zx_status_t ReadAt(uint64_t count, uint64_t offset,
-                     std::vector<uint8_t>* out_data) override;
+  zx_status_t ReadAt(uint64_t count, uint64_t offset, std::vector<uint8_t>* out_data) override;
 
   // Write the given |data| to the file at the given |offset|.
   //
   // Data should be copied into the file starting at the beginning of |data|.
   // If |WriteAt| returns |ZX_OK|, |out_actual| should contain the number of
   // bytes actually written to the file.
-  zx_status_t WriteAt(std::vector<uint8_t> data, uint64_t offset,
-                      uint64_t* out_actual) override;
+  zx_status_t WriteAt(std::vector<uint8_t> data, uint64_t offset, uint64_t* out_actual) override;
 
   // Resize the file to the given |length|.
   zx_status_t Truncate(uint64_t length) override;
@@ -109,8 +107,7 @@ class VmoFile final : public vfs::internal::File {
   size_t GetCapacity() override;
 
   // Returns the node attributes for this VmoFile.
-  zx_status_t GetAttr(
-      fuchsia::io::NodeAttributes* out_attributes) const override;
+  zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const override;
 
  protected:
   NodeKind::Type GetKind() const override;

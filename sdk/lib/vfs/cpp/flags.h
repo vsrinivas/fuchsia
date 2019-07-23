@@ -13,17 +13,11 @@ class Flags {
  public:
   Flags() = delete;
 
-  static bool IsReadable(uint32_t flags) {
-    return (flags & fuchsia::io::OPEN_RIGHT_READABLE) != 0;
-  }
+  static bool IsReadable(uint32_t flags) { return (flags & fuchsia::io::OPEN_RIGHT_READABLE) != 0; }
 
-  static bool IsWritable(uint32_t flags) {
-    return (flags & fuchsia::io::OPEN_RIGHT_WRITABLE) != 0;
-  }
+  static bool IsWritable(uint32_t flags) { return (flags & fuchsia::io::OPEN_RIGHT_WRITABLE) != 0; }
 
-  static bool IsAdminable(uint32_t flags) {
-    return (flags & fuchsia::io::OPEN_RIGHT_ADMIN) != 0;
-  }
+  static bool IsAdminable(uint32_t flags) { return (flags & fuchsia::io::OPEN_RIGHT_ADMIN) != 0; }
 
   static bool IsDirectory(uint32_t flags) {
     return (flags & fuchsia::io::OPEN_FLAG_DIRECTORY) != 0;
@@ -45,21 +39,18 @@ class Flags {
     return (flags & fuchsia::io::CLONE_FLAG_SAME_RIGHTS) != 0;
   }
 
-  static bool IsPosix(uint32_t flags) {
-    return (flags & fuchsia::io::OPEN_FLAG_POSIX) != 0;
-  }
+  static bool IsPosix(uint32_t flags) { return (flags & fuchsia::io::OPEN_FLAG_POSIX) != 0; }
 
   // All known rights.
-  static constexpr uint32_t kFsRights =
-      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
-      fuchsia::io::OPEN_RIGHT_ADMIN;
+  static constexpr uint32_t kFsRights = fuchsia::io::OPEN_RIGHT_READABLE |
+                                        fuchsia::io::OPEN_RIGHT_WRITABLE |
+                                        fuchsia::io::OPEN_RIGHT_ADMIN;
 
   // All lower 16 bits are reserved for future rights extensions.
   static constexpr uint32_t kFsRightsSpace = 0x0000FFFF;
 
   // Flags which can be modified by FIDL File::SetFlags.
-  static constexpr uint32_t kSettableStatusFlags =
-      fuchsia::io::OPEN_FLAG_APPEND;
+  static constexpr uint32_t kSettableStatusFlags = fuchsia::io::OPEN_FLAG_APPEND;
 
   // All flags which indicate state of the connection (excluding rights).
   static constexpr uint32_t kStatusFlags =
@@ -84,10 +75,8 @@ class Flags {
     // Explicitly reject NODE_REFERENCE together with any invalid flags.
     if (Flags::IsNodeReference(flags)) {
       constexpr uint32_t kValidFlagsForNodeRef =
-          fuchsia::io::OPEN_FLAG_NODE_REFERENCE |
-          fuchsia::io::OPEN_FLAG_DIRECTORY |
-          fuchsia::io::OPEN_FLAG_NOT_DIRECTORY |
-          fuchsia::io::OPEN_FLAG_DESCRIBE;
+          fuchsia::io::OPEN_FLAG_NODE_REFERENCE | fuchsia::io::OPEN_FLAG_DIRECTORY |
+          fuchsia::io::OPEN_FLAG_NOT_DIRECTORY | fuchsia::io::OPEN_FLAG_DESCRIBE;
       if (flags & ~kValidFlagsForNodeRef) {
         return false;
       }

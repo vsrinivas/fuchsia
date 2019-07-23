@@ -4,8 +4,9 @@
 
 #include "lib/fidl/cpp/interface_handle.h"
 
-#include <fidl/test/frobinator/cpp/fidl.h>
 #include <lib/zx/channel.h>
+
+#include <fidl/test/frobinator/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"

@@ -44,15 +44,14 @@ class Directory : public Node {
   //
   // Returns |ZX_OK| if able to read at least one dentry else returns
   // |ZX_ERR_INVALID_ARGS| with |out_actual| as 0 and |out_offset| as |offset|.
-  virtual zx_status_t Readdir(uint64_t offset, void* data, uint64_t len,
-                              uint64_t* out_offset, uint64_t* out_actual) = 0;
+  virtual zx_status_t Readdir(uint64_t offset, void* data, uint64_t len, uint64_t* out_offset,
+                              uint64_t* out_actual) = 0;
 
   // Parses path and opens correct node.
   //
   // Called from |fuchsia.io.Directory#Open|.
-  void Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode,
-            const char* path, size_t path_len, zx::channel request,
-            async_dispatcher_t* dispatcher);
+  void Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, const char* path,
+            size_t path_len, zx::channel request, async_dispatcher_t* dispatcher);
 
   // Validates passed path
   //
@@ -77,18 +76,15 @@ class Directory : public Node {
   // path =".", out_path would be ""
   // path ="./", out_path would be ""
   // path ="a/b/", out_path would be "b/"
-  static zx_status_t WalkPath(const char* path, size_t path_len,
-                              const char** out_path, size_t* out_len,
-                              std::string* out_key, bool* out_is_self);
+  static zx_status_t WalkPath(const char* path, size_t path_len, const char** out_path,
+                              size_t* out_len, std::string* out_key, bool* out_is_self);
 
   // |Node| implementation
-  zx_status_t GetAttr(
-      fuchsia::io::NodeAttributes* out_attributes) const override;
+  zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const override;
 
  protected:
   // |Node| implementations
-  zx_status_t CreateConnection(
-      uint32_t flags, std::unique_ptr<Connection>* connection) override;
+  zx_status_t CreateConnection(uint32_t flags, std::unique_ptr<Connection>* connection) override;
 
   // Markes directory with |NODE_KIND_DIRECTORY| and also marks it readable and
   // writable.
@@ -106,9 +102,8 @@ class Directory : public Node {
   //
   // Calls |WalkPath| in loop and returns status on error. Returns
   // |ZX_ERR_NOT_DIR| if an intermediate component of |path| is not a directory.
-  zx_status_t LookupPath(const char* path, size_t path_len, bool* out_is_dir,
-                         Node** out_node, const char** out_path,
-                         size_t* out_len);
+  zx_status_t LookupPath(const char* path, size_t path_len, bool* out_is_dir, Node** out_node,
+                         const char** out_path, size_t* out_len);
 };
 
 }  // namespace internal

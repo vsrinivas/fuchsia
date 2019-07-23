@@ -19,17 +19,14 @@ TestHarnessLauncher::TestHarnessLauncher(fuchsia::sys::LauncherPtr launcher)
 
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kTestHarnessUrl;
-  test_harness_svc_ =
-      sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
+  test_harness_svc_ = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
 
-  launcher->CreateComponent(
-      std::move(launch_info),
-      test_harness_ctrl_.NewRequest(test_harness_loop_.dispatcher()));
+  launcher->CreateComponent(std::move(launch_info),
+                            test_harness_ctrl_.NewRequest(test_harness_loop_.dispatcher()));
 
   test_harness_svc_->Connect(test_harness_.NewRequest());
 
-  test_harness_ctrl_.set_error_handler(
-      [this](zx_status_t) { test_harness_loop_.Quit(); });
+  test_harness_ctrl_.set_error_handler([this](zx_status_t) { test_harness_loop_.Quit(); });
 }
 
 TestHarnessLauncher::~TestHarnessLauncher() {

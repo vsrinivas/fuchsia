@@ -60,9 +60,7 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
     return launcher;
   }
 
-  const std::shared_ptr<sys::ServiceDirectory>& real_services() {
-    return real_services_;
-  }
+  const std::shared_ptr<sys::ServiceDirectory>& real_services() { return real_services_; }
 
   const fuchsia::sys::EnvironmentPtr& real_env() { return real_env_; }
 
@@ -78,8 +76,7 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
   std::unique_ptr<EnclosingEnvironment> CreateNewEnclosingEnvironment(
       const std::string& label, std::unique_ptr<EnvironmentServices> services,
       const fuchsia::sys::EnvironmentOptions& options = {}) const {
-    return EnclosingEnvironment::Create(label, real_env_, std::move(services),
-                                        options);
+    return EnclosingEnvironment::Create(label, real_env_, std::move(services), options);
   }
 
   // Returns an EnvironmentServices object that the caller can use to pass
@@ -93,8 +90,7 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
 
   std::unique_ptr<EnvironmentServices> CreateServicesWithParentOverrides(
       EnvironmentServices::ParentOverrides parent_overrides) {
-    return EnvironmentServices::CreateWithParentOverrides(
-        real_env_, std::move(parent_overrides));
+    return EnvironmentServices::CreateWithParentOverrides(real_env_, std::move(parent_overrides));
   }
 
   // Creates component in current real environment. This component will have
@@ -112,17 +108,13 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
   //
   // You should either use this function to wait or run your own loop if you
   // want CreateComponent* to succed on |enclosing_environment|.
-  void WaitForEnclosingEnvToStart(
-      const EnclosingEnvironment* enclosing_environment) {
-    RunLoopUntil([enclosing_environment] {
-      return enclosing_environment->is_running();
-    });
+  void WaitForEnclosingEnvToStart(const EnclosingEnvironment* enclosing_environment) {
+    RunLoopUntil([enclosing_environment] { return enclosing_environment->is_running(); });
   }
 
   // Run a loop until the given component is terminated or |timeout| elapses.
-  bool RunComponentUntilTerminated(
-      fuchsia::sys::ComponentControllerPtr component_controller,
-      TerminationResult* termination_result = nullptr);
+  bool RunComponentUntilTerminated(fuchsia::sys::ComponentControllerPtr component_controller,
+                                   TerminationResult* termination_result = nullptr);
 
  private:
   std::shared_ptr<sys::ServiceDirectory> real_services_;

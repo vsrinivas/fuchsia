@@ -25,8 +25,7 @@ class TestLoader : fuchsia::sys::Loader {
   TestLoader(const fuchsia::sys::EnvironmentPtr& env) {
     fuchsia::sys::ServiceProviderPtr sp;
     env->GetServices(sp.NewRequest());
-    sp->ConnectToService(fuchsia::sys::Loader::Name_,
-                         fallback_loader_.NewRequest().TakeChannel());
+    sp->ConnectToService(fuchsia::sys::Loader::Name_, fallback_loader_.NewRequest().TakeChannel());
   }
 
   virtual ~TestLoader() = default;
@@ -60,8 +59,7 @@ TEST_F(ComponentInterceptorTest, TestFallbackAndInterceptingUrls) {
 
   sys::testing::ComponentInterceptor interceptor(test_loader.NewRequest());
   auto env = sys::testing::EnclosingEnvironment::Create(
-      "test_harness", real_env(),
-      interceptor.MakeEnvironmentServices(real_env()));
+      "test_harness", real_env(), interceptor.MakeEnvironmentServices(real_env()));
 
   constexpr char kInterceptUrl[] = "file://intercept_url";
   constexpr char kFallbackUrl[] = "file://fallback_url";
@@ -110,8 +108,7 @@ TEST_F(ComponentInterceptorTest, TestOnKill) {
 
   sys::testing::ComponentInterceptor interceptor(test_loader.NewRequest());
   auto env = sys::testing::EnclosingEnvironment::Create(
-      "test_harness", real_env(),
-      interceptor.MakeEnvironmentServices(real_env()));
+      "test_harness", real_env(), interceptor.MakeEnvironmentServices(real_env()));
 
   constexpr char kInterceptUrl[] = "file://intercept_url";
 
@@ -123,11 +120,10 @@ TEST_F(ComponentInterceptorTest, TestOnKill) {
   ASSERT_TRUE(interceptor.InterceptURL(
       kInterceptUrl, "",
       [&](fuchsia::sys::StartupInfo startup_info,
-          std::unique_ptr<sys::testing::InterceptedComponent>
-              intercepted_component) {
+          std::unique_ptr<sys::testing::InterceptedComponent> intercepted_component) {
         component = std::move(intercepted_component);
-        component->set_on_kill([startup_info = std::move(startup_info),
-                                &killed]() { killed = true; });
+        component->set_on_kill(
+            [startup_info = std::move(startup_info), &killed]() { killed = true; });
       }));
 
   {
@@ -144,31 +140,28 @@ TEST_F(ComponentInterceptorTest, TestOnKill) {
 }
 
 TEST_F(ComponentInterceptorTest, ExtraCmx) {
-  auto interceptor =
-      sys::testing::ComponentInterceptor::CreateWithEnvironmentLoader(
-          real_env());
+  auto interceptor = sys::testing::ComponentInterceptor::CreateWithEnvironmentLoader(real_env());
   auto env = sys::testing::EnclosingEnvironment::Create(
-      "test_harness", real_env(),
-      interceptor.MakeEnvironmentServices(real_env()));
+      "test_harness", real_env(), interceptor.MakeEnvironmentServices(real_env()));
 
   constexpr char kUrl[] = "file://fake_url";
   bool intercepted_url = false;
   std::map<std::string, std::string> program_metadata;
-  ASSERT_TRUE(interceptor.InterceptURL(
-      kUrl, R"({
+  ASSERT_TRUE(interceptor.InterceptURL(kUrl, R"({
         "runner": "fake",
         "program": {
           "binary": "",
           "data": "randomstring"
         }
       })",
-      [&](fuchsia::sys::StartupInfo startup_info,
-          std::unique_ptr<sys::testing::InterceptedComponent> c) {
-        intercepted_url = true;
-        for (const auto& metadata : startup_info.program_metadata.get()) {
-          program_metadata[metadata.key] = metadata.value;
-        }
-      }));
+                                       [&](fuchsia::sys::StartupInfo startup_info,
+                                           std::unique_ptr<sys::testing::InterceptedComponent> c) {
+                                         intercepted_url = true;
+                                         for (const auto& metadata :
+                                              startup_info.program_metadata.get()) {
+                                           program_metadata[metadata.key] = metadata.value;
+                                         }
+                                       }));
 
   fuchsia::sys::ComponentControllerPtr controller;
   fuchsia::sys::LaunchInfo info;
@@ -178,8 +171,7 @@ TEST_F(ComponentInterceptorTest, ExtraCmx) {
   env->CreateComponent(std::move(info), controller.NewRequest());
 
   // Test that we intercepting URL
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return intercepted_url; }, zx::sec(2)));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return intercepted_url; }, zx::sec(2)));
   EXPECT_TRUE(intercepted_url);
   EXPECT_EQ("randomstring", program_metadata["data"]);
 }

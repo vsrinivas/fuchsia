@@ -24,8 +24,7 @@ uint32_t gcd(uint32_t a, uint32_t b) {
 // subject_delta * common_factor / reference_delta * common_factor is reduced
 // to subject_delta / reference_delta. subject_delta and reference_delta need
 // to be relatively prime for this to work.
-void VerifyReduce(uint32_t subject_delta, uint32_t reference_delta,
-                  uint32_t common_factor) {
+void VerifyReduce(uint32_t subject_delta, uint32_t reference_delta, uint32_t common_factor) {
   // Make sure subject_delta and reference_delta are relatively prime.
   EXPECT_EQ(1u, gcd(subject_delta, reference_delta));
 
@@ -46,8 +45,7 @@ void VerifyReduce(uint32_t subject_delta, uint32_t reference_delta,
 // Verifies the TimelineRate::Scale methods by scaling value by subject_delta
 // /
 // reference_delta and verifying the result.
-void VerifyScale(int64_t value, uint32_t subject_delta,
-                 uint32_t reference_delta, int64_t result) {
+void VerifyScale(int64_t value, uint32_t subject_delta, uint32_t reference_delta, int64_t result) {
   // Test the instance method.
   EXPECT_EQ(result, TimelineRate(subject_delta, reference_delta).Scale(value));
 
@@ -64,24 +62,21 @@ void VerifyScale(int64_t value, uint32_t subject_delta,
 
 // Verifies the TimelineRate::Product methods by multiplying the given a and b
 // rates and checking the result against the expected rate.
-void VerifyProduct(uint32_t a_subject_delta, uint32_t a_reference_delta,
-                   uint32_t b_subject_delta, uint32_t b_reference_delta,
-                   uint32_t expected_subject_delta,
+void VerifyProduct(uint32_t a_subject_delta, uint32_t a_reference_delta, uint32_t b_subject_delta,
+                   uint32_t b_reference_delta, uint32_t expected_subject_delta,
                    uint32_t expected_reference_delta, bool exact) {
   // Test the first static method.
   uint32_t actual_subject_delta;
   uint32_t actual_reference_delta;
-  TimelineRate::Product(a_subject_delta, a_reference_delta, b_subject_delta,
-                        b_reference_delta, &actual_subject_delta,
-                        &actual_reference_delta, exact);
+  TimelineRate::Product(a_subject_delta, a_reference_delta, b_subject_delta, b_reference_delta,
+                        &actual_subject_delta, &actual_reference_delta, exact);
   EXPECT_EQ(expected_subject_delta, actual_subject_delta);
   EXPECT_EQ(expected_reference_delta, actual_reference_delta);
 
   // Test the second static method.
   EXPECT_EQ(TimelineRate(expected_subject_delta, expected_reference_delta),
-            TimelineRate::Product(
-                TimelineRate(a_subject_delta, a_reference_delta),
-                TimelineRate(b_subject_delta, b_reference_delta), exact));
+            TimelineRate::Product(TimelineRate(a_subject_delta, a_reference_delta),
+                                  TimelineRate(b_subject_delta, b_reference_delta), exact));
 
   // Test the operator
   if (exact) {
@@ -140,8 +135,7 @@ TEST(TimelineRateTest, Scale) {
   VerifyScale(1234ll << 30, 1, 2, 1234ll << 29);
   VerifyScale(1234ll << 30, 2, 1, 1234ll << 31);
   VerifyScale(1234ll << 30, 1 << 31, 1, TimelineRate::kOverflow);
-  VerifyScale(1234ll << 30, 1ll << 31, (1ll << 31) - 2,
-              (1234ll << 30) + 1234ll);
+  VerifyScale(1234ll << 30, 1ll << 31, (1ll << 31) - 2, (1234ll << 30) + 1234ll);
   VerifyScale(int64_min, 1, 1, int64_min);
   VerifyScale(int64_min, 1, 2, int64_min / 2);
   VerifyScale(int64_min / 2, 2, 1, int64_min);
@@ -155,10 +149,9 @@ TEST(TimelineRateTest, Product) {
   VerifyProduct(10, 1, 1, 10, 1, 1, true);
   VerifyProduct(4321, 1234, 617, 4321, 1, 2, true);
   VerifyProduct(1234, 4321, 4321, 617, 2, 1, true);
-  VerifyProduct(1ll << 31, (1ll << 31) - 1, (1ll << 31) - 1, 1ll << 31, 1, 1,
-                true);
-  VerifyProduct(1ll << 31, (1ll << 31) - 1, (1ll << 31) - 2, 1ll << 31,
-                0x7ffffffe, 0x7fffffff, false);
+  VerifyProduct(1ll << 31, (1ll << 31) - 1, (1ll << 31) - 1, 1ll << 31, 1, 1, true);
+  VerifyProduct(1ll << 31, (1ll << 31) - 1, (1ll << 31) - 2, 1ll << 31, 0x7ffffffe, 0x7fffffff,
+                false);
 }
 
 // Tests TimelineRate::Inverse.

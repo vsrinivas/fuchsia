@@ -15,8 +15,7 @@ class Service : public vfs::internal::Node {
  public:
   // Handler called to bind the provided channel to an implementation
   // of the service.
-  using Connector =
-      fit::function<void(zx::channel channel, async_dispatcher_t* dispatcher)>;
+  using Connector = fit::function<void(zx::channel channel, async_dispatcher_t* dispatcher)>;
 
   // Adds the specified interface to the set of public interfaces.
   //
@@ -32,10 +31,10 @@ class Service : public vfs::internal::Node {
   // call, if you want to use dispatcher call |Service(Connector)|.
   template <typename Interface>
   explicit Service(fidl::InterfaceRequestHandler<Interface> handler)
-      : Service([handler = std::move(handler)](zx::channel channel,
-                                               async_dispatcher_t* dispatcher) {
-          handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
-        }) {}
+      : Service(
+            [handler = std::move(handler)](zx::channel channel, async_dispatcher_t* dispatcher) {
+              handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
+            }) {}
 
   // Creates a service with the specified connector.
   //
@@ -56,12 +55,10 @@ class Service : public vfs::internal::Node {
  protected:
   NodeKind::Type GetKind() const override;
   // |Node| implementations:
-  zx_status_t CreateConnection(
-      uint32_t flags,
-      std::unique_ptr<vfs::internal::Connection>* connection) final;
+  zx_status_t CreateConnection(uint32_t flags,
+                               std::unique_ptr<vfs::internal::Connection>* connection) final;
 
-  zx_status_t Connect(uint32_t flags, zx::channel request,
-                      async_dispatcher_t* dispatcher) override;
+  zx_status_t Connect(uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher) override;
 
  private:
   Connector connector_;

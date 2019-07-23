@@ -71,8 +71,7 @@ class OutgoingDirectory final {
   // ZX_ERR_ACCESS_DENIED: |directory_request| has insufficient rights.
   //
   // TODO: Document more errors.
-  zx_status_t Serve(zx::channel directory_request,
-                    async_dispatcher_t* dispatcher = nullptr);
+  zx_status_t Serve(zx::channel directory_request, async_dispatcher_t* dispatcher = nullptr);
 
   // Starts serving the outgoing directory on the channel provided to this
   // process at startup as |PA_DIRECTORY_REQUEST|.
@@ -111,9 +110,8 @@ class OutgoingDirectory final {
   // outgoing.AddPublicService(bindings.GetHandler(this));
   // ```
   template <typename Interface>
-  zx_status_t AddPublicService(
-      fidl::InterfaceRequestHandler<Interface> handler,
-      std::string service_name = Interface::Name_) const {
+  zx_status_t AddPublicService(fidl::InterfaceRequestHandler<Interface> handler,
+                               std::string service_name = Interface::Name_) const {
     return AddPublicService(std::make_unique<vfs::Service>(std::move(handler)),
                             std::move(service_name));
   }
@@ -143,8 +141,7 @@ class OutgoingDirectory final {
   // outgoing.RemovePublicService<fuchsia::foo::Controller>();
   // ```
   template <typename Interface>
-  zx_status_t RemovePublicService(
-      const std::string& name = Interface::Name_) const {
+  zx_status_t RemovePublicService(const std::string& name = Interface::Name_) const {
     return svc_->RemoveEntry(name);
   }
 

@@ -18,20 +18,17 @@ class Directory;
 
 // Binds an implementation of |fuchsia.io.Directory| to a
 // |vfs::internal::Directory|.
-class DirectoryConnection final : public Connection,
-                                  public fuchsia::io::Directory {
+class DirectoryConnection final : public Connection, public fuchsia::io::Directory {
  public:
   // Create a connection to |vn| with the given |flags|.
   DirectoryConnection(uint32_t flags, vfs::internal::Directory* vn);
   ~DirectoryConnection() override;
 
   // Start listening for |fuchsia.io.Directory| messages on |request|.
-  zx_status_t BindInternal(zx::channel request,
-                           async_dispatcher_t* dispatcher) override;
+  zx_status_t BindInternal(zx::channel request, async_dispatcher_t* dispatcher) override;
 
   // |fuchsia::io::Directory| Implementation:
-  void Clone(uint32_t flags,
-             fidl::InterfaceRequest<fuchsia::io::Node> object) override;
+  void Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) override;
   void Close(CloseCallback callback) override;
   void Describe(DescribeCallback callback) override;
   void Sync(SyncCallback callback) override;
@@ -50,8 +47,7 @@ class DirectoryConnection final : public Connection,
               RenameCallback callback) override;
   void Link(std::string src, zx::handle dst_parent_token, std::string dst,
             LinkCallback callback) override;
-  void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
-             WatchCallback callback) override;
+  void Watch(uint32_t mask, uint32_t options, zx::channel watcher, WatchCallback callback) override;
 
  protected:
   // |Connection| Implementation:

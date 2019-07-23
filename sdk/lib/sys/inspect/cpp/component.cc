@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/sys/inspect/cpp/component.h>
+
 #include <memory>
 
-#include <lib/sys/inspect/cpp/component.h>
 #include <sdk/lib/vfs/cpp/vmo_file.h>
 
 using inspect::NodeHealth;

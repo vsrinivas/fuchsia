@@ -22,13 +22,11 @@ void FakeLauncher::CreateComponent(
   }
 }
 
-void FakeLauncher::RegisterComponent(std::string url,
-                                     ComponentConnector connector) {
+void FakeLauncher::RegisterComponent(std::string url, ComponentConnector connector) {
   connectors_[url] = std::move(connector);
 }
 
-fidl::InterfaceRequestHandler<Launcher> FakeLauncher::GetHandler(
-    async_dispatcher_t* dispatcher) {
+fidl::InterfaceRequestHandler<Launcher> FakeLauncher::GetHandler(async_dispatcher_t* dispatcher) {
   return [this, dispatcher](fidl::InterfaceRequest<Launcher> request) {
     binding_set_.AddBinding(this, std::move(request), dispatcher);
   };

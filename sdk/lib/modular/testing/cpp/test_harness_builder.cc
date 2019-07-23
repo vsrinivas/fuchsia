@@ -58,8 +58,7 @@ bool BufferFromString(std::string str, fuchsia::mem::Buffer* buffer) {
 
 }  // namespace
 
-TestHarnessBuilder::TestHarnessBuilder(
-    fuchsia::modular::testing::TestHarnessSpec spec)
+TestHarnessBuilder::TestHarnessBuilder(fuchsia::modular::testing::TestHarnessSpec spec)
     : spec_(std::move(spec)), env_services_(new vfs::PseudoDir) {}
 
 TestHarnessBuilder::TestHarnessBuilder()
@@ -69,28 +68,23 @@ fuchsia::modular::testing::TestHarnessSpec TestHarnessBuilder::BuildSpec() {
   fuchsia::io::DirectoryPtr dir;
   // This directory must be READABLE *and* WRITABLE, otherwise service
   // connections fail.
-  env_services_->Serve(
-      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-      dir.NewRequest().TakeChannel());
+  env_services_->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                       dir.NewRequest().TakeChannel());
   spec_.mutable_env_services()->set_service_dir(dir.Unbind().TakeChannel());
   return std::move(spec_);
 }
 
-TestHarnessBuilder::OnNewComponentHandler
-TestHarnessBuilder::BuildOnNewComponentHandler() {
-  return
-      [handlers = std::move(handlers_)](
-          fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              component) {
-        auto it = handlers.find(startup_info.launch_info.url);
-        if (it == handlers.end()) {
-          ZX_ASSERT_MSG(false, "Unexpected component URL: %s",
-                        startup_info.launch_info.url.c_str());
-        }
+TestHarnessBuilder::OnNewComponentHandler TestHarnessBuilder::BuildOnNewComponentHandler() {
+  return [handlers = std::move(handlers_)](
+             fuchsia::sys::StartupInfo startup_info,
+             fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
+    auto it = handlers.find(startup_info.launch_info.url);
+    if (it == handlers.end()) {
+      ZX_ASSERT_MSG(false, "Unexpected component URL: %s", startup_info.launch_info.url.c_str());
+    }
 
-        it->second(std::move(startup_info), component.Bind());
-      };
+    it->second(std::move(startup_info), component.Bind());
+  };
 }
 
 void TestHarnessBuilder::BuildAndRun(
@@ -99,8 +93,8 @@ void TestHarnessBuilder::BuildAndRun(
   test_harness->Run(BuildSpec());
 }
 
-TestHarnessBuilder& TestHarnessBuilder::InterceptComponent(
-    OnNewComponentHandler on_new_component, InterceptOptions options) {
+TestHarnessBuilder& TestHarnessBuilder::InterceptComponent(OnNewComponentHandler on_new_component,
+                                                           InterceptOptions options) {
   ZX_ASSERT(on_new_component);
   if (options.url.empty()) {
     options.url = modular::testing::GenerateFakeUrl();
@@ -110,8 +104,7 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptComponent(
   intercept_spec.set_component_url(options.url);
   auto extra_cmx_contents = BuildExtraCmx(options);
   if (!extra_cmx_contents.empty()) {
-    ZX_ASSERT(BufferFromString(extra_cmx_contents,
-                               intercept_spec.mutable_extra_cmx_contents()));
+    ZX_ASSERT(BufferFromString(extra_cmx_contents, intercept_spec.mutable_extra_cmx_contents()));
   }
   spec_.mutable_components_to_intercept()->push_back(std::move(intercept_spec));
 
@@ -119,18 +112,15 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptComponent(
   return *this;
 }
 
-TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(
-    OnNewComponentHandler on_new_component, InterceptOptions options) {
+TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(OnNewComponentHandler on_new_component,
+                                                           InterceptOptions options) {
   if (options.url.empty()) {
     options.url = modular::testing::GenerateFakeUrl("base_shell");
   }
   auto url = options.url;
   InterceptComponent(std::move(on_new_component), std::move(options));
 
-  spec_.mutable_basemgr_config()
-      ->mutable_base_shell()
-      ->mutable_app_config()
-      ->set_url(url);
+  spec_.mutable_basemgr_config()->mutable_base_shell()->mutable_app_config()->set_url(url);
   return *this;
 }
 
@@ -144,58 +134,49 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptSessionShell(
 
   fuchsia::modular::session::SessionShellMapEntry entry;
   entry.mutable_config()->mutable_app_config()->set_url(url);
-  spec_.mutable_basemgr_config()->mutable_session_shell_map()->push_back(
-      std::move(entry));
+  spec_.mutable_basemgr_config()->mutable_session_shell_map()->push_back(std::move(entry));
   return *this;
 }
 
-TestHarnessBuilder& TestHarnessBuilder::InterceptStoryShell(
-    OnNewComponentHandler on_new_component, InterceptOptions options) {
+TestHarnessBuilder& TestHarnessBuilder::InterceptStoryShell(OnNewComponentHandler on_new_component,
+                                                            InterceptOptions options) {
   if (options.url.empty()) {
     options.url = modular::testing::GenerateFakeUrl("story_shell");
   }
   auto url = options.url;
   InterceptComponent(std::move(on_new_component), std::move(options));
 
-  spec_.mutable_basemgr_config()
-      ->mutable_story_shell()
-      ->mutable_app_config()
-      ->set_url(url);
+  spec_.mutable_basemgr_config()->mutable_story_shell()->mutable_app_config()->set_url(url);
   return *this;
 }
 
-TestHarnessBuilder& TestHarnessBuilder::AddService(
-    const std::string& service_name, vfs::Service::Connector connector) {
-  env_services_->AddEntry(service_name,
-                          std::make_unique<vfs::Service>(std::move(connector)));
+TestHarnessBuilder& TestHarnessBuilder::AddService(const std::string& service_name,
+                                                   vfs::Service::Connector connector) {
+  env_services_->AddEntry(service_name, std::make_unique<vfs::Service>(std::move(connector)));
   return *this;
 }
 
-TestHarnessBuilder& TestHarnessBuilder::AddServiceFromComponent(
-    const std::string& service_name, const std::string& component_url) {
+TestHarnessBuilder& TestHarnessBuilder::AddServiceFromComponent(const std::string& service_name,
+                                                                const std::string& component_url) {
   fuchsia::modular::testing::ComponentService svc;
   svc.name = service_name;
   svc.url = component_url;
-  spec_.mutable_env_services()->mutable_services_from_components()->push_back(
-      std::move(svc));
+  spec_.mutable_env_services()->mutable_services_from_components()->push_back(std::move(svc));
   return *this;
 }
 
 TestHarnessBuilder& TestHarnessBuilder::AddServiceFromServiceDirectory(
-    const std::string& service_name,
-    std::shared_ptr<sys::ServiceDirectory> services) {
-  return AddService(service_name, [service_name, services](
-                                      zx::channel request,
-                                      async_dispatcher_t* dispatcher) mutable {
+    const std::string& service_name, std::shared_ptr<sys::ServiceDirectory> services) {
+  return AddService(service_name, [service_name, services](zx::channel request,
+                                                           async_dispatcher_t* dispatcher) mutable {
     services->Connect(service_name, std::move(request));
   });
 }
 
 std::string GenerateFakeUrl(std::string name) {
-  name.erase(
-      std::remove_if(name.begin(), name.end(),
-                     [](auto const& c) -> bool { return !std::isalnum(c); }),
-      name.end());
+  name.erase(std::remove_if(name.begin(), name.end(),
+                            [](auto const& c) -> bool { return !std::isalnum(c); }),
+             name.end());
 
   uint32_t random_number = 0;
   zx_cprng_draw(&random_number, sizeof random_number);

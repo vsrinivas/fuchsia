@@ -4,8 +4,9 @@
 
 #include "lib/fidl/cpp/internal/message_reader.h"
 
-#include <fidl/test/misc/cpp/fidl.h>
 #include <lib/zx/channel.h>
+
+#include <fidl/test/misc/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"

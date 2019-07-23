@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <gtest/gtest.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
 #include <tuple>
+
+#include <gtest/gtest.h>
 
 namespace {
 

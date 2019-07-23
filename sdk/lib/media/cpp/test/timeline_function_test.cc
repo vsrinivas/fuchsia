@@ -11,9 +11,8 @@ namespace {
 
 // Verifies that the given TimelineFunction instantiated with the given
 // arguments has the expected properties.
-void VerifyBasics(const TimelineFunction& under_test, int64_t subject_time,
-                  int64_t reference_time, uint32_t subject_delta,
-                  uint32_t reference_delta) {
+void VerifyBasics(const TimelineFunction& under_test, int64_t subject_time, int64_t reference_time,
+                  uint32_t subject_delta, uint32_t reference_delta) {
   TimelineRate::Reduce(&subject_delta, &reference_delta);
   EXPECT_EQ(reference_time, under_test.reference_time());
   EXPECT_EQ(subject_time, under_test.subject_time());
@@ -25,17 +24,14 @@ void VerifyBasics(const TimelineFunction& under_test, int64_t subject_time,
 
 // Verifies that a TimelineFunction instantiated in three different ways with
 // the given arguments has the expected properties.
-void VerifyBasics(int64_t subject_time, int64_t reference_time,
-                  uint32_t subject_delta, uint32_t reference_delta) {
-  TimelineFunction under_test_1(subject_time, reference_time, subject_delta,
-                                reference_delta);
-  VerifyBasics(under_test_1, subject_time, reference_time, subject_delta,
-               reference_delta);
+void VerifyBasics(int64_t subject_time, int64_t reference_time, uint32_t subject_delta,
+                  uint32_t reference_delta) {
+  TimelineFunction under_test_1(subject_time, reference_time, subject_delta, reference_delta);
+  VerifyBasics(under_test_1, subject_time, reference_time, subject_delta, reference_delta);
 
   TimelineFunction under_test_2(subject_time, reference_time,
                                 TimelineRate(subject_delta, reference_delta));
-  VerifyBasics(under_test_2, subject_time, reference_time, subject_delta,
-               reference_delta);
+  VerifyBasics(under_test_2, subject_time, reference_time, subject_delta, reference_delta);
 
   TimelineFunction under_test_3(TimelineRate(subject_delta, reference_delta));
   VerifyBasics(under_test_3, 0, 0, subject_delta, reference_delta);
@@ -60,17 +56,16 @@ void VerifyBasics(int64_t subject_time, int64_t reference_time,
 
 // Verifies that the inverse of a TimelineFunction instantiated in three
 // different ways with the given arguments has the expected properties.
-void VerifyInverse(int64_t subject_time, int64_t reference_time,
-                   uint32_t subject_delta, uint32_t reference_delta) {
-  TimelineFunction under_test_1(subject_time, reference_time, subject_delta,
-                                reference_delta);
-  VerifyBasics(under_test_1.Inverse(), reference_time, subject_time,
-               reference_delta, subject_delta);
+void VerifyInverse(int64_t subject_time, int64_t reference_time, uint32_t subject_delta,
+                   uint32_t reference_delta) {
+  TimelineFunction under_test_1(subject_time, reference_time, subject_delta, reference_delta);
+  VerifyBasics(under_test_1.Inverse(), reference_time, subject_time, reference_delta,
+               subject_delta);
 
   TimelineFunction under_test_2(subject_time, reference_time,
                                 TimelineRate(subject_delta, reference_delta));
-  VerifyBasics(under_test_2.Inverse(), reference_time, subject_time,
-               reference_delta, subject_delta);
+  VerifyBasics(under_test_2.Inverse(), reference_time, subject_time, reference_delta,
+               subject_delta);
 
   TimelineFunction under_test_3(TimelineRate(subject_delta, reference_delta));
   VerifyBasics(under_test_3.Inverse(), 0, 0, reference_delta, subject_delta);
@@ -78,18 +73,15 @@ void VerifyInverse(int64_t subject_time, int64_t reference_time,
 
 // Verifies that TimelineFunction::Apply, in its various forms, works as
 // expected for the given arguments.
-void VerifyApply(int64_t subject_time, int64_t reference_time,
-                 uint32_t subject_delta, uint32_t reference_delta,
-                 int64_t reference_input, int64_t expected_result) {
+void VerifyApply(int64_t subject_time, int64_t reference_time, uint32_t subject_delta,
+                 uint32_t reference_delta, int64_t reference_input, int64_t expected_result) {
   // Verify the static method.
   EXPECT_EQ(expected_result,
-            TimelineFunction::Apply(
-                subject_time, reference_time,
-                TimelineRate(subject_delta, reference_delta), reference_input));
+            TimelineFunction::Apply(subject_time, reference_time,
+                                    TimelineRate(subject_delta, reference_delta), reference_input));
 
   // Verify the instance method.
-  TimelineFunction under_test(subject_time, reference_time, subject_delta,
-                              reference_delta);
+  TimelineFunction under_test(subject_time, reference_time, subject_delta, reference_delta);
   EXPECT_EQ(expected_result, under_test.Apply(reference_input));
 
   // Verify the operator.
@@ -98,25 +90,22 @@ void VerifyApply(int64_t subject_time, int64_t reference_time,
 
 // Verifies that TimelineFunction::ApplyInverse, in its various forms, works
 // as expected for the given arguments.
-void VerifyApplyInverse(int64_t subject_time, int64_t reference_time,
-                        uint32_t subject_delta, uint32_t reference_delta,
-                        int64_t subject_input, int64_t expected_result) {
+void VerifyApplyInverse(int64_t subject_time, int64_t reference_time, uint32_t subject_delta,
+                        uint32_t reference_delta, int64_t subject_input, int64_t expected_result) {
   // Verify the static method.
-  EXPECT_EQ(expected_result,
-            TimelineFunction::ApplyInverse(
-                subject_time, reference_time,
-                TimelineRate(subject_delta, reference_delta), subject_input));
+  EXPECT_EQ(expected_result, TimelineFunction::ApplyInverse(
+                                 subject_time, reference_time,
+                                 TimelineRate(subject_delta, reference_delta), subject_input));
 
   // Verify the instance method.
-  TimelineFunction under_test(subject_time, reference_time, subject_delta,
-                              reference_delta);
+  TimelineFunction under_test(subject_time, reference_time, subject_delta, reference_delta);
   EXPECT_EQ(expected_result, under_test.ApplyInverse(subject_input));
 }
 
 // Verifies that TimelineFunction::Compose works as expected with the given
 // inputs.
-void VerifyCompose(const TimelineFunction& a, const TimelineFunction& b,
-                   bool exact, const TimelineFunction& expected_result) {
+void VerifyCompose(const TimelineFunction& a, const TimelineFunction& b, bool exact,
+                   const TimelineFunction& expected_result) {
   // Verify the static method.
   EXPECT_EQ(expected_result, TimelineFunction::Compose(a, b, exact));
 }
@@ -188,20 +177,20 @@ TEST(TimelineFunctionTest, ApplyInverse) {
 
 // Tests TimelineFunction::Compose.
 TEST(TimelineFunctionTest, Compose) {
-  VerifyCompose(TimelineFunction(0, 0, 0, 1), TimelineFunction(0, 0, 0, 1),
-                true, TimelineFunction(0, 0, 0, 1));
-  VerifyCompose(TimelineFunction(0, 0, 1, 1), TimelineFunction(0, 0, 1, 1),
-                true, TimelineFunction(0, 0, 1, 1));
-  VerifyCompose(TimelineFunction(0, 1, 1, 1), TimelineFunction(0, 0, 1, 1),
-                true, TimelineFunction(-1, 0, 1, 1));
-  VerifyCompose(TimelineFunction(10, 10, 1, 1), TimelineFunction(0, 0, 1, 1),
-                true, TimelineFunction(0, 0, 1, 1));
-  VerifyCompose(TimelineFunction(0, 0, 2, 1), TimelineFunction(0, 0, 2, 1),
-                true, TimelineFunction(0, 0, 4, 1));
-  VerifyCompose(TimelineFunction(0, 0, 1, 2), TimelineFunction(0, 0, 1, 2),
-                true, TimelineFunction(0, 0, 1, 4));
-  VerifyCompose(TimelineFunction(0, 0, 1, 2), TimelineFunction(0, 0, 2, 1),
-                true, TimelineFunction(0, 0, 1, 1));
+  VerifyCompose(TimelineFunction(0, 0, 0, 1), TimelineFunction(0, 0, 0, 1), true,
+                TimelineFunction(0, 0, 0, 1));
+  VerifyCompose(TimelineFunction(0, 0, 1, 1), TimelineFunction(0, 0, 1, 1), true,
+                TimelineFunction(0, 0, 1, 1));
+  VerifyCompose(TimelineFunction(0, 1, 1, 1), TimelineFunction(0, 0, 1, 1), true,
+                TimelineFunction(-1, 0, 1, 1));
+  VerifyCompose(TimelineFunction(10, 10, 1, 1), TimelineFunction(0, 0, 1, 1), true,
+                TimelineFunction(0, 0, 1, 1));
+  VerifyCompose(TimelineFunction(0, 0, 2, 1), TimelineFunction(0, 0, 2, 1), true,
+                TimelineFunction(0, 0, 4, 1));
+  VerifyCompose(TimelineFunction(0, 0, 1, 2), TimelineFunction(0, 0, 1, 2), true,
+                TimelineFunction(0, 0, 1, 4));
+  VerifyCompose(TimelineFunction(0, 0, 1, 2), TimelineFunction(0, 0, 2, 1), true,
+                TimelineFunction(0, 0, 1, 1));
 }
 
 }  // namespace

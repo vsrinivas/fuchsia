@@ -24,19 +24,17 @@ class ComposedServiceDir : public vfs::internal::Directory {
 
   void set_fallback(fidl::InterfaceHandle<fuchsia::io::Directory> fallback_dir);
 
-  void AddService(const std::string& service_name,
-                  std::unique_ptr<vfs::Service> service);
+  void AddService(const std::string& service_name, std::unique_ptr<vfs::Service> service);
 
   //
   // |vfs::internal::Node| Implementations:
   //
-  zx_status_t Lookup(const std::string& name,
-                     vfs::internal::Node** out_node) const final;
+  zx_status_t Lookup(const std::string& name, vfs::internal::Node** out_node) const final;
 
   zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const final;
 
-  zx_status_t Readdir(uint64_t offset, void* data, uint64_t len,
-                      uint64_t* out_offset, uint64_t* out_actual) final;
+  zx_status_t Readdir(uint64_t offset, void* data, uint64_t len, uint64_t* out_offset,
+                      uint64_t* out_actual) final;
 
  private:
   std::unique_ptr<vfs::PseudoDir> root_;
@@ -47,8 +45,7 @@ class ComposedServiceDir : public vfs::internal::Directory {
   // good way in the present context to know whether these service entries
   // actually match an existing service, and since the present object must own
   // these entries, we keep them around until the present object gets deleted.
-  mutable std::map<std::string, std::unique_ptr<vfs::Service>>
-      fallback_services_;
+  mutable std::map<std::string, std::unique_ptr<vfs::Service>> fallback_services_;
 
   // Disallow copy and assignment.
   ComposedServiceDir(const ComposedServiceDir&) = delete;

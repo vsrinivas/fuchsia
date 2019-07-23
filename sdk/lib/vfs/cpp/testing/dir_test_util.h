@@ -49,34 +49,29 @@ class DirConnection : public gtest::RealLoopFixture {
  protected:
   virtual vfs::internal::Directory* GetDirectoryNode() = 0;
 
-  void AssertOpen(async_dispatcher_t* dispatcher, uint32_t flags,
-                  zx_status_t expected_status, bool test_on_open_event = true);
+  void AssertOpen(async_dispatcher_t* dispatcher, uint32_t flags, zx_status_t expected_status,
+                  bool test_on_open_event = true);
 
   void AssertReadDirents(fuchsia::io::DirectorySyncPtr& ptr, uint64_t max_bytes,
                          std::vector<Dirent>& expected_dirents,
                          zx_status_t expected_status = ZX_OK);
 
-  void AssertRewind(fuchsia::io::DirectorySyncPtr& ptr,
-                    zx_status_t expected_status = ZX_OK);
+  void AssertRewind(fuchsia::io::DirectorySyncPtr& ptr, zx_status_t expected_status = ZX_OK);
 
   template <typename T>
   void AssertOpenPathImpl(std::string caller_file, int caller_line,
-                          fuchsia::io::DirectorySyncPtr& dir_ptr,
-                          const std::string& path,
-                          ::fidl::SynchronousInterfacePtr<T>& out_sync_ptr,
-                          uint32_t flags, uint32_t mode = 0,
-                          zx_status_t expected_status = ZX_OK) {
+                          fuchsia::io::DirectorySyncPtr& dir_ptr, const std::string& path,
+                          ::fidl::SynchronousInterfacePtr<T>& out_sync_ptr, uint32_t flags,
+                          uint32_t mode = 0, zx_status_t expected_status = ZX_OK) {
     ::fidl::InterfacePtr<fuchsia::io::Node> node_ptr;
-    dir_ptr->Open(flags | fuchsia::io::OPEN_FLAG_DESCRIBE, mode, path,
-                  node_ptr.NewRequest());
+    dir_ptr->Open(flags | fuchsia::io::OPEN_FLAG_DESCRIBE, mode, path, node_ptr.NewRequest());
     bool on_open_called = false;
-    node_ptr.events().OnOpen =
-        [&](zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> unused) {
-          EXPECT_FALSE(on_open_called);  // should be called only once
-          on_open_called = true;
-          EXPECT_EQ(expected_status, status)
-              << "from file " << caller_file << ", line " << caller_line;
-        };
+    node_ptr.events().OnOpen = [&](zx_status_t status,
+                                   std::unique_ptr<fuchsia::io::NodeInfo> unused) {
+      EXPECT_FALSE(on_open_called);  // should be called only once
+      on_open_called = true;
+      EXPECT_EQ(expected_status, status) << "from file " << caller_file << ", line " << caller_line;
+    };
 
     RunLoopUntil([&]() { return on_open_called; }, zx::msec(1));
 
@@ -84,8 +79,7 @@ class DirConnection : public gtest::RealLoopFixture {
     out_sync_ptr.Bind(node_ptr.Unbind().TakeChannel());
   }
 
-  void AssertRead(fuchsia::io::FileSyncPtr& file, int count,
-                  const std::string& expected_str,
+  void AssertRead(fuchsia::io::FileSyncPtr& file, int count, const std::string& expected_str,
                   zx_status_t expected_status = ZX_OK);
 };
 

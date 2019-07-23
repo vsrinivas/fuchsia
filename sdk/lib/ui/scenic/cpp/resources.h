@@ -5,13 +5,13 @@
 #ifndef LIB_UI_SCENIC_CPP_RESOURCES_H_
 #define LIB_UI_SCENIC_CPP_RESOURCES_H_
 
-#include <array>
-
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <zircon/assert.h>
+
+#include <array>
 
 namespace scenic {
 

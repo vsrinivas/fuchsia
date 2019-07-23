@@ -5,11 +5,12 @@
 #ifndef LIB_FIDL_CPP_TEST_FROBINATOR_IMPL_H_
 #define LIB_FIDL_CPP_TEST_FROBINATOR_IMPL_H_
 
-#include <fidl/test/frobinator/cpp/fidl.h>
 #include <lib/fit/function.h>
 
 #include <string>
 #include <vector>
+
+#include <fidl/test/frobinator/cpp/fidl.h>
 
 namespace fidl {
 namespace test {

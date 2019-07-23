@@ -14,21 +14,18 @@ PseudoDir::PseudoDir() : next_node_id_(kDotId + 1) {}
 
 PseudoDir::~PseudoDir() = default;
 
-zx_status_t PseudoDir::AddSharedEntry(std::string name,
-                                      std::shared_ptr<Node> vn) {
+zx_status_t PseudoDir::AddSharedEntry(std::string name, std::shared_ptr<Node> vn) {
   ZX_DEBUG_ASSERT(vn);
 
   auto id = next_node_id_++;
-  return AddEntry(
-      std::make_unique<SharedEntry>(id, std::move(name), std::move(vn)));
+  return AddEntry(std::make_unique<SharedEntry>(id, std::move(name), std::move(vn)));
 }
 
 zx_status_t PseudoDir::AddEntry(std::string name, std::unique_ptr<Node> vn) {
   ZX_DEBUG_ASSERT(vn);
 
   auto id = next_node_id_++;
-  return AddEntry(
-      std::make_unique<UniqueEntry>(id, std::move(name), std::move(vn)));
+  return AddEntry(std::make_unique<UniqueEntry>(id, std::move(name), std::move(vn)));
 }
 
 zx_status_t PseudoDir::AddEntry(std::unique_ptr<Entry> entry) {
@@ -74,8 +71,7 @@ zx_status_t PseudoDir::RemoveEntry(const std::string& name, Node* node) {
   return ZX_OK;
 }
 
-zx_status_t PseudoDir::Lookup(const std::string& name,
-                              vfs::internal::Node** out_node) const {
+zx_status_t PseudoDir::Lookup(const std::string& name, vfs::internal::Node** out_node) const {
   std::lock_guard<std::mutex> guard(mutex_);
 
   auto search = entries_by_name_.find(name);
@@ -87,14 +83,13 @@ zx_status_t PseudoDir::Lookup(const std::string& name,
   }
 }
 
-zx_status_t PseudoDir::Readdir(uint64_t offset, void* data, uint64_t len,
-                               uint64_t* out_offset, uint64_t* out_actual) {
+zx_status_t PseudoDir::Readdir(uint64_t offset, void* data, uint64_t len, uint64_t* out_offset,
+                               uint64_t* out_actual) {
   vfs::internal::DirentFiller df(data, len);
   *out_actual = 0;
   *out_offset = offset;
   if (offset < kDotId) {
-    if (df.Next(".", 1, fuchsia::io::DIRENT_TYPE_DIRECTORY,
-                fuchsia::io::INO_UNKNOWN) != ZX_OK) {
+    if (df.Next(".", 1, fuchsia::io::DIRENT_TYPE_DIRECTORY, fuchsia::io::INO_UNKNOWN) != ZX_OK) {
       *out_actual = df.GetBytesFilled();
       return ZX_ERR_INVALID_ARGS;  // out_actual would be 0
     }
@@ -103,8 +98,7 @@ zx_status_t PseudoDir::Readdir(uint64_t offset, void* data, uint64_t len,
 
   std::lock_guard<std::mutex> guard(mutex_);
 
-  for (auto it = entries_by_id_.upper_bound(*out_offset);
-       it != entries_by_id_.end(); ++it) {
+  for (auto it = entries_by_id_.upper_bound(*out_offset); it != entries_by_id_.end(); ++it) {
     fuchsia::io::NodeAttributes attr;
     auto d_type = fuchsia::io::DIRENT_TYPE_UNKNOWN;
     auto ino = fuchsia::io::INO_UNKNOWN;
@@ -133,28 +127,21 @@ bool PseudoDir::IsEmpty() const {
   return entries_by_name_.size() == 0;
 }
 
-PseudoDir::Entry::Entry(uint64_t id, std::string name)
-    : id_(id), name_(std::move(name)) {}
+PseudoDir::Entry::Entry(uint64_t id, std::string name) : id_(id), name_(std::move(name)) {}
 
 PseudoDir::Entry::~Entry() = default;
 
-PseudoDir::SharedEntry::SharedEntry(uint64_t id, std::string name,
-                                    std::shared_ptr<Node> node)
+PseudoDir::SharedEntry::SharedEntry(uint64_t id, std::string name, std::shared_ptr<Node> node)
     : Entry(id, std::move(name)), node_(std::move(node)) {}
 
-vfs::internal::Node* PseudoDir::SharedEntry::node() const {
-  return node_.get();
-}
+vfs::internal::Node* PseudoDir::SharedEntry::node() const { return node_.get(); }
 
 PseudoDir::SharedEntry::~SharedEntry() = default;
 
-PseudoDir::UniqueEntry::UniqueEntry(uint64_t id, std::string name,
-                                    std::unique_ptr<Node> node)
+PseudoDir::UniqueEntry::UniqueEntry(uint64_t id, std::string name, std::unique_ptr<Node> node)
     : Entry(id, std::move(name)), node_(std::move(node)) {}
 
-vfs::internal::Node* PseudoDir::UniqueEntry::node() const {
-  return node_.get();
-}
+vfs::internal::Node* PseudoDir::UniqueEntry::node() const { return node_.get(); }
 
 PseudoDir::UniqueEntry::~UniqueEntry() = default;
 

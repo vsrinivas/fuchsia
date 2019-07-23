@@ -26,8 +26,7 @@ class TestFile : public vfs::internal::File {
   explicit TestFile(std::vector<uint8_t>* buffer) : buffer_(buffer) {}
   ~TestFile() override = default;
 
-  zx_status_t ReadAt(uint64_t count, uint64_t offset,
-                     std::vector<uint8_t>* out_data) override {
+  zx_status_t ReadAt(uint64_t count, uint64_t offset, std::vector<uint8_t>* out_data) override {
     if (offset >= buffer_->size()) {
       return ZX_OK;
     }
@@ -37,8 +36,7 @@ class TestFile : public vfs::internal::File {
     return ZX_OK;
   }
 
-  zx_status_t WriteAt(std::vector<uint8_t> data, uint64_t offset,
-                      uint64_t* out_actual) override {
+  zx_status_t WriteAt(std::vector<uint8_t> data, uint64_t offset, uint64_t* out_actual) override {
     if (offset >= buffer_->size()) {
       *out_actual = 0u;
       return ZX_OK;
@@ -67,8 +65,7 @@ class TestFile : public vfs::internal::File {
 int OpenAsFD(vfs::internal::Node* node, async_dispatcher_t* dispatcher) {
   zx::channel local, remote;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
-  EXPECT_EQ(ZX_OK, node->Serve(fuchsia::io::OPEN_RIGHT_READABLE |
-                                   fuchsia::io::OPEN_RIGHT_WRITABLE,
+  EXPECT_EQ(ZX_OK, node->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
                                std::move(remote), dispatcher));
   int fd = -1;
   EXPECT_EQ(ZX_OK, fdio_fd_create(local.release(), &fd));

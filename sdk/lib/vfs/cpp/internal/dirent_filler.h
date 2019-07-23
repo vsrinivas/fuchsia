@@ -29,8 +29,7 @@ class DirentFiller {
   // Attempts to add the name to the end of the dirent buffer
   // which is returned by readdir.
   // Will not write anything incase of error.
-  zx_status_t Next(const char* name, size_t name_len, uint8_t type,
-                   uint64_t ino);
+  zx_status_t Next(const char* name, size_t name_len, uint8_t type, uint64_t ino);
 
   uint64_t GetBytesFilled() const { return pos_; }
 

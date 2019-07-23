@@ -57,12 +57,10 @@ class Node {
   virtual zx_status_t Sync();
 
   // Implementation of |fuchsia.io.Node/GetAttr|.
-  virtual zx_status_t GetAttr(
-      fuchsia::io::NodeAttributes* out_attributes) const;
+  virtual zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const;
 
   // Implementation of |fuchsia.io.Node/SetAttr|.
-  virtual zx_status_t SetAttr(uint32_t flags,
-                              const fuchsia::io::NodeAttributes& attributes);
+  virtual zx_status_t SetAttr(uint32_t flags, const fuchsia::io::NodeAttributes& attributes);
 
   // Implementation of |fuchsia.io.Node/Clone|.
   virtual void Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,
@@ -76,8 +74,7 @@ class Node {
   // current thread.
   //
   // Calls |Connect| after validating flags and modes.
-  zx_status_t Serve(uint32_t flags, zx::channel request,
-                    async_dispatcher_t* dispatcher = nullptr);
+  zx_status_t Serve(uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher = nullptr);
 
   // Validates |mode| and passes request to serve
   //
@@ -130,12 +127,10 @@ class Node {
   // Default implementation:
   // Uses |CreateConnection| to create a connection appropriate for the
   // concrete type of this object.
-  virtual zx_status_t Connect(uint32_t flags, zx::channel request,
-                              async_dispatcher_t* dispatcher);
+  virtual zx_status_t Connect(uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher);
 
   // Sends OnOpen event on error status if |OPEN_FLAG_DESCRIBE| is set.
-  static void SendOnOpenEventOnError(uint32_t flags, zx::channel request,
-                                     zx_status_t status);
+  static void SendOnOpenEventOnError(uint32_t flags, zx::channel request, zx_status_t status);
 
   // Store given connection.
   void AddConnection(std::unique_ptr<Connection> connection);
@@ -146,8 +141,7 @@ class Node {
   // The returned connection should be in an "unbound" state.
   //
   // Typically called by |Serve|.
-  virtual zx_status_t CreateConnection(
-      uint32_t flags, std::unique_ptr<Connection>* connection) = 0;
+  virtual zx_status_t CreateConnection(uint32_t flags, std::unique_ptr<Connection>* connection) = 0;
 
  private:
   // Validate flags on |Serve|.

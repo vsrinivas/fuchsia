@@ -4,10 +4,10 @@
 
 #include "fuzz_input.h"
 
-#include "gtest/gtest.h"
-
 #include <cstdint>
 #include <cstdlib>
+
+#include "gtest/gtest.h"
 
 namespace {
 

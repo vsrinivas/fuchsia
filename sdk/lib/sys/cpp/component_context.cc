@@ -12,8 +12,7 @@
 namespace sys {
 
 ComponentContext::ComponentContext(std::shared_ptr<ServiceDirectory> svc,
-                                   zx::channel directory_request,
-                                   async_dispatcher_t* dispatcher)
+                                   zx::channel directory_request, async_dispatcher_t* dispatcher)
     : svc_(std::move(svc)), outgoing_(std::make_shared<OutgoingDirectory>()) {
   outgoing_->Serve(std::move(directory_request), dispatcher);
 }
@@ -22,8 +21,8 @@ ComponentContext::~ComponentContext() = default;
 
 std::unique_ptr<ComponentContext> ComponentContext::Create() {
   zx_handle_t directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
-  return std::make_unique<ComponentContext>(
-      ServiceDirectory::CreateFromNamespace(), zx::channel(directory_request));
+  return std::make_unique<ComponentContext>(ServiceDirectory::CreateFromNamespace(),
+                                            zx::channel(directory_request));
 }
 
 }  // namespace sys

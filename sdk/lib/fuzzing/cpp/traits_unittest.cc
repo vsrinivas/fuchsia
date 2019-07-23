@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fuzzing/cpp/traits.h>
+#include <lib/zx/handle.h>
+#include <zircon/types.h>
+
 #include <array>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <lib/fuzzing/cpp/traits.h>
-#include <lib/zx/handle.h>
-#include <zircon/types.h>
 
 #include "gtest/gtest.h"
 

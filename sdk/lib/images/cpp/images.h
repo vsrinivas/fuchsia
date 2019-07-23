@@ -6,7 +6,6 @@
 #define LIB_IMAGES_CPP_IMAGES_H_
 
 #include <fuchsia/images/cpp/fidl.h>
-
 #include <stdint.h>
 
 namespace images {
@@ -20,8 +19,7 @@ size_t BitsPerPixel(const fuchsia::images::PixelFormat& pixel_format);
 // NV12 that separate Y and UV data, this is the number of stride bytes of the Y
 // plane.  NV12 has the same stride for the UV data.  formats with a different
 // stride for UV data vs Y data are not handled yet.
-size_t StrideBytesPerWidthPixel(
-    const fuchsia::images::PixelFormat& pixel_format);
+size_t StrideBytesPerWidthPixel(const fuchsia::images::PixelFormat& pixel_format);
 
 // Returns the pixel alignment for the given format.
 //

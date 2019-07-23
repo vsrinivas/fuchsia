@@ -37,8 +37,8 @@ class EnclosingEnvironment;
 // created.
 class EnvironmentServices {
  public:
-  using ServiceTerminatedCallback = fit::function<void(
-      const std::string&, int64_t, fuchsia::sys::TerminationReason)>;
+  using ServiceTerminatedCallback =
+      fit::function<void(const std::string&, int64_t, fuchsia::sys::TerminationReason)>;
 
   struct ParentOverrides final {
     ParentOverrides();
@@ -56,14 +56,12 @@ class EnvironmentServices {
   EnvironmentServices(EnvironmentServices&&) = delete;
 
   // Creates services with some of parent's service.
-  static std::unique_ptr<EnvironmentServices> Create(
-      const fuchsia::sys::EnvironmentPtr& parent_env,
-      async_dispatcher_t* dispatcher = nullptr);
+  static std::unique_ptr<EnvironmentServices> Create(const fuchsia::sys::EnvironmentPtr& parent_env,
+                                                     async_dispatcher_t* dispatcher = nullptr);
 
   // Creates services with custom parent overrides.
   static std::unique_ptr<EnvironmentServices> CreateWithParentOverrides(
-      const fuchsia::sys::EnvironmentPtr& parent_env,
-      ParentOverrides parent_overrides,
+      const fuchsia::sys::EnvironmentPtr& parent_env, ParentOverrides parent_overrides,
       async_dispatcher_t* dispatcher = nullptr);
 
   // Adds the specified interface to the set of services.
@@ -83,8 +81,7 @@ class EnvironmentServices {
     return svc_.AddEntry(
         service_name,
         std::make_unique<vfs::Service>(
-            [handler = std::move(handler)](zx::channel channel,
-                                           async_dispatcher_t* dispatcher) {
+            [handler = std::move(handler)](zx::channel channel, async_dispatcher_t* dispatcher) {
               handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
             }));
   }
@@ -94,8 +91,7 @@ class EnvironmentServices {
                                const std::string& service_name);
 
   // Adds the specified service to the set of services.
-  zx_status_t AddService(std::unique_ptr<vfs::Service> service,
-                         const std::string& service_name);
+  zx_status_t AddService(std::unique_ptr<vfs::Service> service, const std::string& service_name);
 
   // Adds the specified service to the set of services.
   //
@@ -115,10 +111,9 @@ class EnvironmentServices {
   // The provided singleton_id argument is used to keep track of singleton
   // instances, generally you want to use the URL that'll be used for launch
   // info.
-  zx_status_t AddServiceWithLaunchInfo(
-      std::string singleton_id,
-      fit::function<fuchsia::sys::LaunchInfo()> handler,
-      const std::string& service_name);
+  zx_status_t AddServiceWithLaunchInfo(std::string singleton_id,
+                                       fit::function<fuchsia::sys::LaunchInfo()> handler,
+                                       const std::string& service_name);
 
   // Allows child components to access parent service with name
   // |service_name|.
@@ -130,19 +125,17 @@ class EnvironmentServices {
   // Serve service directory using |flags| and returns a new |InterfaceHandle|;
   // Will cause exception if serving fails.
   fidl::InterfaceHandle<fuchsia::io::Directory> ServeServiceDir(
-      uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE |
-                       fuchsia::io::OPEN_RIGHT_WRITABLE);
+      uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE);
 
   // Serves service directory using passed |request| and returns status.
-  zx_status_t ServeServiceDir(
-      fidl::InterfaceRequest<fuchsia::io::Directory> request,
-      uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE |
-                       fuchsia::io::OPEN_RIGHT_WRITABLE);
+  zx_status_t ServeServiceDir(fidl::InterfaceRequest<fuchsia::io::Directory> request,
+                              uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE |
+                                               fuchsia::io::OPEN_RIGHT_WRITABLE);
 
   // Serves service directory using passed |request| and returns status.
-  zx_status_t ServeServiceDir(
-      zx::channel request, uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE |
-                                            fuchsia::io::OPEN_RIGHT_WRITABLE);
+  zx_status_t ServeServiceDir(zx::channel request,
+                              uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE |
+                                               fuchsia::io::OPEN_RIGHT_WRITABLE);
 
   // Sets a callback to be triggered whenever a singleton service launched
   // by |AddServiceWithLaunchInfo| terminates. The callback provides the
@@ -155,8 +148,7 @@ class EnvironmentServices {
  private:
   friend class EnclosingEnvironment;
   EnvironmentServices(const fuchsia::sys::EnvironmentPtr& parent_env,
-                      ParentOverrides parent_overrides,
-                      async_dispatcher_t* dispatcher = nullptr);
+                      ParentOverrides parent_overrides, async_dispatcher_t* dispatcher = nullptr);
 
   void set_enclosing_env(EnclosingEnvironment* e) { enclosing_env_ = e; }
 
@@ -169,8 +161,7 @@ class EnvironmentServices {
   ServiceTerminatedCallback service_terminated_callback_;
 
   // Keep track of all singleton services, indexed by url.
-  std::unordered_map<std::string, std::shared_ptr<sys::ServiceDirectory>>
-      singleton_services_;
+  std::unordered_map<std::string, std::shared_ptr<sys::ServiceDirectory>> singleton_services_;
 };
 
 // EnclosingEnvironment wraps a new isolated environment for test |parent_env|
@@ -214,34 +205,29 @@ class EnclosingEnvironment {
   //
   // That component will only have access to the services added and
   // any allowed parent service.
-  void CreateComponent(
-      fuchsia::sys::LaunchInfo launch_info,
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> request);
+  void CreateComponent(fuchsia::sys::LaunchInfo launch_info,
+                       fidl::InterfaceRequest<fuchsia::sys::ComponentController> request);
 
   // Creates a real component from |launch_info| in underlying environment and
   // returns controller ptr.
   //
   // That component will only have access to the services added and
   // any allowed parent service.
-  fuchsia::sys::ComponentControllerPtr CreateComponent(
-      fuchsia::sys::LaunchInfo launch_info);
+  fuchsia::sys::ComponentControllerPtr CreateComponent(fuchsia::sys::LaunchInfo launch_info);
 
   // Creates a real component in underlying environment for a url and returns
   // controller ptr.
   //
   // That component will only have access to the services added and
   // any allowed parent service.
-  fuchsia::sys::ComponentControllerPtr CreateComponentFromUrl(
-      std::string component_url);
+  fuchsia::sys::ComponentControllerPtr CreateComponentFromUrl(std::string component_url);
 
   // Creates a nested enclosing environment on top of underlying environment.
-  std::unique_ptr<EnclosingEnvironment> CreateNestedEnclosingEnvironment(
-      const std::string& label);
+  std::unique_ptr<EnclosingEnvironment> CreateNestedEnclosingEnvironment(const std::string& label);
 
   // Creates a nested enclosing environment on top of underlying environment
   // with custom loader service.
-  std::unique_ptr<EnclosingEnvironment>
-  CreateNestedEnclosingEnvironmentWithLoader(
+  std::unique_ptr<EnclosingEnvironment> CreateNestedEnclosingEnvironmentWithLoader(
       const std::string& label, std::shared_ptr<vfs::Service> loader_service);
 
   // Connects to service provided by this environment.
@@ -271,8 +257,7 @@ class EnclosingEnvironment {
   }
 
  private:
-  EnclosingEnvironment(std::string label,
-                       const fuchsia::sys::EnvironmentPtr& parent_env,
+  EnclosingEnvironment(std::string label, const fuchsia::sys::EnvironmentPtr& parent_env,
                        std::unique_ptr<EnvironmentServices> services,
                        const fuchsia::sys::EnvironmentOptions& options);
 

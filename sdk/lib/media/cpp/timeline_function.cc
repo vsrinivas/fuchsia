@@ -10,16 +10,14 @@
 namespace media {
 
 // static
-int64_t TimelineFunction::Apply(
-    int64_t subject_time, int64_t reference_time,
-    TimelineRate rate,  // subject_delta / reference_delta
-    int64_t reference_input) {
+int64_t TimelineFunction::Apply(int64_t subject_time, int64_t reference_time,
+                                TimelineRate rate,  // subject_delta / reference_delta
+                                int64_t reference_input) {
   return rate.Scale(reference_input - reference_time) + subject_time;
 }
 
 // static
-TimelineFunction TimelineFunction::Compose(const TimelineFunction& bc,
-                                           const TimelineFunction& ab,
+TimelineFunction TimelineFunction::Compose(const TimelineFunction& bc, const TimelineFunction& ab,
                                            bool exact) {
   // TODO(dalesat): Improve this implementation.
   // This particular approach to composing two timeline functions comprimises

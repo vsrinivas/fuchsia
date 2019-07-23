@@ -15,20 +15,17 @@ void File::Describe(fuchsia::io::NodeInfo* out_info) {
   out_info->set_file(fuchsia::io::FileObject());
 }
 
-zx_status_t File::ReadAt(uint64_t count, uint64_t offset,
-                         std::vector<uint8_t>* out_data) {
+zx_status_t File::ReadAt(uint64_t count, uint64_t offset, std::vector<uint8_t>* out_data) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t File::WriteAt(std::vector<uint8_t> data, uint64_t offset,
-                          uint64_t* out_actual) {
+zx_status_t File::WriteAt(std::vector<uint8_t> data, uint64_t offset, uint64_t* out_actual) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t File::Truncate(uint64_t length) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t File::CreateConnection(uint32_t flags,
-                                   std::unique_ptr<Connection>* connection) {
+zx_status_t File::CreateConnection(uint32_t flags, std::unique_ptr<Connection>* connection) {
   *connection = std::make_unique<internal::FileConnection>(flags, this);
   return ZX_OK;
 }

@@ -8,9 +8,10 @@
 
 //
 
+#include <lib/fidl/cpp/test/test_util.h>
+
 #include <conformance/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/fidl/cpp/test/test_util.h>
 
 TEST(Conformance, EmptyStruct_Encoding) {
   conformance::EmptyStruct v1;

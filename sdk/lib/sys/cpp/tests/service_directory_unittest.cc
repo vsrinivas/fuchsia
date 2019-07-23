@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/sys/cpp/service_directory.h>
-
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fidl/cpp/message_buffer.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/channel.h>
+
+#include <fidl/examples/echo/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 

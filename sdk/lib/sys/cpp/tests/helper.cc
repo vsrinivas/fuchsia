@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include <iostream>
+
 #include "fidl/examples/echo/cpp/fidl.h"
 #include "lib/async-loop/cpp/loop.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "src/lib/fxl/command_line.h"
 #include "lib/sys/cpp/component_context.h"
+#include "src/lib/fxl/command_line.h"
 
 static constexpr char kCmdHelp[] = "help";
 static constexpr char kCmdEcho[] = "echo";
@@ -31,8 +32,7 @@ Arguments:
 
 class EchoServer : public fidl::examples::echo::Echo {
  public:
-  void EchoString(::fidl::StringPtr value,
-                  EchoStringCallback callback) override {
+  void EchoString(::fidl::StringPtr value, EchoStringCallback callback) override {
     std::string intercept = value;
     callback(std::move(value));
     if (listener_) {
@@ -44,9 +44,7 @@ class EchoServer : public fidl::examples::echo::Echo {
     return bindings_.GetHandler(this);
   }
 
-  void SetListener(fit::function<void(std::string)> list) {
-    listener_ = std::move(list);
-  }
+  void SetListener(fit::function<void(std::string)> list) { listener_ = std::move(list); }
 
  private:
   fidl::BindingSet<fidl::examples::echo::Echo> bindings_;
@@ -84,12 +82,11 @@ int main(int argc, const char** argv) {
   if (echo_server && cmdline.HasOption(kCmdKill)) {
     std::string kill_str;
     cmdline.GetOptionValue(kCmdKill, &kill_str);
-    echo_server->SetListener(
-        [&loop, kill_str = std::move(kill_str)](std::string str) {
-          if (str == kill_str) {
-            loop.Quit();
-          }
-        });
+    echo_server->SetListener([&loop, kill_str = std::move(kill_str)](std::string str) {
+      if (str == kill_str) {
+        loop.Quit();
+      }
+    });
   }
 
   if (echo_server) {

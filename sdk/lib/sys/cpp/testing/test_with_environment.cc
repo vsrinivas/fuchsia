@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/sys/cpp/testing/test_with_environment.h>
-
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 
 namespace sys {
 namespace testing {
@@ -25,16 +24,16 @@ bool TestWithEnvironment::RunComponentUntilTerminated(
     fuchsia::sys::ComponentControllerPtr component_controller,
     TerminationResult* termination_result) {
   bool is_terminated = false;
-  component_controller.events().OnTerminated =
-      [&](int64_t return_code, fuchsia::sys::TerminationReason reason) {
-        is_terminated = true;
-        if (termination_result != nullptr) {
-          *termination_result = {
-              .return_code = return_code,
-              .reason = reason,
-          };
-        }
+  component_controller.events().OnTerminated = [&](int64_t return_code,
+                                                   fuchsia::sys::TerminationReason reason) {
+    is_terminated = true;
+    if (termination_result != nullptr) {
+      *termination_result = {
+          .return_code = return_code,
+          .reason = reason,
       };
+    }
+  };
   RunLoopUntil([&]() { return is_terminated; });
   return is_terminated;
 }

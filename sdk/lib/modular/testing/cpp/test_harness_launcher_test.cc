@@ -48,9 +48,8 @@ class TestHarnessLauncherTest : public gtest::RealLoopFixture {
  public:
   TestHarnessLauncherTest() {
     fake_launcher_.RegisterComponent(
-        kTestHarnessUrl,
-        [this](fuchsia::sys::LaunchInfo info,
-               fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        kTestHarnessUrl, [this](fuchsia::sys::LaunchInfo info,
+                                fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
           info_ = std::move(info);
           fake_ctrl_ = std::make_unique<FakeController>(std::move(ctrl));
         });

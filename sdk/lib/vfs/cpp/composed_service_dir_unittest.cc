@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -10,6 +9,8 @@
 #include <lib/vfs/cpp/composed_service_dir.h>
 #include <lib/vfs/cpp/service.h>
 #include <lib/vfs/cpp/testing/dir_test_util.h>
+
+#include <fidl/examples/echo/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 
@@ -21,9 +22,7 @@ class EchoImpl : public fidl::examples::echo::Echo {
  public:
   EchoImpl(std::string ans) : ans_(ans) {}
 
-  void EchoString(fidl::StringPtr value, EchoStringCallback callback) override {
-    callback(ans_);
-  }
+  void EchoString(fidl::StringPtr value, EchoStringCallback callback) override { callback(ans_); }
 
  private:
   std::string ans_;
@@ -33,17 +32,13 @@ class ComposedServiceDirectorySimpleTest : public vfs_tests::DirConnection {
  public:
   vfs::internal::Directory* GetDirectoryNode() override { return &dir_; }
 
-  ComposedServiceDirectorySimpleTest()
-      : loop_(&kAsyncLoopConfigNoAttachToThread) {
+  ComposedServiceDirectorySimpleTest() : loop_(&kAsyncLoopConfigNoAttachToThread) {
     dir_.AddService("echo1", GetFakeService("echo1", loop_.dispatcher()));
     dir_.AddService("echo2", GetFakeService("echo2", loop_.dispatcher()));
     dir_.AddService("echo3", GetFakeService("echo3", loop_.dispatcher()));
-    backing_dir_.AddEntry("echo1",
-                          GetFakeService("fallback_echo1", loop_.dispatcher()));
-    backing_dir_.AddEntry("echo4",
-                          GetFakeService("fallback_echo4", loop_.dispatcher()));
-    backing_dir_.AddEntry("echo5",
-                          GetFakeService("fallback_echo5", loop_.dispatcher()));
+    backing_dir_.AddEntry("echo1", GetFakeService("fallback_echo1", loop_.dispatcher()));
+    backing_dir_.AddEntry("echo4", GetFakeService("fallback_echo4", loop_.dispatcher()));
+    backing_dir_.AddEntry("echo5", GetFakeService("fallback_echo5", loop_.dispatcher()));
 
     dir_.set_fallback(GetConnection(&backing_dir_));
     loop_.StartThread("vfs test thread");
@@ -51,18 +46,15 @@ class ComposedServiceDirectorySimpleTest : public vfs_tests::DirConnection {
 
   fuchsia::io::DirectoryPtr GetConnection(vfs::internal::Directory* dir) {
     fuchsia::io::DirectoryPtr ptr;
-    dir->Serve(
-        fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-        ptr.NewRequest().TakeChannel(), loop_.dispatcher());
+    dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+               ptr.NewRequest().TakeChannel(), loop_.dispatcher());
     return ptr;
   }
 
-  fuchsia::io::DirectorySyncPtr GetSyncConnection(
-      vfs::internal::Directory* dir) {
+  fuchsia::io::DirectorySyncPtr GetSyncConnection(vfs::internal::Directory* dir) {
     fuchsia::io::DirectorySyncPtr ptr;
-    dir->Serve(
-        fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-        ptr.NewRequest().TakeChannel(), loop_.dispatcher());
+    dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+               ptr.NewRequest().TakeChannel(), loop_.dispatcher());
     return ptr;
   }
 
@@ -76,8 +68,7 @@ class ComposedServiceDirectorySimpleTest : public vfs_tests::DirConnection {
   std::unique_ptr<vfs::Service> GetFakeService(const std::string& ans,
                                                async_dispatcher_t* dispatcher) {
     auto echo = std::make_unique<EchoImpl>(ans);
-    auto service = std::make_unique<vfs::Service>(
-        bindings_.GetHandler(echo.get(), dispatcher));
+    auto service = std::make_unique<vfs::Service>(bindings_.GetHandler(echo.get(), dispatcher));
     echo_impls_.push_back(std::move(echo));
     return service;
   }

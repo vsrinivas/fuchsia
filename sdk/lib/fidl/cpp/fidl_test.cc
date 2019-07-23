@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test/misc/cpp/fidl.h>
-
 #include <list>
+
+#include <fidl/test/misc/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/clone.h"

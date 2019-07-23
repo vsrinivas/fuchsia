@@ -77,11 +77,10 @@ class PseudoDir : public vfs::internal::Directory {
   bool IsEmpty() const;
 
   // |Directory| implementation:
-  zx_status_t Lookup(const std::string& name,
-                     vfs::internal::Node** out_node) const final;
+  zx_status_t Lookup(const std::string& name, vfs::internal::Node** out_node) const final;
 
-  zx_status_t Readdir(uint64_t offset, void* data, uint64_t len,
-                      uint64_t* out_offset, uint64_t* out_actual) override;
+  zx_status_t Readdir(uint64_t offset, void* data, uint64_t len, uint64_t* out_offset,
+                      uint64_t* out_actual) override;
 
  private:
   class Entry {
@@ -129,8 +128,7 @@ class PseudoDir : public vfs::internal::Directory {
   std::atomic_uint64_t next_node_id_;
 
   // for enumeration
-  std::map<uint64_t, std::unique_ptr<Entry>> entries_by_id_
-      __TA_GUARDED(mutex_);
+  std::map<uint64_t, std::unique_ptr<Entry>> entries_by_id_ __TA_GUARDED(mutex_);
 
   // for lookup
   std::map<std::string, Entry*> entries_by_name_ __TA_GUARDED(mutex_);

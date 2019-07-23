@@ -13,17 +13,13 @@
 namespace fidl {
 
 template <>
-struct TypeConverter<fuchsia::media::TimelineFunction,
-                     media::TimelineFunction> {
-  static fuchsia::media::TimelineFunction Convert(
-      const media::TimelineFunction& value);
+struct TypeConverter<fuchsia::media::TimelineFunction, media::TimelineFunction> {
+  static fuchsia::media::TimelineFunction Convert(const media::TimelineFunction& value);
 };
 
 template <>
-struct TypeConverter<media::TimelineFunction,
-                     fuchsia::media::TimelineFunction> {
-  static media::TimelineFunction Convert(
-      const fuchsia::media::TimelineFunction& value);
+struct TypeConverter<media::TimelineFunction, fuchsia::media::TimelineFunction> {
+  static media::TimelineFunction Convert(const fuchsia::media::TimelineFunction& value);
 };
 
 }  // namespace fidl

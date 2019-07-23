@@ -83,28 +83,24 @@ class Connection {
   // current thread.
   //
   // Should returns |ZX_ERR_BAD_STATE| if channel is already bound.
-  virtual zx_status_t BindInternal(zx::channel request,
-                                   async_dispatcher_t* dispatcher) = 0;
+  virtual zx_status_t BindInternal(zx::channel request, async_dispatcher_t* dispatcher) = 0;
 
   // Implementations for common |fuchsia.io.Node| operations. Used by
   // subclasses to avoid code duplication.
 
-  void Clone(Node* vn, uint32_t flags, zx::channel request,
-             async_dispatcher_t* dispatcher);
+  void Clone(Node* vn, uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher);
   void Close(Node* vn, fuchsia::io::Node::CloseCallback callback);
   void Describe(Node* vn, fuchsia::io::Node::DescribeCallback callback);
   void Sync(Node* vn, fuchsia::io::Node::SyncCallback callback);
   void GetAttr(Node* vn, fuchsia::io::Node::GetAttrCallback callback);
   void SetAttr(Node* vn, uint32_t flags, fuchsia::io::NodeAttributes attributes,
                fuchsia::io::Node::SetAttrCallback callback);
-  void Ioctl(Node* vn, uint32_t opcode, uint64_t max_out,
-             std::vector<zx::handle> handles, std::vector<uint8_t> in,
-             fuchsia::io::Node::IoctlCallback callback);
+  void Ioctl(Node* vn, uint32_t opcode, uint64_t max_out, std::vector<zx::handle> handles,
+             std::vector<uint8_t> in, fuchsia::io::Node::IoctlCallback callback);
 
   // returns |fuchsia.io.NodeInfo| if status is |ZX_OK|, else returns null
   // inside unique_ptr.
-  std::unique_ptr<fuchsia::io::NodeInfo> NodeInfoIfStatusOk(Node* vn,
-                                                            zx_status_t status);
+  std::unique_ptr<fuchsia::io::NodeInfo> NodeInfoIfStatusOk(Node* vn, zx_status_t status);
 
  private:
   // The flags associated with this connection.

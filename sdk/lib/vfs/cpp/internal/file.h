@@ -34,16 +34,14 @@ class File : public Node {
   // The data read should be copied to |out_data|, which should be empty when
   // passed as an argument. When |ReadAt| returns, |out_data| should contain no
   // more than |count| bytes.
-  virtual zx_status_t ReadAt(uint64_t count, uint64_t offset,
-                             std::vector<uint8_t>* out_data);
+  virtual zx_status_t ReadAt(uint64_t count, uint64_t offset, std::vector<uint8_t>* out_data);
 
   // Write the given |data| to the file at the given |offset|.
   //
   // Data should be copied into the file starting at the beginning of |data|.
   // If |WriteAt| returns |ZX_OK|, |out_actual| should contain the number of
   // bytes actually written to the file.
-  virtual zx_status_t WriteAt(std::vector<uint8_t> data, uint64_t offset,
-                              uint64_t* out_actual);
+  virtual zx_status_t WriteAt(std::vector<uint8_t> data, uint64_t offset, uint64_t* out_actual);
 
   // Resize the file to the given |length|.
   virtual zx_status_t Truncate(uint64_t length);
@@ -65,8 +63,7 @@ class File : public Node {
  protected:
   NodeKind::Type GetKind() const override;
 
-  zx_status_t CreateConnection(
-      uint32_t flags, std::unique_ptr<Connection>* connection) override;
+  zx_status_t CreateConnection(uint32_t flags, std::unique_ptr<Connection>* connection) override;
 };
 
 }  // namespace internal

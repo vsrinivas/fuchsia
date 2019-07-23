@@ -60,8 +60,7 @@ class ComponentContext final {
   //
   // This constructor is rarely used directly. Instead, most clients create a
   // component context using the |Create()| static method.
-  ComponentContext(std::shared_ptr<ServiceDirectory> svc,
-                   zx::channel directory_request,
+  ComponentContext(std::shared_ptr<ServiceDirectory> svc, zx::channel directory_request,
                    async_dispatcher_t* dispatcher = nullptr);
 
   ~ComponentContext();
@@ -135,9 +134,7 @@ class ComponentContext final {
   //   fidl::BindingSet<fuchsia::foo::Controller> bindings_;
   // }
   // ```
-  const std::shared_ptr<OutgoingDirectory>& outgoing() const {
-    return outgoing_;
-  }
+  const std::shared_ptr<OutgoingDirectory>& outgoing() const { return outgoing_; }
   std::shared_ptr<OutgoingDirectory>& outgoing() { return outgoing_; }
 
  private:

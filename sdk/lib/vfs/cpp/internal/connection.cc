@@ -25,8 +25,7 @@ void Connection::Close(Node* vn, fuchsia::io::Node::CloseCallback callback) {
   // |this| is destroyed at this point.
 }
 
-void Connection::Describe(Node* vn,
-                          fuchsia::io::Node::DescribeCallback callback) {
+void Connection::Describe(Node* vn, fuchsia::io::Node::DescribeCallback callback) {
   fuchsia::io::NodeInfo info{};
   vn->Describe(&info);
   if (info.has_invalid_tag()) {
@@ -36,8 +35,7 @@ void Connection::Describe(Node* vn,
   }
 }
 
-zx_status_t Connection::Bind(zx::channel request,
-                             async_dispatcher_t* dispatcher) {
+zx_status_t Connection::Bind(zx::channel request, async_dispatcher_t* dispatcher) {
   auto status = BindInternal(std::move(request), dispatcher);
   if (status == ZX_OK && Flags::ShouldDescribe(flags_)) {
     SendOnOpenEvent(status);
@@ -50,30 +48,26 @@ void Connection::Sync(Node* vn, fuchsia::io::Node::SyncCallback callback) {
   callback(vn->Sync());
 }
 
-void Connection::GetAttr(Node* vn,
-                         fuchsia::io::Node::GetAttrCallback callback) {
+void Connection::GetAttr(Node* vn, fuchsia::io::Node::GetAttrCallback callback) {
   // TODO: Check flags.
   fuchsia::io::NodeAttributes attributes{};
   zx_status_t status = vn->GetAttr(&attributes);
   callback(status, attributes);
 }
 
-void Connection::SetAttr(Node* vn, uint32_t flags,
-                         fuchsia::io::NodeAttributes attributes,
+void Connection::SetAttr(Node* vn, uint32_t flags, fuchsia::io::NodeAttributes attributes,
                          fuchsia::io::Node::SetAttrCallback callback) {
   // TODO: Check flags.
   callback(vn->SetAttr(flags, attributes));
 }
 
-void Connection::Ioctl(Node* vn, uint32_t opcode, uint64_t max_out,
-                       std::vector<zx::handle> handles, std::vector<uint8_t> in,
-                       fuchsia::io::Node::IoctlCallback callback) {
-  callback(ZX_ERR_NOT_SUPPORTED, std::vector<zx::handle>(),
-           std::vector<uint8_t>());
+void Connection::Ioctl(Node* vn, uint32_t opcode, uint64_t max_out, std::vector<zx::handle> handles,
+                       std::vector<uint8_t> in, fuchsia::io::Node::IoctlCallback callback) {
+  callback(ZX_ERR_NOT_SUPPORTED, std::vector<zx::handle>(), std::vector<uint8_t>());
 }
 
-std::unique_ptr<fuchsia::io::NodeInfo> Connection::NodeInfoIfStatusOk(
-    Node* vn, zx_status_t status) {
+std::unique_ptr<fuchsia::io::NodeInfo> Connection::NodeInfoIfStatusOk(Node* vn,
+                                                                      zx_status_t status) {
   std::unique_ptr<fuchsia::io::NodeInfo> node_info;
   if (status == ZX_OK) {
     node_info = std::make_unique<fuchsia::io::NodeInfo>();

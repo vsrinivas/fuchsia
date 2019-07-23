@@ -18,28 +18,25 @@
 
 namespace sys::testing {
 
-EnvironmentServices::ParentOverrides::ParentOverrides(
-    ParentOverrides&&) noexcept = default;
+EnvironmentServices::ParentOverrides::ParentOverrides(ParentOverrides&&) noexcept = default;
 
 EnvironmentServices::ParentOverrides::ParentOverrides() = default;
 
-EnvironmentServices::EnvironmentServices(
-    const fuchsia::sys::EnvironmentPtr& parent_env,
-    ParentOverrides parent_overrides, async_dispatcher_t* dispatcher)
+EnvironmentServices::EnvironmentServices(const fuchsia::sys::EnvironmentPtr& parent_env,
+                                         ParentOverrides parent_overrides,
+                                         async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher) {
   zx::channel request;
   parent_svc_ = sys::ServiceDirectory::CreateWithRequest(&request);
   parent_env->GetDirectory(std::move(request));
   if (parent_overrides.loader_service_) {
-    AddSharedService(parent_overrides.loader_service_,
-                     fuchsia::sys::Loader::Name_);
+    AddSharedService(parent_overrides.loader_service_, fuchsia::sys::Loader::Name_);
   } else {
     AllowParentService(fuchsia::sys::Loader::Name_);
   }
 
   if (parent_overrides.debug_data_service_) {
-    AddSharedService(parent_overrides.debug_data_service_,
-                     fuchsia::debugdata::DebugData::Name_);
+    AddSharedService(parent_overrides.debug_data_service_, fuchsia::debugdata::DebugData::Name_);
   } else {
     AllowParentService(fuchsia::debugdata::DebugData::Name_);
   }
@@ -47,36 +44,33 @@ EnvironmentServices::EnvironmentServices(
 
 // static
 std::unique_ptr<EnvironmentServices> EnvironmentServices::Create(
-    const fuchsia::sys::EnvironmentPtr& parent_env,
-    async_dispatcher_t* dispatcher) {
+    const fuchsia::sys::EnvironmentPtr& parent_env, async_dispatcher_t* dispatcher) {
   return std::unique_ptr<EnvironmentServices>(
       new EnvironmentServices(parent_env, ParentOverrides{}, dispatcher));
 }
 
 // static
-std::unique_ptr<EnvironmentServices>
-EnvironmentServices::CreateWithParentOverrides(
-    const fuchsia::sys::EnvironmentPtr& parent_env,
-    ParentOverrides parent_overrides, async_dispatcher_t* dispatcher) {
-  return std::unique_ptr<EnvironmentServices>(new EnvironmentServices(
-      parent_env, std::move(parent_overrides), dispatcher));
+std::unique_ptr<EnvironmentServices> EnvironmentServices::CreateWithParentOverrides(
+    const fuchsia::sys::EnvironmentPtr& parent_env, ParentOverrides parent_overrides,
+    async_dispatcher_t* dispatcher) {
+  return std::unique_ptr<EnvironmentServices>(
+      new EnvironmentServices(parent_env, std::move(parent_overrides), dispatcher));
 }
 
-zx_status_t EnvironmentServices::AddSharedService(
-    const std::shared_ptr<vfs::Service>& service,
-    const std::string& service_name) {
+zx_status_t EnvironmentServices::AddSharedService(const std::shared_ptr<vfs::Service>& service,
+                                                  const std::string& service_name) {
   svc_names_.push_back(service_name);
   return svc_.AddSharedEntry(service_name, service);
 }
 
-zx_status_t EnvironmentServices::AddService(
-    std::unique_ptr<vfs::Service> service, const std::string& service_name) {
+zx_status_t EnvironmentServices::AddService(std::unique_ptr<vfs::Service> service,
+                                            const std::string& service_name) {
   svc_names_.push_back(service_name);
   return svc_.AddEntry(service_name, std::move(service));
 }
 
-zx_status_t EnvironmentServices::AddServiceWithLaunchInfo(
-    fuchsia::sys::LaunchInfo launch_info, const std::string& service_name) {
+zx_status_t EnvironmentServices::AddServiceWithLaunchInfo(fuchsia::sys::LaunchInfo launch_info,
+                                                          const std::string& service_name) {
   return AddServiceWithLaunchInfo(
       launch_info.url,
       [launch_info = std::move(launch_info)]() {
@@ -93,28 +87,23 @@ zx_status_t EnvironmentServices::AddServiceWithLaunchInfo(
     std::string singleton_id, fit::function<fuchsia::sys::LaunchInfo()> handler,
     const std::string& service_name) {
   auto child = std::make_unique<vfs::Service>(
-      [this, service_name, handler = std::move(handler),
-       singleton_id = std::move(singleton_id),
+      [this, service_name, handler = std::move(handler), singleton_id = std::move(singleton_id),
        controller = fuchsia::sys::ComponentControllerPtr()](
           zx::channel client_handle, async_dispatcher_t* /*unused*/) mutable {
         auto it = singleton_services_.find(singleton_id);
         if (it == singleton_services_.end()) {
           fuchsia::sys::LaunchInfo launch_info = handler();
-          auto services = sys::ServiceDirectory::CreateWithRequest(
-              &launch_info.directory_request);
+          auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
 
-          enclosing_env_->CreateComponent(std::move(launch_info),
-                                          controller.NewRequest());
-          controller.set_error_handler(
-              [this, singleton_id, &controller](zx_status_t /*unused*/) {
-                // TODO(unknown): show error? where on stderr?
-                controller.Unbind();  // kills the singleton application
-                singleton_services_.erase(singleton_id);
-              });
+          enclosing_env_->CreateComponent(std::move(launch_info), controller.NewRequest());
+          controller.set_error_handler([this, singleton_id, &controller](zx_status_t /*unused*/) {
+            // TODO(unknown): show error? where on stderr?
+            controller.Unbind();  // kills the singleton application
+            singleton_services_.erase(singleton_id);
+          });
 
           controller.events().OnTerminated =
-              [this, singleton_id](int64_t exit_code,
-                                   fuchsia::sys::TerminationReason reason) {
+              [this, singleton_id](int64_t exit_code, fuchsia::sys::TerminationReason reason) {
                 if (service_terminated_callback_) {
                   service_terminated_callback_(singleton_id, exit_code, reason);
                 }
@@ -130,20 +119,16 @@ zx_status_t EnvironmentServices::AddServiceWithLaunchInfo(
   return svc_.AddEntry(service_name, std::move(child));
 }
 
-zx_status_t EnvironmentServices::AllowParentService(
-    const std::string& service_name) {
+zx_status_t EnvironmentServices::AllowParentService(const std::string& service_name) {
   svc_names_.push_back(service_name);
   return svc_.AddEntry(
       service_name, std::make_unique<vfs::Service>(
-                        [this, service_name](zx::channel channel,
-                                             async_dispatcher_t* /*unused*/) {
-                          parent_svc_->Connect(service_name,
-                                               std::move(channel));
+                        [this, service_name](zx::channel channel, async_dispatcher_t* /*unused*/) {
+                          parent_svc_->Connect(service_name, std::move(channel));
                         }));
 }
 
-fidl::InterfaceHandle<fuchsia::io::Directory>
-EnvironmentServices::ServeServiceDir(uint32_t flags) {
+fidl::InterfaceHandle<fuchsia::io::Directory> EnvironmentServices::ServeServiceDir(uint32_t flags) {
   fidl::InterfaceHandle<fuchsia::io::Directory> dir;
   ZX_ASSERT(ServeServiceDir(dir.NewRequest(), flags) == ZX_OK);
   return dir;
@@ -154,15 +139,14 @@ zx_status_t EnvironmentServices::ServeServiceDir(
   return ServeServiceDir(request.TakeChannel(), flags);
 }
 
-zx_status_t EnvironmentServices::ServeServiceDir(zx::channel request,
-                                                 uint32_t flags) {
+zx_status_t EnvironmentServices::ServeServiceDir(zx::channel request, uint32_t flags) {
   return svc_.Serve(flags, std::move(request), dispatcher_);
 }
 
-EnclosingEnvironment::EnclosingEnvironment(
-    std::string label, const fuchsia::sys::EnvironmentPtr& parent_env,
-    std::unique_ptr<EnvironmentServices> services,
-    const fuchsia::sys::EnvironmentOptions& options)
+EnclosingEnvironment::EnclosingEnvironment(std::string label,
+                                           const fuchsia::sys::EnvironmentPtr& parent_env,
+                                           std::unique_ptr<EnvironmentServices> services,
+                                           const fuchsia::sys::EnvironmentOptions& options)
     : label_(std::move(label)), services_(std::move(services)) {
   services_->set_enclosing_env(this);
 
@@ -172,11 +156,9 @@ EnclosingEnvironment::EnclosingEnvironment(
   service_list->host_directory = services_->ServeServiceDir().TakeChannel();
   fuchsia::sys::EnvironmentPtr env;
 
-  parent_env->CreateNestedEnvironment(env.NewRequest(),
-                                      env_controller_.NewRequest(), label_,
+  parent_env->CreateNestedEnvironment(env.NewRequest(), env_controller_.NewRequest(), label_,
                                       std::move(service_list), options);
-  env_controller_.set_error_handler(
-      [this](zx_status_t /*unused*/) { SetRunning(false); });
+  env_controller_.set_error_handler([this](zx_status_t /*unused*/) { SetRunning(false); });
   // Connect to launcher
   env->GetLauncher(launcher_.NewRequest());
 
@@ -193,8 +175,7 @@ std::unique_ptr<EnclosingEnvironment> EnclosingEnvironment::Create(
     const std::string& label, const fuchsia::sys::EnvironmentPtr& parent_env,
     std::unique_ptr<EnvironmentServices> services,
     const fuchsia::sys::EnvironmentOptions& options) {
-  auto* env =
-      new EnclosingEnvironment(label, parent_env, std::move(services), options);
+  auto* env = new EnclosingEnvironment(label, parent_env, std::move(services), options);
   return std::unique_ptr<EnclosingEnvironment>(env);
 }
 
@@ -215,8 +196,7 @@ void EnclosingEnvironment::Kill(fit::function<void()> callback) {
   });
 }
 
-std::unique_ptr<EnclosingEnvironment>
-EnclosingEnvironment::CreateNestedEnclosingEnvironment(
+std::unique_ptr<EnclosingEnvironment> EnclosingEnvironment::CreateNestedEnclosingEnvironment(
     const std::string& label) {
   fuchsia::sys::EnvironmentPtr env;
   service_provider_->Connect(env.NewRequest());
@@ -236,8 +216,8 @@ fuchsia::sys::ComponentControllerPtr EnclosingEnvironment::CreateComponent(
   return controller;
 }
 
-fuchsia::sys::ComponentControllerPtr
-EnclosingEnvironment::CreateComponentFromUrl(std::string component_url) {
+fuchsia::sys::ComponentControllerPtr EnclosingEnvironment::CreateComponentFromUrl(
+    std::string component_url) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = component_url;
 

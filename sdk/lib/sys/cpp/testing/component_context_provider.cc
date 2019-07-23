@@ -12,8 +12,7 @@
 namespace sys {
 namespace testing {
 
-ComponentContextProvider::ComponentContextProvider(
-    async_dispatcher_t* dispatcher)
+ComponentContextProvider::ComponentContextProvider(async_dispatcher_t* dispatcher)
     : svc_provider_(std::make_shared<ServiceDirectoryProvider>(dispatcher)) {
   // remove this handle from namespace so that no one is using it.
   zx_take_startup_handle(PA_DIRECTORY_REQUEST);
@@ -22,9 +21,8 @@ ComponentContextProvider::ComponentContextProvider(
       svc_provider_->service_directory(),
       outgoing_directory_ptr_.NewRequest(dispatcher).TakeChannel(), dispatcher);
 
-  fdio_service_connect_at(
-      outgoing_directory_ptr_.channel().get(), "svc",
-      public_directory_ptr_.NewRequest().TakeChannel().release());
+  fdio_service_connect_at(outgoing_directory_ptr_.channel().get(), "svc",
+                          public_directory_ptr_.NewRequest().TakeChannel().release());
 }
 
 ComponentContextProvider::~ComponentContextProvider() = default;

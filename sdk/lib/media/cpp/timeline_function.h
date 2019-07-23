@@ -28,33 +28,28 @@ class TimelineFunction {
                        int64_t reference_input);
 
   // Applies the inverse of a timeline function.
-  static int64_t ApplyInverse(
-      int64_t subject_time, int64_t reference_time,
-      TimelineRate rate,  // subject_delta / reference_delta
-      int64_t subject_input) {
+  static int64_t ApplyInverse(int64_t subject_time, int64_t reference_time,
+                              TimelineRate rate,  // subject_delta / reference_delta
+                              int64_t subject_input) {
     ZX_DEBUG_ASSERT(rate.reference_delta() != 0u);
     return Apply(reference_time, subject_time, rate.Inverse(), subject_input);
   }
 
   // Composes two timeline functions B->C and A->B producing A->C. If exact is
   // true, DCHECKs on loss of precision.
-  static TimelineFunction Compose(const TimelineFunction& bc,
-                                  const TimelineFunction& ab,
+  static TimelineFunction Compose(const TimelineFunction& bc, const TimelineFunction& ab,
                                   bool exact = true);
 
   TimelineFunction() : subject_time_(0), reference_time_(0) {}
 
-  TimelineFunction(int64_t subject_time, int64_t reference_time,
-                   uint32_t subject_delta, uint32_t reference_delta)
+  TimelineFunction(int64_t subject_time, int64_t reference_time, uint32_t subject_delta,
+                   uint32_t reference_delta)
       : subject_time_(subject_time),
         reference_time_(reference_time),
         rate_(subject_delta, reference_delta) {}
 
-  TimelineFunction(int64_t subject_time, int64_t reference_time,
-                   TimelineRate rate)
-      : subject_time_(subject_time),
-        reference_time_(reference_time),
-        rate_(rate) {}
+  TimelineFunction(int64_t subject_time, int64_t reference_time, TimelineRate rate)
+      : subject_time_(subject_time), reference_time_(reference_time), rate_(rate) {}
 
   explicit TimelineFunction(TimelineRate rate)
       : subject_time_(0), reference_time_(0), rate_(rate) {}
@@ -75,9 +70,7 @@ class TimelineFunction {
   }
 
   // Applies the function.  Returns TimelineRate::kOverflow on overflow.
-  int64_t operator()(int64_t reference_input) const {
-    return Apply(reference_input);
-  }
+  int64_t operator()(int64_t reference_input) const { return Apply(reference_input); }
 
   // Returns a timeline function that is the inverse if this timeline function.
   TimelineFunction Inverse() const {
@@ -104,20 +97,17 @@ class TimelineFunction {
 // Tests two timeline functions for equality. Equality requires equal basis
 // values.
 inline bool operator==(const TimelineFunction& a, const TimelineFunction& b) {
-  return a.subject_time() == b.subject_time() &&
-         a.reference_time() == b.reference_time() && a.rate() == b.rate();
+  return a.subject_time() == b.subject_time() && a.reference_time() == b.reference_time() &&
+         a.rate() == b.rate();
 }
 
 // Tests two timeline functions for inequality. Equality requires equal basis
 // values.
-inline bool operator!=(const TimelineFunction& a, const TimelineFunction& b) {
-  return !(a == b);
-}
+inline bool operator!=(const TimelineFunction& a, const TimelineFunction& b) { return !(a == b); }
 
 // Composes two timeline functions B->C and A->B producing A->C. DCHECKs on
 // loss of precision.
-inline TimelineFunction operator*(const TimelineFunction& bc,
-                                  const TimelineFunction& ab) {
+inline TimelineFunction operator*(const TimelineFunction& bc, const TimelineFunction& ab) {
   return TimelineFunction::Compose(bc, ab);
 }
 

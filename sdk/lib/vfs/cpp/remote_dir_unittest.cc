@@ -28,9 +28,8 @@ class RemoteDirConnection : public vfs_tests::DirConnection {
 
   fuchsia::io::DirectoryPtr GetPseudoDirConnection() {
     fuchsia::io::DirectoryPtr ptr;
-    pseudo_dir_.Serve(
-        fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-        ptr.NewRequest().TakeChannel(), loop_.dispatcher());
+    pseudo_dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                      ptr.NewRequest().TakeChannel(), loop_.dispatcher());
     return ptr;
   }
 
@@ -61,8 +60,7 @@ class RemoteDirConnection : public vfs_tests::DirConnection {
   void AddFileToPseudoDir(const std::string& name) {
     pseudo_dir_.AddEntry(
         name, std::make_unique<vfs::PseudoFile>(
-                  name.length(),
-                  [name](std::vector<uint8_t>* output, size_t max_file_size) {
+                  name.length(), [name](std::vector<uint8_t>* output, size_t max_file_size) {
                     output->resize(name.length());
                     std::copy(name.begin(), name.end(), output->begin());
                     return ZX_OK;
@@ -92,9 +90,8 @@ class RemoteDirContained : public RemoteDirConnection {
   RemoteDirContained() {
     dir_ = std::make_shared<vfs::RemoteDir>(GetPseudoDirConnection());
     parent_pseudo_dir_.AddSharedEntry("remote_dir", dir_);
-    parent_pseudo_dir_.Serve(
-        fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-        ptr_.NewRequest().TakeChannel(), loop_.dispatcher());
+    parent_pseudo_dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                             ptr_.NewRequest().TakeChannel(), loop_.dispatcher());
   }
 
   ~RemoteDirContained() { loop_.Shutdown(); }
@@ -104,16 +101,14 @@ class RemoteDirContained : public RemoteDirConnection {
 };
 
 TEST_F(RemoteDirContained, RemoteDirContainedInPseudoDir) {
-  std::vector<vfs_tests::Dirent> expected = {
-      vfs_tests::Dirent::DirentForDot(),
-      vfs_tests::Dirent::DirentForDirectory("remote_dir")};
+  std::vector<vfs_tests::Dirent> expected = {vfs_tests::Dirent::DirentForDot(),
+                                             vfs_tests::Dirent::DirentForDirectory("remote_dir")};
   AssertReadDirents(ptr_, 1024, expected);
 }
 
 TEST_F(RemoteDirContained, OpenAndReadFile) {
   fuchsia::io::FileSyncPtr file_ptr;
-  std::string paths[] = {"remote_dir/file1", "remote_dir//file1",
-                         "remote_dir/./file1"};
+  std::string paths[] = {"remote_dir/file1", "remote_dir//file1", "remote_dir/./file1"};
   for (auto& path : paths) {
     SCOPED_TRACE(path);
     AssertOpenPath(ptr_, path, file_ptr, fuchsia::io::OPEN_RIGHT_READABLE);
@@ -127,12 +122,10 @@ TEST_F(RemoteDirContained, OpenRemoteDirAndRead) {
   for (auto& path : paths) {
     SCOPED_TRACE(path);
     fuchsia::io::DirectorySyncPtr remote_ptr;
-    AssertOpenPath(
-        ptr_, path, remote_ptr,
-        fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE);
+    AssertOpenPath(ptr_, path, remote_ptr,
+                   fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE);
     fuchsia::io::FileSyncPtr file_ptr;
-    AssertOpenPath(remote_ptr, "file1", file_ptr,
-                   fuchsia::io::OPEN_RIGHT_READABLE);
+    AssertOpenPath(remote_ptr, "file1", file_ptr, fuchsia::io::OPEN_RIGHT_READABLE);
     AssertRead(file_ptr, 1024, "file1");
   }
 }

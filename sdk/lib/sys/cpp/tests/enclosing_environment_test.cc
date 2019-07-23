@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <fuchsia/debugdata/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
@@ -15,6 +14,8 @@
 
 #include <memory>
 
+#include <fidl/examples/echo/cpp/fidl.h>
+
 #include "src/lib/fxl/strings/string_printf.h"
 
 using namespace fuchsia::sys;
@@ -22,8 +23,7 @@ namespace echo = ::fidl::examples::echo;
 
 namespace sys::testing::test {
 
-constexpr char kHelperProc[] =
-    "fuchsia-pkg://fuchsia.com/component_cpp_tests#meta/helper_proc.cmx";
+constexpr char kHelperProc[] = "fuchsia-pkg://fuchsia.com/component_cpp_tests#meta/helper_proc.cmx";
 constexpr int kNumberOfTries = 3;
 
 // helper class that creates and listens on
@@ -44,8 +44,8 @@ class SocketReader {
 
   std::string GetString() { return stream_.str(); }
 
-  void OnData(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-              zx_status_t status, const zx_packet_signal_t* signal) {
+  void OnData(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+              const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
       return;
     }
@@ -89,8 +89,7 @@ class EnclosingEnvTest : public TestWithEnvironment {
       env->ConnectToService(echo.NewRequest());
 
       bool channel_closed = false;
-      echo.set_error_handler(
-          [&](zx_status_t status) { channel_closed = true; });
+      echo.set_error_handler([&](zx_status_t status) { channel_closed = true; });
       // talk with the service once and assert it's ok
       echo->EchoString("hello", [&req_done](::fidl::StringPtr rsp) {
         EXPECT_EQ(rsp, "hello");
@@ -100,8 +99,7 @@ class EnclosingEnvTest : public TestWithEnvironment {
       if (req_done) {
         return true;
       } else {
-        std::cerr << "Didn't receive echo response in attempt number "
-                  << (tries + 1) << std::endl;
+        std::cerr << "Didn't receive echo response in attempt number " << (tries + 1) << std::endl;
       }
     }
     return false;
@@ -120,8 +118,7 @@ TEST_F(EnclosingEnvTest, RespawnService) {
   bool req_done = false;
   bool got_error = false;
   echo::EchoPtr echo;
-  echo.set_error_handler(
-      [&got_error](zx_status_t status) { got_error = true; });
+  echo.set_error_handler([&got_error](zx_status_t status) { got_error = true; });
   env->ConnectToService(echo.NewRequest());
 
   // talk with the service once and assert it's done
@@ -152,8 +149,7 @@ TEST_F(EnclosingEnvTest, EnclosingEnvOnASeperateThread) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   loop.StartThread("vfs test thread");
 
-  auto svc =
-      sys::testing::EnvironmentServices::Create(real_env(), loop.dispatcher());
+  auto svc = sys::testing::EnvironmentServices::Create(real_env(), loop.dispatcher());
 
   LaunchInfo linfo;
   linfo.url = kHelperProc;
@@ -190,8 +186,7 @@ TEST_F(EnclosingEnvTest, RespawnServiceWithHandler) {
   bool req_done = false;
   bool got_error = false;
   echo::EchoPtr echo;
-  echo.set_error_handler(
-      [&got_error](zx_status_t status) { got_error = true; });
+  echo.set_error_handler([&got_error](zx_status_t status) { got_error = true; });
   env->ConnectToService(echo.NewRequest());
 
   // talk with the service once and assert it's done
@@ -264,12 +259,10 @@ TEST_F(EnclosingEnvTest, OutErrPassing) {
 class FakeLoader : public fuchsia::sys::Loader {
  public:
   FakeLoader() {
-    loader_service_ = std::make_shared<vfs::Service>(
-        [this](zx::channel channel, async_dispatcher_t* dispatcher) {
+    loader_service_ =
+        std::make_shared<vfs::Service>([this](zx::channel channel, async_dispatcher_t* dispatcher) {
           bindings_.AddBinding(
-              this,
-              fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)),
-              dispatcher);
+              this, fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)), dispatcher);
         });
   }
 
@@ -296,8 +289,7 @@ TEST_F(EnclosingEnvTest, CanLaunchMoreThanOneService) {
   std::vector<std::string> urls;
   std::vector<std::string> svc_names;
   for (int i = 0; i < 3; i++) {
-    auto url = fxl::StringPrintf(
-        "fuchsia-pkg://fuchsia.com/dummy%d#meta/dummy%d.cmx", i, i);
+    auto url = fxl::StringPrintf("fuchsia-pkg://fuchsia.com/dummy%d#meta/dummy%d.cmx", i, i);
     auto svc_name = fxl::StringPrintf("service%d", i);
     LaunchInfo linfo;
     linfo.url = url;
@@ -318,12 +310,9 @@ TEST_F(EnclosingEnvTest, CanLaunchMoreThanOneService) {
 
 class FakeDebugData : public fuchsia::debugdata::DebugData {
  public:
-  void Publish(std::string data_sink, ::zx::vmo data) override {
-    call_count_++;
-  }
+  void Publish(std::string data_sink, ::zx::vmo data) override { call_count_++; }
 
-  void LoadConfig(std::string config_name,
-                  LoadConfigCallback callback) override {
+  void LoadConfig(std::string config_name, LoadConfigCallback callback) override {
     // not implemented
   }
 
@@ -346,8 +335,7 @@ TEST_F(EnclosingEnvTest, DebugDataServicePlumbedCorrectly) {
 
   // Add to first enclosing env and override plumbing
   EnvironmentServices::ParentOverrides parent_overrides;
-  parent_overrides.debug_data_service_ =
-      std::make_shared<vfs::Service>(debug_data.GetHandler());
+  parent_overrides.debug_data_service_ = std::make_shared<vfs::Service>(debug_data.GetHandler());
   auto svc = CreateServicesWithParentOverrides(std::move(parent_overrides));
 
   auto env = CreateNewEnclosingEnvironment("test-env1", std::move(svc));

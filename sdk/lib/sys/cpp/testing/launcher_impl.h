@@ -18,15 +18,12 @@ class LauncherImpl : public fuchsia::sys::Launcher {
     bindings_.AddBinding(this, std::move(launcher));
   }
 
-  ::fidl::InterfaceRequest<fuchsia::sys::Launcher> NewRequest() {
-    return launcher_.NewRequest();
-  }
+  ::fidl::InterfaceRequest<fuchsia::sys::Launcher> NewRequest() { return launcher_.NewRequest(); }
 
   // Overrides stdout and stderr to current stdout and stderr if not passed in
   // |launch_info| and creates a component.
   void CreateComponent(fuchsia::sys::LaunchInfo launch_info,
-                       fidl::InterfaceRequest<fuchsia::sys::ComponentController>
-                           request) override;
+                       fidl::InterfaceRequest<fuchsia::sys::ComponentController> request) override;
 
  private:
   fuchsia::sys::LauncherPtr launcher_;

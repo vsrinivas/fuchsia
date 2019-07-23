@@ -25,8 +25,7 @@ zx_status_t Directory::Lookup(const std::string& name, Node** out_node) const {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Directory::CreateConnection(
-    uint32_t flags, std::unique_ptr<Connection>* connection) {
+zx_status_t Directory::CreateConnection(uint32_t flags, std::unique_ptr<Connection>* connection) {
   *connection = std::make_unique<internal::DirectoryConnection>(flags, this);
   return ZX_OK;
 }
@@ -34,8 +33,7 @@ zx_status_t Directory::CreateConnection(
 zx_status_t Directory::ValidatePath(const char* path, size_t path_len) {
   bool starts_with_dot_dot = (path_len > 1 && path[0] == '.' && path[1] == '.');
   if (path_len > NAME_MAX || (path_len == 2 && starts_with_dot_dot) ||
-      (path_len > 2 && starts_with_dot_dot && path[2] == '/') ||
-      (path_len > 0 && path[0] == '/')) {
+      (path_len > 2 && starts_with_dot_dot && path[2] == '/') || (path_len > 0 && path[0] == '/')) {
     return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
@@ -45,8 +43,7 @@ NodeKind::Type Directory::GetKind() const {
   return NodeKind::kDirectory | NodeKind::kReadable | NodeKind::kWritable;
 }
 
-zx_status_t Directory::GetAttr(
-    fuchsia::io::NodeAttributes* out_attributes) const {
+zx_status_t Directory::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
   out_attributes->mode = fuchsia::io::MODE_TYPE_DIRECTORY | V_IRUSR;
   out_attributes->id = fuchsia::io::INO_UNKNOWN;
   out_attributes->content_size = 0;
@@ -57,9 +54,8 @@ zx_status_t Directory::GetAttr(
   return ZX_OK;
 }
 
-zx_status_t Directory::WalkPath(const char* path, size_t path_len,
-                                const char** out_path, size_t* out_len,
-                                std::string* out_key, bool* out_is_self) {
+zx_status_t Directory::WalkPath(const char* path, size_t path_len, const char** out_path,
+                                size_t* out_len, std::string* out_key, bool* out_is_self) {
   *out_path = path;
   *out_len = path_len;
   *out_is_self = false;
@@ -111,9 +107,8 @@ zx_status_t Directory::WalkPath(const char* path, size_t path_len,
   return ZX_OK;
 }
 
-zx_status_t Directory::LookupPath(const char* path, size_t path_len,
-                                  bool* out_is_dir, Node** out_node,
-                                  const char** out_path, size_t* out_len) {
+zx_status_t Directory::LookupPath(const char* path, size_t path_len, bool* out_is_dir,
+                                  Node** out_node, const char** out_path, size_t* out_len) {
   Node* current_node = this;
   size_t new_path_len = path_len;
   const char* new_path = path;
@@ -121,8 +116,7 @@ zx_status_t Directory::LookupPath(const char* path, size_t path_len,
   do {
     std::string key;
     bool is_self = false;
-    zx_status_t status = WalkPath(new_path, new_path_len, &new_path,
-                                  &new_path_len, &key, &is_self);
+    zx_status_t status = WalkPath(new_path, new_path_len, &new_path, &new_path_len, &key, &is_self);
     if (status != ZX_OK) {
       return status;
     }
@@ -148,32 +142,26 @@ zx_status_t Directory::LookupPath(const char* path, size_t path_len,
   return ZX_OK;
 }
 
-void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode,
-                     const char* path, size_t path_len, zx::channel request,
-                     async_dispatcher_t* dispatcher) {
+void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, const char* path,
+                     size_t path_len, zx::channel request, async_dispatcher_t* dispatcher) {
   if (!Flags::InputPrecondition(open_flags)) {
-    Node::SendOnOpenEventOnError(open_flags, std::move(request),
-                                 ZX_ERR_INVALID_ARGS);
+    Node::SendOnOpenEventOnError(open_flags, std::move(request), ZX_ERR_INVALID_ARGS);
     return;
   }
   if (Flags::ShouldCloneWithSameRights(open_flags)) {
-    Node::SendOnOpenEventOnError(open_flags, std::move(request),
-                                 ZX_ERR_INVALID_ARGS);
+    Node::SendOnOpenEventOnError(open_flags, std::move(request), ZX_ERR_INVALID_ARGS);
     return;
   }
   if (!Flags::IsNodeReference(open_flags) && !(open_flags & Flags::kFsRights)) {
-    Node::SendOnOpenEventOnError(open_flags, std::move(request),
-                                 ZX_ERR_INVALID_ARGS);
+    Node::SendOnOpenEventOnError(open_flags, std::move(request), ZX_ERR_INVALID_ARGS);
     return;
   }
   if (!Flags::StricterOrSameRights(open_flags, parent_flags)) {
-    Node::SendOnOpenEventOnError(open_flags, std::move(request),
-                                 ZX_ERR_ACCESS_DENIED);
+    Node::SendOnOpenEventOnError(open_flags, std::move(request), ZX_ERR_ACCESS_DENIED);
     return;
   }
   if ((path_len < 1) || (path_len > PATH_MAX)) {
-    Node::SendOnOpenEventOnError(open_flags, std::move(request),
-                                 ZX_ERR_BAD_PATH);
+    Node::SendOnOpenEventOnError(open_flags, std::move(request), ZX_ERR_BAD_PATH);
     return;
   }
 
@@ -181,8 +169,7 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode,
   bool path_is_dir = false;
   size_t new_path_len = path_len;
   const char* new_path = path;
-  zx_status_t status =
-      LookupPath(path, path_len, &path_is_dir, &n, &new_path, &new_path_len);
+  zx_status_t status = LookupPath(path, path_len, &path_is_dir, &n, &new_path, &new_path_len);
   if (status != ZX_OK) {
     return SendOnOpenEventOnError(open_flags, std::move(request), status);
   }
@@ -205,9 +192,8 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode,
     if (status != ZX_OK) {
       return SendOnOpenEventOnError(open_flags, std::move(request), status);
     }
-    temp_dir->Open(
-        open_flags, mode, std::string(new_path, new_path_len),
-        fidl::InterfaceRequest<fuchsia::io::Node>(std::move(request)));
+    temp_dir->Open(open_flags, mode, std::string(new_path, new_path_len),
+                   fidl::InterfaceRequest<fuchsia::io::Node>(std::move(request)));
     return;
   }
 

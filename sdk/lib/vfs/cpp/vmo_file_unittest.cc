@@ -36,15 +36,13 @@ zx::vmo MakeTestVmo() {
   return ret;
 }
 
-fuchsia::io::FileSyncPtr OpenAsFile(vfs::internal::Node* node,
-                                    async_dispatcher_t* dispatcher,
+fuchsia::io::FileSyncPtr OpenAsFile(vfs::internal::Node* node, async_dispatcher_t* dispatcher,
                                     bool writable = false) {
   zx::channel local, remote;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
-  EXPECT_EQ(ZX_OK,
-            node->Serve(fuchsia::io::OPEN_RIGHT_READABLE |
-                            (writable ? fuchsia::io::OPEN_RIGHT_WRITABLE : 0),
-                        std::move(remote), dispatcher));
+  EXPECT_EQ(ZX_OK, node->Serve(fuchsia::io::OPEN_RIGHT_READABLE |
+                                   (writable ? fuchsia::io::OPEN_RIGHT_WRITABLE : 0),
+                               std::move(remote), dispatcher));
   fuchsia::io::FileSyncPtr ret;
   ret.Bind(std::move(local));
   return ret;
@@ -67,8 +65,7 @@ TEST(VmoFile, ConstructTransferOwnership) {
 TEST(VmoFile, Reading) {
   // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000,
-                    vfs::VmoFile::WriteOption::READ_ONLY,
+  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -92,8 +89,7 @@ TEST(VmoFile, Reading) {
 TEST(VmoFile, GetAttrReadOnly) {
   // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000,
-                    vfs::VmoFile::WriteOption::READ_ONLY,
+  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -108,15 +104,13 @@ TEST(VmoFile, GetAttrReadOnly) {
   EXPECT_EQ(ZX_OK, status);
   EXPECT_EQ(1000u, attr.content_size);
   EXPECT_EQ(1000u, attr.storage_size);
-  EXPECT_EQ(fuchsia::io::MODE_TYPE_FILE | fuchsia::io::OPEN_RIGHT_READABLE,
-            attr.mode);
+  EXPECT_EQ(fuchsia::io::MODE_TYPE_FILE | fuchsia::io::OPEN_RIGHT_READABLE, attr.mode);
 }
 
 TEST(VmoFile, GetAttrWritable) {
   // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000,
-                    vfs::VmoFile::WriteOption::WRITABLE,
+  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -139,8 +133,7 @@ TEST(VmoFile, GetAttrWritable) {
 TEST(VmoFile, ReadOnlyNoSharing) {
   // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000,
-                    vfs::VmoFile::WriteOption::READ_ONLY,
+  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -173,8 +166,7 @@ TEST(VmoFile, ReadOnlyNoSharing) {
 TEST(VmoFile, WritableNoSharing) {
   // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000,
-                    vfs::VmoFile::WriteOption::WRITABLE,
+  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -246,8 +238,7 @@ TEST(VmoFile, ReadOnlyDuplicate) {
 TEST(VmoFile, WritableDuplicate) {
   // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000,
-                    vfs::VmoFile::WriteOption::WRITABLE);
+  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   loop.StartThread("vfs test thread");
@@ -287,8 +278,7 @@ TEST(VmoFile, WritableDuplicate) {
 TEST(VmoFile, ReadOnlyCopyOnWrite) {
   // Create a VmoFile wrapping the VMO.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 0, 4096,
-                    vfs::VmoFile::WriteOption::READ_ONLY,
+  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 0, 4096, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::CLONE_COW);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -327,8 +317,7 @@ TEST(VmoFile, ReadOnlyCopyOnWrite) {
 TEST(VmoFile, WritableCopyOnWrite) {
   // Create a VmoFile wrapping the VMO.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 0, 4096,
-                    vfs::VmoFile::WriteOption::WRITABLE,
+  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 0, 4096, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::CLONE_COW);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -373,8 +362,7 @@ TEST(VmoFile, VmoWithNoRights) {
   zx::vmo test_vmo = MakeTestVmo();
   zx::vmo bad_vmo;
   ASSERT_EQ(ZX_OK, test_vmo.duplicate(0, &bad_vmo));
-  vfs::VmoFile file(std::move(bad_vmo), 24, 1000,
-                    vfs::VmoFile::WriteOption::WRITABLE);
+  vfs::VmoFile file(std::move(bad_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   loop.StartThread("vfs test thread");
@@ -404,8 +392,7 @@ TEST(VmoFile, UnalignedCopyOnWrite) {
   // Create a VmoFile wrapping 1000 bytes of the VMO starting at offset 24.
   // This offset is not page-aligned, so cloning will fail.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000,
-                    vfs::VmoFile::WriteOption::WRITABLE,
+  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::CLONE_COW);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);

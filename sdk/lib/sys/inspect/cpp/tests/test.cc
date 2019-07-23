@@ -10,8 +10,9 @@
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
-#include <src/lib/fxl/strings/substitute.h>
 #include <zircon/device/vfs.h>
+
+#include <src/lib/fxl/strings/substitute.h>
 
 #include "gmock/gmock.h"
 #include "src/lib/files/glob.h"

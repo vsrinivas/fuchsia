@@ -5,13 +5,13 @@
 #ifndef LIB_UI_SCENIC_CPP_COMMANDS_H_
 #define LIB_UI_SCENIC_CPP_COMMANDS_H_
 
-#include <string>
-
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/zx/eventpair.h>
+
+#include <string>
 
 namespace scenic {
 

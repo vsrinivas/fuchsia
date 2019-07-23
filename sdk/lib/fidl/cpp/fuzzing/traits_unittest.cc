@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/fuzzing/traits.h>
-
-#include <lib/fidl/cpp/fuzzing/traits.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fidl/cpp/vector.h>
 

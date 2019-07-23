@@ -4,9 +4,10 @@
 
 #include "lib/vfs/cpp/service.h"
 
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fidl/cpp/binding_set.h>
+
+#include <fidl/examples/echo/cpp/fidl.h>
 
 #include "fuchsia/io/cpp/fidl.h"
 #include "lib/gtest/real_loop_fixture.h"

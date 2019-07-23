@@ -21,13 +21,11 @@ namespace {
 
 class DummyTestFile : public vfs::internal::File {
  public:
-  zx_status_t ReadAt(uint64_t count, uint64_t offset,
-                     std::vector<uint8_t>* out_data) override {
+  zx_status_t ReadAt(uint64_t count, uint64_t offset, std::vector<uint8_t>* out_data) override {
     return ZX_OK;
   }
 
-  zx_status_t WriteAt(std::vector<uint8_t> data, uint64_t offset,
-                      uint64_t* out_actual) override {
+  zx_status_t WriteAt(std::vector<uint8_t> data, uint64_t offset, uint64_t* out_actual) override {
     return ZX_OK;
   }
 
@@ -39,10 +37,10 @@ class DummyTestFile : public vfs::internal::File {
 void CallBindTwiceAndTest(vfs::internal::Connection* connection) {
   fuchsia::io::NodePtr ptr1;
   fuchsia::io::NodePtr ptr2;
-  ASSERT_EQ(ZX_OK, connection->Bind(ptr1.NewRequest().TakeChannel(),
-                                    async_get_default_dispatcher()));
-  ASSERT_EQ(ZX_ERR_BAD_STATE, connection->Bind(ptr2.NewRequest().TakeChannel(),
-                                               async_get_default_dispatcher()));
+  ASSERT_EQ(ZX_OK,
+            connection->Bind(ptr1.NewRequest().TakeChannel(), async_get_default_dispatcher()));
+  ASSERT_EQ(ZX_ERR_BAD_STATE,
+            connection->Bind(ptr2.NewRequest().TakeChannel(), async_get_default_dispatcher()));
 }
 
 TEST(ConnectionBindCalledTwice, DirectoryConnection) {
@@ -79,9 +77,8 @@ class DummyTestNode : public vfs::internal::Node {
 
   vfs::NodeKind::Type GetKind() const override { return vfs::NodeKind::kFile; }
 
-  zx_status_t CreateConnection(
-      uint32_t flags,
-      std::unique_ptr<vfs::internal::Connection>* connection) override {
+  zx_status_t CreateConnection(uint32_t flags,
+                               std::unique_ptr<vfs::internal::Connection>* connection) override {
     return Node::CreateConnection(flags, connection);
   }
 };
@@ -91,8 +88,7 @@ TEST(ConenctionTest, ConnectionPassedErrorInClose) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   loop.StartThread("vfs test thread");
   fuchsia::io::NodeSyncPtr ptr;
-  ASSERT_EQ(ZX_OK,
-            node.Serve(0, ptr.NewRequest().TakeChannel(), loop.dispatcher()));
+  ASSERT_EQ(ZX_OK, node.Serve(0, ptr.NewRequest().TakeChannel(), loop.dispatcher()));
   zx_status_t status = -1;
   ASSERT_EQ(ZX_OK, ptr->Close(&status));
   ASSERT_EQ(ZX_ERR_UNAVAILABLE, status);

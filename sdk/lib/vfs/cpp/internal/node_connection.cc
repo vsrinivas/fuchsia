@@ -16,8 +16,7 @@ NodeConnection::NodeConnection(uint32_t flags, vfs::internal::Node* vn)
 
 NodeConnection::~NodeConnection() = default;
 
-zx_status_t NodeConnection::BindInternal(zx::channel request,
-                                         async_dispatcher_t* dispatcher) {
+zx_status_t NodeConnection::BindInternal(zx::channel request, async_dispatcher_t* dispatcher) {
   if (binding_.is_bound()) {
     return ZX_ERR_BAD_STATE;
   }
@@ -29,38 +28,30 @@ zx_status_t NodeConnection::BindInternal(zx::channel request,
   return ZX_OK;
 }
 
-void NodeConnection::Clone(uint32_t flags,
-                           fidl::InterfaceRequest<fuchsia::io::Node> object) {
+void NodeConnection::Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) {
   Connection::Clone(vn_, flags, object.TakeChannel(), binding_.dispatcher());
 }
 
-void NodeConnection::Close(CloseCallback callback) {
-  Connection::Close(vn_, std::move(callback));
-}
+void NodeConnection::Close(CloseCallback callback) { Connection::Close(vn_, std::move(callback)); }
 
 void NodeConnection::Describe(DescribeCallback callback) {
   Connection::Describe(vn_, std::move(callback));
 }
 
-void NodeConnection::Sync(SyncCallback callback) {
-  Connection::Sync(vn_, std::move(callback));
-}
+void NodeConnection::Sync(SyncCallback callback) { Connection::Sync(vn_, std::move(callback)); }
 
 void NodeConnection::GetAttr(GetAttrCallback callback) {
   Connection::GetAttr(vn_, std::move(callback));
 }
 
-void NodeConnection::SetAttr(uint32_t flags,
-                             fuchsia::io::NodeAttributes attributes,
+void NodeConnection::SetAttr(uint32_t flags, fuchsia::io::NodeAttributes attributes,
                              SetAttrCallback callback) {
   Connection::SetAttr(vn_, flags, attributes, std::move(callback));
 }
 
-void NodeConnection::Ioctl(uint32_t opcode, uint64_t max_out,
-                           std::vector<zx::handle> handles,
+void NodeConnection::Ioctl(uint32_t opcode, uint64_t max_out, std::vector<zx::handle> handles,
                            std::vector<uint8_t> in, IoctlCallback callback) {
-  Connection::Ioctl(vn_, opcode, max_out, std::move(handles), std::move(in),
-                    std::move(callback));
+  Connection::Ioctl(vn_, opcode, max_out, std::move(handles), std::move(in), std::move(callback));
 }
 
 void NodeConnection::SendOnOpenEvent(zx_status_t status) {

@@ -32,9 +32,7 @@ class TestHarnessLauncher final {
   TestHarnessLauncher(const TestHarnessLauncher&) = delete;
   TestHarnessLauncher& operator=(const TestHarnessLauncher&) = delete;
 
-  fuchsia::modular::testing::TestHarnessPtr& test_harness() {
-    return test_harness_;
-  }
+  fuchsia::modular::testing::TestHarnessPtr& test_harness() { return test_harness_; }
 
  private:
   // In order to avoid depending on the owning thread's run loop, the test

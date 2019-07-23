@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/fidl/echo_client_cpp/echo_client_app.h"
-
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/test_loop_fixture.h>
@@ -11,7 +9,10 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/sys/cpp/testing/fake_component.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
+
 #include <memory>
+
+#include "garnet/examples/fidl/echo_client_cpp/echo_client_app.h"
 
 // This test file demonstrates how to use |ComponentContextProvider|.
 
@@ -26,16 +27,12 @@ class FakeEcho : public Echo {
  public:
   static const char kURL[];
 
-  fidl::InterfaceRequestHandler<Echo> GetHandler() {
-    return bindings_.GetHandler(this);
-  }
+  fidl::InterfaceRequestHandler<Echo> GetHandler() { return bindings_.GetHandler(this); }
 
   FakeEcho() { component_.AddPublicService(bindings_.GetHandler(this)); }
 
   // Fake implementation of server-side logic
-  void EchoString(fidl::StringPtr value, EchoStringCallback callback) {
-    callback(answer_);
-  }
+  void EchoString(fidl::StringPtr value, EchoStringCallback callback) { callback(answer_); }
 
   void SetAnswer(fidl::StringPtr answer) { answer_ = answer; }
 
@@ -67,8 +64,7 @@ class TestWithContextExampleTest : public gtest::TestLoopFixture {
   void SetUp() override {
     TestLoopFixture::SetUp();
     echoClientApp_.reset(new EchoClientAppForTest(provider_.TakeContext()));
-    provider_.service_directory_provider()->AddService(
-        fake_launcher_.GetHandler());
+    provider_.service_directory_provider()->AddService(fake_launcher_.GetHandler());
 
     fake_echo_.reset(new FakeEcho());
     fake_echo_->Register(fake_launcher_);
@@ -97,8 +93,7 @@ TEST_F(TestWithContextExampleTest, EchoString_HelloWorld_GoodbyeWorld) {
   fidl::StringPtr message = "bogus";
   Start(FakeEcho::kURL);
   SetAnswer("Goodbye World!");
-  echo()->EchoString("Hello World!",
-                     [&](::fidl::StringPtr retval) { message = retval; });
+  echo()->EchoString("Hello World!", [&](::fidl::StringPtr retval) { message = retval; });
   RunLoopUntilIdle();
   EXPECT_EQ("Goodbye World!", message);
 }
@@ -108,8 +103,7 @@ TEST_F(TestWithContextExampleTest, EchoString_HelloWorld_GoodbyeWorld) {
 // server.
 TEST_F(TestWithContextExampleTest, EchoString_NoStart) {
   fidl::StringPtr message = "bogus";
-  echo()->EchoString("Hello World!",
-                     [&](::fidl::StringPtr retval) { message = retval; });
+  echo()->EchoString("Hello World!", [&](::fidl::StringPtr retval) { message = retval; });
   RunLoopUntilIdle();
   EXPECT_EQ("bogus", message);
 }
@@ -123,8 +117,7 @@ class FakeEchoInContextExampleTest : public gtest::TestLoopFixture {
   void SetUp() override {
     TestLoopFixture::SetUp();
     fake_echo_.reset(new FakeEcho());
-    provider_.service_directory_provider()->AddService(
-        fake_echo_->GetHandler());
+    provider_.service_directory_provider()->AddService(fake_echo_->GetHandler());
   }
 
   void TearDown() override { TestLoopFixture::TearDown(); }
@@ -147,8 +140,7 @@ TEST_F(FakeEchoInContextExampleTest, EchoString_HelloWorld_GoodbyeWorld) {
   fidl::StringPtr message = "bogus";
   SetAnswer("Goodbye World!");
   auto echo_ptr = echo();
-  echo_ptr->EchoString("Hello World!",
-                       [&](::fidl::StringPtr retval) { message = retval; });
+  echo_ptr->EchoString("Hello World!", [&](::fidl::StringPtr retval) { message = retval; });
   RunLoopUntilIdle();
   EXPECT_EQ("Goodbye World!", message);
 }

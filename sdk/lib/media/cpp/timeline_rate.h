@@ -36,23 +36,20 @@ class TimelineRate {
   // precision.
   static void Product(uint32_t a_subject_delta, uint32_t a_reference_delta,
                       uint32_t b_subject_delta, uint32_t b_reference_delta,
-                      uint32_t* product_subject_delta,
-                      uint32_t* product_reference_delta, bool exact = true);
+                      uint32_t* product_subject_delta, uint32_t* product_reference_delta,
+                      bool exact = true);
 
   // Produces the product of the rates and the int64_t as an int64_t. Returns
   // kOverflow on overflow.
-  static int64_t Scale(int64_t value, uint32_t subject_delta,
-                       uint32_t reference_delta);
+  static int64_t Scale(int64_t value, uint32_t subject_delta, uint32_t reference_delta);
 
   // Returns the product of the rates. If exact is true, DCHECKs on loss of
   // precision.
-  static TimelineRate Product(TimelineRate a, TimelineRate b,
-                              bool exact = true) {
+  static TimelineRate Product(TimelineRate a, TimelineRate b, bool exact = true) {
     uint32_t result_subject_delta;
     uint32_t result_reference_delta;
-    Product(a.subject_delta(), a.reference_delta(), b.subject_delta(),
-            b.reference_delta(), &result_subject_delta, &result_reference_delta,
-            exact);
+    Product(a.subject_delta(), a.reference_delta(), b.subject_delta(), b.reference_delta(),
+            &result_subject_delta, &result_reference_delta, exact);
     return TimelineRate(result_subject_delta, result_reference_delta);
   }
 
@@ -62,14 +59,10 @@ class TimelineRate {
       : subject_delta_(subject_delta), reference_delta_(1) {}
 
   explicit TimelineRate(float rate_as_float)
-      : subject_delta_(
-            rate_as_float > 1.0f
-                ? kFloatFactor
-                : static_cast<uint32_t>(kFloatFactor * rate_as_float)),
-        reference_delta_(
-            rate_as_float > 1.0f
-                ? static_cast<uint32_t>(kFloatFactor / rate_as_float)
-                : kFloatFactor) {
+      : subject_delta_(rate_as_float > 1.0f ? kFloatFactor
+                                            : static_cast<uint32_t>(kFloatFactor * rate_as_float)),
+        reference_delta_(rate_as_float > 1.0f ? static_cast<uint32_t>(kFloatFactor / rate_as_float)
+                                              : kFloatFactor) {
     // The expressions above are intended to provide good precision for
     // 'reasonable' playback rate values (say in the range 0.0 to 4.0). The
     // expressions always produce a ratio of kFloatFactor and a number smaller
@@ -105,9 +98,7 @@ class TimelineRate {
   }
 
   // Scales the value by this rate. Returns kOverflow on overflow.
-  int64_t Scale(int64_t value) const {
-    return Scale(value, subject_delta_, reference_delta_);
-  }
+  int64_t Scale(int64_t value) const { return Scale(value, subject_delta_, reference_delta_); }
 
   uint32_t subject_delta() const { return subject_delta_; }
   uint32_t reference_delta() const { return reference_delta_; }
@@ -123,8 +114,7 @@ class TimelineRate {
 
 // Tests two rates for equality.
 inline bool operator==(TimelineRate a, TimelineRate b) {
-  return a.subject_delta() == b.subject_delta() &&
-         a.reference_delta() == b.reference_delta();
+  return a.subject_delta() == b.subject_delta() && a.reference_delta() == b.reference_delta();
 }
 
 // Tests two rates for inequality.
@@ -150,9 +140,7 @@ inline int64_t operator*(int64_t a, TimelineRate b) { return b.Scale(a); }
 
 // Returns the the int64_t divided by the rate. Returns kOverflow on
 // overflow.
-inline int64_t operator/(int64_t a, TimelineRate b) {
-  return b.Inverse().Scale(a);
-}
+inline int64_t operator/(int64_t a, TimelineRate b) { return b.Inverse().Scale(a); }
 
 }  // namespace media
 

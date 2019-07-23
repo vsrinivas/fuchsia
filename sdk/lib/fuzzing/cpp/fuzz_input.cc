@@ -4,10 +4,10 @@
 
 #include "fuzz_input.h"
 
+#include <string.h>
+
 #include <cstddef>
 #include <cstdint>
-
-#include <string.h>
 
 namespace fuzzing {
 

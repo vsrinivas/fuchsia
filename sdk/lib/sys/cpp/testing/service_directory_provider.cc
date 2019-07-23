@@ -7,21 +7,18 @@
 namespace sys {
 namespace testing {
 
-ServiceDirectoryProvider::ServiceDirectoryProvider(
-    async_dispatcher_t* dispatcher)
+ServiceDirectoryProvider::ServiceDirectoryProvider(async_dispatcher_t* dispatcher)
     : svc_dir_(std::make_unique<vfs::PseudoDir>()) {
   fidl::InterfaceHandle<fuchsia::io::Directory> directory_ptr;
-  svc_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE |
-                      fuchsia::io::OPEN_RIGHT_WRITABLE,
+  svc_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
                   directory_ptr.NewRequest().TakeChannel(), dispatcher);
-  service_directory_ =
-      std::make_shared<sys::ServiceDirectory>(directory_ptr.TakeChannel());
+  service_directory_ = std::make_shared<sys::ServiceDirectory>(directory_ptr.TakeChannel());
 }
 
 ServiceDirectoryProvider::~ServiceDirectoryProvider() = default;
 
-zx_status_t ServiceDirectoryProvider::AddService(
-    std::unique_ptr<vfs::Service> service, const std::string& name) const {
+zx_status_t ServiceDirectoryProvider::AddService(std::unique_ptr<vfs::Service> service,
+                                                 const std::string& name) const {
   return svc_dir_->AddEntry(name, std::move(service));
 }
 

@@ -8,15 +8,12 @@ namespace vfs {
 
 VmoFile::VmoFile(zx::unowned_vmo unowned_vmo, size_t offset, size_t length,
                  WriteOption write_option, Sharing vmo_sharing)
-    : offset_(offset),
-      length_(length),
-      write_option_(write_option),
-      vmo_sharing_(vmo_sharing) {
+    : offset_(offset), length_(length), write_option_(write_option), vmo_sharing_(vmo_sharing) {
   unowned_vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_);
 }
 
-VmoFile::VmoFile(zx::vmo vmo, size_t offset, size_t length,
-                 WriteOption write_option, Sharing vmo_sharing)
+VmoFile::VmoFile(zx::vmo vmo, size_t offset, size_t length, WriteOption write_option,
+                 Sharing vmo_sharing)
     : offset_(offset),
       length_(length),
       write_option_(write_option),
@@ -38,22 +35,20 @@ void VmoFile::Describe(fuchsia::io::NodeInfo* out_info) {
                          &temp_vmo) != ZX_OK) {
         return;
       }
-      out_info->vmofile() = fuchsia::io::Vmofile{
-          .vmo = std::move(temp_vmo), .length = length_, .offset = offset_};
+      out_info->vmofile() =
+          fuchsia::io::Vmofile{.vmo = std::move(temp_vmo), .length = length_, .offset = offset_};
       break;
     case Sharing::CLONE_COW:
-      if (vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, offset_, length_,
-                            &temp_vmo) != ZX_OK) {
+      if (vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, offset_, length_, &temp_vmo) != ZX_OK) {
         return;
       }
-      out_info->vmofile() = fuchsia::io::Vmofile{
-          .vmo = std::move(temp_vmo), .length = length_, .offset = offset_};
+      out_info->vmofile() =
+          fuchsia::io::Vmofile{.vmo = std::move(temp_vmo), .length = length_, .offset = offset_};
       break;
   }
 }
 
-zx_status_t VmoFile::ReadAt(uint64_t length, uint64_t offset,
-                            std::vector<uint8_t>* out_data) {
+zx_status_t VmoFile::ReadAt(uint64_t length, uint64_t offset, std::vector<uint8_t>* out_data) {
   if (length == 0u || offset >= length_) {
     return ZX_OK;
   }
@@ -67,8 +62,7 @@ zx_status_t VmoFile::ReadAt(uint64_t length, uint64_t offset,
   return vmo_.read(out_data->data(), offset_ + offset, length);
 }
 
-zx_status_t VmoFile::WriteAt(std::vector<uint8_t> data, uint64_t offset,
-                             uint64_t* out_actual) {
+zx_status_t VmoFile::WriteAt(std::vector<uint8_t> data, uint64_t offset, uint64_t* out_actual) {
   size_t length = data.size();
   if (length == 0u) {
     *out_actual = 0u;
@@ -95,12 +89,10 @@ size_t VmoFile::GetCapacity() { return length_; }
 
 size_t VmoFile::GetLength() { return length_; }
 
-zx_status_t VmoFile::GetAttr(
-    fuchsia::io::NodeAttributes* out_attributes) const {
+zx_status_t VmoFile::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
   out_attributes->mode =
       fuchsia::io::MODE_TYPE_FILE | fuchsia::io::OPEN_RIGHT_READABLE |
-      (write_option_ == WriteOption::WRITABLE ? fuchsia::io::OPEN_RIGHT_WRITABLE
-                                              : 0);
+      (write_option_ == WriteOption::WRITABLE ? fuchsia::io::OPEN_RIGHT_WRITABLE : 0);
   out_attributes->id = fuchsia::io::INO_UNKNOWN;
   out_attributes->content_size = length_;
   out_attributes->storage_size = length_;

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test/misc/cpp/fidl.h>
 #include <lib/fidl/cpp/comparison.h>
 #include <lib/fidl/cpp/test/test_util.h>
 
 #include <vector>
+
+#include <fidl/test/misc/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 

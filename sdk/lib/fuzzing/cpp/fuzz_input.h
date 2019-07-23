@@ -16,9 +16,8 @@ namespace fuzzing {
 // API supports zero-copy and single-copy methods for extracting data, both of
 // which can fail.
 class FuzzInput final {
-public:
-  FuzzInput(const uint8_t* data, size_t remaining)
-    : data_(data), remaining_(remaining) {}
+ public:
+  FuzzInput(const uint8_t* data, size_t remaining) : data_(data), remaining_(remaining) {}
 
   // Consumes exactly |size| bytes of underlying data without copying. Returns
   // a pointer to bytes on success or |nullptr| on failure.
@@ -39,7 +38,7 @@ public:
   // data pointed to by |out| may have been modified.
   bool CopyBytes(uint8_t* out, size_t size);
 
-private:
+ private:
   // Unowned raw pointer to remaining data in fuzzing input data. It is assumed
   // that the fuzzing input buffer will outlive this |FuzzInput| instance.
   const uint8_t* data_;
@@ -56,4 +55,4 @@ private:
 
 }  // namespace fuzzing
 
-#endif // LIB_FUZZING_CPP_FUZZ_INPUT_H_
+#endif  // LIB_FUZZING_CPP_FUZZ_INPUT_H_

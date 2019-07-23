@@ -4,9 +4,9 @@
 
 #include "lib/svc/dir.h"
 
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 
 #include <thread>
@@ -16,13 +16,11 @@
 namespace svc {
 namespace {
 
-static void connect(void* context, const char* service_name,
-                    zx_handle_t service_request) {
+static void connect(void* context, const char* service_name, zx_handle_t service_request) {
   EXPECT_EQ(std::string("foobar"), service_name);
   zx::channel binding(service_request);
   zx_signals_t observed;
-  EXPECT_EQ(ZX_OK, binding.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(),
-                                    &observed));
+  EXPECT_EQ(ZX_OK, binding.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
   EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
             binding.read(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, nullptr, 0, 0, nullptr, nullptr));
   EXPECT_EQ(ZX_OK, binding.write(0, "ok", 2, 0, 0));
@@ -37,15 +35,11 @@ TEST_F(ServiceTest, Control) {
   std::thread child([this, dir_request = std::move(dir_request)]() mutable {
     svc_dir_t* dir = nullptr;
     EXPECT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
-    EXPECT_EQ(ZX_OK,
-              svc_dir_add_service(dir, "svc", "foobar", nullptr, connect));
-    EXPECT_EQ(ZX_OK,
-              svc_dir_add_service(dir, "svc", "baz", nullptr, nullptr));
-    EXPECT_EQ(ZX_ERR_ALREADY_EXISTS,
-              svc_dir_add_service(dir, "svc", "baz", nullptr, nullptr));
+    EXPECT_EQ(ZX_OK, svc_dir_add_service(dir, "svc", "foobar", nullptr, connect));
+    EXPECT_EQ(ZX_OK, svc_dir_add_service(dir, "svc", "baz", nullptr, nullptr));
+    EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, svc_dir_add_service(dir, "svc", "baz", nullptr, nullptr));
     EXPECT_EQ(ZX_OK, svc_dir_remove_service(dir, "svc", "baz"));
-    EXPECT_EQ(ZX_OK,
-              svc_dir_add_service(dir, "another", "qux", nullptr, nullptr));
+    EXPECT_EQ(ZX_OK, svc_dir_add_service(dir, "another", "qux", nullptr, nullptr));
 
     RunLoop();
 
@@ -58,16 +52,14 @@ TEST_F(ServiceTest, Control) {
   fdio_service_connect_at(dir.get(), "svc/foobar", request.release());
   EXPECT_EQ(ZX_OK, svc.write(0, "hello", 5, 0, 0));
   zx_signals_t observed;
-  EXPECT_EQ(ZX_OK,
-            svc.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
+  EXPECT_EQ(ZX_OK, svc.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
   EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
             svc.read(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, nullptr, 0, 0, nullptr, nullptr));
 
   // Verify that connection to a removed service fails.
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &svc, &request));
   fdio_service_connect_at(dir.get(), "svc/baz", request.release());
-  EXPECT_EQ(ZX_OK, svc.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
-                                &observed));
+  EXPECT_EQ(ZX_OK, svc.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed));
 
   // Shutdown the service thread.
   QuitLoop();
@@ -76,8 +68,7 @@ TEST_F(ServiceTest, Control) {
   // Verify that connection fails after svc_dir_destroy().
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &svc, &request));
   fdio_service_connect_at(dir.get(), "svc/foobar", request.release());
-  EXPECT_EQ(ZX_OK, svc.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
-                                &observed));
+  EXPECT_EQ(ZX_OK, svc.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed));
 }
 
 TEST_F(ServiceTest, PublishLegacyService) {
@@ -87,10 +78,8 @@ TEST_F(ServiceTest, PublishLegacyService) {
   std::thread child([this, dir_request = std::move(dir_request)]() mutable {
     svc_dir_t* dir = nullptr;
     EXPECT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
-    EXPECT_EQ(ZX_OK,
-              svc_dir_add_service(dir, nullptr, "foobar", nullptr, connect));
-    EXPECT_EQ(ZX_OK,
-              svc_dir_add_service(dir, nullptr, "baz", nullptr, connect));
+    EXPECT_EQ(ZX_OK, svc_dir_add_service(dir, nullptr, "foobar", nullptr, connect));
+    EXPECT_EQ(ZX_OK, svc_dir_add_service(dir, nullptr, "baz", nullptr, connect));
     EXPECT_EQ(ZX_OK, svc_dir_remove_service(dir, nullptr, "baz"));
 
     RunLoop();
@@ -104,16 +93,14 @@ TEST_F(ServiceTest, PublishLegacyService) {
   fdio_service_connect_at(dir.get(), "foobar", request.release());
   EXPECT_EQ(ZX_OK, svc.write(0, "hello", 5, 0, 0));
   zx_signals_t observed;
-  EXPECT_EQ(ZX_OK,
-            svc.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
+  EXPECT_EQ(ZX_OK, svc.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
   EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
             svc.read(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, nullptr, 0, 0, nullptr, nullptr));
 
   // Verify that connection to a removed service fails.
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &svc, &request));
   fdio_service_connect_at(dir.get(), "baz", request.release());
-  EXPECT_EQ(ZX_OK, svc.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
-                                &observed));
+  EXPECT_EQ(ZX_OK, svc.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed));
 
   // Shutdown the service thread.
   QuitLoop();
@@ -122,8 +109,7 @@ TEST_F(ServiceTest, PublishLegacyService) {
   // Verify that connection fails after svc_dir_destroy().
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &svc, &request));
   fdio_service_connect_at(dir.get(), "foobar", request.release());
-  EXPECT_EQ(ZX_OK, svc.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
-                                &observed));
+  EXPECT_EQ(ZX_OK, svc.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed));
 }
 
 }  // namespace

@@ -16,8 +16,7 @@ FileConnection::FileConnection(uint32_t flags, vfs::internal::File* vn)
 
 FileConnection::~FileConnection() = default;
 
-zx_status_t FileConnection::BindInternal(zx::channel request,
-                                         async_dispatcher_t* dispatcher) {
+zx_status_t FileConnection::BindInternal(zx::channel request, async_dispatcher_t* dispatcher) {
   if (binding_.is_bound()) {
     return ZX_ERR_BAD_STATE;
   }
@@ -29,38 +28,30 @@ zx_status_t FileConnection::BindInternal(zx::channel request,
   return ZX_OK;
 }
 
-void FileConnection::Clone(uint32_t flags,
-                           fidl::InterfaceRequest<fuchsia::io::Node> object) {
+void FileConnection::Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) {
   Connection::Clone(vn_, flags, object.TakeChannel(), binding_.dispatcher());
 }
 
-void FileConnection::Close(CloseCallback callback) {
-  Connection::Close(vn_, std::move(callback));
-}
+void FileConnection::Close(CloseCallback callback) { Connection::Close(vn_, std::move(callback)); }
 
 void FileConnection::Describe(DescribeCallback callback) {
   Connection::Describe(vn_, std::move(callback));
 }
 
-void FileConnection::Sync(SyncCallback callback) {
-  Connection::Sync(vn_, std::move(callback));
-}
+void FileConnection::Sync(SyncCallback callback) { Connection::Sync(vn_, std::move(callback)); }
 
 void FileConnection::GetAttr(GetAttrCallback callback) {
   Connection::GetAttr(vn_, std::move(callback));
 }
 
-void FileConnection::SetAttr(uint32_t flags,
-                             fuchsia::io::NodeAttributes attributes,
+void FileConnection::SetAttr(uint32_t flags, fuchsia::io::NodeAttributes attributes,
                              SetAttrCallback callback) {
   Connection::SetAttr(vn_, flags, attributes, std::move(callback));
 }
 
-void FileConnection::Ioctl(uint32_t opcode, uint64_t max_out,
-                           std::vector<zx::handle> handles,
+void FileConnection::Ioctl(uint32_t opcode, uint64_t max_out, std::vector<zx::handle> handles,
                            std::vector<uint8_t> in, IoctlCallback callback) {
-  Connection::Ioctl(vn_, opcode, max_out, std::move(handles), std::move(in),
-                    std::move(callback));
+  Connection::Ioctl(vn_, opcode, max_out, std::move(handles), std::move(in), std::move(callback));
 }
 
 void FileConnection::Read(uint64_t count, ReadCallback callback) {
@@ -76,8 +67,7 @@ void FileConnection::Read(uint64_t count, ReadCallback callback) {
   callback(status, std::move(data));
 }
 
-void FileConnection::ReadAt(uint64_t count, uint64_t offset,
-                            ReadAtCallback callback) {
+void FileConnection::ReadAt(uint64_t count, uint64_t offset, ReadAtCallback callback) {
   std::vector<uint8_t> data;
   if (!Flags::IsReadable(flags())) {
     callback(ZX_ERR_ACCESS_DENIED, std::move(data));
@@ -100,8 +90,7 @@ void FileConnection::Write(std::vector<uint8_t> data, WriteCallback callback) {
   callback(status, actual);
 }
 
-void FileConnection::WriteAt(std::vector<uint8_t> data, uint64_t offset,
-                             WriteAtCallback callback) {
+void FileConnection::WriteAt(std::vector<uint8_t> data, uint64_t offset, WriteAtCallback callback) {
   if (!Flags::IsWritable(flags())) {
     callback(ZX_ERR_ACCESS_DENIED, 0);
     return;
@@ -111,8 +100,7 @@ void FileConnection::WriteAt(std::vector<uint8_t> data, uint64_t offset,
   callback(status, actual);
 }
 
-void FileConnection::Seek(int64_t new_offset, fuchsia::io::SeekOrigin seek,
-                          SeekCallback callback) {
+void FileConnection::Seek(int64_t new_offset, fuchsia::io::SeekOrigin seek, SeekCallback callback) {
   int64_t cur_len = vn_->GetLength();
   size_t capacity = vn_->GetCapacity();
   uint64_t calculated_offset = 0u;
@@ -147,9 +135,7 @@ void FileConnection::Truncate(uint64_t length, TruncateCallback callback) {
   callback(vn_->Truncate(length));
 }
 
-void FileConnection::GetFlags(GetFlagsCallback callback) {
-  callback(ZX_OK, flags());
-}
+void FileConnection::GetFlags(GetFlagsCallback callback) { callback(ZX_OK, flags()); }
 
 void FileConnection::SetFlags(uint32_t flags, SetFlagsCallback callback) {
   // TODO: Implement set flags.

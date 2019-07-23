@@ -24,8 +24,7 @@ size_t BitsPerPixel(const fuchsia::images::PixelFormat& pixel_format) {
   return 0;
 }
 
-size_t StrideBytesPerWidthPixel(
-    const fuchsia::images::PixelFormat& pixel_format) {
+size_t StrideBytesPerWidthPixel(const fuchsia::images::PixelFormat& pixel_format) {
   switch (pixel_format) {
     case fuchsia::images::PixelFormat::BGRA_8:
       return 4u;
@@ -76,8 +75,7 @@ size_t ImageSize(const fuchsia::images::ImageInfo& image_info) {
     case fuchsia::images::PixelFormat::YV12:
       return image_info.height * image_info.stride * 3 / 2;
   }
-  ZX_PANIC("Unknown Pixel Format: %d",
-           static_cast<int>(image_info.pixel_format));
+  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(image_info.pixel_format));
   return 0;
 }
 

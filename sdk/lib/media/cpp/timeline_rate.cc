@@ -84,8 +84,8 @@ template void ReduceRatio<uint32_t>(uint32_t* numerator, uint32_t* denominator);
 // Scales a uint64_t value by the ratio of two uint32_t values. If round_up is
 // true, the result is rounded up rather than down. overflow is set to indicate
 // overflow.
-uint64_t ScaleUInt64(uint64_t value, uint32_t subject_delta,
-                     uint32_t reference_delta, bool round_up, bool* overflow) {
+uint64_t ScaleUInt64(uint64_t value, uint32_t subject_delta, uint32_t reference_delta,
+                     bool round_up, bool* overflow) {
   ZX_DEBUG_ASSERT(reference_delta != 0u);
   ZX_DEBUG_ASSERT(overflow != nullptr);
 
@@ -152,17 +152,15 @@ void TimelineRate::Reduce(uint32_t* subject_delta, uint32_t* reference_delta) {
 // static
 void TimelineRate::Product(uint32_t a_subject_delta, uint32_t a_reference_delta,
                            uint32_t b_subject_delta, uint32_t b_reference_delta,
-                           uint32_t* product_subject_delta,
-                           uint32_t* product_reference_delta, bool exact) {
+                           uint32_t* product_subject_delta, uint32_t* product_reference_delta,
+                           bool exact) {
   ZX_DEBUG_ASSERT(a_reference_delta != 0);
   ZX_DEBUG_ASSERT(b_reference_delta != 0);
   ZX_DEBUG_ASSERT(product_subject_delta != nullptr);
   ZX_DEBUG_ASSERT(product_reference_delta != nullptr);
 
-  uint64_t subject_delta =
-      static_cast<uint64_t>(a_subject_delta) * b_subject_delta;
-  uint64_t reference_delta =
-      static_cast<uint64_t>(a_reference_delta) * b_reference_delta;
+  uint64_t subject_delta = static_cast<uint64_t>(a_subject_delta) * b_subject_delta;
+  uint64_t reference_delta = static_cast<uint64_t>(a_reference_delta) * b_reference_delta;
 
   ReduceRatio(&subject_delta, &reference_delta);
 
@@ -190,8 +188,7 @@ void TimelineRate::Product(uint32_t a_subject_delta, uint32_t a_reference_delta,
 }
 
 // static
-int64_t TimelineRate::Scale(int64_t value, uint32_t subject_delta,
-                            uint32_t reference_delta) {
+int64_t TimelineRate::Scale(int64_t value, uint32_t subject_delta, uint32_t reference_delta) {
   static constexpr uint64_t abs_of_min_int64 =
       static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) + 1;
 
@@ -202,14 +199,13 @@ int64_t TimelineRate::Scale(int64_t value, uint32_t subject_delta,
   uint64_t abs_result;
 
   if (value >= 0) {
-    abs_result = ScaleUInt64(static_cast<uint64_t>(value), subject_delta,
-                             reference_delta, false, &overflow);
+    abs_result =
+        ScaleUInt64(static_cast<uint64_t>(value), subject_delta, reference_delta, false, &overflow);
   } else if (value == std::numeric_limits<int64_t>::min()) {
-    abs_result = ScaleUInt64(abs_of_min_int64, subject_delta, reference_delta,
-                             true, &overflow);
+    abs_result = ScaleUInt64(abs_of_min_int64, subject_delta, reference_delta, true, &overflow);
   } else {
-    abs_result = ScaleUInt64(static_cast<uint64_t>(-value), subject_delta,
-                             reference_delta, true, &overflow);
+    abs_result =
+        ScaleUInt64(static_cast<uint64_t>(-value), subject_delta, reference_delta, true, &overflow);
   }
 
   if (overflow) {
@@ -224,8 +220,7 @@ int64_t TimelineRate::Scale(int64_t value, uint32_t subject_delta,
     return TimelineRate::kOverflow;
   }
 
-  return value >= 0 ? static_cast<int64_t>(abs_result)
-                    : -static_cast<int64_t>(abs_result);
+  return value >= 0 ? static_cast<int64_t>(abs_result) : -static_cast<int64_t>(abs_result);
 }
 
 }  // namespace media

@@ -9,6 +9,7 @@
 #include <lib/sys/cpp/testing/fake_launcher.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
+
 #include <memory>
 #include <utility>
 
@@ -32,12 +33,10 @@ class FakeComponent {
   //
   //   AddPublicService(foobar_bindings_.GetHandler(this));
   template <typename Interface>
-  zx_status_t AddPublicService(
-      fidl::InterfaceRequestHandler<Interface> handler,
-      const std::string& service_name = Interface::Name_) {
-    return directory_.AddEntry(
-        service_name.c_str(),
-        std::make_unique<vfs::Service>(std::move(handler)));
+  zx_status_t AddPublicService(fidl::InterfaceRequestHandler<Interface> handler,
+                               const std::string& service_name = Interface::Name_) {
+    return directory_.AddEntry(service_name.c_str(),
+                               std::make_unique<vfs::Service>(std::move(handler)));
   }
 
   // Registers this component with a FakeLauncher.

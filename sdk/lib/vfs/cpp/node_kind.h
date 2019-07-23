@@ -46,9 +46,7 @@ class NodeKind {
   static constexpr Type kCreatable = 0x1000;
   static constexpr Type kAppendable = 0x2000;
 
-  static bool IsDirectory(Type kind) {
-    return (kind & kDirectory) == kDirectory;
-  }
+  static bool IsDirectory(Type kind) { return (kind & kDirectory) == kDirectory; }
 
   static bool IsFile(Type kind) { return (kind & kFile) == kFile; }
 

@@ -10,8 +10,7 @@ namespace vfs_tests {
 Dirent Dirent::DirentForDot() { return DirentForDirectory("."); }
 
 Dirent Dirent::DirentForDirectory(const std::string& name) {
-  return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DIRENT_TYPE_DIRECTORY,
-                name);
+  return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DIRENT_TYPE_DIRECTORY, name);
 }
 
 Dirent Dirent::DirentForFile(const std::string& name) {
@@ -19,13 +18,11 @@ Dirent Dirent::DirentForFile(const std::string& name) {
 }
 
 Dirent Dirent::DirentForService(const std::string& name) {
-  return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DIRENT_TYPE_SERVICE,
-                name);
+  return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DIRENT_TYPE_SERVICE, name);
 }
 
 std::string Dirent::String() {
-  return "Dirent:\nino: " + std ::to_string(ino_) +
-         "\ntype: " + std ::to_string(type_) +
+  return "Dirent:\nino: " + std ::to_string(ino_) + "\ntype: " + std ::to_string(type_) +
          "\nsize: " + std ::to_string(size_) + "\nname: " + name_;
 }
 
@@ -39,37 +36,34 @@ Dirent::Dirent(uint64_t ino, uint8_t type, const std::string& name)
 }
 
 void DirConnection::AssertOpen(async_dispatcher_t* dispatcher, uint32_t flags,
-                               zx_status_t expected_status,
-                               bool test_on_open_event) {
+                               zx_status_t expected_status, bool test_on_open_event) {
   fuchsia::io::NodePtr node_ptr;
   if (test_on_open_event) {
     flags |= fuchsia::io::OPEN_FLAG_DESCRIBE;
   }
   EXPECT_EQ(expected_status,
-            GetDirectoryNode()->Serve(
-                flags, node_ptr.NewRequest().TakeChannel(), dispatcher));
+            GetDirectoryNode()->Serve(flags, node_ptr.NewRequest().TakeChannel(), dispatcher));
 
   if (test_on_open_event) {
     bool on_open_called = false;
-    node_ptr.events().OnOpen =
-        [&](zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> info) {
-          EXPECT_FALSE(on_open_called);  // should be called only once
-          on_open_called = true;
-          EXPECT_EQ(expected_status, status);
-          if (expected_status == ZX_OK) {
-            ASSERT_NE(info.get(), nullptr);
-            EXPECT_TRUE(info->is_directory());
-          } else {
-            EXPECT_EQ(info.get(), nullptr);
-          }
-        };
+    node_ptr.events().OnOpen = [&](zx_status_t status,
+                                   std::unique_ptr<fuchsia::io::NodeInfo> info) {
+      EXPECT_FALSE(on_open_called);  // should be called only once
+      on_open_called = true;
+      EXPECT_EQ(expected_status, status);
+      if (expected_status == ZX_OK) {
+        ASSERT_NE(info.get(), nullptr);
+        EXPECT_TRUE(info->is_directory());
+      } else {
+        EXPECT_EQ(info.get(), nullptr);
+      }
+    };
 
     RunLoopUntil([&]() { return on_open_called; }, zx::msec(1));
   }
 }
 
-void DirConnection::AssertReadDirents(fuchsia::io::DirectorySyncPtr& ptr,
-                                      uint64_t max_bytes,
+void DirConnection::AssertReadDirents(fuchsia::io::DirectorySyncPtr& ptr, uint64_t max_bytes,
                                       std::vector<Dirent>& expected_dirents,
                                       zx_status_t expected_status) {
   std::vector<uint8_t> out_dirents;
@@ -100,16 +94,14 @@ void DirConnection::AssertReadDirents(fuchsia::io::DirectorySyncPtr& ptr,
   }
 }
 
-void DirConnection::AssertRewind(fuchsia::io::DirectorySyncPtr& ptr,
-                                 zx_status_t expected_status) {
+void DirConnection::AssertRewind(fuchsia::io::DirectorySyncPtr& ptr, zx_status_t expected_status) {
   zx_status_t status;
   ptr->Rewind(&status);
   ASSERT_EQ(expected_status, status);
 }
 
 void DirConnection::AssertRead(fuchsia::io::FileSyncPtr& file, int count,
-                               const std::string& expected_str,
-                               zx_status_t expected_status) {
+                               const std::string& expected_str, zx_status_t expected_status) {
   zx_status_t status;
   std::vector<uint8_t> buffer;
   file->Read(count, &status, &buffer);

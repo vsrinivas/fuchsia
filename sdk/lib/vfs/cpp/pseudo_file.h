@@ -39,8 +39,7 @@ namespace vfs {
 class PseudoFile final : public vfs::internal::File {
  public:
   // Handler called to read from the pseudo-file.
-  using ReadHandler = fit::function<zx_status_t(std::vector<uint8_t>* output,
-                                                size_t max_bytes)>;
+  using ReadHandler = fit::function<zx_status_t(std::vector<uint8_t>* output, size_t max_bytes)>;
 
   // Handler called to write into the pseudo-file.
   using WriteHandler = fit::function<zx_status_t(std::vector<uint8_t> input)>;
@@ -57,13 +56,11 @@ class PseudoFile final : public vfs::internal::File {
   ~PseudoFile() override;
 
   // |Node| implementations:
-  zx_status_t GetAttr(
-      fuchsia::io::NodeAttributes* out_attributes) const override;
+  zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const override;
 
  protected:
-  zx_status_t CreateConnection(
-      uint32_t flags,
-      std::unique_ptr<vfs::internal::Connection>* connection) override;
+  zx_status_t CreateConnection(uint32_t flags,
+                               std::unique_ptr<vfs::internal::Connection>* connection) override;
 
   NodeKind::Type GetKind() const override;
 
@@ -74,10 +71,8 @@ class PseudoFile final : public vfs::internal::File {
     ~Content() override;
 
     // |File| implementations:
-    zx_status_t ReadAt(uint64_t count, uint64_t offset,
-                       std::vector<uint8_t>* out_data) override;
-    zx_status_t WriteAt(std::vector<uint8_t> data, uint64_t offset,
-                        uint64_t* out_actual) override;
+    zx_status_t ReadAt(uint64_t count, uint64_t offset, std::vector<uint8_t>* out_data) override;
+    zx_status_t WriteAt(std::vector<uint8_t> data, uint64_t offset, uint64_t* out_actual) override;
     zx_status_t Truncate(uint64_t length) override;
 
     uint64_t GetLength() override;
@@ -85,8 +80,7 @@ class PseudoFile final : public vfs::internal::File {
     size_t GetCapacity() override;
 
     // Connection implementation:
-    zx_status_t BindInternal(zx::channel request,
-                             async_dispatcher_t* dispatcher) override;
+    zx_status_t BindInternal(zx::channel request, async_dispatcher_t* dispatcher) override;
 
     // |Node| implementations:
     std::unique_ptr<Connection> Close(Connection* connection) override;
@@ -96,8 +90,7 @@ class PseudoFile final : public vfs::internal::File {
     void Clone(uint32_t flags, uint32_t parent_flags, zx::channel request,
                async_dispatcher_t* dispatcher) override;
 
-    zx_status_t GetAttr(
-        fuchsia::io::NodeAttributes* out_attributes) const override;
+    zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const override;
 
    protected:
     void SendOnOpenEvent(zx_status_t status) override;

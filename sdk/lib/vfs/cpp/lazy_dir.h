@@ -46,12 +46,11 @@ class LazyDir : public vfs::internal::Directory {
   ~LazyDir() override;
 
   // |Directory| implementation:
-  zx_status_t Readdir(uint64_t offset, void* data, uint64_t len,
-                      uint64_t* out_offset, uint64_t* out_actual) override;
+  zx_status_t Readdir(uint64_t offset, void* data, uint64_t len, uint64_t* out_offset,
+                      uint64_t* out_actual) override;
 
   // |Node| implementations:
-  zx_status_t GetAttr(
-      fuchsia::io::NodeAttributes* out_attributes) const override;
+  zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const override;
 
   zx_status_t Lookup(const std::string& name, Node** out_node) const final;
 
@@ -61,8 +60,7 @@ class LazyDir : public vfs::internal::Directory {
 
   // Get the reference to a single file. The id and name of the entry as
   // returned from GetContents are passed in to assist locating the file.
-  virtual zx_status_t GetFile(Node** out_node, uint64_t id,
-                              std::string name) const = 0;
+  virtual zx_status_t GetFile(Node** out_node, uint64_t id, std::string name) const = 0;
 
   // Ids returned by |GetContent| should be more than or equal to id returned by
   // this function.

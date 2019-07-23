@@ -55,7 +55,7 @@ struct Allocate {
 //    succeeds.
 // 4. Allocate<T>(src, size) takes up to |size| bytes to produce a new fuzzer
 //    input of type, T.
-#define FUZZING_STATIC(T)                              \
+#define FUZZING_STATIC(T)                                   \
   template <>                                               \
   struct MinSize<T> {                                       \
     constexpr operator size_t() const { return sizeof(T); } \

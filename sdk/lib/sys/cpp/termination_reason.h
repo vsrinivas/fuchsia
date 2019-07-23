@@ -8,15 +8,14 @@
 #define LIB_SYS_CPP_TERMINATION_REASON_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+
 #include <string>
 
 namespace sys {
 
-std::string TerminationReasonToString(
-    fuchsia::sys::TerminationReason termination_reason);
+std::string TerminationReasonToString(fuchsia::sys::TerminationReason termination_reason);
 
-std::string HumanReadableTerminationReason(
-    fuchsia::sys::TerminationReason termination_reason);
+std::string HumanReadableTerminationReason(fuchsia::sys::TerminationReason termination_reason);
 
 }  // namespace sys
 

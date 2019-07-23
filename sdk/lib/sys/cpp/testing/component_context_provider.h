@@ -37,16 +37,13 @@ class ComponentContextProvider {
   // Points to outgoing root directory of outgoing directory, test can get it
   // and try to connect to internal directories/objects/files/services to test
   // code which published them.
-  fuchsia::io::DirectoryPtr& outgoing_directory_ptr() {
-    return outgoing_directory_ptr_;
-  }
+  fuchsia::io::DirectoryPtr& outgoing_directory_ptr() { return outgoing_directory_ptr_; }
 
   // Connects to public service which was published in "svc" directory by
   // code under test.
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToPublicService(
-      const std::string& name = Interface::Name_,
-      async_dispatcher_t* dispatcher = nullptr) const {
+      const std::string& name = Interface::Name_, async_dispatcher_t* dispatcher = nullptr) const {
     fidl::InterfacePtr<Interface> ptr;
     ConnectToPublicService(ptr.NewRequest(dispatcher), name);
     return ptr;
@@ -55,9 +52,8 @@ class ComponentContextProvider {
   // Connects to public service which was published in "svc" directory by code
   // under test.
   template <typename Interface>
-  void ConnectToPublicService(
-      fidl::InterfaceRequest<Interface> request,
-      const std::string& name = Interface::Name_) const {
+  void ConnectToPublicService(fidl::InterfaceRequest<Interface> request,
+                              const std::string& name = Interface::Name_) const {
     fdio_service_connect_at(public_directory_ptr_.channel().get(), name.c_str(),
                             request.TakeChannel().release());
   }
@@ -76,16 +72,13 @@ class ComponentContextProvider {
   // ...
   // context->svc()->Connect(...);
   // ```
-  const std::shared_ptr<ServiceDirectoryProvider>& service_directory_provider()
-      const {
+  const std::shared_ptr<ServiceDirectoryProvider>& service_directory_provider() const {
     return svc_provider_;
   }
 
   // Relinquishes the ownership of fake context. This object should be alive
   // for lifetime of returned context.
-  std::unique_ptr<sys::ComponentContext> TakeContext() {
-    return std::move(component_context_);
-  }
+  std::unique_ptr<sys::ComponentContext> TakeContext() { return std::move(component_context_); }
 
   sys::ComponentContext* context() { return component_context_.get(); }
 

@@ -72,12 +72,9 @@ class ServiceDirectoryProvider {
   //
   // ZX_ERR_ALREADY_EXISTS: This already contains an entry for
   // this service.
-  zx_status_t AddService(std::unique_ptr<vfs::Service> service,
-                         const std::string& name) const;
+  zx_status_t AddService(std::unique_ptr<vfs::Service> service, const std::string& name) const;
 
-  std::shared_ptr<ServiceDirectory>& service_directory() {
-    return service_directory_;
-  }
+  std::shared_ptr<ServiceDirectory>& service_directory() { return service_directory_; }
 
  private:
   std::shared_ptr<ServiceDirectory> service_directory_;

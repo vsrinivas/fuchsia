@@ -16,12 +16,11 @@ struct svc_dir {
   fbl::RefPtr<fs::PseudoDir> root;
 };
 
-zx_status_t svc_dir_create(async_dispatcher_t* dispatcher,
-                           zx_handle_t dir_request, svc_dir_t** result) {
+zx_status_t svc_dir_create(async_dispatcher_t* dispatcher, zx_handle_t dir_request,
+                           svc_dir_t** result) {
   svc_dir_t* dir = new svc_dir_t(dispatcher);
   dir->root = fbl::AdoptRef(new fs::PseudoDir());
-  zx_status_t status =
-      dir->vfs.ServeDirectory(dir->root, zx::channel(dir_request));
+  zx_status_t status = dir->vfs.ServeDirectory(dir->root, zx::channel(dir_request));
   if (status != ZX_OK) {
     delete dir;
     return status;
@@ -30,9 +29,8 @@ zx_status_t svc_dir_create(async_dispatcher_t* dispatcher,
   return ZX_OK;
 }
 
-zx_status_t svc_dir_add_service(svc_dir_t* dir, const char* type,
-                                const char* service_name, void* context,
-                                svc_connector_t handler) {
+zx_status_t svc_dir_add_service(svc_dir_t* dir, const char* type, const char* service_name,
+                                void* context, svc_connector_t handler) {
   fbl::RefPtr<fs::Vnode> node = dir->root;
   if (type != nullptr) {
     zx_status_t status = dir->root->Lookup(&node, type);
@@ -44,17 +42,15 @@ zx_status_t svc_dir_add_service(svc_dir_t* dir, const char* type,
       return status;
   }
   fs::PseudoDir* node_dir = static_cast<fs::PseudoDir*>(node.get());
-  return node_dir->AddEntry(
-      service_name,
-      fbl::AdoptRef(new fs::Service([service_name = fbl::String(service_name),
-                                     context, handler](zx::channel channel) {
-        handler(context, service_name.c_str(), channel.release());
-        return ZX_OK;
-      })));
+  return node_dir->AddEntry(service_name,
+                            fbl::AdoptRef(new fs::Service([service_name = fbl::String(service_name),
+                                                           context, handler](zx::channel channel) {
+                              handler(context, service_name.c_str(), channel.release());
+                              return ZX_OK;
+                            })));
 }
 
-zx_status_t svc_dir_remove_service(svc_dir_t* dir, const char* type,
-                                   const char* service_name) {
+zx_status_t svc_dir_remove_service(svc_dir_t* dir, const char* type, const char* service_name) {
   fbl::RefPtr<fs::Vnode> node = dir->root;
   if (type != nullptr) {
     zx_status_t status = dir->root->Lookup(&node, type);

@@ -24,12 +24,10 @@ class NodeConnection final : public Connection, public fuchsia::io::Node {
   ~NodeConnection() override;
 
   // Start listening for |fuchsia.io.Node| messages on |request|.
-  zx_status_t BindInternal(zx::channel request,
-                           async_dispatcher_t* dispatcher) override;
+  zx_status_t BindInternal(zx::channel request, async_dispatcher_t* dispatcher) override;
 
   // |fuchsia::io::Node| Implementation:
-  void Clone(uint32_t flags,
-             fidl::InterfaceRequest<fuchsia::io::Node> object) override;
+  void Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) override;
   void Close(CloseCallback callback) override;
   void Describe(DescribeCallback callback) override;
   void Sync(SyncCallback callback) override;

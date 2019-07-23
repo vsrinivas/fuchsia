@@ -16,13 +16,12 @@ void Service::Describe(fuchsia::io::NodeInfo* out_info) {
   out_info->set_service(fuchsia::io::Service());
 }
 
-zx_status_t Service::CreateConnection(
-    uint32_t flags, std::unique_ptr<vfs::internal::Connection>* connection) {
+zx_status_t Service::CreateConnection(uint32_t flags,
+                                      std::unique_ptr<vfs::internal::Connection>* connection) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Service::Connect(uint32_t flags, zx::channel request,
-                             async_dispatcher_t* dispatcher) {
+zx_status_t Service::Connect(uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher) {
   if (Flags::IsNodeReference(flags)) {
     return Node::Connect(flags, std::move(request), dispatcher);
   }
@@ -34,8 +33,7 @@ zx_status_t Service::Connect(uint32_t flags, zx::channel request,
   return ZX_OK;
 }
 
-zx_status_t Service::GetAttr(
-    fuchsia::io::NodeAttributes* out_attributes) const {
+zx_status_t Service::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
   out_attributes->mode = fuchsia::io::MODE_TYPE_SERVICE | V_IRUSR;
   out_attributes->id = fuchsia::io::INO_UNKNOWN;
   out_attributes->content_size = 0;

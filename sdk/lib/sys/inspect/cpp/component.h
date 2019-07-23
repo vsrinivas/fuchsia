@@ -5,11 +5,11 @@
 #ifndef LIB_SYS_INSPECT_CPP_COMPONENT_H_
 #define LIB_SYS_INSPECT_CPP_COMPONENT_H_
 
-#include <string>
-
 #include <lib/inspect/cpp/health.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/cpp/component_context.h>
+
+#include <string>
 
 namespace sys {
 

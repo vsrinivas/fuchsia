@@ -21,4 +21,3 @@ fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd);
 }  // namespace sys
 
 #endif  // LIB_SYS_CPP_FILE_DESCRIPTOR_H_
-
