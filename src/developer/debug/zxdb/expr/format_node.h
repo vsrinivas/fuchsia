@@ -20,22 +20,6 @@ namespace zxdb {
 // expressions which are evaluated, and ExprValue classes which contain already-evaluated values.
 // This tree can represent expansions for things like struct members.
 //
-// TRANSITION
-// ----------
-// Development of this is currently in-progress.
-//
-// To print a value in the old model, code in the console frontend converts an ExprValue to a string
-// that's printed.
-//
-// With this class, the formatted "data model" is separate from the code to format for the console.
-// This class represents that data model.
-//
-// During the transition, the console formatting code calls into this code for the sub-types that
-// FormatNode supports and immediately stringifies it. This allows for an incremental conversion.
-// When FormatNode supports all data types, the console formatter will be replaced with some code
-// that takes a FormatNode and converts to a string specifically for the console context (possibly
-// with wrapping and indenting, etc.).
-//
 // DESIGN
 // ------
 // Think of this class as being a tree node in a GUI debugger's "watch" window. The "source" is the
