@@ -33,7 +33,7 @@
 #include "garnet/bin/sshd-host/service.h"
 
 const auto kSshdPath = "/pkg/bin/sshd";
-const char* kSshdArgv[] = {kSshdPath, "-ie", "-f", "/pkg/data/ssh/sshd_config",
+const char* kSshdArgv[] = {kSshdPath, "-ie", "-f", "/config/data/sshd_config",
                            nullptr};
 
 namespace sshd_host {
