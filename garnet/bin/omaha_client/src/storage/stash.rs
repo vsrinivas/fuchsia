@@ -48,7 +48,6 @@ impl Stash {
     ///
     /// The |identity| param provides a namespace for the client.  Each unique client identity has
     /// its own private namespace.
-    #[allow(dead_code)]
     pub async fn new(identity: &str) -> Result<Self> {
         let stash_svc = fuchsia_component::client::connect_to_service::<StoreMarker>()?;
         stash_svc.identify(identity)?;

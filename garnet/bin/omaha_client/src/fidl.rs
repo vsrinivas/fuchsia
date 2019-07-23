@@ -23,19 +23,21 @@ use omaha_client::{
     policy::PolicyEngine,
     protocol::request::InstallSource,
     state_machine::{self, StateMachine, Timer},
+    storage::Storage,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub struct FidlServer<PE, HR, IN, TM, MR>
+pub struct FidlServer<PE, HR, IN, TM, MR, ST>
 where
     PE: PolicyEngine,
     HR: HttpRequest,
     IN: Installer,
     TM: Timer,
     MR: MetricsReporter,
+    ST: Storage,
 {
-    state_machine_ref: Rc<RefCell<StateMachine<PE, HR, IN, TM, MR>>>,
+    state_machine_ref: Rc<RefCell<StateMachine<PE, HR, IN, TM, MR, ST>>>,
 
     // The current State table, defined in fuchsia.update.fidl.
     state: State,
@@ -53,15 +55,16 @@ pub enum IncomingServices {
     OmahaClientConfiguration(OmahaClientConfigurationRequestStream),
 }
 
-impl<PE, HR, IN, TM, MR> FidlServer<PE, HR, IN, TM, MR>
+impl<PE, HR, IN, TM, MR, ST> FidlServer<PE, HR, IN, TM, MR, ST>
 where
     PE: PolicyEngine + 'static,
     HR: HttpRequest + 'static,
     IN: Installer + 'static,
     TM: Timer + 'static,
     MR: MetricsReporter + 'static,
+    ST: Storage + 'static,
 {
-    pub fn new(state_machine_ref: Rc<RefCell<StateMachine<PE, HR, IN, TM, MR>>>) -> Self {
+    pub fn new(state_machine_ref: Rc<RefCell<StateMachine<PE, HR, IN, TM, MR, ST>>>) -> Self {
         FidlServer {
             state_machine_ref,
             state: State { state: Some(ManagerState::Idle), version_available: None },
@@ -255,27 +258,33 @@ mod tests {
     use omaha_client::{
         http_request::StubHttpRequest, installer::stub::StubInstaller,
         metrics::StubMetricsReporter, policy::StubPolicyEngine, state_machine::StubTimer,
+        storage::MemStorage,
     };
 
-    fn new_fidl_server(
-    ) -> FidlServer<StubPolicyEngine, StubHttpRequest, StubInstaller, StubTimer, StubMetricsReporter>
-    {
+    async fn new_fidl_server() -> FidlServer<
+        StubPolicyEngine,
+        StubHttpRequest,
+        StubInstaller,
+        StubTimer,
+        StubMetricsReporter,
+        MemStorage,
+    > {
         let config = configuration::get_config();
-        let state_machine = StateMachine::new_stub(&config);
+        let state_machine = await!(StateMachine::new_stub(&config));
 
         FidlServer::new(Rc::new(RefCell::new(state_machine)))
     }
 
-    #[test]
-    fn test_on_state_change() {
-        let mut fidl = new_fidl_server();
+    #[fasync::run_singlethreaded(test)]
+    async fn test_on_state_change() {
+        let mut fidl = await!(new_fidl_server());
         fidl.on_state_change(state_machine::State::CheckingForUpdates);
         assert_eq!(Some(ManagerState::CheckingForUpdates), fidl.state.state);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_state() {
-        let fidl = Rc::new(RefCell::new(new_fidl_server()));
+        let fidl = Rc::new(RefCell::new(await!(new_fidl_server())));
         let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
         fasync::spawn_local(
             FidlServer::handle_client(fidl.clone(), IncomingServices::Manager(stream))
@@ -288,7 +297,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_monitor() {
-        let fidl = Rc::new(RefCell::new(new_fidl_server()));
+        let fidl = Rc::new(RefCell::new(await!(new_fidl_server())));
         let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
         fasync::spawn_local(
             FidlServer::handle_client(fidl.clone(), IncomingServices::Manager(stream))
@@ -309,7 +318,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_check_now() {
-        let fidl = Rc::new(RefCell::new(new_fidl_server()));
+        let fidl = Rc::new(RefCell::new(await!(new_fidl_server())));
         let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
         fasync::spawn_local(
             FidlServer::handle_client(fidl.clone(), IncomingServices::Manager(stream))
@@ -322,7 +331,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_check_now_with_monitor() {
-        let fidl = Rc::new(RefCell::new(new_fidl_server()));
+        let fidl = Rc::new(RefCell::new(await!(new_fidl_server())));
         FidlServer::setup_state_callback(fidl.clone());
         let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
         fasync::spawn_local(

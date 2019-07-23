@@ -5,8 +5,13 @@
 //! The omaha_client::common module contains those types that are common to many parts of the
 //! library.  Many of these don't belong to a specific sub-module.
 
-use crate::protocol::{self, request::InstallSource, Cohort};
+use crate::{
+    protocol::{self, request::InstallSource, Cohort},
+    storage::Storage,
+};
 use itertools::Itertools;
+use log::error;
+use serde_derive::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 use std::time::SystemTime;
@@ -15,7 +20,7 @@ use std::time::SystemTime;
 /// only recommended method is the Client Regulated - Date method.
 ///
 /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#client-regulated-counting-date-based
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum UserCounting {
     ClientRegulatedByDate(
         /// Date (sent by the server) of the last contact with Omaha.
@@ -110,9 +115,23 @@ pub struct App {
     /// as well as returned by Omaha.
     pub cohort: Cohort,
 
-    /// The app's current user-counting infomation.  This is both provided to Omaha as well as
+    /// The app's current user-counting information.  This is both provided to Omaha as well as
     /// returned by Omaha.
     pub user_counting: UserCounting,
+}
+
+/// Structure used to serialize per app data to be persisted.
+/// Be careful when making changes to this struct to keep backward compatibility.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct PersistedApp {
+    pub cohort: Cohort,
+    pub user_counting: UserCounting,
+}
+
+impl From<&App> for PersistedApp {
+    fn from(app: &App) -> Self {
+        PersistedApp { cohort: app.cohort.clone(), user_counting: app.user_counting.clone() }
+    }
 }
 
 impl App {
@@ -142,6 +161,52 @@ impl App {
             fingerprint: Some(fingerprint.into()),
             cohort,
             user_counting: UserCounting::ClientRegulatedByDate(None),
+        }
+    }
+
+    /// Load data from |storage|, only overwrite existing fields if data exists.
+    pub async fn load<'a>(&'a mut self, storage: &'a impl Storage) {
+        if let Some(app_json) = await!(storage.get_string(&self.id)) {
+            match serde_json::from_str::<PersistedApp>(&app_json) {
+                Ok(persisted_app) => {
+                    // Do not overwrite existing fields in app if no data for this field is
+                    // persisted.
+                    if let Some(id) = persisted_app.cohort.id {
+                        self.cohort.id = Some(id);
+                    }
+                    if let Some(hint) = persisted_app.cohort.hint {
+                        self.cohort.hint = Some(hint);
+                    }
+                    if let Some(name) = persisted_app.cohort.name {
+                        self.cohort.name = Some(name);
+                    }
+                    if let UserCounting::ClientRegulatedByDate(Some(days)) =
+                        persisted_app.user_counting
+                    {
+                        self.user_counting = UserCounting::ClientRegulatedByDate(Some(days));
+                    }
+                }
+                Err(e) => {
+                    error!("Unable to deserialize PersistedApp from json {}: {}", app_json, e);
+                }
+            }
+        }
+    }
+
+    /// Persist cohort and user counting to |storage|, will try to set all of them to storage even
+    /// if previous set fails.
+    /// It will NOT call commit() on |storage|, caller is responsible to call commit().
+    pub async fn persist<'a>(&'a self, storage: &'a mut impl Storage) {
+        let persisted_app = PersistedApp::from(self);
+        match serde_json::to_string(&persisted_app) {
+            Ok(json) => {
+                if let Err(e) = await!(storage.set_string(&self.id, &json)) {
+                    error!("Unable to persist cohort id: {}", e);
+                }
+            }
+            Err(e) => {
+                error!("Unable to serialize PersistedApp {:?}: {}", persisted_app, e);
+            }
         }
     }
 }
@@ -202,6 +267,9 @@ pub struct ProtocolState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::MemStorage;
+    use futures::executor::block_on;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_version_display() {
@@ -290,5 +358,164 @@ mod tests {
         assert_eq!(app.cohort.name, None);
         assert_eq!(app.cohort.id, None);
         assert_eq!(app.user_counting, UserCounting::ClientRegulatedByDate(None));
+    }
+
+    #[test]
+    fn test_app_load() {
+        block_on(async {
+            let mut storage = MemStorage::new();
+            let json = serde_json::json!({
+            "cohort": {
+                "cohort": "some_id",
+                "cohorthint":"some_hint",
+                "cohortname": "some_name"
+            },
+            "user_counting": {
+                "ClientRegulatedByDate":123
+            }});
+            let json = serde_json::to_string(&json).unwrap();
+            let mut app = App::new("some_id", [1, 2], Cohort::new(""));
+            await!(storage.set_string(&app.id, &json)).unwrap();
+            await!(app.load(&storage));
+
+            let cohort = Cohort {
+                id: Some("some_id".to_string()),
+                hint: Some("some_hint".to_string()),
+                name: Some("some_name".to_string()),
+            };
+            assert_eq!(cohort, app.cohort);
+            assert_eq!(UserCounting::ClientRegulatedByDate(Some(123)), app.user_counting);
+        });
+    }
+
+    #[test]
+    fn test_app_load_empty_storage() {
+        block_on(async {
+            let storage = MemStorage::new();
+            let cohort = Cohort {
+                id: Some("some_id".to_string()),
+                hint: Some("some_hint".to_string()),
+                name: Some("some_name".to_string()),
+            };
+            let mut app = App::new("some_id", [1, 2], cohort);
+            app.user_counting = UserCounting::ClientRegulatedByDate(Some(123));
+            await!(app.load(&storage));
+
+            // existing data not overwritten
+            let cohort = Cohort {
+                id: Some("some_id".to_string()),
+                hint: Some("some_hint".to_string()),
+                name: Some("some_name".to_string()),
+            };
+            assert_eq!(cohort, app.cohort);
+            assert_eq!(UserCounting::ClientRegulatedByDate(Some(123)), app.user_counting);
+        });
+    }
+
+    #[test]
+    fn test_app_load_malformed() {
+        block_on(async {
+            let mut storage = MemStorage::new();
+            let cohort = Cohort {
+                id: Some("some_id".to_string()),
+                hint: Some("some_hint".to_string()),
+                name: Some("some_name".to_string()),
+            };
+            let mut app = App::new("some_id", [1, 2], cohort);
+            await!(storage.set_string(&app.id, "not a json")).unwrap();
+            app.user_counting = UserCounting::ClientRegulatedByDate(Some(123));
+            await!(app.load(&storage));
+
+            // existing data not overwritten
+            let cohort = Cohort {
+                id: Some("some_id".to_string()),
+                hint: Some("some_hint".to_string()),
+                name: Some("some_name".to_string()),
+            };
+            assert_eq!(cohort, app.cohort);
+            assert_eq!(UserCounting::ClientRegulatedByDate(Some(123)), app.user_counting);
+        });
+    }
+
+    #[test]
+    fn test_app_load_partial() {
+        block_on(async {
+            let mut storage = MemStorage::new();
+            let json = serde_json::json!({
+            "cohort": {
+                "cohorthint":"some_hint_2",
+                "cohortname": "some_name_2"
+            },
+            "user_counting": {
+                "ClientRegulatedByDate":null
+            }});
+            let json = serde_json::to_string(&json).unwrap();
+            let cohort = Cohort {
+                id: Some("some_id".to_string()),
+                hint: Some("some_hint".to_string()),
+                name: Some("some_name".to_string()),
+            };
+            let mut app = App::new("some_id", [1, 2], cohort);
+            await!(storage.set_string(&app.id, &json)).unwrap();
+            app.user_counting = UserCounting::ClientRegulatedByDate(Some(123));
+            await!(app.load(&storage));
+
+            // existing data not overwritten
+            let cohort = Cohort {
+                id: Some("some_id".to_string()),
+                hint: Some("some_hint_2".to_string()),
+                name: Some("some_name_2".to_string()),
+            };
+            assert_eq!(cohort, app.cohort);
+            assert_eq!(UserCounting::ClientRegulatedByDate(Some(123)), app.user_counting);
+        });
+    }
+
+    #[test]
+    fn test_app_persist() {
+        block_on(async {
+            let mut storage = MemStorage::new();
+            let cohort = Cohort {
+                id: Some("some_id".to_string()),
+                hint: Some("some_hint".to_string()),
+                name: Some("some_name".to_string()),
+            };
+            let mut app = App::new("some_id", [1, 2], cohort);
+            app.user_counting = UserCounting::ClientRegulatedByDate(Some(123));
+            await!(app.persist(&mut storage));
+
+            let expected = serde_json::json!({
+            "cohort": {
+                "cohort": "some_id",
+                "cohorthint":"some_hint",
+                "cohortname": "some_name"
+            },
+            "user_counting": {
+                "ClientRegulatedByDate":123
+            }});
+            let json = await!(storage.get_string(&app.id)).unwrap();
+            assert_eq!(expected, serde_json::Value::from_str(&json).unwrap());
+            assert_eq!(false, storage.committed());
+        });
+    }
+
+    #[test]
+    fn test_app_persist_empty() {
+        block_on(async {
+            let mut storage = MemStorage::new();
+            let cohort = Cohort { id: None, hint: None, name: None };
+            let mut app = App::new("some_id", [1, 2], cohort);
+            app.user_counting = UserCounting::ClientRegulatedByDate(None);
+            await!(app.persist(&mut storage));
+
+            let expected = serde_json::json!({
+            "cohort": {},
+            "user_counting": {
+                "ClientRegulatedByDate":null
+            }});
+            let json = await!(storage.get_string(&app.id)).unwrap();
+            assert_eq!(expected, serde_json::Value::from_str(&json).unwrap());
+            assert_eq!(false, storage.committed());
+        });
     }
 }

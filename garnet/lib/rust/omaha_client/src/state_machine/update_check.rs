@@ -5,10 +5,18 @@
 /// The update_check module contains the structures and functions for performing a single update
 /// check with Omaha.
 use crate::{
+    clock,
     common::{ProtocolState, UpdateCheckSchedule, UserCounting},
     protocol::Cohort,
+    state_machine::time::{i64_to_time, time_to_i64},
+    storage::Storage,
 };
+use log::error;
 use std::time::Duration;
+
+// These are the keys used to persist data to storage.
+pub const LAST_UPDATE_TIME: &str = "last_update_time";
+pub const SERVER_DICTATED_POLL_INTERVAL: &str = "server_dictated_poll_interval";
 
 /// The Context provides the protocol context for a given update check operation.  This is
 /// information that's passed to the Policy to allow it to properly reason about what can and cannot
@@ -21,6 +29,45 @@ pub struct Context {
     /// The state of the protocol (retries, errors, etc.) as of the last update check that was
     /// attempted.
     pub state: ProtocolState,
+}
+
+impl Context {
+    /// Load and initialize update check context from persistent storage.
+    pub async fn load(storage: &impl Storage) -> Self {
+        let micros = await!(storage.get_int(LAST_UPDATE_TIME)).unwrap_or(0);
+        let last_update_time = i64_to_time(micros);
+        let server_dictated_poll_interval = await!(storage.get_int(SERVER_DICTATED_POLL_INTERVAL))
+            .map(|micros| Duration::from_micros(micros as u64));
+        Context {
+            schedule: UpdateCheckSchedule {
+                last_update_time,
+                next_update_time: clock::now(),
+                next_update_window_start: clock::now(),
+            },
+            state: ProtocolState { server_dictated_poll_interval, ..ProtocolState::default() },
+        }
+    }
+
+    /// Persist data in Context to |storage|, will try to set all of them to storage even if
+    /// previous set fails.
+    /// It will NOT call commit() on |storage|, caller is responsible to call commit().
+    pub async fn persist<'a>(&'a self, storage: &'a mut impl Storage) {
+        let micros = time_to_i64(self.schedule.last_update_time);
+        if let Err(e) = await!(storage.set_int(LAST_UPDATE_TIME, micros)) {
+            error!("Unable to persist {}: {}", LAST_UPDATE_TIME, e);
+        }
+
+        if let Some(interval) = &self.state.server_dictated_poll_interval {
+            let interval = interval.as_micros() as i64;
+            if let Err(e) = await!(storage.set_int(SERVER_DICTATED_POLL_INTERVAL, interval)) {
+                error!("Unable to persist {}: {}", SERVER_DICTATED_POLL_INTERVAL, e);
+            }
+        } else {
+            if let Err(e) = await!(storage.remove(SERVER_DICTATED_POLL_INTERVAL)) {
+                error!("Unable to remove {}: {}", SERVER_DICTATED_POLL_INTERVAL, e);
+            }
+        }
+    }
 }
 
 /// The response context from the update check contains any extra information that Omaha returns to
@@ -72,4 +119,83 @@ pub enum Action {
 
     /// An update was performed.
     Updated,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::storage::MemStorage;
+    use futures::executor::block_on;
+    use std::time::SystemTime;
+
+    #[test]
+    fn test_load_context() {
+        block_on(async {
+            let mut storage = MemStorage::new();
+            let last_update_time = i64_to_time(123456789);
+            await!(storage.set_int(LAST_UPDATE_TIME, time_to_i64(last_update_time))).unwrap();
+            let poll_interval = Duration::from_micros(56789);
+            await!(storage.set_int(SERVER_DICTATED_POLL_INTERVAL, poll_interval.as_micros()as i64)).unwrap();
+
+            let context = await!(Context::load(&storage));
+            assert_eq!(last_update_time, context.schedule.last_update_time);
+            assert_eq!(Some(poll_interval), context.state.server_dictated_poll_interval);
+        });
+    }
+
+    #[test]
+    fn test_load_context_empty_storage() {
+        block_on(async {
+            let storage = MemStorage::new();
+            let context = await!(Context::load(&storage));
+            assert_eq!(SystemTime::UNIX_EPOCH, context.schedule.last_update_time);
+            assert_eq!(None, context.state.server_dictated_poll_interval);
+        });
+    }
+
+    #[test]
+    fn test_persist_context() {
+        block_on(async {
+            let mut storage = MemStorage::new();
+            let last_update_time = i64_to_time(123456789);
+            let server_dictated_poll_interval = Some(Duration::from_micros(56789));
+            let context = Context {
+                schedule: UpdateCheckSchedule {
+                    last_update_time,
+                    next_update_time: clock::now(),
+                    next_update_window_start: clock::now(),
+                },
+                state: ProtocolState { server_dictated_poll_interval, ..ProtocolState::default() },
+            };
+            await!(context.persist(&mut storage));
+            assert_eq!(Some(123456789), await!(storage.get_int(LAST_UPDATE_TIME)));
+            assert_eq!(Some(56789), await!(storage.get_int(SERVER_DICTATED_POLL_INTERVAL)));
+            assert_eq!(false, storage.committed());
+        });
+    }
+
+    #[test]
+    fn test_persist_context_remove_poll_interval() {
+        block_on(async {
+            let mut storage = MemStorage::new();
+            let last_update_time = i64_to_time(123456789);
+            await!(storage.set_int(SERVER_DICTATED_POLL_INTERVAL, 987654)).unwrap();
+
+            let context = Context {
+                schedule: UpdateCheckSchedule {
+                    last_update_time,
+                    next_update_time: clock::now(),
+                    next_update_window_start: clock::now(),
+                },
+                state: ProtocolState {
+                    server_dictated_poll_interval: None,
+                    ..ProtocolState::default()
+                },
+            };
+            await!(context.persist(&mut storage));
+            assert_eq!(Some(123456789), await!(storage.get_int(LAST_UPDATE_TIME)));
+            assert_eq!(None, await!(storage.get_int(SERVER_DICTATED_POLL_INTERVAL)));
+            assert_eq!(false, storage.committed());
+        });
+    }
 }

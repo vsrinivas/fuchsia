@@ -9,12 +9,17 @@ use std::collections::HashMap;
 
 /// The MemStorage struct is an in-memory-only implementation of the Storage trait, to be used in
 /// testing scenarios.
+#[derive(Debug)]
 pub struct MemStorage {
     /// The values current stored.
     data: HashMap<String, Value>,
+
+    /// Whether commit() has been called after set_*() or remove().
+    committed: bool,
 }
 
 /// Value is an enumeration for holding the values in MemStorage.
+#[derive(Debug)]
 enum Value {
     String(String),
     Int(i64),
@@ -30,7 +35,11 @@ pub enum StorageErrors {
 
 impl MemStorage {
     pub fn new() -> Self {
-        MemStorage { data: HashMap::new() }
+        MemStorage { data: HashMap::new(), committed: true }
+    }
+
+    pub fn committed(&self) -> bool {
+        self.committed
     }
 }
 
@@ -72,6 +81,7 @@ impl Storage for MemStorage {
         value: &'a str,
     ) -> BoxFuture<Result<(), Self::Error>> {
         self.data.insert(key.to_string(), Value::String(value.to_string()));
+        self.committed = false;
         future::ready(Ok(())).boxed()
     }
 
@@ -79,6 +89,7 @@ impl Storage for MemStorage {
     /// until the |commit()| fn is called, and then persist all cached values at that time.
     fn set_int<'a>(&'a mut self, key: &'a str, value: i64) -> BoxFuture<Result<(), Self::Error>> {
         self.data.insert(key.to_string(), Value::Int(value));
+        self.committed = false;
         future::ready(Ok(())).boxed()
     }
 
@@ -86,17 +97,20 @@ impl Storage for MemStorage {
     /// until the |commit()| fn is called, and then persist all cached values at that time.
     fn set_bool<'a>(&'a mut self, key: &'a str, value: bool) -> BoxFuture<Result<(), Self::Error>> {
         self.data.insert(key.to_string(), Value::Bool(value));
+        self.committed = false;
         future::ready(Ok(())).boxed()
     }
 
     fn remove<'a>(&'a mut self, key: &'a str) -> BoxFuture<Result<(), Self::Error>> {
         self.data.remove(key);
+        self.committed = false;
         future::ready(Ok(())).boxed()
     }
 
     /// Set a value to be stored in the backing store.  The implementation should cache the value
     /// until the |commit()| fn is called, and then persist all cached values at that time.
     fn commit(&mut self) -> BoxFuture<Result<(), Self::Error>> {
+        self.committed = true;
         future::ready(Ok(())).boxed()
     }
 }
@@ -130,5 +144,23 @@ mod tests {
     #[test]
     fn test_ensure_no_error_remove_nonexistent_key() {
         block_on(do_ensure_no_error_remove_nonexistent_key(&mut MemStorage::new()));
+    }
+
+    #[test]
+    fn test_committed() {
+        block_on(async {
+            let mut storage = MemStorage::new();
+            assert_eq!(true, storage.committed());
+            await!(storage.set_bool("some bool key", false)).unwrap();
+            assert_eq!(false, storage.committed());
+            await!(storage.commit()).unwrap();
+            assert_eq!(true, storage.committed());
+            await!(storage.set_string("some string key", "some string")).unwrap();
+            assert_eq!(false, storage.committed());
+            await!(storage.set_int("some int key", 42)).unwrap();
+            assert_eq!(false, storage.committed());
+            await!(storage.commit()).unwrap();
+            assert_eq!(true, storage.committed());
+        });
     }
 }

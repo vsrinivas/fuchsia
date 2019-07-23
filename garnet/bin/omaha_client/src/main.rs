@@ -40,15 +40,17 @@ fn main() -> Result<(), Error> {
 
         let http = FuchsiaHyperHttpRequest::new();
         let installer = temp_installer::FuchsiaInstaller::new()?;
-        let mut state_machine = StateMachine::new(
+        let stash = await!(storage::Stash::new("omaha-client"))?;
+        let mut state_machine = await!(StateMachine::new(
             policy::FuchsiaPolicyEngine,
             http,
             installer,
             &config,
             timer::FuchsiaTimer,
             metrics_reporter,
-        );
-        state_machine.add_apps(apps);
+            stash,
+        ));
+        await!(state_machine.add_apps(apps));
         let state_machine_ref = Rc::new(RefCell::new(state_machine));
         let fidl = fidl::FidlServer::new(state_machine_ref.clone());
         let mut fs = ServiceFs::new_local();
