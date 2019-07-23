@@ -88,6 +88,9 @@ toc:
   section:
   - include: /fuchsia-src/zircon/syscalls/_toc.yaml
 
+- title: "abigen file grammar"
+  path: /fuchsia-src/zircon/abigen/grammar
+
 - title: "Bootsvc"
   path: /fuchsia-src/zircon/bootsvc
 
