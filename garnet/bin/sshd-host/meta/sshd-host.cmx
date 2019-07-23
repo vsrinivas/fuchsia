@@ -6,7 +6,8 @@
         "features": [
             "config-data",
             "build-info",
-            "deprecated-shell"
+            "deprecated-shell",
+            "deprecated-ambient-replace-as-executable"
         ],
         "services": [
             "fuchsia.net.NameLookup",

@@ -6,6 +6,9 @@
         "binary": "bin/root_job_test_runner"
     },
     "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
         "dev": [
             "misc/sysinfo"
         ],

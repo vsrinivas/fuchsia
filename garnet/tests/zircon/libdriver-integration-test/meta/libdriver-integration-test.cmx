@@ -3,7 +3,10 @@
         "binary": "test/libdriver-integration-test"
     },
     "sandbox": {
-        "features": [ "deprecated-shell" ],
+        "features": [
+            "deprecated-shell",
+            "deprecated-ambient-replace-as-executable"
+        ],
         "services": [
           "fuchsia.process.Launcher"
         ]

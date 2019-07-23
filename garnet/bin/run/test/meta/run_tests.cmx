@@ -4,7 +4,8 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-shell"
+            "deprecated-shell",
+            "deprecated-ambient-replace-as-executable"
         ],
         "services": [
             "fuchsia.process.Launcher"

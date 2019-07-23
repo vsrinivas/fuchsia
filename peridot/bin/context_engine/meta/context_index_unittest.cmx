@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/context_index_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ]
     }
 }

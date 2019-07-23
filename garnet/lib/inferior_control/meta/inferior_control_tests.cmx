@@ -9,6 +9,9 @@
     "services": [
       "fuchsia.process.Launcher",
       "fuchsia.process.Resolver"
+    ],
+    "features": [
+      "deprecated-ambient-replace-as-executable"
     ]
   }
 }

@@ -7,6 +7,9 @@
             "class/ethernet",
             "misc"
         ],
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
         "services": [
             "fuchsia.virtualization.vmm.LaunchInfoProvider",
             "fuchsia.sys.Environment",

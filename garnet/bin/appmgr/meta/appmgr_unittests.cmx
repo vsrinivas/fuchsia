@@ -6,7 +6,8 @@
         "features": [
             "deprecated-shell",
             "shell-commands",
-            "system-temp"
+            "system-temp",
+            "deprecated-ambient-replace-as-executable"
         ],
         "services": [
             "fuchsia.process.Resolver",

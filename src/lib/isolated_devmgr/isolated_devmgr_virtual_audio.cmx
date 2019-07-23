@@ -9,6 +9,9 @@
         "binary": "bin/isolated_devmgr"
     },
     "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
         "boot": [
             "bin",
             "lib"

@@ -10,7 +10,8 @@
         "features": [
           "isolated-persistent-storage",
           "shell-commands",
-          "system-temp"
+          "system-temp",
+          "deprecated-ambient-replace-as-executable"
         ],
         "services": [
             "fuchsia.process.Launcher",

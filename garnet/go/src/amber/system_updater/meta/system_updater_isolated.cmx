@@ -3,6 +3,9 @@
         "binary": "bin/system_updater"
     },
     "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
         "services": [
             "fuchsia.pkg.PackageResolver",
             "fuchsia.cobalt.LoggerFactory",

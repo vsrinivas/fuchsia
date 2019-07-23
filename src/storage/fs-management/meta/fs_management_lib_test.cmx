@@ -9,6 +9,9 @@
         "services": [
             "fuchsia.process.Launcher",
             "fuchsia.tracing.provider.Registry"
+        ],
+        "features" : [
+            "deprecated-ambient-replace-as-executable"
         ]
     }
 }

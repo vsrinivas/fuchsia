@@ -3,6 +3,7 @@
         "binary": "test/package_updating_loader_test"
     },
     "sandbox": {
+        "features": [ "deprecated-ambient-replace-as-executable" ],
         "services": [ "fuchsia.sys.Launcher", "fuchsia.sys.Environment" ],
         "pkgfs": [ "packages" ]
     }

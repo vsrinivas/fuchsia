@@ -6,6 +6,9 @@
         "services": [
             "fuchsia.process.Launcher",
             "fidl.examples.echo.Echo"
+        ],
+        "features": [
+            "deprecated-ambient-replace-as-executable"
         ]
     }
 }

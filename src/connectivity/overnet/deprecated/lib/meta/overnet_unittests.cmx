@@ -5,6 +5,9 @@
     "sandbox": {
       "services": [
         "fuchsia.process.Launcher"
+      ],
+      "features": [
+          "deprecated-ambient-replace-as-executable"
       ]
     }
 }

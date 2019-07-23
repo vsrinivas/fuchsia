@@ -3,6 +3,9 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
         "system": [ "lib" ]
     }
 }

@@ -3,6 +3,9 @@
         "binary": "test/fuzzing_traits_unittests"
     },
     "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
         "services": [
             "fuchsia.process.Launcher"
         ]
