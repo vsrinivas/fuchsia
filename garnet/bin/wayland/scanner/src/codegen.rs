@@ -237,7 +237,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Array, Enum, Fixed, FromArgs, IntoMess
     ///
     /// Ex:
     ///   impl IntoMessage for Event {
-    ///       fn into_message(self, id: u32) -> Result<Message, Self::Error> {
+    ///       fn into_message(self, id: u32) -> Result<Message, <Self as IntoMessage>::Error> {
     ///           let mut header = MessageHeader {...};
     ///           let mut message = Message::new();
     ///           message.write_header(&header);
@@ -261,7 +261,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Array, Enum, Fixed, FromArgs, IntoMess
             "\
 impl IntoMessage for Event {{
     type Error = EncodeError;
-    fn into_message(self, id: u32) -> Result<Message, Self::Error> {{
+    fn into_message(self, id: u32) -> Result<Message, <Self as IntoMessage>::Error> {{
         let mut header = MessageHeader {{
             sender: id,
             opcode: 0,
