@@ -4,12 +4,13 @@
 
 #include "zircon_platform_device.h"
 
-#include <ddk/device.h>
-#include <ddk/protocol/platform/device.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 #include <zircon/process.h>
+
+#include <ddk/device.h>
+#include <ddk/protocol/platform/device.h>
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
@@ -20,9 +21,8 @@
 
 namespace magma {
 
-Status ZirconPlatformDevice::LoadFirmware(const char* filename,
-                                          std::unique_ptr<PlatformBuffer>* firmware_out,
-                                          uint64_t* size_out) const {
+Status ZirconPlatformDeviceWithoutProtocol::LoadFirmware(
+    const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out, uint64_t* size_out) const {
   zx::vmo vmo;
   size_t size;
   zx_status_t status = load_firmware(zx_device_, filename, vmo.reset_and_get_address(), &size);
@@ -34,8 +34,8 @@ Status ZirconPlatformDevice::LoadFirmware(const char* filename,
   return MAGMA_STATUS_OK;
 }
 
-std::unique_ptr<PlatformHandle> ZirconPlatformDevice::GetSchedulerProfile(Priority priority,
-                                                                          const char* name) const {
+std::unique_ptr<PlatformHandle> ZirconPlatformDeviceWithoutProtocol::GetSchedulerProfile(
+    Priority priority, const char* name) const {
   zx_handle_t handle;
   zx_status_t status = device_get_profile(zx_device_, priority, name, &handle);
   if (status != ZX_OK)
@@ -92,12 +92,19 @@ std::unique_ptr<PlatformHandle> ZirconPlatformDevice::GetBusTransactionInitiator
 std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle) {
   if (!device_handle)
     return DRETP(nullptr, "device_handle is null, cannot create PlatformDevice");
-  zx_device_t* zx_device = static_cast<zx_device_t*>(device_handle);
-  pdev_protocol_t pdev;
-  if (device_get_protocol(zx_device, ZX_PROTOCOL_PDEV, &pdev) != ZX_OK)
-    return DRETP(nullptr, "Failed to get protocol\n");
 
-  return std::unique_ptr<PlatformDevice>(new ZirconPlatformDevice(zx_device, pdev));
+  zx_device_t* zx_device = static_cast<zx_device_t*>(device_handle);
+
+  pdev_protocol_t pdev;
+  zx_status_t status = device_get_protocol(zx_device, ZX_PROTOCOL_PDEV, &pdev);
+  switch (status) {
+    case ZX_OK:
+      return std::unique_ptr<PlatformDevice>(new ZirconPlatformDevice(zx_device, pdev));
+    case ZX_ERR_NOT_SUPPORTED:
+      return std::unique_ptr<PlatformDevice>(new ZirconPlatformDeviceWithoutProtocol(zx_device));
+    default:
+      return DRETP(nullptr, "Error requesting protocol: %d", status);
+  }
 }
 
 }  // namespace magma
