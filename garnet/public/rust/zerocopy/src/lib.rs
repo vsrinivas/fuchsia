@@ -74,7 +74,7 @@ macro_rules! impl_for_composite_types {
 // implement an unsafe trait for all signed and unsigned primitive types
 macro_rules! impl_for_primitives {
     ($trait:ident) => (
-        impl_for_primitives!(@inner $trait, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, usize, isize);
+        impl_for_primitives!(@inner $trait, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, usize, isize, f32, f64);
     );
     (@inner $trait:ident, $type:ty) => (
         unsafe impl $trait for $type {
