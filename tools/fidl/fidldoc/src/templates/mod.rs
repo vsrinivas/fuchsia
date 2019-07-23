@@ -128,8 +128,7 @@ fn pl(name: &str, base: &str) -> String {
 
     if package_base == base {
         format!(
-            "<a class='link' href='../{b}/index.html#{anchor}'>{anchor}</a>",
-            b = package_base,
+            "<a class='link' href='#{anchor}'>{anchor}</a>",
             anchor = package_name
         )
     } else {
@@ -251,7 +250,7 @@ mod test {
     fn pl_test() {
         let name = "fuchsia.media/Audio";
         let base = "fuchsia.media";
-        let expected = "<a class='link' href='../fuchsia.media/index.html#Audio'>Audio</a>";
+        let expected = "<a class='link' href='#Audio'>Audio</a>";
         assert_eq!(pl(name, base), expected.to_string());
 
         let name = "fuchsia.media/Metadata";
@@ -261,7 +260,7 @@ mod test {
 
         let name = "Audio";
         let base = "fuchsia.media";
-        let expected = "<a class='link' href='../fuchsia.media/index.html#Audio'>Audio</a>";
+        let expected = "<a class='link' href='#Audio'>Audio</a>";
         assert_eq!(pl(name, base), expected.to_string());
     }
 
@@ -269,12 +268,12 @@ mod test {
     fn dl_test() {
         let docs = "This is the the documentation for [`fuchsia.media/Audio`]";
         let base = "fuchsia.media";
-        let expected = "This is the the documentation for <a class='link' href='../fuchsia.media/index.html#Audio'>Audio</a>";
+        let expected = "This is the the documentation for <a class='link' href='#Audio'>Audio</a>";
         assert_eq!(dl(docs, base), expected.to_string());
 
         let docs = "This is [`fuchsia.media/Audio`] and this is [`fuchsia.media.sessions/Publisher`], while this is not a link to fuchsia.io/Node.";
         let base = "fuchsia.media.sessions";
-        let expected = "This is <a class='link' href='../fuchsia.media/index.html'>fuchsia.media</a>/<a class='link' href='../fuchsia.media/index.html#Audio'>Audio</a> and this is <a class='link' href='../fuchsia.media.sessions/index.html#Publisher'>Publisher</a>, while this is not a link to fuchsia.io/Node.";
+        let expected = "This is <a class='link' href='../fuchsia.media/index.html'>fuchsia.media</a>/<a class='link' href='../fuchsia.media/index.html#Audio'>Audio</a> and this is <a class='link' href='#Publisher'>Publisher</a>, while this is not a link to fuchsia.io/Node.";
         assert_eq!(dl(docs, base), expected.to_string());
     }
 
