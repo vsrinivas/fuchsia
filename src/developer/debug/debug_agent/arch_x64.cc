@@ -267,8 +267,8 @@ debug_ipc::NotifyException::Type DetermineHWException(
       return debug_ipc::NotifyException::Type::kWatchpoint;
   }
 
-  FXL_NOTREACHED();
-  return debug_ipc::NotifyException::Type::kNone;
+  // This is a HW breakpoint not set by us.
+  return debug_ipc::NotifyException::Type::kHardware;
 }
 
 }  // namespace
