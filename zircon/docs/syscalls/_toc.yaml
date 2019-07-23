@@ -207,14 +207,10 @@ toc:
   path: /fuchsia-src/zircon/syscalls/resource_create
 - title: "zx_smc_call"
   path: /fuchsia-src/zircon/syscalls/smc_call
-- title: "zx_socket_accept"
-  path: /fuchsia-src/zircon/syscalls/socket_accept
 - title: "zx_socket_create"
   path: /fuchsia-src/zircon/syscalls/socket_create
 - title: "zx_socket_read"
   path: /fuchsia-src/zircon/syscalls/socket_read
-- title: "zx_socket_share"
-  path: /fuchsia-src/zircon/syscalls/socket_share
 - title: "zx_socket_shutdown"
   path: /fuchsia-src/zircon/syscalls/socket_shutdown
 - title: "zx_socket_write"

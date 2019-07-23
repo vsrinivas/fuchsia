@@ -6,9 +6,11 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/development/languages/index.md
+  path: /fuchsia-src/development/languages
+- title: "Linting and formatting"
+  path: /fuchsia-src/development/languages/lint_and_format
 - title: "Supporting new languages"
-  path: /fuchsia-src/development/languages/new/structure.md
+  path: /fuchsia-src/development/languages/new/structure
 - title: "C/C++"
   section:
   - include: /fuchsia-src/development/languages/c-cpp/_toc.yaml
