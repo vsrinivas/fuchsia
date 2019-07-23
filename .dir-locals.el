@@ -3,7 +3,9 @@
 ;; found in the LICENSE file.
 
 (
- ;; Expand tabs as spaces.
- (c-mode . ((indent-tabs-mode . nil)))
- (c++-mode . ((indent-tabs-mode . nil)))
+ ;; Expand tabs as spaces, and wrap lines at 100.
+ (c-mode . ((indent-tabs-mode . nil)
+            (fill-column . 100)))
+ (c++-mode . ((indent-tabs-mode . nil)
+              (fill-column . 100)))
 )
