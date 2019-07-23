@@ -14,7 +14,7 @@ A typical workflow for using `enclosed_runner` is as follows:
   and `001` has interface id `3`.
 * First thing to do is to remove interface `3` so we can give it to `netstack3`:
 ```
-$ net_cli if del 3
+$ net if del 3
 ```
 * Now that we can use ethernet `001` for ourselves, we can start `enclosed_runner` giving it
 the path to the ethernet device and some fixed IP address:
@@ -29,7 +29,7 @@ with `&`.
   with `netstack3` using the statically assigned IP, but we should also still be
   able to use `fx shell`, `fx syslog` and other useful development commands that
   rely on the main netstack to work.
-* If you want to start processes that use `netstack3`, like `net_cli` for
+* If you want to start processes that use `netstack3`, like `net` for
   example, you can `chrealm` into the realm created for `enclosed_runner`, like:
 ```
 $ chrealm /hub/r/netstack3-env/<koid>

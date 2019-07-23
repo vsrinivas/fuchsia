@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/net_bin_test"
+    }
+}

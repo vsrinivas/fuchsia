@@ -74,12 +74,12 @@ which will have those packages be part of the base system.  Like this:
 ## Running
 
 Once you've done this setup, the netstack should be set up. You can run fuchsia
-however you normally would, then use `net_cli` to set up the interface:
+however you normally would, then use `net` to set up the interface:
 
 ```
-net_cli if add /dev/class/ethernet/000
-net_cli if addr add 1 192.168.1.39 24
-net_cli fwd add-device 1 192.168.1.0 24
+net if add /dev/class/ethernet/000
+net if addr add 1 192.168.1.39 24
+net fwd add-device 1 192.168.1.0 24
 ```
 
 Once you've done this, you can check that Netstack3 is reachable by pinging it
