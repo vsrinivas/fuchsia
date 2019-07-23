@@ -1,7 +1,7 @@
 {
     "crashpad_database" : {
         "path": "/tmp/crashes",
-        "max_size_in_kb": 10240
+        "max_size_in_kb": 51200
     },
     "crash_server": {
         "enable_upload": false
