@@ -4,6 +4,13 @@
 
 #pragma once
 
+#include <lib/fit/function.h>
+#include <lib/operation/operation.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/vmo.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+
 #include <optional>
 
 #include <ddk/debug.h>
@@ -13,12 +20,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <lib/fit/function.h>
-#include <lib/operation/operation.h>
-#include <lib/zx/bti.h>
-#include <lib/zx/vmo.h>
-#include <zircon/assert.h>
-#include <zircon/compiler.h>
 
 #include "usb-request.h"
 

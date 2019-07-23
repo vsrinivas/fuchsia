@@ -4,30 +4,34 @@
 
 #pragma once
 
-#include <ddk/protocol/usb.h>
-#include <ddk/protocol/usb/composite.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/usb.h>
+
+#include <ddk/protocol/usb.h>
+#include <ddk/protocol/usb/composite.h>
 #ifdef __cplusplus
-#include <ddktl/protocol/usb.h>
 #include <optional>
+
+#include <ddktl/protocol/usb.h>
 #endif
 
 __BEGIN_CDECLS
 
 // helper function for claiming additional interfaces that satisfy the want_interface predicate,
 // want_interface will be passed the supplied arg
+// clang-format off
 zx_status_t usb_claim_additional_interfaces(
-    usb_composite_protocol_t* comp,
-    bool (*want_interface)(usb_interface_descriptor_t*, void*),
-    void* arg);
+  usb_composite_protocol_t* comp,
+  bool (*want_interface)(usb_interface_descriptor_t*, void*),
+  void* arg);
+// clang-format on
 
 // Utilities for iterating through descriptors within a device's USB configuration descriptor
 typedef struct {
-    uint8_t* desc;     // start of configuration descriptor
-    uint8_t* desc_end; // end of configuration descriptor
-    uint8_t* current;  // current position in configuration descriptor
+  uint8_t* desc;      // start of configuration descriptor
+  uint8_t* desc_end;  // end of configuration descriptor
+  uint8_t* current;   // current position in configuration descriptor
 } usb_desc_iter_t;
 
 // initializes a usb_desc_iter_t
@@ -60,27 +64,26 @@ usb_ss_ep_comp_descriptor_t* usb_desc_iter_next_ss_ep_comp(usb_desc_iter_t* iter
 static inline zx_status_t usb_get_descriptor(const usb_protocol_t* usb, uint8_t request_type,
                                              uint16_t type, uint16_t index, void* data,
                                              size_t length, zx_time_t timeout, size_t* out_length) {
-    return usb_control_in(usb, request_type | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
-                          (uint16_t)(type << 8 | index), 0, timeout, data, length, out_length);
+  return usb_control_in(usb, request_type | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
+                        (uint16_t)(type << 8 | index), 0, timeout, data, length, out_length);
 }
 
 static inline zx_status_t usb_get_status(const usb_protocol_t* usb, uint8_t request_type,
                                          uint16_t index, void* data, size_t length,
                                          zx_time_t timeout, size_t* out_length) {
-    return usb_control_in(usb, request_type | USB_DIR_IN, USB_REQ_GET_STATUS, 0, index, timeout,
-                          data, length, out_length);
+  return usb_control_in(usb, request_type | USB_DIR_IN, USB_REQ_GET_STATUS, 0, index, timeout, data,
+                        length, out_length);
 }
 
 static inline zx_status_t usb_set_feature(const usb_protocol_t* usb, uint8_t request_type,
                                           uint16_t feature, uint16_t index, zx_time_t timeout) {
-    return usb_control_out(usb, request_type, USB_REQ_SET_FEATURE, feature, index, timeout,
-                           NULL, 0);
+  return usb_control_out(usb, request_type, USB_REQ_SET_FEATURE, feature, index, timeout, NULL, 0);
 }
 
 static inline zx_status_t usb_clear_feature(const usb_protocol_t* usb, uint8_t request_type,
                                             uint16_t feature, uint16_t index, zx_time_t timeout) {
-    return usb_control_out(usb, request_type, USB_REQ_CLEAR_FEATURE, feature, index, timeout,
-                           NULL, 0);
+  return usb_control_out(usb, request_type, USB_REQ_CLEAR_FEATURE, feature, index, timeout, NULL,
+                         0);
 }
 
 __END_CDECLS
@@ -89,48 +92,41 @@ __END_CDECLS
 namespace usb {
 
 typedef struct {
-    usb_endpoint_descriptor_t descriptor;
-    usb_ss_ep_comp_descriptor_t ss_companion;
-    // True if ss_companion is populated.
-    bool has_companion;
+  usb_endpoint_descriptor_t descriptor;
+  usb_ss_ep_comp_descriptor_t ss_companion;
+  // True if ss_companion is populated.
+  bool has_companion;
 } usb_iter_endpoint_descriptor_t;
 
 class UsbDevice : public ddk::UsbProtocolClient {
-public:
-    UsbDevice() {}
-    UsbDevice(const usb_protocol_t* proto)
-        : UsbProtocolClient(proto) {}
+ public:
+  UsbDevice() {}
+  UsbDevice(const usb_protocol_t* proto) : UsbProtocolClient(proto) {}
 
-    UsbDevice(zx_device_t* parent)
-        : UsbProtocolClient(parent) {
-    }
-    zx_status_t ClearFeature(uint8_t request_type,
-                             uint16_t feature, uint16_t index, zx_time_t timeout) {
-        usb_protocol_t proto;
-        GetProto(&proto);
-        return usb_clear_feature(&proto, request_type, feature, index, timeout);
-    }
-    zx_status_t GetDescriptor(uint8_t request_type,
-                              uint16_t type, uint16_t index, void* data,
-                              size_t length, zx_time_t timeout, size_t* out_length) {
-        usb_protocol_t proto;
-        GetProto(&proto);
-        return usb_get_descriptor(&proto, request_type, type, index, data, length, timeout,
-                                  out_length);
-    }
-    zx_status_t GetStatus(uint8_t request_type,
-                          uint16_t index, void* data, size_t length,
-                          zx_time_t timeout, size_t* out_length) {
-        usb_protocol_t proto;
-        GetProto(&proto);
-        return usb_get_status(&proto, request_type, index, data, length, timeout, out_length);
-    }
-    zx_status_t SetFeature(int8_t request_type,
-                           uint16_t feature, uint16_t index, zx_time_t timeout) {
-        usb_protocol_t proto;
-        GetProto(&proto);
-        return usb_set_feature(&proto, request_type, feature, index, timeout);
-    }
+  UsbDevice(zx_device_t* parent) : UsbProtocolClient(parent) {}
+  zx_status_t ClearFeature(uint8_t request_type, uint16_t feature, uint16_t index,
+                           zx_time_t timeout) {
+    usb_protocol_t proto;
+    GetProto(&proto);
+    return usb_clear_feature(&proto, request_type, feature, index, timeout);
+  }
+  zx_status_t GetDescriptor(uint8_t request_type, uint16_t type, uint16_t index, void* data,
+                            size_t length, zx_time_t timeout, size_t* out_length) {
+    usb_protocol_t proto;
+    GetProto(&proto);
+    return usb_get_descriptor(&proto, request_type, type, index, data, length, timeout, out_length);
+  }
+  zx_status_t GetStatus(uint8_t request_type, uint16_t index, void* data, size_t length,
+                        zx_time_t timeout, size_t* out_length) {
+    usb_protocol_t proto;
+    GetProto(&proto);
+    return usb_get_status(&proto, request_type, index, data, length, timeout, out_length);
+  }
+  zx_status_t SetFeature(int8_t request_type, uint16_t feature, uint16_t index, zx_time_t timeout) {
+    usb_protocol_t proto;
+    GetProto(&proto);
+    return usb_set_feature(&proto, request_type, feature, index, timeout);
+  }
 };
 
 // Interface is owned by an iterator of an InterfaceList.  It is possible to enumerate all USB
@@ -138,74 +134,72 @@ public:
 // for (auto endpoint:interface) { ... } where interface is an instance of an Interface.
 // Interfaces must not outlive their original InterfaceLists.
 class Interface {
-private:
-    class iterator_impl;
+ private:
+  class iterator_impl;
 
-public:
-    using iterator = iterator_impl;
-    using const_iterator = iterator_impl;
+ public:
+  using iterator = iterator_impl;
+  using const_iterator = iterator_impl;
 
-    Interface() = delete;
+  Interface() = delete;
 
-    const usb_interface_descriptor_t* descriptor() const { return descriptor_; }
+  const usb_interface_descriptor_t* descriptor() const { return descriptor_; }
 
-    iterator begin() const;
-    const_iterator cbegin() const;
-    iterator end() const;
-    const_iterator cend() const;
+  iterator begin() const;
+  const_iterator cbegin() const;
+  iterator end() const;
+  const_iterator cend() const;
 
-    friend class InterfaceList;
+  friend class InterfaceList;
 
-private:
-    Interface(const usb_desc_iter_t& iter, const usb_interface_descriptor_t* descriptor)
-        : iter_(iter),
-          descriptor_(descriptor) {}
+ private:
+  Interface(const usb_desc_iter_t& iter, const usb_interface_descriptor_t* descriptor)
+      : iter_(iter), descriptor_(descriptor) {}
 
-    class iterator_impl {
-    public:
-        friend class Interface;
+  class iterator_impl {
+   public:
+    friend class Interface;
 
-        iterator_impl(const usb_desc_iter_t& iter, const usb_iter_endpoint_descriptor_t& endpoint)
-            : iter_(iter),
-              endpoint_(endpoint) {}
+    iterator_impl(const usb_desc_iter_t& iter, const usb_iter_endpoint_descriptor_t& endpoint)
+        : iter_(iter), endpoint_(endpoint) {}
 
-        bool operator==(const iterator_impl& other) const {
-            const usb_endpoint_descriptor_t* a = &endpoint_.descriptor;
-            const usb_endpoint_descriptor_t* b = &other.endpoint_.descriptor;
-            // Note that within a configuration, endpoint addresses are unique.
-            return (a->bEndpointAddress == b->bEndpointAddress);
-        }
-        bool operator!=(const iterator_impl& other) const { return !(*this == other); }
+    bool operator==(const iterator_impl& other) const {
+      const usb_endpoint_descriptor_t* a = &endpoint_.descriptor;
+      const usb_endpoint_descriptor_t* b = &other.endpoint_.descriptor;
+      // Note that within a configuration, endpoint addresses are unique.
+      return (a->bEndpointAddress == b->bEndpointAddress);
+    }
+    bool operator!=(const iterator_impl& other) const { return !(*this == other); }
 
-        iterator_impl operator++(int) {
-            iterator_impl ret(*this);
-            ++(*this);
-            return ret;
-        }
+    iterator_impl operator++(int) {
+      iterator_impl ret(*this);
+      ++(*this);
+      return ret;
+    }
 
-        iterator_impl& operator++() {
-            endpoint_ = {};
-            ReadEp(&iter_, &endpoint_);
-            return *this;
-        }
+    iterator_impl& operator++() {
+      endpoint_ = {};
+      ReadEp(&iter_, &endpoint_);
+      return *this;
+    }
 
-        const usb_iter_endpoint_descriptor_t* endpoint() const { return &endpoint_; }
-        const usb_iter_endpoint_descriptor_t& operator*() const { return endpoint_; }
-        const usb_iter_endpoint_descriptor_t* operator->() const { return &endpoint_; }
+    const usb_iter_endpoint_descriptor_t* endpoint() const { return &endpoint_; }
+    const usb_iter_endpoint_descriptor_t& operator*() const { return endpoint_; }
+    const usb_iter_endpoint_descriptor_t* operator->() const { return &endpoint_; }
 
-    private:
-        // Using the given iter, read the next endpoint descriptor(s).
-        static void ReadEp(usb_desc_iter_t* iter, usb_iter_endpoint_descriptor_t* out);
-
-        usb_desc_iter_t iter_;
-        usb_iter_endpoint_descriptor_t endpoint_;
-    };
-
-    // Advances iter_ to the next usb_interface_descriptor_t.
-    void Next(bool skip_alt);
+   private:
+    // Using the given iter, read the next endpoint descriptor(s).
+    static void ReadEp(usb_desc_iter_t* iter, usb_iter_endpoint_descriptor_t* out);
 
     usb_desc_iter_t iter_;
-    const usb_interface_descriptor_t* descriptor_;
+    usb_iter_endpoint_descriptor_t endpoint_;
+  };
+
+  // Advances iter_ to the next usb_interface_descriptor_t.
+  void Next(bool skip_alt);
+
+  usb_desc_iter_t iter_;
+  const usb_interface_descriptor_t* descriptor_;
 };
 
 // An InterfaceList can be used for enumerating USB interfaces and endpoints.  It implements a
@@ -243,72 +237,69 @@ private:
 //         } while (++ep_iter != my_iter->end())
 //     } while (++my_iter != my_list->end())
 class InterfaceList {
-private:
-    class iterator_impl;
+ private:
+  class iterator_impl;
 
-public:
-    using iterator = iterator_impl;
-    using const_iterator = iterator_impl;
+ public:
+  using iterator = iterator_impl;
+  using const_iterator = iterator_impl;
 
-    InterfaceList() = delete;
+  InterfaceList() = delete;
 
-    InterfaceList(const usb_desc_iter_t& iter, bool skip_alt)
-        : iter_(iter),
-          skip_alt_(skip_alt) {}
+  InterfaceList(const usb_desc_iter_t& iter, bool skip_alt) : iter_(iter), skip_alt_(skip_alt) {}
 
-    InterfaceList(InterfaceList&&) = delete;
-    InterfaceList& operator=(InterfaceList&&) = delete;
+  InterfaceList(InterfaceList&&) = delete;
+  InterfaceList& operator=(InterfaceList&&) = delete;
 
-    ~InterfaceList() {
-        if (iter_.desc) {
-            usb_desc_iter_release(&iter_);
-        }
+  ~InterfaceList() {
+    if (iter_.desc) {
+      usb_desc_iter_release(&iter_);
+    }
+  }
+
+  static zx_status_t Create(const ddk::UsbProtocolClient& client, bool skip_alt,
+                            std::optional<InterfaceList>* out);
+
+  iterator begin() const;
+  const_iterator cbegin() const;
+  iterator end() const;
+  const_iterator cend() const;
+
+ private:
+  class iterator_impl {
+   public:
+    iterator_impl(const usb_desc_iter_t& iter, bool skip_alt,
+                  const usb_interface_descriptor_t* descriptor)
+        : skip_alt_(skip_alt), interface_(iter, descriptor) {}
+
+    bool operator==(const iterator_impl& other) const {
+      return interface_.descriptor_ == other.interface_.descriptor_;
+    }
+    bool operator!=(const iterator_impl& other) const { return !(*this == other); }
+
+    iterator_impl operator++(int) {
+      iterator_impl ret(*this);
+      ++(*this);
+      return ret;
     }
 
-    static zx_status_t Create(const ddk::UsbProtocolClient& client, bool skip_alt,
-                              std::optional<InterfaceList>* out);
+    iterator_impl& operator++() {
+      interface_.Next(skip_alt_);
+      return *this;
+    }
 
-    iterator begin() const;
-    const_iterator cbegin() const;
-    iterator end() const;
-    const_iterator cend() const;
+    const Interface* get() const { return &interface_; }
+    const Interface& operator*() const { return interface_; }
+    const Interface* operator->() const { return &interface_; }
 
-private:
-    class iterator_impl {
-    public:
-        iterator_impl(const usb_desc_iter_t& iter, bool skip_alt,
-                      const usb_interface_descriptor_t* descriptor)
-            : skip_alt_(skip_alt),
-              interface_(iter, descriptor) {}
+   private:
+    const bool skip_alt_;
+    Interface interface_;
+  };
 
-        bool operator==(const iterator_impl& other) const {
-            return interface_.descriptor_ == other.interface_.descriptor_;
-        }
-        bool operator!=(const iterator_impl& other) const { return !(*this == other); }
-
-        iterator_impl operator++(int) {
-            iterator_impl ret(*this);
-            ++(*this);
-            return ret;
-        }
-
-        iterator_impl& operator++() {
-            interface_.Next(skip_alt_);
-            return *this;
-        }
-
-        const Interface* get() const { return &interface_; }
-        const Interface& operator*() const { return interface_; }
-        const Interface* operator->() const { return &interface_; }
-
-    private:
-        const bool skip_alt_;
-        Interface interface_;
-    };
-
-    usb_desc_iter_t iter_{};
-    bool skip_alt_;
+  usb_desc_iter_t iter_{};
+  bool skip_alt_;
 };
 
-} // namespace usb
+}  // namespace usb
 #endif

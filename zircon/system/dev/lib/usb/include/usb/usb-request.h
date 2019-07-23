@@ -6,39 +6,40 @@
 
 #include <stdint.h>
 #include <sys/types.h>
-#include <ddk/io-buffer.h>
-#include <ddk/protocol/usb/request.h>
+#include <threads.h>
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 
-#include <threads.h>
+#include <ddk/io-buffer.h>
+#include <ddk/protocol/usb/request.h>
 
 __BEGIN_CDECLS
 
 // cache maintenance ops
+// clang-format off
 #define USB_REQUEST_CACHE_INVALIDATE        ZX_VMO_OP_CACHE_INVALIDATE
 #define USB_REQUEST_CACHE_CLEAN             ZX_VMO_OP_CACHE_CLEAN
 #define USB_REQUEST_CACHE_CLEAN_INVALIDATE  ZX_VMO_OP_CACHE_CLEAN_INVALIDATE
 #define USB_REQUEST_CACHE_SYNC              ZX_VMO_OP_CACHE_SYNC
+// clang-format on
 
 typedef struct {
-    list_node_t free_reqs;
-    mtx_t lock;
-    //offset of the list_node_t* (used for queueing) in usb_request_t.
-    uint64_t node_offset;
+  list_node_t free_reqs;
+  mtx_t lock;
+  // offset of the list_node_t* (used for queueing) in usb_request_t.
+  uint64_t node_offset;
 } usb_request_pool_t;
 
 typedef struct {
-    list_node_t node;
+  list_node_t node;
 } usb_req_internal_t;
 
-#define USB_REQ_TO_REQ_INTERNAL(req, size) \
-   ((usb_req_internal_t *)((uintptr_t)(req) + (size)))
-#define REQ_INTERNAL_TO_USB_REQ(ctx, size) ((usb_request_t *)((uintptr_t)(ctx) - (size)))
+#define USB_REQ_TO_REQ_INTERNAL(req, size) ((usb_req_internal_t*)((uintptr_t)(req) + (size)))
+#define REQ_INTERNAL_TO_USB_REQ(ctx, size) ((usb_request_t*)((uintptr_t)(ctx) - (size)))
 
 // usb_request_alloc() creates a new usb request with payload space of data_size.
-zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size,
-                              uint8_t ep_address, size_t req_size);
+zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size, uint8_t ep_address,
+                              size_t req_size);
 
 // usb_request_alloc_vmo() creates a new usb request with the given VMO.
 zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_handle, uint64_t vmo_offset,
@@ -46,8 +47,8 @@ zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_handle, u
 
 // usb_request_init() initializes the statically allocated usb request with the given VMO.
 // This will free any resources allocated by the usb request but not the usb request itself.
-zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle,
-                             uint64_t vmo_offset, uint64_t length, uint8_t ep_address);
+zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle, uint64_t vmo_offset,
+                             uint64_t length, uint8_t ep_address);
 
 // usb_request_set_sg_list() copies the scatter gather list to the request.
 // Future transfers using this request will determine where in the VMO to store read / write data
@@ -82,7 +83,8 @@ zx_status_t usb_request_cache_flush_invalidate(usb_request_t* req, zx_off_t offs
 // Looks up the physical pages backing this request's vm object.
 zx_status_t usb_request_physmap(usb_request_t* req, zx_handle_t bti_handle);
 
-// usb_request_release() frees the message data -- should be called only by the entity that allocated it
+// usb_request_release() frees the message data -- should be called only by the entity that
+// allocated it
 void usb_request_release(usb_request_t* req);
 
 // usb_request_complete() must be called by the processor when the request has
