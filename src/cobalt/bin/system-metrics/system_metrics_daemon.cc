@@ -6,7 +6,15 @@
 // on a regular basis.
 #include "src/cobalt/bin/system-metrics/system_metrics_daemon.h"
 
+#include <assert.h>
 #include <fcntl.h>
+
+#include <chrono>
+#include <memory>
+#include <numeric>
+#include <thread>
+#include <vector>
+
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
@@ -16,12 +24,6 @@
 #include <lib/zx/resource.h>
 #include <trace/event.h>
 #include <zircon/status.h>
-
-#include <chrono>
-#include <memory>
-#include <numeric>
-#include <thread>
-#include <vector>
 
 #include "lib/syslog/cpp/logger.h"
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher_impl.h"
@@ -34,6 +36,7 @@
 
 using cobalt::CobaltEventBuilder;
 using cobalt::StatusToString;
+using cobalt::TemperatureFetchStatus;
 using fuchsia::cobalt::CobaltEvent;
 using fuchsia::cobalt::HistogramBucket;
 using fuchsia::cobalt::Logger_Sync;
@@ -86,7 +89,7 @@ void SystemMetricsDaemon::StartLogging() {
   RepeatedlyLogUptime();
   RepeatedlyLogCpuUsage();
   RepeatedlyLogMemoryUsage();
-  RepeatedlyLogTemperature();
+  LogTemperatureIfSupported(1 /*remaining_attempts*/);
 }
 
 void SystemMetricsDaemon::RepeatedlyLogUpPingAndLifeTimeEvents() {
@@ -116,6 +119,31 @@ void SystemMetricsDaemon::RepeatedlyLogMemoryUsage() {
   async::PostDelayedTask(
       dispatcher_, [this]() { RepeatedlyLogMemoryUsage(); }, zx::sec(seconds_to_sleep.count()));
   return;
+}
+
+void SystemMetricsDaemon::LogTemperatureIfSupported(int remaining_attempts) {
+  uint32_t temperature;
+  TemperatureFetchStatus status = temperature_fetcher_->FetchTemperature(&temperature);
+  switch (status) {
+    case TemperatureFetchStatus::NOT_SUPPORTED:
+      FX_LOGS(INFO) << "Stop further attempt to read or log temperature as it is not supported.";
+      return;
+    case TemperatureFetchStatus::SUCCEED:
+      RepeatedlyLogTemperature();
+      return;
+    case TemperatureFetchStatus::FAIL:
+      if (remaining_attempts > 0) {
+        FX_LOGS(INFO) << "Failed to fetch device temperature. Try again in 1 minute.";
+        async::PostDelayedTask(
+            dispatcher_,
+            [this, remaining_attempts]() { LogTemperatureIfSupported(remaining_attempts - 1); },
+            zx::sec(60));
+      } else {
+        FX_LOGS(INFO) << "Exceeded the number of attempts to check for temperature support."
+                      << "Stop further attempt to read or log temperature.";
+      }
+      return;
+  }
 }
 
 void SystemMetricsDaemon::RepeatedlyLogTemperature() {
@@ -343,15 +371,15 @@ std::chrono::seconds SystemMetricsDaemon::LogTemperature() {
     return std::chrono::minutes(1);
   }
   uint32_t temperature;
-  if (!temperature_fetcher_->FetchTemperature(&temperature)) {
-    return std::chrono::minutes(1);
+  TemperatureFetchStatus status = temperature_fetcher_->FetchTemperature(&temperature);
+  if (TemperatureFetchStatus::SUCCEED != status) {
+    FX_LOGS(ERROR) << "Temperature fetch failed.";
   }
   temperature_map_[temperature]++;
   temperature_map_size_++;
   if (temperature_map_size_ == 6) {  // Flush every minute.
     LogTemperatureToCobalt();
-    // Drop the data even if logging does not succeed.
-    temperature_map_.clear();
+    temperature_map_.clear();  // Drop the data even if logging does not succeed.
     temperature_map_size_ = 0;
   }
   return std::chrono::seconds(10);
@@ -528,4 +556,9 @@ void SystemMetricsDaemon::InitializeLogger() {
   if (!logger_) {
     FX_LOGS(ERROR) << "Unable to get Logger from factory.";
   }
+}
+
+void SystemMetricsDaemon::SetTemperatureFetcher(
+    std::unique_ptr<cobalt::TemperatureFetcher> fetcher) {
+  temperature_fetcher_ = std::move(fetcher);
 }

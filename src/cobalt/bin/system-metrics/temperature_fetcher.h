@@ -9,6 +9,12 @@
 
 namespace cobalt {
 
+enum TemperatureFetchStatus {
+  SUCCEED,
+  FAIL,
+  NOT_SUPPORTED,
+};
+
 // An abstract interface for temperature fetching from various
 // resources
 class TemperatureFetcher {
@@ -16,7 +22,7 @@ class TemperatureFetcher {
   virtual ~TemperatureFetcher() = default;
 
   // Temperature in Celsius.
-  virtual bool FetchTemperature(uint32_t* temperature) = 0;
+  virtual TemperatureFetchStatus FetchTemperature(uint32_t* temperature) = 0;
 };
 
 }  // namespace cobalt

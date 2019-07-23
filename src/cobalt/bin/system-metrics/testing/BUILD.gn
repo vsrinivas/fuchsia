@@ -12,6 +12,8 @@ source_set("fake_fetchers") {
     "fake_memory_stats_fetcher.h",
     "fake_temperature_fetcher.cc",
     "fake_temperature_fetcher.h",
+    "fake_temperature_fetcher_not_supported.cc",
+    "fake_temperature_fetcher_not_supported.h",
   ]
 
   deps = [

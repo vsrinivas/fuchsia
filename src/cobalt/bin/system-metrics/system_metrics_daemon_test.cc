@@ -4,16 +4,17 @@
 
 #include "src/cobalt/bin/system-metrics/system_metrics_daemon.h"
 
+#include <future>
+
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/gtest/test_loop_fixture.h>
-
-#include <future>
 
 #include "gtest/gtest.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_cpu_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_memory_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_temperature_fetcher.h"
+#include "src/cobalt/bin/system-metrics/testing/fake_temperature_fetcher_not_supported.h"
 #include "src/cobalt/bin/testing/fake_clock.h"
 #include "src/cobalt/bin/testing/fake_logger.h"
 #include "src/cobalt/bin/utils/clock.h"
@@ -23,7 +24,9 @@ using cobalt::FakeLogger_Sync;
 using cobalt::FakeMemoryStatsFetcher;
 using cobalt::FakeSteadyClock;
 using cobalt::FakeTemperatureFetcher;
+using cobalt::FakeTemperatureFetcherNotSupported;
 using cobalt::LogMethod;
+using cobalt::TemperatureFetchStatus;
 using fuchsia_system_metrics::FuchsiaLifetimeEventsMetricDimensionEvents;
 using fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot;
 using fuchsia_system_metrics::FuchsiaUpPingMetricDimensionUptime;
@@ -63,6 +66,12 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
     return daemon_->RepeatedlyLogUpPingAndLifeTimeEvents();
   }
 
+  void RepeatedlyLogTemperature() { return daemon_->RepeatedlyLogTemperature(); }
+
+  void LogTemperatureIfSupported(bool remaining_attempts) {
+    return daemon_->LogTemperatureIfSupported(remaining_attempts);
+  }
+
   void RepeatedlyLogUptime() { return daemon_->RepeatedlyLogUptime(); }
 
   seconds LogMemoryUsage() { return daemon_->LogMemoryUsage(); }
@@ -81,6 +90,10 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
     daemon_->temperature_map_[50] = 1;
     daemon_->temperature_map_size_ = 5;
     return daemon_->LogTemperature();
+  }
+
+  void SetTemperatureFetcher(std::unique_ptr<cobalt::TemperatureFetcher> fetcher) {
+    daemon_->SetTemperatureFetcher(std::move(fetcher));
   }
 
   FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot GetUpTimeEventCode(
@@ -141,12 +154,13 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
   // RepeatedlyLogUpPingAndLifeTimeEvents() was executed and did the expected
   // thing.
   void AdvanceTimeAndCheck(seconds advance_time_seconds, size_t expected_call_count,
-                           uint32_t expected_metric_id, uint32_t expected_last_event_code) {
+                           uint32_t expected_metric_id, uint32_t expected_last_event_code,
+                           LogMethod expected_log_method_invoked = cobalt::kOther) {
     bool expected_activity = (expected_call_count != 0);
     fake_clock_->Increment(advance_time_seconds);
     EXPECT_EQ(expected_activity, RunLoopFor(zx::sec(advance_time_seconds.count())));
-    LogMethod expected_log_method_invoked =
-        (expected_call_count == 0 ? cobalt::kOther : cobalt::kLogEvent);
+    expected_log_method_invoked =
+        (expected_call_count == 0 ? cobalt::kOther : expected_log_method_invoked);
     CheckValues(expected_log_method_invoked, expected_call_count, expected_metric_id,
                 expected_last_event_code);
     fake_logger_.reset();
@@ -463,39 +477,39 @@ TEST_F(SystemMetricsDaemonTest, RepeatedlyLogUpPingAndLifeTimeEvents) {
   fake_logger_.reset();
 
   // Advance the clock by 30 seconds. Nothing should have happened.
-  AdvanceTimeAndCheck(seconds(30), 0, -1, -1);
+  AdvanceTimeAndCheck(seconds(30), 0, -1, -1, cobalt::kLogEvent);
   // Advance the clock by 30 seconds again. Nothing should have happened
   // because the first run of RepeatedlyLogUpPingAndLifeTimeEvents() added a 5
   // second buffer to the next scheduled run time.
-  AdvanceTimeAndCheck(seconds(30), 0, -1, -1);
+  AdvanceTimeAndCheck(seconds(30), 0, -1, -1, cobalt::kLogEvent);
 
   // Advance the clock by 5 seconds to t=65s. Now expect the second batch
   // of work to occur. This consists of two events the second of which is
   // |UpOneMinute|. The third batch of work should be schedule for
   // t = 10m + 5s.
   AdvanceTimeAndCheck(seconds(5), 2, fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                      FuchsiaUpPingMetricDimensionUptime::UpOneMinute);
+                      FuchsiaUpPingMetricDimensionUptime::UpOneMinute, cobalt::kLogEvent);
 
   // Advance the clock to t=10m. Nothing should have happened because the
   // previous round added a 5s buffer.
-  AdvanceTimeAndCheck(minutes(10) - seconds(65), 0, -1, -1);
+  AdvanceTimeAndCheck(minutes(10) - seconds(65), 0, -1, -1, cobalt::kLogEvent);
 
   // Advance the clock 5 s to t=10m + 5s. Now expect the third batch of
   // work to occur. This consists of three events the second of which is
   // |UpTenMinutes|. The fourth batch of work should be scheduled for
   // t = 1 hour + 5s.
   AdvanceTimeAndCheck(seconds(5), 3, fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                      FuchsiaUpPingMetricDimensionUptime::UpTenMinutes);
+                      FuchsiaUpPingMetricDimensionUptime::UpTenMinutes, cobalt::kLogEvent);
 
   // Advance the clock to t=1h. Nothing should have happened because the
   // previous round added a 5s buffer.
-  AdvanceTimeAndCheck(minutes(60) - (minutes(10) + seconds(5)), 0, -1, -1);
+  AdvanceTimeAndCheck(minutes(60) - (minutes(10) + seconds(5)), 0, -1, -1, cobalt::kLogEvent);
 
   // Advance the clock 5 s to t=1h + 5s. Now expect the fourth batch of
   // work to occur. This consists of 4 events the last of which is
   // |UpOneHour|.
   AdvanceTimeAndCheck(seconds(5), 4, fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                      FuchsiaUpPingMetricDimensionUptime::UpOneHour);
+                      FuchsiaUpPingMetricDimensionUptime::UpOneHour, cobalt::kLogEvent);
 }
 
 // Tests the method LogMemoryUsage(). Uses a local FakeLogger_Sync and
@@ -522,11 +536,69 @@ TEST_F(SystemMetricsDaemonTest, LogCpuUsage) {
 // does not use FIDL. Does not use the message loop.
 TEST_F(SystemMetricsDaemonTest, LogTemperature) {
   fake_logger_.reset();
+  // This is already set in the constructor. Setting it again just in case people
+  // change the order of tests in the future.
+  SetTemperatureFetcher(std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()));
   // When LogTemperature() is invoked it should log 6 events
   // in 1 FIDL call, and return 10 second.
   EXPECT_EQ(seconds(10).count(), LogTemperature().count());
   CheckValues(cobalt::kLogIntHistogram, 1,
               fuchsia_system_metrics::kFuchsiaTemperatureExperimentalMetricId, 0);
+}
+
+// Tests first call of the method LogTemperatureIfSupported()
+// when temperature fetcher returns NOT_SUPPORTED.
+TEST_F(SystemMetricsDaemonTest, LogTemperatureIfSupportedNotSupported) {
+  RunLoopUntilIdle();
+  fake_logger_.reset();
+  SetTemperatureFetcher(
+      std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcherNotSupported()));
+  LogTemperatureIfSupported(1 /*remaining_attempts*/);
+  // LogTemperature would NOT be triggered.
+  CheckValues(cobalt::kOther, 0, -1, -1);
+  // There should be no logging activity forever.
+  AdvanceTimeAndCheck(hours(24), 0, -1, -1);
+}
+
+// Tests second call of the method LogTemperatureIfSupported()
+// when temperature fetcher returns NOT_SUPPORTED.
+TEST_F(SystemMetricsDaemonTest, LogTemperatureIfSupportedNotSupported2) {
+  RunLoopUntilIdle();
+  // Second trial should give the same result.
+  fake_logger_.reset();
+  SetTemperatureFetcher(
+      std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcherNotSupported()));
+  LogTemperatureIfSupported(0 /*remaining_attempts*/);
+  // LogTemperature would NOT be triggered.
+  CheckValues(cobalt::kOther, 0, -1, -1);
+  // There should be no logging activity forever.
+  AdvanceTimeAndCheck(hours(24), 0, -1, -1);
+}
+
+// Tests first call of the method LogTemperatureIfSupported()
+// when temperature fetcher returns SUCCEED.
+TEST_F(SystemMetricsDaemonTest, LogTemperatureIfSupportedSucceed) {
+  RunLoopUntilIdle();
+  fake_logger_.reset();
+  // SetTemperatureFetcher(std::unique_ptr<cobalt::TemperatureFetcher>(new
+  // FakeTemperatureFetcher()));
+  LogTemperatureIfSupported(1 /*remaining_attempts*/);
+  // LogTemperature would be triggered and one cobalt call would be made within 1 minute
+  AdvanceTimeAndCheck(minutes(1), 1,
+                      fuchsia_system_metrics::kFuchsiaTemperatureExperimentalMetricId, 0,
+                      cobalt::kLogIntHistogram);
+}
+
+// Tests second call of the method LogTemperatureIfSupported()
+// when temperature fetcher returns SUCCEED.
+TEST_F(SystemMetricsDaemonTest, LogTemperatureIfSupportedSucceed2) {
+  RunLoopUntilIdle();
+  fake_logger_.reset();
+  LogTemperatureIfSupported(0 /*remaining_attempts*/);
+  // LogTemperature would be triggered and one cobalt call would be made within 1 minute
+  AdvanceTimeAndCheck(minutes(1), 1,
+                      fuchsia_system_metrics::kFuchsiaTemperatureExperimentalMetricId, 0,
+                      cobalt::kLogIntHistogram);
 }
 
 TEST_F(SystemMetricsDaemonTest, GetUpTimeEventCode) {
