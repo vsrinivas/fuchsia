@@ -15,6 +15,7 @@ const SourceFile = `
 	nonstandard_style, // auto-caps does its best, but is not always successful
 )]
 
+#[cfg(target_os = "fuchsia")]
 #[allow(unused_imports)]
 use fuchsia_zircon as zx;
 #[allow(unused_imports)]
@@ -53,7 +54,9 @@ use fidl::{
 {{ template "TableDeclaration" $table }}
 {{ end -}}
 {{ range $interface := .Interfaces -}}
-{{ template "InterfaceDeclaration" $interface }}
+{{ range $transport, $_ := .Transports -}}
+{{ if eq $transport "Channel" -}}{{ template "InterfaceDeclaration" $interface }}{{- end }}
+{{ end -}}
 {{ end -}}
 {{- end -}}
 `

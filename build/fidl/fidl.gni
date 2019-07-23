@@ -131,6 +131,7 @@ template("fidl") {
     }
   } else {
     import("//build/c/fidl_c.gni")
+    import("//build/rust/fidl_rust_library.gni")
 
     if (current_toolchain == fidl_toolchain) {
       import("//build/fidl/fidl_library.gni")
@@ -201,14 +202,12 @@ template("fidl") {
                              ])
     }
 
+    # TODO(cramertj): remove pending TC-81.
+    fidl_rust_library(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+
     if (is_fuchsia) {
-      import("//build/rust/fidl_rust_library.gni")
-
-      # TODO(cramertj): remove pending TC-81.
-      fidl_rust_library(target_name) {
-        forward_variables_from(invoker, "*")
-      }
-
       fidl_c_client(target_name) {
         forward_variables_from(invoker, "*")
       }

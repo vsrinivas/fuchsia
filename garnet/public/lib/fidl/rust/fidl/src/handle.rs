@@ -39,8 +39,10 @@ pub mod non_fuchsia_handles {
 
     use std::mem;
 
+    /// A trait to get a reference to the underlying handle of an object.
     pub trait AsHandleRef {}
 
+    /// A trait implemented by all handle-based types.
     pub trait HandleBased : AsHandleRef + From<Handle> + Into<Handle> {
         /// Creates an instance of this type from a handle.
         ///
@@ -57,6 +59,7 @@ pub mod non_fuchsia_handles {
         }
     }
 
+    /// Representation of a handle-like object
     #[derive(PartialEq, Eq, Debug)]
     pub struct Handle {}
 
@@ -65,10 +68,12 @@ pub mod non_fuchsia_handles {
     impl HandleBased for Handle {}
 
     impl Handle {
+        /// Return an invalid handle
         pub fn invalid() -> Handle {
             Handle {}
         }
 
+        /// Return true if this handle is invalid
         pub fn is_invalid(&self) -> bool {
             true
         }
