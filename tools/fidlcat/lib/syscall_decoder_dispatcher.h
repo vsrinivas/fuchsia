@@ -50,7 +50,7 @@ inline std::ostream& operator<<(std::ostream& os, const DisplayTime& time) {
       char buffer[100];
       strftime(buffer, sizeof(buffer), "%c", &tm);
       os << time.colors().blue << buffer << " and ";
-      snprintf(buffer, sizeof(buffer), "%09ld", time.time_ns() % 1000000000L);
+      snprintf(buffer, sizeof(buffer), "%09" PRId64, time.time_ns() % 1000000000L);
       os << buffer << " ns" << time.colors().reset;
     } else {
       os << time.colors().red << "unknown time" << time.colors().reset;
