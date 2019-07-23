@@ -253,6 +253,13 @@ pub(crate) fn receive_arp_packet<
             packet.sender_hardware_address(),
         );
 
+        // If we have an outstanding retry timer for this host, we should cancel
+        // it since we now have the mapping in cache.
+        ctx.dispatcher.cancel_timeout(ArpTimerId::new_request_retry_timer_id(
+            device_id,
+            packet.sender_protocol_address().addr(),
+        ));
+
         increment_counter!(ctx, "arp::rx_gratuitous_resolve");
         // Notify device layer:
         AD::address_resolved(
@@ -712,6 +719,57 @@ mod tests {
 
         // Gratuitous ARPs should not send a response.
         assert_eq!(ctx.dispatcher.frames_sent().len(), 0);
+    }
+
+    #[test]
+    fn test_receive_gratuitous_arp_response_cancels_timers() {
+        // Test that, if we have an outstanding request retry timer and receive
+        // a gratuitous ARP for the same host, we cancel the timer.
+        let (mut ctx, device_id) = set_up_simple_test_environment();
+        set_ip_addr_subnet(&mut ctx, device_id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
+
+        lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
+            &mut ctx,
+            device_id,
+            TEST_LOCAL_MAC,
+            TEST_REMOTE_IPV4,
+        );
+
+        let request_retry_timer_id =
+            ArpTimerId::new_request_retry_timer_id(device_id, TEST_REMOTE_IPV4);
+
+        assert_eq!(
+            ctx.dispatcher.timer_events().filter(|(_, id)| id == &&request_retry_timer_id).count(),
+            1
+        );
+
+        send_arp_packet(
+            &mut ctx,
+            device_id,
+            ArpOp::Response,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_MAC,
+            TEST_REMOTE_MAC,
+        );
+
+        assert_eq!(
+            *EthernetArpDevice::get_arp_state(ctx.state_mut(), device_id)
+                .table
+                .lookup(TEST_REMOTE_IPV4)
+                .unwrap(),
+            TEST_REMOTE_MAC
+        );
+
+        // The timer has been canceled.
+        assert_eq!(
+            ctx.dispatcher.timer_events().filter(|(_, id)| id == &&request_retry_timer_id).count(),
+            0
+        );
+
+        // Gratuitous ARPs should not send a response (the 1 frame is for the
+        // original request).
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
     }
 
     #[test]
