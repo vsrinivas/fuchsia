@@ -12,8 +12,8 @@ that we expect everyone who interacts with the project to respect.
 
 ## How can I build and run Fuchsia?
 
-See [Getting Started](docs/getting_started.md).
+See [Getting Started](https://fuchsia.dev/fuchsia-src/getting_started.md).
 
 ## Where can I learn more about Fuchsia?
 
-See the [documentation](docs/).
+See [fuchsia.dev](https://fuchsia.dev).
