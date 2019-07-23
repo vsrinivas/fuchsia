@@ -1,13 +1,13 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+pub use cstr::cstr;
+
 use {
     fuchsia_zircon as zx,
     std::{ffi::CStr, marker::PhantomData, mem, ptr},
 };
-
-// Re-export libc to be used from the c_char macro
-#[doc(hidden)]
-pub mod __libc_reexport {
-    pub use libc::*;
-}
 
 /// `Scope` represents the scope of a trace event.
 #[derive(Copy, Clone)]
@@ -25,21 +25,6 @@ impl Scope {
             Scope::Global => sys::TRACE_SCOPE_GLOBAL,
         }
     }
-}
-
-/// Creates a `&'static CStr` from a string literal.
-#[macro_export]
-macro_rules! cstr {
-    ($s:expr) => {
-        // `concat` macro always produces a static string literal.
-        // It is always safe to create a CStr from a null-terminated string.
-        // If there are interior null bytes, the string will just end early.
-        unsafe {
-            ::std::ffi::CStr::from_ptr::<'static>(
-                concat!($s, "\0").as_ptr() as *const $crate::__libc_reexport::c_char
-            )
-        }
-    };
 }
 
 /// Returns true if tracing is enabled.

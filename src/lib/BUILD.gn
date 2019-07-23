@@ -26,6 +26,7 @@ group("tests") {
   deps = [
     "cobalt:tests",
     "containers/cpp:tests",
+    "cstr:tests",
     "fidl_table_validation:tests",
     "fuzzing:tests",
     "isolated_devmgr:tests",

@@ -10,6 +10,7 @@ rustc_library("fuchsia-trace") {
   edition = "2018"
   deps = [
     "//garnet/public/rust/fuchsia-zircon",
+    "//src/lib/cstr",
     "//third_party/rust_crates:libc",
   ]
   non_rust_deps = [ "//zircon/public/lib/trace-engine" ]

@@ -53,33 +53,13 @@
 #![deny(missing_docs)]
 
 use {
+    cstr::cstr,
     failure::{bail, format_err, Error, ResultExt},
     fdio::{spawn_etc, Namespace, SpawnAction, SpawnOptions},
     fidl_fuchsia_io::{DirectoryAdminSynchronousProxy, OPEN_RIGHT_ADMIN},
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef},
 };
-
-// Re-export libc to be used from the c_char macro
-#[doc(hidden)]
-pub mod __libc_reexport {
-    pub use libc::*;
-}
-
-/// Creates a `&'static CStr` from a string literal.
-#[macro_export]
-macro_rules! cstr {
-    ($s:expr) => {
-        // `concat` macro always produces a static string literal.
-        // It is always safe to create a CStr from a null-terminated string.
-        // If there are interior null bytes, the string will just end early.
-        unsafe {
-            ::std::ffi::CStr::from_ptr::<'static>(
-                concat!($s, "\0").as_ptr() as *const $crate::__libc_reexport::c_char
-            )
-        }
-    };
-}
 
 /// A structure representing a managed blobfs partition. When dropped, it attempts to unmount blobfs
 /// (if it was previously mounted).
