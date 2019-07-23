@@ -29,7 +29,7 @@ pub(crate) type OptionsSerializer<'a, I> = crate::wire::records::options::Option
 >;
 
 /// An NDP Router Solicitation.
-#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[derive(Copy, Clone, Default, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 pub(crate) struct RouterSolicitation {
     _reserved: [u8; 4],
@@ -40,7 +40,7 @@ impl_icmp_message!(Ipv6, RouterSolicitation, RouterSolicitation, IcmpUnusedCode,
 /// An NDP Router Advertisement.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub(crate) struct RouterAdvertisment {
+pub(crate) struct RouterAdvertisement {
     current_hop_limit: u8,
     configuration_mo: u8,
     router_lifetime: U16,
@@ -48,9 +48,24 @@ pub(crate) struct RouterAdvertisment {
     retransmit_timer: U32,
 }
 
-impl_icmp_message!(Ipv6, RouterAdvertisment, RouterAdvertisment, IcmpUnusedCode, Options<B>);
+impl_icmp_message!(Ipv6, RouterAdvertisement, RouterAdvertisement, IcmpUnusedCode, Options<B>);
 
-impl RouterAdvertisment {
+impl RouterAdvertisement {
+    pub(crate) fn new(
+        current_hop_limit: u8,
+        configuration_mo: u8,
+        router_lifetime: u16,
+        reachable_time: u32,
+        retransmit_timer: u32,
+    ) -> Self {
+        Self {
+            current_hop_limit,
+            configuration_mo,
+            router_lifetime: U16::new(router_lifetime),
+            reachable_time: U32::new(reachable_time),
+            retransmit_timer: U32::new(retransmit_timer),
+        }
+    }
     pub(crate) fn router_lifetime(&self) -> u16 {
         self.router_lifetime.get()
     }
@@ -90,15 +105,15 @@ impl NeighborSolicitation {
 /// An NDP Neighbor Advertisement.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub(crate) struct NeighborAdvertisment {
+pub(crate) struct NeighborAdvertisement {
     flags_rso: u8,
     _reserved: [u8; 3],
     target_address: Ipv6Addr,
 }
 
-impl_icmp_message!(Ipv6, NeighborAdvertisment, NeighborAdvertisment, IcmpUnusedCode, Options<B>);
+impl_icmp_message!(Ipv6, NeighborAdvertisement, NeighborAdvertisement, IcmpUnusedCode, Options<B>);
 
-impl NeighborAdvertisment {
+impl NeighborAdvertisement {
     /// Router flag.
     ///
     /// When set, the R-bit indicates that the sender is a router. The R-bit is
@@ -332,14 +347,14 @@ mod tests {
     }
 
     #[test]
-    fn parse_neighbor_advertisment() {
+    fn parse_neighbor_advertisement() {
         use crate::wire::icmp::testdata::ndp_neighbor::*;
-        let mut buf = &ADVERTISMENT_IP_PACKET_BYTES[..];
+        let mut buf = &ADVERTISEMENT_IP_PACKET_BYTES[..];
         let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
         let ip_builder = ip.builder();
         let (src_ip, dst_ip, hop_limit) = (ip.src_ip(), ip.dst_ip(), ip.hop_limit());
         let icmp = buf
-            .parse_with::<_, IcmpPacket<_, _, NeighborAdvertisment>>(IcmpParseArgs::new(
+            .parse_with::<_, IcmpPacket<_, _, NeighborAdvertisement>>(IcmpParseArgs::new(
                 src_ip, dst_ip,
             ))
             .unwrap();
@@ -359,18 +374,18 @@ mod tests {
             .unwrap()
             .as_ref()
             .to_vec();
-        assert_eq!(&serialized, &ADVERTISMENT_IP_PACKET_BYTES);
+        assert_eq!(&serialized, &ADVERTISEMENT_IP_PACKET_BYTES);
     }
 
     #[test]
-    fn parse_router_advertisment() {
+    fn parse_router_advertisement() {
         use crate::wire::icmp::testdata::ndp_router::*;
-        let mut buf = &ADVERTISMENT_IP_PACKET_BYTES[..];
+        let mut buf = &ADVERTISEMENT_IP_PACKET_BYTES[..];
         let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
         let ip_builder = ip.builder();
         let (src_ip, dst_ip) = (ip.src_ip(), ip.dst_ip());
         let icmp = buf
-            .parse_with::<_, IcmpPacket<_, _, RouterAdvertisment>>(IcmpParseArgs::new(
+            .parse_with::<_, IcmpPacket<_, _, RouterAdvertisement>>(IcmpParseArgs::new(
                 src_ip, dst_ip,
             ))
             .unwrap();
@@ -409,6 +424,6 @@ mod tests {
             .unwrap()
             .as_ref()
             .to_vec();
-        assert_eq!(&serialized, &ADVERTISMENT_IP_PACKET_BYTES);
+        assert_eq!(&serialized, &ADVERTISEMENT_IP_PACKET_BYTES);
     }
 }

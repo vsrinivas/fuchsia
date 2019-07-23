@@ -35,9 +35,9 @@ pub(crate) enum Icmpv6Packet<B: ByteSlice> {
     EchoRequest(IcmpPacket<Ipv6, B, IcmpEchoRequest>),
     EchoReply(IcmpPacket<Ipv6, B, IcmpEchoReply>),
     RouterSolicitation(IcmpPacket<Ipv6, B, ndp::RouterSolicitation>),
-    RouterAdvertisment(IcmpPacket<Ipv6, B, ndp::RouterAdvertisment>),
+    RouterAdvertisement(IcmpPacket<Ipv6, B, ndp::RouterAdvertisement>),
     NeighborSolicitation(IcmpPacket<Ipv6, B, ndp::NeighborSolicitation>),
-    NeighborAdvertisment(IcmpPacket<Ipv6, B, ndp::NeighborAdvertisment>),
+    NeighborAdvertisement(IcmpPacket<Ipv6, B, ndp::NeighborAdvertisement>),
     Redirect(IcmpPacket<Ipv6, B, ndp::Redirect>),
     MulticastListenerQuery(IcmpPacket<Ipv6, B, mld::MulticastListenerQuery>),
     MulticastListenerReport(IcmpPacket<Ipv6, B, mld::MulticastListenerReport>),
@@ -55,9 +55,11 @@ impl<B: ByteSlice + fmt::Debug> fmt::Debug for Icmpv6Packet<B> {
             EchoRequest(ref p) => f.debug_tuple("EchoRequest").field(p).finish(),
             EchoReply(ref p) => f.debug_tuple("EchoReply").field(p).finish(),
             RouterSolicitation(ref p) => f.debug_tuple("RouterSolicitation").field(p).finish(),
-            RouterAdvertisment(ref p) => f.debug_tuple("RouterAdvertisment").field(p).finish(),
+            RouterAdvertisement(ref p) => f.debug_tuple("RouterAdvertisement").field(p).finish(),
             NeighborSolicitation(ref p) => f.debug_tuple("NeighborSolicitation").field(p).finish(),
-            NeighborAdvertisment(ref p) => f.debug_tuple("NeighborAdvertisment").field(p).finish(),
+            NeighborAdvertisement(ref p) => {
+                f.debug_tuple("NeighborAdvertisement").field(p).finish()
+            }
             Redirect(ref p) => f.debug_tuple("Redirect").field(p).finish(),
             MulticastListenerQuery(ref p) => {
                 f.debug_tuple("MulticastListenerQuery").field(p).finish()
@@ -85,9 +87,9 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv6Addr>> for Icmpv6Packet<B
             EchoRequest(p) => p.parse_metadata(),
             EchoReply(p) => p.parse_metadata(),
             RouterSolicitation(p) => p.parse_metadata(),
-            RouterAdvertisment(p) => p.parse_metadata(),
+            RouterAdvertisement(p) => p.parse_metadata(),
             NeighborSolicitation(p) => p.parse_metadata(),
-            NeighborAdvertisment(p) => p.parse_metadata(),
+            NeighborAdvertisement(p) => p.parse_metadata(),
             Redirect(p) => p.parse_metadata(),
             MulticastListenerQuery(p) => p.parse_metadata(),
             MulticastListenerReport(p) => p.parse_metadata(),
@@ -120,9 +122,9 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv6Addr>> for Icmpv6Packet<B
             EchoRequest => IcmpEchoRequest,
             EchoReply => IcmpEchoReply,
             RouterSolicitation => ndp::RouterSolicitation,
-            RouterAdvertisment => ndp::RouterAdvertisment,
+            RouterAdvertisement => ndp::RouterAdvertisement,
             NeighborSolicitation => ndp::NeighborSolicitation,
-            NeighborAdvertisment => ndp::NeighborAdvertisment,
+            NeighborAdvertisement => ndp::NeighborAdvertisement,
             Redirect => ndp::Redirect,
             MulticastListenerQuery => mld::MulticastListenerQuery,
             MulticastListenerReport => mld::MulticastListenerReport,
@@ -142,9 +144,9 @@ create_net_enum! {
 
     // NDP messages
     RouterSolicitation: ROUTER_SOLICITATION = 133,
-    RouterAdvertisment: ROUTER_ADVERTISMENT = 134,
+    RouterAdvertisement: ROUTER_ADVERTISEMENT = 134,
     NeighborSolicitation: NEIGHBOR_SOLICITATION = 135,
-    NeighborAdvertisment: NEIGHBOR_ADVERTISMENT = 136,
+    NeighborAdvertisement: NEIGHBOR_ADVERTISEMENT = 136,
     Redirect: REDIRECT = 137,
 
     // MLDv1 messages

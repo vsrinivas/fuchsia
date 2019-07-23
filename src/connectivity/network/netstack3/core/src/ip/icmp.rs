@@ -255,9 +255,9 @@ pub(crate) fn receive_icmp_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAdd
                 receive_icmp_echo_reply(ctx, src_ip, dst_ip, echo_reply);
             }
             Icmpv6Packet::RouterSolicitation(_)
-            | Icmpv6Packet::RouterAdvertisment(_)
+            | Icmpv6Packet::RouterAdvertisement(_)
             | Icmpv6Packet::NeighborSolicitation(_)
-            | Icmpv6Packet::NeighborAdvertisment(_)
+            | Icmpv6Packet::NeighborAdvertisement(_)
             | Icmpv6Packet::Redirect(_) => {
                 ndp::receive_ndp_packet(ctx, device, src_ip, dst_ip, packet);
             }

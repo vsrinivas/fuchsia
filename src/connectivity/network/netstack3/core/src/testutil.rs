@@ -355,6 +355,11 @@ pub(crate) fn get_dummy_config<A: IpAddress>() -> DummyEventDispatcherConfig<A> 
     }
 }
 
+/// Get the counter value for a `key`.
+pub(crate) fn get_counter_val(ctx: &mut Context<DummyEventDispatcher>, key: &str) -> usize {
+    *ctx.state.test_counters.get(key)
+}
+
 /// A configuration for a simple network.
 ///
 /// `DummyEventDispatcherConfig` describes a simple network with two IP hosts

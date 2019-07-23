@@ -1161,6 +1161,16 @@ where
     Ok(())
 }
 
+/// Is `ctx` configured for a router?
+#[specialize_ip]
+pub(crate) fn is_router<D: EventDispatcher, I: Ip>(ctx: &Context<D>) -> bool {
+    #[ipv4]
+    return ctx.state.ip.v4.forward;
+
+    #[ipv6]
+    return ctx.state.ip.v6.forward;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1190,11 +1200,6 @@ mod tests {
     //
     // Some helper functions
     //
-
-    /// Get the counter value for a `key`.
-    fn get_counter_val(ctx: &mut Context<DummyEventDispatcher>, key: &str) -> usize {
-        *ctx.state.test_counters.get(key)
-    }
 
     /// Verify that an ICMP Parameter Problem packet was actually sent in response to
     /// a packet with an unrecognized IPv6 extension header option.

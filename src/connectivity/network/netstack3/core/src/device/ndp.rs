@@ -30,9 +30,9 @@ use zerocopy::ByteSlice;
 
 use crate::device::ethernet::EthernetNdpDevice;
 use crate::device::{DeviceId, DeviceLayerTimerId, Tentative};
-use crate::ip::IpProto;
+use crate::ip::{is_router, IpProto};
 use crate::wire::icmp::ndp::{
-    self, options::NdpOption, NeighborAdvertisment, NeighborSolicitation, Options,
+    self, options::NdpOption, NeighborAdvertisement, NeighborSolicitation, Options,
 };
 use crate::wire::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode, Icmpv6Packet};
 use crate::wire::ipv6::Ipv6PacketBuilder;
@@ -604,7 +604,7 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
     debug_assert!(dst_ip.is_valid_unicast() || (!solicited && dst_ip.is_multicast()));
 
     // TODO(brunodalbo) if we're a router, flags must also set FLAG_ROUTER.
-    let flags = if solicited { NeighborAdvertisment::FLAG_SOLICITED } else { 0x00 };
+    let flags = if solicited { NeighborAdvertisement::FLAG_SOLICITED } else { 0x00 };
     // We must call into the higher level send_ipv6_frame function because it is
     // not guaranteed that we have actually saved the link layer address of the
     // destination ip. Typically, the solicitation request will carry that
@@ -619,7 +619,7 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
             device_addr,
             dst_ip,
             IcmpUnusedCode,
-            NeighborAdvertisment::new(flags, device_addr),
+            NeighborAdvertisement::new(flags, device_addr),
         ))
         .encapsulate(Ipv6PacketBuilder::new(device_addr, dst_ip, 1, IpProto::Icmpv6));
     ND::send_ipv6_frame(ctx, device_id, dst_ip, body)
@@ -707,9 +707,47 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 {
     match packet {
         Icmpv6Packet::RouterSolicitation(p) => {
+            trace!("receive_ndp_packet_inner: Received NDP RS");
+
+            if !is_router::<_, Ipv6>(ctx) {
+                // Hosts MUST silently discard Router Solicitation messages
+                // as per RFC 4861 section 6.1.1.
+                trace!("receive_ndp_packet_inner: not a router, discarding NDP RS");
+                return;
+            }
+
+            // TODO(ghanan): Make sure IP's hop limit is set to 255 as per RFC 4861 section 6.1.1.
+
+            let source_link_layer_option = get_source_link_layer_option::<ND, _>(p.body());
+
+            if src_ip.is_unspecified() && source_link_layer_option.is_some() {
+                // If the IP source address is the unspecified address and there is a
+                // source link-layer address option in the message, we MUST silently
+                // discard the Router Solicitation message as per RFC 4861 section 6.1.1.
+                trace!("receive_ndp_packet_inner: source is unspcified but it has the source link-layer address option, discarding NDP RS");
+                return;
+            }
+
+            increment_counter!(ctx, "ndp::rx_router_solicitation");
+
             log_unimplemented!((), "NDP Router Solicitation not implemented")
         }
-        Icmpv6Packet::RouterAdvertisment(p) => {
+        Icmpv6Packet::RouterAdvertisement(p) => {
+            trace!("receive_ndp_packet_inner: Received NDP RA");
+
+            if !src_ip.is_linklocal() {
+                // Nodes MUST silently discard any received Router Advertisement message
+                // where the IP source address is not a link-local address as routers must
+                // use their link-local address as the source for Router Advertisements so
+                // hosts can uniquely identify routers, as per RFC 4861 section 6.1.2.
+                trace!("receive_ndp_packet_inner: source is not a link-local address, discarding NDP RA");
+                return;
+            }
+
+            // TODO(ghanan): Make sure IP's hop limit is set to 255 as per RFC 4861 section 6.1.2.
+
+            increment_counter!(ctx, "ndp::rx_router_advertisement");
+
             log_unimplemented!((), "NDP Router Advertisement not implemented")
         }
         Icmpv6Packet::NeighborSolicitation(p) => {
@@ -774,7 +812,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                 }
             }
         }
-        Icmpv6Packet::NeighborAdvertisment(p) => {
+        Icmpv6Packet::NeighborAdvertisement(p) => {
             trace!("receive_ndp_packet_inner: Received NDP NA");
 
             let target_address = p.message().target_address();
@@ -864,16 +902,18 @@ mod tests {
 
     use net_types::ethernet::Mac;
     use net_types::ip::AddrSubnet;
-    use packet::Buf;
+    use packet::{Buf, Buffer, ParseBuffer};
 
     use crate::device::{
         ethernet::EthernetNdpDevice, get_ip_addr_subnet, is_in_ip_multicast, set_ip_addr_subnet,
     };
     use crate::ip::IPV6_MIN_MTU;
     use crate::testutil::{
-        self, set_logger_for_test, DummyEventDispatcher, DummyEventDispatcherBuilder, DummyNetwork,
+        self, get_counter_val, get_dummy_config, set_logger_for_test, DummyEventDispatcher,
+        DummyEventDispatcherBuilder, DummyNetwork,
     };
-    use crate::wire::icmp::IcmpEchoRequest;
+    use crate::wire::icmp::ndp::{OptionsSerializer, RouterAdvertisement, RouterSolicitation};
+    use crate::wire::icmp::{IcmpEchoRequest, IcmpParseArgs, Icmpv6Packet};
     use crate::StackStateBuilder;
 
     const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
@@ -1257,5 +1297,127 @@ mod tests {
         // in the local network
         assert!(get_ip_addr_subnet::<_, Ipv6Addr>(net.context("local"), device_id).is_none());
         assert!(get_ip_addr_subnet::<_, Ipv6Addr>(net.context("remote"), device_id).is_none());
+    }
+
+    #[test]
+    fn test_receiving_router_solicitation_validity_check() {
+        let config = get_dummy_config::<Ipv6Addr>();
+        let src_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 10]);
+        let src_mac = [10, 11, 12, 13, 14, 15];
+
+        //
+        // Test receiving NDP RS when not a router (should not receive)
+        //
+
+        let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
+            .build::<DummyEventDispatcher>();
+        let device = Some(DeviceId::new_ethernet(0));
+        let options = vec![NdpOption::SourceLinkLayerAddress(&src_mac[..])];
+        let mut icmpv6_packet_buf = OptionsSerializer::new(options.iter())
+            .into_serializer()
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                src_ip,
+                config.local_ip,
+                IcmpUnusedCode,
+                RouterSolicitation::default(),
+            ))
+            .serialize_vec_outer()
+            .unwrap();
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+
+        receive_ndp_packet(&mut ctx, device, src_ip, config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_solicitation"), 0);
+
+        //
+        // Test receiving NDP RS as a router (should receive)
+        //
+
+        let mut state_builder = StackStateBuilder::default();
+        state_builder.ip_builder().forward(true);
+        let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
+            .build_with(state_builder, DummyEventDispatcher::default());
+        icmpv6_packet_buf.reset();
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, device, src_ip, config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_solicitation"), 1);
+
+        //
+        // Test receiving NDP RS as a router, but source is unspecified and the source
+        // link layer option is included (should not receive)
+        //
+
+        let unspecified_source = Ipv6Addr::default();
+        let mut icmpv6_packet_buf = OptionsSerializer::new(options.iter())
+            .into_serializer()
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                unspecified_source,
+                config.local_ip,
+                IcmpUnusedCode,
+                RouterSolicitation::default(),
+            ))
+            .serialize_vec_outer()
+            .unwrap();
+        println!("{:?}", icmpv6_packet_buf);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(
+                unspecified_source,
+                config.local_ip,
+            ))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, device, unspecified_source, config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_solicitation"), 1);
+    }
+
+    #[test]
+    fn test_receiving_router_advertisement_validity_check() {
+        let config = get_dummy_config::<Ipv6Addr>();
+        let src_mac = [10, 11, 12, 13, 14, 15];
+        let src_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 10]);
+        let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
+            .build::<DummyEventDispatcher>();
+        let device = Some(DeviceId::new_ethernet(0));
+
+        //
+        // Test receiving NDP RA where source ip is not a link local address (should not receive)
+        //
+
+        let mut icmpv6_packet_buf = Buf::new(Vec::new(), ..)
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                src_ip,
+                config.local_ip,
+                IcmpUnusedCode,
+                RouterAdvertisement::new(1, 2, 3, 4, 5),
+            ))
+            .serialize_vec_outer()
+            .unwrap();
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, device, src_ip, config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 0);
+
+        //
+        // Test receiving NDP RA where source ip is a link local address (should receive)
+        //
+
+        let src_ip = Mac::new(src_mac).to_ipv6_link_local();
+        let mut icmpv6_packet_buf = Buf::new(Vec::new(), ..)
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                src_ip,
+                config.local_ip,
+                IcmpUnusedCode,
+                RouterAdvertisement::new(1, 2, 3, 4, 5),
+            ))
+            .serialize_vec_outer()
+            .unwrap();
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, device, src_ip, config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
     }
 }
