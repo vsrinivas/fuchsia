@@ -257,7 +257,7 @@ mod tests {
         },
         fuchsia_async::Executor,
         fuchsia_zircon::{sys::ZX_OK, Status},
-        futures::{channel::oneshot, future::join, FutureExt},
+        futures::{channel::oneshot, future::{self, join}, FutureExt},
         libc::{S_IRUSR, S_IWUSR},
         std::sync::{
             atomic::{AtomicUsize, Ordering},
@@ -269,8 +269,8 @@ mod tests {
     fn read_only_read() {
         run_server_client(
             OPEN_RIGHT_READABLE,
-            read_only(async || Ok(b"Read only test".to_vec())),
-            async move |proxy| {
+            read_only(|| future::ready(Ok(b"Read only test".to_vec()))),
+            |proxy| async move {
                 assert_read!(proxy, "Read only test");
                 assert_close!(proxy);
             },
@@ -282,13 +282,13 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX,
             read_write(
-                async || Ok(b"Content".to_vec()),
+                || future::ready(Ok(b"Content".to_vec())),
                 100,
-                async move |_content| {
+                |_content| async move {
                     panic!("OPEN_FLAG_POSIX should be ignored for files");
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "Content");
                 assert_write_err!(proxy, "Can write", Status::ACCESS_DENIED);
                 assert_close!(proxy);
@@ -304,8 +304,8 @@ mod tests {
         run_server_client_with_executor(
             OPEN_RIGHT_READABLE,
             exec,
-            read_only(async || Ok(b"Read only test".to_vec())),
-            async move |proxy| {
+            read_only(|| future::ready(Ok(b"Read only test".to_vec()))),
+            |proxy| async move {
                 // Make sure `open()` call is complete, before we start checking.
                 await!(check_event_recv).unwrap();
                 assert_no_event!(proxy);
@@ -325,9 +325,9 @@ mod tests {
         let exec = Executor::new().expect("Executor creation failed");
         let scope = ExecutionScope::new(Box::new(exec.ehandle()));
 
-        let server = read_only(async || Ok(b"Read only test".to_vec()));
+        let server = read_only(|| future::ready(Ok(b"Read only test".to_vec())));
 
-        run_client(exec, async move || {
+        run_client(exec, || async move {
             let (proxy, server_end) =
                 create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
@@ -345,11 +345,11 @@ mod tests {
     fn write_only_write() {
         run_server_client(
             OPEN_RIGHT_WRITABLE,
-            write_only(100, async move |content| {
+            write_only(100, |content| {
                 assert_eq!(&*content, b"Write only test");
-                Ok(())
+                future::ready(Ok(()))
             }),
-            async move |proxy| {
+            |proxy| async move {
                 assert_write!(proxy, "Write only test");
                 assert_close!(proxy);
             },
@@ -361,14 +361,14 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             read_write(
-                async || Ok(b"Hello".to_vec()),
+                || future::ready(Ok(b"Hello".to_vec())),
                 100,
-                async move |content| {
+                |content| {
                     assert_eq!(*&content, b"Hello, world!");
-                    Ok(())
+                    future::ready(Ok(()))
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "Hello");
                 assert_write!(proxy, ", world!");
                 assert_close!(proxy);
@@ -395,7 +395,7 @@ mod tests {
                     }
                 }
             }),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "State one");
                 assert_seek!(proxy, 0, Start);
                 assert_read!(proxy, "State one");
@@ -428,7 +428,7 @@ mod tests {
                     }
                 }
             }),
-            async move |proxy| {
+            |proxy| async move {
                 assert_write!(proxy, "Write one");
                 assert_write!(proxy, " and two");
                 assert_close!(proxy);
@@ -461,7 +461,7 @@ mod tests {
             }
         });
 
-        run_client(exec, async move || {
+        run_client(exec, || async move {
             {
                 let (proxy, server_end) =
                     create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
@@ -504,13 +504,13 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             read_write(
-                async || Ok(b"Can read".to_vec()),
+                || future::ready(Ok(b"Can read".to_vec())),
                 100,
-                async move |_content| {
-                    panic!("File was not opened as writable");
+                |_content| async move {
+                    panic!("File was not opened as writable")
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "Can read");
                 assert_write_err!(proxy, "Can write", Status::ACCESS_DENIED);
                 assert_write_at_err!(proxy, 0, "Can write", Status::ACCESS_DENIED);
@@ -524,16 +524,14 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_WRITABLE,
             read_write(
-                async || {
-                    panic!("File was not opened as readable");
-                },
+                || async move { panic!("File was not opened as readable") },
                 100,
-                async move |content| {
+                |content| {
                     assert_eq!(*&content, b"Can write");
-                    Ok(())
+                    future::ready(Ok(()))
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read_err!(proxy, Status::ACCESS_DENIED);
                 assert_read_at_err!(proxy, 0, Status::ACCESS_DENIED);
                 assert_write!(proxy, "Can write");
@@ -548,7 +546,7 @@ mod tests {
 
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_POSIX,
-            read_write(async || Ok(b"Content".to_vec()), 100, {
+            read_write(|| future::ready(Ok(b"Content".to_vec())), 100, {
                 let attempts = attempts.clone();
                 move |content| {
                     let attempts = attempts.clone();
@@ -564,7 +562,7 @@ mod tests {
                     }
                 }
             }),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "Content");
                 assert_seek!(proxy, 0, Start);
                 assert_write!(proxy, "Can write");
@@ -585,14 +583,14 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             read_write(
-                async || Ok(b"Read handler may return more than capacity".to_vec()),
+                || future::ready(Ok(b"Read handler may return more than capacity".to_vec())),
                 10,
-                async move |content| {
+                |content| {
                     assert_eq!(content, b"Write then could write beyond max capacity".to_vec());
-                    Ok(())
+                    future::ready(Ok(()))
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "Read");
                 assert_seek!(proxy, 0, Start);
                 // Need to write something, otherwise `update` handler will not be called.
@@ -607,11 +605,11 @@ mod tests {
     fn write_error() {
         run_server_client(
             OPEN_RIGHT_WRITABLE,
-            write_only(100, async move |content| {
+            write_only(100, |content| {
                 assert_eq!(*&content, b"Wrong format");
-                Err(Status::INVALID_ARGS)
+                future::ready(Err(Status::INVALID_ARGS))
             }),
-            async move |proxy| {
+            |proxy| async move {
                 assert_write!(proxy, "Wrong");
                 assert_write!(proxy, " format");
                 assert_close_err!(proxy, Status::INVALID_ARGS);
@@ -624,14 +622,14 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE,
             read_write(
-                async || panic!("OPEN_FLAG_TRUNCATE means read() is not called."),
+                || async move { panic!("OPEN_FLAG_TRUNCATE means read() is not called.") },
                 100,
-                async move |content| {
+                |content| {
                     assert_eq!(*&content, b"File content");
-                    Ok(())
+                    future::ready(Ok(()))
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_write!(proxy, "File content");
                 assert_close!(proxy);
             },
@@ -642,8 +640,8 @@ mod tests {
     fn read_at_0() {
         run_server_client(
             OPEN_RIGHT_READABLE,
-            read_only(async || Ok(b"Whole file content".to_vec())),
-            async move |proxy| {
+            read_only(|| future::ready(Ok(b"Whole file content".to_vec()))),
+            |proxy| async move {
                 assert_read_at!(proxy, 0, "Whole file content");
                 assert_close!(proxy);
             },
@@ -654,10 +652,10 @@ mod tests {
     fn read_at_overlapping() {
         run_server_client(
             OPEN_RIGHT_READABLE,
-            read_only(async || Ok(b"Content of the file".to_vec())),
+            read_only(|| future::ready(Ok(b"Content of the file".to_vec()))),
             //                      0         1
             //                      0123456789012345678
-            async move |proxy| {
+            |proxy| async move {
                 assert_read_at!(proxy, 3, "tent of the");
                 assert_read_at!(proxy, 11, "the file");
                 assert_close!(proxy);
@@ -669,10 +667,10 @@ mod tests {
     fn read_mixed_with_read_at() {
         run_server_client(
             OPEN_RIGHT_READABLE,
-            read_only(async || Ok(b"Content of the file".to_vec())),
+            read_only(|| future::ready(Ok(b"Content of the file".to_vec()))),
             //                      0         1
             //                      0123456789012345678
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "Content");
                 assert_read_at!(proxy, 3, "tent of the");
                 assert_read!(proxy, " of the ");
@@ -687,11 +685,11 @@ mod tests {
     fn write_at_0() {
         run_server_client(
             OPEN_RIGHT_WRITABLE,
-            write_only(100, async move |content| {
+            write_only(100, |content| {
                 assert_eq!(*&content, b"File content");
-                Ok(())
+                future::ready(Ok(()))
             }),
-            async move |proxy| {
+            |proxy| async move {
                 assert_write_at!(proxy, 0, "File content");
                 assert_close!(proxy);
             },
@@ -702,13 +700,13 @@ mod tests {
     fn write_at_overlapping() {
         run_server_client(
             OPEN_RIGHT_WRITABLE,
-            write_only(100, async move |content| {
+            write_only(100, |content| {
                 assert_eq!(*&content, b"Whole file content");
                 //                      0         1
                 //                      012345678901234567
-                Ok(())
+                future::ready(Ok(()))
             }),
-            async move |proxy| {
+            |proxy| async move {
                 assert_write_at!(proxy, 8, "le content");
                 assert_write_at!(proxy, 6, "file");
                 assert_write_at!(proxy, 0, "Whole file");
@@ -721,13 +719,13 @@ mod tests {
     fn write_mixed_with_write_at() {
         run_server_client(
             OPEN_RIGHT_WRITABLE,
-            write_only(100, async move |content| {
+            write_only(100, |content| {
                 assert_eq!(*&content, b"Whole file content");
                 //                      0         1
                 //                      012345678901234567
-                Ok(())
+                future::ready(Ok(()))
             }),
-            async move |proxy| {
+            |proxy| async move {
                 assert_write!(proxy, "whole");
                 assert_write_at!(proxy, 0, "Who");
                 assert_write!(proxy, " 1234 ");
@@ -743,16 +741,16 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             read_write(
-                async || Ok(b"Initial".to_vec()),
+                || future::ready(Ok(b"Initial".to_vec())),
                 100,
-                async move |content| {
+                |content| {
                     assert_eq!(*&content, b"Final content");
                     //                      0         1
                     //                      0123456789012
-                    Ok(())
+                    future::ready(Ok(()))
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "Init");
                 assert_write!(proxy, "l con");
                 // buffer: "Initl con"
@@ -770,10 +768,10 @@ mod tests {
     fn seek_valid_positions() {
         run_server_client(
             OPEN_RIGHT_READABLE,
-            read_only(async || Ok(b"Long file content".to_vec())),
+            read_only(|| future::ready(Ok(b"Long file content".to_vec()))),
             //                      0         1
             //                      01234567890123456
-            async move |proxy| {
+            |proxy| async move {
                 assert_seek!(proxy, 5, Start);
                 assert_read!(proxy, "file");
                 assert_seek!(proxy, 1, Current, 10);
@@ -790,17 +788,17 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             read_write(
-                async || Ok(b"Content".to_vec()),
+                || future::ready(Ok(b"Content".to_vec())),
                 //            0123456
                 100,
-                async move |content| {
+                |content| {
                     assert_eq!(*&content, b"Content extended further");
                     //                      0         1         2
                     //                      012345678901234567890123
-                    Ok(())
+                    future::ready(Ok(()))
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_seek!(proxy, 7, Start);
                 // POSIX wants this to be a zero read. ZX-3633.
                 assert_read!(proxy, "");
@@ -827,10 +825,10 @@ mod tests {
     fn seek_invalid_before_0() {
         run_server_client(
             OPEN_RIGHT_READABLE,
-            read_only(async || Ok(b"Seek position is unaffected".to_vec())),
+            read_only(|| future::ready(Ok(b"Seek position is unaffected".to_vec()))),
             //                      0         1         2
             //                      012345678901234567890123456
-            async move |proxy| {
+            |proxy| async move {
                 assert_seek_err!(proxy, -10, Current, Status::OUT_OF_RANGE, 0);
                 assert_read!(proxy, "Seek");
                 assert_seek_err!(proxy, -10, Current, Status::OUT_OF_RANGE, 4);
@@ -847,12 +845,12 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             read_write(
-                async || Ok(b"Content".to_vec()),
+                || future::ready(Ok(b"Content".to_vec())),
                 //      0123456
                 10,
-                async move |_content| panic!("No writes should have happened"),
+                |_content| async move { panic!("No writes should have happened") },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_seek!(proxy, 8, Start);
                 assert_seek_err!(proxy, 12, Start, Status::OUT_OF_RANGE, 8);
                 assert_seek_err!(proxy, 3, Current, Status::OUT_OF_RANGE, 8);
@@ -866,17 +864,17 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             read_write(
-                async || Ok(b"Content".to_vec()),
+                || future::ready(Ok(b"Content".to_vec())),
                 //      0123456
                 100,
-                async move |content| {
+                |content| {
                     assert_eq!(*&content, b"Content\0\0\0end");
                     //                      0            1
                     //                      01234567 8 9 012
-                    Ok(())
+                    future::ready(Ok(()))
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_truncate!(proxy, 12);
                 assert_seek!(proxy, 10, Start);
                 assert_write!(proxy, "end");
@@ -892,13 +890,13 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             read_write(
-                async || Ok(b"Long content".to_vec()),
+                || future::ready(Ok(b"Long content".to_vec())),
                 //            0         1
                 //            012345678901
                 8,
-                async move |_content| panic!("No writes should have happened"),
+                |_content| async move { panic!("No writes should have happened") },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_seek!(proxy, 10, Start);
                 assert_seek_err!(proxy, 12, Start, Status::OUT_OF_RANGE, 10);
                 assert_close!(proxy);
@@ -911,15 +909,15 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             read_write(
-                async || Ok(b"Content".to_vec()),
+                || future::ready(Ok(b"Content".to_vec())),
                 //            0123456
                 100,
-                async move |content| {
+                |content| {
                     assert_eq!(*&content, b"Replaced");
-                    Ok(())
+                    future::ready(Ok(()))
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "Content");
                 assert_truncate!(proxy, 0);
                 // truncate should not change the seek position.
@@ -935,11 +933,11 @@ mod tests {
     fn write_then_truncate() {
         run_server_client(
             OPEN_RIGHT_WRITABLE,
-            write_only(100, async move |content| {
+            write_only(100, |content| {
                 assert_eq!(*&content, b"Replaced");
-                Ok(())
+                future::ready(Ok(()))
             }),
-            async move |proxy| {
+            |proxy| async move {
                 assert_write!(proxy, "Replaced content");
                 assert_truncate!(proxy, 8);
                 assert_close!(proxy);
@@ -951,8 +949,8 @@ mod tests {
     fn truncate_beyond_capacity() {
         run_server_client(
             OPEN_RIGHT_WRITABLE,
-            write_only(10, async move |_content| panic!("No writes should have happened")),
-            async move |proxy| {
+            write_only(10, |_content| async move { panic!("No writes should have happened") }),
+            |proxy| async move {
                 assert_truncate_err!(proxy, 20, Status::OUT_OF_RANGE);
                 assert_close!(proxy);
             },
@@ -963,8 +961,8 @@ mod tests {
     fn truncate_read_only_file() {
         run_server_client(
             OPEN_RIGHT_READABLE,
-            read_only(async || Ok(b"Read-only content".to_vec())),
-            async move |proxy| {
+            read_only(|| future::ready(Ok(b"Read-only content".to_vec()))),
+            |proxy| async move {
                 assert_truncate_err!(proxy, 10, Status::ACCESS_DENIED);
                 assert_close!(proxy);
             },
@@ -979,18 +977,18 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             read_write(
-                async || Ok(b"Content is very long".to_vec()),
+                || future::ready(Ok(b"Content is very long".to_vec())),
                 //            0         1
                 //            01234567890123456789
                 10,
-                async move |content| {
+                |content| {
                     assert_eq!(*&content, b"Content is very");
                     //                      0         1
                     //                      012345678901234
-                    Ok(())
+                    future::ready(Ok(()))
                 },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_read!(proxy, "Content");
                 assert_truncate_err!(proxy, 40, Status::OUT_OF_RANGE);
                 assert_truncate!(proxy, 16);
@@ -1006,14 +1004,14 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             read_write(
-                async || Ok(b"Initial content".to_vec()),
+                || future::ready(Ok(b"Initial content".to_vec())),
                 100,
-                async move |content| {
+                |content| {
                     assert_eq!(*&content, b"As updated");
-                    Ok(())
+                    future::ready(Ok(()))
                 },
             ),
-            async move |first_proxy| {
+            |first_proxy| async move {
                 assert_read!(first_proxy, "Initial content");
                 assert_truncate!(first_proxy, 0);
                 assert_seek!(first_proxy, 0, Start);
@@ -1040,14 +1038,14 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             read_write(
-                async || Ok(b"Initial content".to_vec()),
+                || future::ready(Ok(b"Initial content".to_vec())),
                 100,
-                async move |content| {
+                |content| {
                     assert_eq!(*&content, b"As updated");
-                    Ok(())
+                    future::ready(Ok(()))
                 },
             ),
-            async move |first_proxy| {
+            |first_proxy| async move {
                 assert_read!(first_proxy, "Initial content");
                 assert_truncate!(first_proxy, 0);
                 assert_seek!(first_proxy, 0, Start);
@@ -1073,8 +1071,8 @@ mod tests {
     fn get_attr_read_only() {
         run_server_client(
             OPEN_RIGHT_READABLE,
-            read_only(async || Ok(b"Content".to_vec())),
-            async move |proxy| {
+            read_only(|| future::ready(Ok(b"Content".to_vec()))),
+            |proxy| async move {
                 assert_get_attr!(
                     proxy,
                     NodeAttributes {
@@ -1096,8 +1094,8 @@ mod tests {
     fn get_attr_write_only() {
         run_server_client(
             OPEN_RIGHT_WRITABLE,
-            write_only(10, async move |_content| panic!("No changes")),
-            async move |proxy| {
+            write_only(10, |_content| async move { panic!("No changes") }),
+            |proxy| async move {
                 assert_get_attr!(
                     proxy,
                     NodeAttributes {
@@ -1120,11 +1118,11 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             read_write(
-                async || Ok(b"Content".to_vec()),
+                || future::ready(Ok(b"Content".to_vec())),
                 10,
-                async move |_content| panic!("No changes"),
+                |_content| async move { panic!("No changes") },
             ),
-            async move |proxy| {
+            |proxy| async move {
                 assert_get_attr!(
                     proxy,
                     NodeAttributes {
@@ -1147,13 +1145,13 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             read_write(
-                async || Ok(b"Initial content".to_vec()),
+                || future::ready(Ok(b"Initial content".to_vec())),
                 100,
-                async move |_content| {
-                    panic!("Clone should not be able to write.");
+                |_content| {
+                    async move { panic!("Clone should not be able to write.") }
                 },
             ),
-            async move |first_proxy| {
+            |first_proxy| async move {
                 assert_read!(first_proxy, "Initial content");
                 assert_write_err!(first_proxy, "Write attempt", Status::ACCESS_DENIED);
 
@@ -1179,8 +1177,8 @@ mod tests {
     fn node_reference_ignores_read_access() {
         run_server_client(
             OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE,
-            read_only(async || panic!("Not supposed to read!")),
-            async move |proxy| {
+            read_only(|| async move { panic!("Not supposed to read!") }),
+            |proxy| async move {
                 assert_read_err!(proxy, Status::ACCESS_DENIED);
                 assert_close!(proxy);
             },
@@ -1191,8 +1189,8 @@ mod tests {
     fn node_reference_ignores_write_access() {
         run_server_client(
             OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_WRITABLE,
-            write_only(100, async move |_content| panic!("Not supposed to write!")),
-            async move |proxy| {
+            write_only(100, |_content| async move { panic!("Not supposed to write!")}),
+            |proxy| async move {
                 assert_write_err!(proxy, "Can write", Status::ACCESS_DENIED);
                 assert_close!(proxy);
             },
@@ -1240,7 +1238,7 @@ mod tests {
             let scope = scope.clone();
 
             (
-                async move || {
+                move || async move {
                     await!(start_receiver).unwrap();
 
                     server.open(
@@ -1273,7 +1271,7 @@ mod tests {
 
         run_client_with_executor(
             exec,
-            async move || {
+            || async move {
                 let client1 = get_client1();
                 let client2 = get_client2();
 
@@ -1339,7 +1337,7 @@ mod tests {
             }),
             {
                 let client_counter = client_counter.clone();
-                async move |proxy| {
+                |proxy| async move {
                     client_counter.fetch_add(1, Ordering::Relaxed);
 
                     assert_read!(proxy, "content");
@@ -1401,7 +1399,7 @@ mod tests {
             }),
             {
                 let client_counter = client_counter.clone();
-                async move |proxy| {
+                |proxy| async move {
                     client_counter.fetch_add(1, Ordering::Relaxed);
 
                     assert_write!(proxy, "content");

@@ -245,6 +245,7 @@ impl Drop for Inner {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::ExecutionScope;
 
@@ -280,7 +281,7 @@ mod tests {
 
     #[test]
     fn simple() {
-        run_test(async move |scope| {
+        run_test(|scope| async move {
             let (sender, receiver) = oneshot::channel();
             let (counters, task) = mocks::ImmediateTask::new(sender);
 
@@ -296,7 +297,7 @@ mod tests {
 
     #[test]
     fn simple_drop() {
-        run_test(async move |scope| {
+        run_test(|scope| async move {
             let (poll_sender, poll_receiver) = oneshot::channel();
             let (processing_done_sender, processing_done_receiver) = oneshot::channel();
             let (drop_sender, drop_receiver) = oneshot::channel();
@@ -325,12 +326,12 @@ mod tests {
 
     #[test]
     fn spawn_with_shutdown() {
-        run_test(async move |scope| {
+        run_test(|scope| async move {
             let (processing_done_sender, processing_done_receiver) = oneshot::channel();
             let (shutdown_complete_sender, shutdown_complete_receiver) = oneshot::channel();
 
             scope
-                .spawn_with_shutdown(async move |_shutdown| {
+                .spawn_with_shutdown(|_shutdown| async move {
                     await!(processing_done_receiver).unwrap();
                     shutdown_complete_sender.send(()).unwrap();
                 })
@@ -344,7 +345,7 @@ mod tests {
 
     #[test]
     fn explicit_shutdown() {
-        run_test(async move |scope| {
+        run_test(|scope| async move {
             let (tick_sender, tick_receiver) = mpsc::unbounded();
             let (tick_confirmation_sender, mut tick_confirmation_receiver) = mpsc::unbounded();
             let (shutdown_complete_sender, shutdown_complete_receiver) = oneshot::channel();
@@ -355,7 +356,7 @@ mod tests {
                 .spawn_with_shutdown({
                     let tick_count = tick_count.clone();
 
-                    async move |shutdown| {
+                    |shutdown| async move {
                         let mut tick_receiver = tick_receiver.fuse();
                         let mut shutdown = shutdown.fuse();
                         loop {
