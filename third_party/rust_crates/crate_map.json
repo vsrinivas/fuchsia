@@ -146,6 +146,11 @@
             "package_name": "hyper-rustls"
         },
         {
+            "crate_name": "id_tree",
+            "crate_type": "lib",
+            "package_name": "id_tree"
+        },
+        {
             "crate_name": "itertools",
             "crate_type": "lib",
             "package_name": "itertools"
