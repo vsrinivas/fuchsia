@@ -55,7 +55,8 @@ void OvernetFactory::Holder::OnEmpty() {
   }
 }
 
-OvernetFactory::OvernetFactory() {}
+OvernetFactory::OvernetFactory(bool return_one_host_list)
+    : return_one_host_list_(return_one_host_list) {}
 
 OvernetFactory::~OvernetFactory() {}
 
@@ -95,6 +96,10 @@ void OvernetFactory::ListPeers(
     return;
   }
   std::vector<fuchsia::overnet::protocol::NodeId> device_names;
+  if (return_one_host_list_ && net_connectors_.size() == 1) {
+    callback(current_version_, {});
+    return;
+  }
   for (const auto& holder_pair : net_connectors_) {
     fuchsia::overnet::protocol::NodeId node;
     node.id = holder_pair.first;

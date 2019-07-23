@@ -21,7 +21,8 @@ namespace ledger {
 // a multi-device setup.
 class OvernetFactory : public FakeOvernet::Delegate {
  public:
-  OvernetFactory();
+  // If set to true, host lists of one host are not returned at all. This is a workaround for OV-8.
+  OvernetFactory(bool return_one_host_list = false);
   ~OvernetFactory() override;
 
   // Creates a new virtual host with the given host name, and connects to its
@@ -43,6 +44,8 @@ class OvernetFactory : public FakeOvernet::Delegate {
   void ConnectToService(fuchsia::overnet::protocol::NodeId device_name, std::string service_name,
                         zx::channel channel) override;
 
+  // If set to true, host lists of one host are not returned at all. This is a workaround for OV-8.
+  const bool return_one_host_list_;
   // Counter incremented each time a Overnet is added or removed; denotes
   // the version of the current device list.
   uint64_t current_version_ = 0;

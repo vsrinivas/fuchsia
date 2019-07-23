@@ -4,14 +4,14 @@
 
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 
-#include <algorithm>
-#include <ostream>
-#include <string>
-
 #include <fuchsia/overnet/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <algorithm>
+#include <ostream>
+#include <string>
 
 // gtest matchers are in gmock.
 #include "gmock/gmock.h"
@@ -89,6 +89,14 @@ class P2PProviderImplTest : public gtest::TestLoopFixture {
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(P2PProviderImplTest);
 };
+
+TEST_F(P2PProviderImplTest, NoSelfPeerNoCrash) {
+  std::unique_ptr<P2PProvider> provider1 = GetProvider(1, "user1");
+  RecordingClient client1;
+  provider1->Start(&client1);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(client1.device_changes.empty());
+}
 
 TEST_F(P2PProviderImplTest, ThreeHosts_SameUser) {
   std::unique_ptr<P2PProvider> provider1 = GetProvider(1, "user1");

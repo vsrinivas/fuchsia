@@ -4,13 +4,15 @@
 
 #include "src/ledger/bin/testing/overnet/overnet_factory.h"
 
-#include <memory>
-
 #include <fuchsia/overnet/cpp/fidl.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/gtest/test_loop_fixture.h>
 
+#include <memory>
+
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/fidl_helpers/message_relay.h"
 #include "src/lib/fxl/macros.h"
@@ -18,6 +20,7 @@
 namespace ledger {
 
 namespace {
+using ::testing::IsEmpty;
 
 class OvernetFactoryTest : public gtest::TestLoopFixture {
  public:
@@ -30,6 +33,32 @@ class OvernetFactoryTest : public gtest::TestLoopFixture {
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(OvernetFactoryTest);
 };
+
+// Verifies that the host list is correct for one host with the workaround.
+TEST_F(OvernetFactoryTest, HostList_OneHost_Workaround) {
+  OvernetFactory factory(true);
+  fuchsia::overnet::OvernetPtr overnet1;
+  factory.AddBinding(1u, overnet1.NewRequest());
+
+  bool called = false;
+  uint64_t version = 0;
+  std::vector<fuchsia::overnet::Peer> host_list;
+  overnet1->ListPeers(0u,
+                      callback::Capture(callback::SetWhenCalled(&called), &version, &host_list));
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(called);
+  EXPECT_NE(0u, version);
+  EXPECT_THAT(host_list, IsEmpty());
+
+  called = false;
+  overnet1->ListPeers(version,
+                      callback::Capture(callback::SetWhenCalled(&called), &version, &host_list));
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+}
 
 // Verifies that the host list is correct for one host.
 TEST_F(OvernetFactoryTest, HostList_OneHost) {

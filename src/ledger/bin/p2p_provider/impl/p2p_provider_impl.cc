@@ -185,7 +185,10 @@ void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
         break;
       }
     }
-    FXL_DCHECK(self_client_id_);
+    if (!self_client_id_) {
+      ListenForNewDevices(new_version);
+      return;
+    }
     std::vector<P2PClientId> seen_devices;
     for (auto& peer : peers) {
       auto client_id = MakeP2PClientId(peer.id);
