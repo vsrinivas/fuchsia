@@ -33,17 +33,13 @@
  *
  *****************************************************************************/
 
-#include "fw/api/power.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/power.h"
 
-#include <linux/etherdevice.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/slab.h>
-#include <net/mac80211.h>
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi//mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-modparams.h"
 
-#include "iwl-debug.h"
-#include "iwl-modparams.h"
-#include "mvm.h"
+#if 0  // NEEDS_PORTING
 
 #define POWER_KEEP_ALIVE_PERIOD_SEC 25
 
@@ -434,8 +430,9 @@ static int iwl_mvm_power_send_cmd(struct iwl_mvm* mvm, struct ieee80211_vif* vif
 
   return iwl_mvm_send_cmd_pdu(mvm, MAC_PM_POWER_TABLE, 0, sizeof(cmd), &cmd);
 }
+#endif  // NEEDS_PORTING
 
-int iwl_mvm_power_update_device(struct iwl_mvm* mvm) {
+zx_status_t iwl_mvm_power_update_device(struct iwl_mvm* mvm) {
   struct iwl_device_power_cmd cmd = {
       .flags = 0,
   };
@@ -459,6 +456,7 @@ int iwl_mvm_power_update_device(struct iwl_mvm* mvm) {
   return iwl_mvm_send_cmd_pdu(mvm, POWER_TABLE_CMD, 0, sizeof(cmd), &cmd);
 }
 
+#if 0  // NEEDS_PORTING
 void iwl_mvm_power_vif_assoc(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
@@ -963,3 +961,4 @@ int iwl_mvm_update_d0i3_power_mode(struct iwl_mvm* mvm, struct ieee80211_vif* vi
 
   return ret;
 }
+#endif  // NEEDS_PORTING

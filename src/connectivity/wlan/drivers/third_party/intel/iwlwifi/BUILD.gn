@@ -38,6 +38,7 @@ source_set("core") {
     "mvm/mac80211.c",
     "mvm/ops.c",
     "mvm/phy-ctxt.c",
+    "mvm/power.c",
     "mvm/rxmq.c",
     "mvm/scan.c",
     "mvm/tof.c",
