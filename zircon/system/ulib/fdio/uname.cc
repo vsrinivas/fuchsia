@@ -48,11 +48,30 @@ extern "C"
 __EXPORT
 int uname(utsname* uts) {
     if (!uts) {
-        errno = EFAULT;
-        return -1;
+        return ERRNO(EFAULT);
     }
+
+    // Avoid overwriting caller's memory until after all fallible operations have succeeded.
+    llcpp::fuchsia::device::NameProvider::SyncClient* name_provider;
+    zx_status_t status = get_name_provider(&name_provider);
+    if (status != ZX_OK) {
+      return ERROR(status);
+    }
+
+    auto response = name_provider->GetDeviceName();
+    if (response.status() != ZX_OK) {
+      return ERROR(response.status());
+    }
+
+    auto result = std::move(response.Unwrap()->result);
+    if (result.is_err()) {
+      return ERROR(result.err());
+    }
+
+    auto nodename = result.response().name;
+    strlcpy(uts->nodename, nodename.data(), nodename.size());
+
     strcpy(uts->sysname, "Fuchsia");
-    strcpy(uts->nodename, "");
     strcpy(uts->release, "");
     strcpy(uts->version, "");
 #if defined(__x86_64__)
@@ -69,35 +88,5 @@ int uname(utsname* uts) {
     strcpy(uts->__domainname, "");
 #endif
 
-    llcpp::fuchsia::device::NameProvider::SyncClient* name_provider;
-    zx_status_t status = get_name_provider(&name_provider);
-    if (status != ZX_OK) {
-        printf("get_name_provider error %s\n", zx_status_get_string(status));
-        return ERROR(status);
-    }
-
-    // TODO: can we use response_buffer.size() (unsigned long) as an argument to BytePart (uint32_t)?
-    uint32_t bufsize(128);
-    std::vector<uint8_t> response_buffer(bufsize);
-    auto response = name_provider->GetDeviceName(fidl::BytePart(&response_buffer[0], bufsize));
-    if (response.status() == ZX_ERR_BAD_HANDLE) {
-      printf("name_provider->GetDeviceName(_) = %s\n", zx_status_get_string(status));
-      // The component calling uname probably doens't have fuchsia.device.NameProvider in its sandbox.
-      strlcpy(uts->nodename, llcpp::fuchsia::device::DEFAULT_DEVICE_NAME, HOST_NAME_MAX);
-      return ZX_OK;
-    }
-    if (response.status() != ZX_OK) {
-        printf("name_provider->GetDeviceName(_).status = %s\n", zx_status_get_string(response.status()));
-        return ERROR(response.status());
-    }
-
-    auto result = std::move(response.Unwrap()->result);
-    if (result.is_err()) {
-        printf("name_provider->GetDeviceName(_).Unwrap()->result = %s\n", zx_status_get_string(result.err()));
-        return ERROR(result.err());
-    }
-
-    auto nodename = result.response().name;
-    strlcpy(uts->nodename, nodename.data(), nodename.size());
-    return ZX_OK;
+    return 0;
 }
