@@ -10,6 +10,7 @@ use {
     regex::Regex,
     serde_derive::{Deserialize, Serialize},
     serde_json::Deserializer,
+    std::collections::BTreeMap,
     std::ffi::{OsStr, OsString},
     std::fs,
     std::io::Write,
@@ -22,9 +23,20 @@ pub struct Archive {
     path: PathBuf,
 }
 
+/// Stats for a particular event group of files.
+#[derive(Debug, Eq, PartialEq)]
+pub struct EventFileGroupStats {
+    /// The number of files associated with this group.
+    pub file_count: usize,
+    /// The size of those files on disk.
+    pub size: u64,
+}
+
 const DATED_DIRECTORY_REGEX: &str = r"^(\d{4}-\d{2}-\d{2})$";
 const EVENT_PREFIX_REGEX: &str = r"^(\d{2}:\d{2}:\d{2}.\d{3})-";
 const EVENT_LOG_SUFFIX_REGEX: &str = r"event.log$";
+
+pub type EventFileGroupStatsMap = BTreeMap<String, EventFileGroupStats>;
 
 impl Archive {
     /// Opens an Archive at the given path, returning an error if it does not exist.
@@ -35,6 +47,20 @@ impl Archive {
         } else {
             Err(format_err!("{} is not a directory", path.display()))
         }
+    }
+
+    /// Returns a vector of EventFileGroups and their associated stats from all dates covered by
+    /// this archive.
+    pub fn get_event_group_stats(&self) -> Result<EventFileGroupStatsMap, Error> {
+        let mut output = EventFileGroupStatsMap::new();
+        for date in self.get_dates()? {
+            for group in self.get_event_file_groups(&date)? {
+                let file_count = 1 + group.event_files.len();
+                let size = group.size()?;
+                output.insert(group.log_file_path(), EventFileGroupStats { file_count, size });
+            }
+        }
+        Ok(output)
     }
 
     /// Returns a vector of the dated directory names in the archive, in sorted order.
@@ -146,6 +172,31 @@ impl EventFileGroup {
         self.event_files.extend(other.event_files.into_iter());
     }
 
+    /// Deletes this group from disk.
+    ///
+    /// Returns stats on the files removed on success.
+    pub fn delete(self) -> Result<EventFileGroupStats, Error> {
+        let size = self.size()?;
+        // There is 1 log file + each event file removed by this operation.
+        let file_count = 1 + self.event_files.len();
+
+        vec![self.log_file.unwrap()]
+            .into_iter()
+            .chain(self.event_files.into_iter())
+            .map(|path| -> Result<(), Error> {
+                fs::remove_file(&path)?;
+                Ok(())
+            })
+            .collect::<Result<(), Error>>()?;
+
+        Ok(EventFileGroupStats { file_count, size })
+    }
+
+    /// Gets the path to the log file for this group.
+    pub fn log_file_path(&self) -> String {
+        self.log_file.as_ref().expect("missing log file path").to_string_lossy().to_string()
+    }
+
     /// Returns the size of all event files from this group on disk.
     pub fn size(&self) -> Result<u64, Error> {
         let log_file = match &self.log_file {
@@ -192,12 +243,15 @@ impl EventFileGroup {
 /// Represents a single event in the log.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct Event {
-    time_seconds: i64,
-    time_nanos: u32,
+    timestamp_nanos: u64,
     event_type: String,
     component_name: String,
     component_instance: String,
     event_files: Vec<String>,
+}
+
+fn datetime_to_timestamp<T: TimeZone>(t: &DateTime<T>) -> u64 {
+    (t.timestamp() * 1_000_000_000 + t.timestamp_subsec_nanos() as i64) as u64
 }
 
 impl Event {
@@ -218,8 +272,7 @@ impl Event {
         component_instance: impl ToString,
     ) -> Self {
         Event {
-            time_seconds: time.timestamp(),
-            time_nanos: time.timestamp_subsec_nanos(),
+            timestamp_nanos: datetime_to_timestamp(&time),
             event_type: event_type.to_string(),
             component_name: component_name.to_string(),
             component_instance: component_instance.to_string(),
@@ -229,7 +282,9 @@ impl Event {
 
     /// Get the timestamp of this event in the given timezone.
     pub fn get_timestamp<T: TimeZone>(&self, time_zone: T) -> DateTime<T> {
-        time_zone.timestamp(self.time_seconds, self.time_nanos)
+        let seconds = self.timestamp_nanos / 1_000_000_000;
+        let nanos = self.timestamp_nanos % 1_000_000_000;
+        time_zone.timestamp(seconds as i64, nanos as u32)
     }
 
     /// Get the vector of event files for this event.
@@ -276,6 +331,15 @@ impl ArchiveWriter {
     pub fn get_log<'a>(&'a mut self) -> &'a mut EventFileGroupWriter {
         &mut self.open_log
     }
+
+    /// Rotates the log by closing the current EventFileGroup and opening a new one.
+    ///
+    /// Returns the name and stats for the just-closed EventFileGroup.
+    pub fn rotate_log(&mut self) -> Result<(PathBuf, EventFileGroupStats), Error> {
+        let mut temp_log = EventFileGroupWriter::new(self.archive.get_path())?;
+        std::mem::swap(&mut self.open_log, &mut temp_log);
+        temp_log.close()
+    }
 }
 
 /// A writer that wraps a particular group of event files.
@@ -285,6 +349,9 @@ impl ArchiveWriter {
 pub struct EventFileGroupWriter {
     /// An opened file to write log events to.
     log_file: fs::File,
+
+    /// The path to the log file.
+    log_file_path: PathBuf,
 
     /// The path to the directory containing this file group.
     directory_path: PathBuf,
@@ -297,6 +364,9 @@ pub struct EventFileGroupWriter {
 
     /// The number of bytes written for this group, including event files.
     bytes_stored: usize,
+
+    /// The number of files written for this group, including event files.
+    files_stored: usize,
 }
 
 impl EventFileGroupWriter {
@@ -316,14 +386,17 @@ impl EventFileGroupWriter {
         fs::create_dir_all(&directory_path)?;
 
         let file_prefix = time.format("%H:%M:%S%.3f-").to_string();
-        let log_file = fs::File::create(directory_path.join(file_prefix.clone() + "event.log"))?;
+        let log_file_path = directory_path.join(file_prefix.clone() + "event.log");
+        let log_file = fs::File::create(&log_file_path)?;
 
         Ok(EventFileGroupWriter {
             log_file,
+            log_file_path,
             directory_path,
             file_prefix,
             records_written: 0,
             bytes_stored: 0,
+            files_stored: 1,
         })
     }
 
@@ -342,18 +415,40 @@ impl EventFileGroupWriter {
         }
     }
 
+    /// Gets the path to the log file for this group.
+    pub fn get_log_file_path(&self) -> &Path {
+        &self.log_file_path
+    }
+
+    /// Gets the stats for the event file group.
+    pub fn get_stats(&self) -> EventFileGroupStats {
+        EventFileGroupStats { file_count: self.files_stored, size: self.bytes_stored as u64 }
+    }
+
     /// Write an event to the log.
-    fn write_event(&mut self, event: &Event) -> Result<(), Error> {
+    ///
+    /// Returns the number of bytes written on success.
+    fn write_event(&mut self, event: &Event, extra_files_size: usize) -> Result<usize, Error> {
         let value = serde_json::to_string(&event)? + "\n";
         self.log_file.write_all(value.as_ref())?;
-        self.bytes_stored += value.len();
+        self.bytes_stored += value.len() + extra_files_size;
         self.records_written += 1;
-        Ok(())
+        self.files_stored += event.event_files.len();
+        Ok(value.len())
     }
 
     /// Synchronize the log with underlying storage.
     fn sync(&mut self) -> Result<(), Error> {
         Ok(self.log_file.sync_all()?)
+    }
+
+    /// Close this EventFileGroup, returning stats of what was written.
+    fn close(mut self) -> Result<(PathBuf, EventFileGroupStats), Error> {
+        self.sync()?;
+        Ok((
+            self.log_file_path,
+            EventFileGroupStats { file_count: self.files_stored, size: self.bytes_stored as u64 },
+        ))
     }
 }
 
@@ -384,22 +479,30 @@ fn delete_files(files: &Vec<PathBuf>) -> Result<(), Error> {
 impl<'a> EventBuilder<'a> {
     /// Build the event and write it to the log.
     ///
-    /// Returns Ok(()) on success or the Error on failure.
+    /// Returns stats on success or the Error on failure.
     /// If this method return an error, all event files on disk will be cleaned up.
-    pub fn build(mut self) -> Result<(), Error> {
+    pub fn build(mut self) -> Result<EventFileGroupStats, Error> {
+        let file_count;
         if let Ok(event_files) = self.event_files.as_ref() {
+            file_count = event_files.len();
             for path in event_files.iter() {
-                self.event.add_event_file(path.file_name().expect("missing file name"));
+                self.event.add_event_file(
+                    path.file_name().ok_or_else(|| format_err!("missing file name"))?,
+                );
             }
         } else {
             return Err(self.event_files.unwrap_err());
         }
 
-        if let Err(e) = self.writer.write_event(&self.event) {
-            self.invalidate(e);
-            return Err(self.event_files.unwrap_err());
+        match self.writer.write_event(&self.event, self.event_file_size) {
+            Ok(bytes) => {
+                Ok(EventFileGroupStats { file_count, size: (self.event_file_size + bytes) as u64 })
+            }
+            Err(e) => {
+                self.invalidate(e);
+                Err(self.event_files.unwrap_err())
+            }
         }
-        Ok(())
     }
 
     /// Add an event file to the event.
@@ -436,6 +539,7 @@ impl<'a> EventBuilder<'a> {
 mod tests {
     use super::*;
     use std::io::Write;
+    use std::iter::FromIterator;
     extern crate tempfile;
 
     #[test]
@@ -512,6 +616,29 @@ mod tests {
             archive.get_event_file_groups("2019-05-08").unwrap()
         );
 
+        assert_eq!(
+            BTreeMap::from_iter(
+                vec![
+                    (
+                        event_log_file_name.to_string_lossy().to_string(),
+                        EventFileGroupStats { file_count: 1, size: 4 }
+                    ),
+                    (
+                        aux_event_log_file_name.to_string_lossy().to_string(),
+                        EventFileGroupStats { file_count: 3, size: 4 * 3 }
+                    )
+                ]
+                .into_iter()
+            ),
+            archive.get_event_group_stats().unwrap()
+        );
+
+        for group in archive.get_event_file_groups("2019-05-08").unwrap() {
+            group.delete().unwrap();
+        }
+
+        assert_eq!(0, archive.get_event_file_groups("2019-05-08").unwrap().len());
+
         // Open an empty directory.
         fs::create_dir(dir.path().join("2019-05-07")).unwrap();
         assert_eq!(0, archive.get_event_file_groups("2019-05-07").unwrap().len());
@@ -571,8 +698,7 @@ mod tests {
         assert_eq!(time, event.get_timestamp(Utc));
         assert_eq!(
             Event {
-                time_seconds: time.timestamp(),
-                time_nanos: time.timestamp_subsec_nanos(),
+                timestamp_nanos: datetime_to_timestamp(&time),
                 event_type: "START".to_string(),
                 component_name: "component".to_string(),
                 component_instance: "instance".to_string(),
@@ -658,7 +784,28 @@ mod tests {
             );
         });
 
-        // TODO(crjohns): Expand this test.
         assert_eq!(2, events.len());
+
+        let (_, stats) = archive.rotate_log().unwrap();
+        assert_eq!(2, stats.file_count);
+        assert_ne!(0, stats.size);
+
+        let mut group_count = 0;
+        archive.get_archive().get_dates().unwrap().into_iter().for_each(|date| {
+            group_count += archive.get_archive().get_event_file_groups(&date).unwrap().len();
+        });
+        assert_eq!(2, group_count);
+
+        let mut stats = archive
+            .get_log()
+            .new_event("STOP", "test", "0")
+            .add_event_file("root.inspect", b"test")
+            .build()
+            .expect("failed to write log");
+
+        // Check the stats returned by the log; we add one to the file count for the log file
+        // itself.
+        stats.file_count += 1;
+        assert_eq!(stats, archive.get_log().get_stats());
     }
 }
