@@ -13,21 +13,21 @@
 
 namespace sherlock {
 
-static const pbus_mmio_t sherlock_canvas_mmios[] = {
-    {
-        .base = T931_DMC_BASE,
-        .length = T931_DMC_LENGTH,
-    },
+constexpr pbus_mmio_t sherlock_canvas_mmios[] = {
+  {
+    .base = T931_DMC_BASE,
+    .length = T931_DMC_LENGTH,
+  },
 };
 
-static const pbus_bti_t sherlock_canvas_btis[] = {
-    {
-        .iommu_index = 0,
-        .bti_id = BTI_CANVAS,
-    },
+constexpr pbus_bti_t sherlock_canvas_btis[] = {
+  {
+    .iommu_index = 0,
+    .bti_id = BTI_CANVAS,
+  },
 };
 
-static pbus_dev_t canvas_dev = []() {
+constexpr pbus_dev_t canvas_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "canvas";
   dev.vid = PDEV_VID_AMLOGIC;
@@ -41,9 +41,9 @@ static pbus_dev_t canvas_dev = []() {
 }();
 
 zx_status_t Sherlock::CanvasInit() {
-  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_dev);
+  zx_status_t status = pbus_.DeviceAdd(&canvas_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Sherlock::CanvasInit: pbus_device_add failed: %d\n", status);
+    zxlogf(ERROR, "Sherlock::CanvasInit: DeviceAdd failed: %d\n", status);
     return status;
   }
   return status;

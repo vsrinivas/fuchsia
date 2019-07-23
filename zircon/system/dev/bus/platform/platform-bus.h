@@ -6,7 +6,6 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/clockimpl.h>
 #include <ddktl/protocol/gpioimpl.h>
 #include <ddktl/protocol/powerimpl.h>
@@ -73,7 +72,6 @@ public:
     zx_status_t GetBootItem(uint32_t type, uint32_t extra, fbl::Array<uint8_t>* out);
 
     // Protocol accessors for PlatformDevice.
-    inline ddk::AmlogicCanvasProtocolClient* canvas() { return &*canvas_; }
     inline ddk::ClockImplProtocolClient* clk() { return &*clk_; }
     inline ddk::GpioImplProtocolClient* gpio() { return &*gpio_; }
     inline ddk::PowerImplProtocolClient* power() { return &*power_; }
@@ -94,7 +92,6 @@ private:
     pdev_board_info_t board_info_;
 
     // Protocols that are optionally provided by the board driver.
-    std::optional<ddk::AmlogicCanvasProtocolClient> canvas_;
     std::optional<ddk::ClockImplProtocolClient> clk_;
     std::optional<ddk::GpioImplProtocolClient> gpio_;
     std::optional<ddk::IommuProtocolClient> iommu_;

@@ -10,6 +10,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/protocol/platform/device.h>
 #include <lib/device-protocol/platform-device.h>
 #include <stdint.h>
@@ -174,12 +175,6 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
     goto fail;
   }
 
-  pbus_protocol_t pbus;
-  if ((status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus)) != ZX_OK) {
-    CANVAS_ERROR("ZX_PROTOCOL_PBUS not available %d \n", status);
-    goto fail;
-  }
-
   // Get BTI handle
   status = pdev_get_bti(&canvas->pdev, 0, &canvas->bti);
   if (status != ZX_OK) {
@@ -212,13 +207,6 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
     goto fail;
   }
 
-  canvas->canvas.ops = &canvas_ops;
-  canvas->canvas.ctx = canvas;
-
-  // Register the canvas protocol with the platform bus
-  // TODO(ZX-3746) Remove this after all clients have switched to using composite protocol. 
-  pbus_register_protocol(&pbus, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas->canvas,
-                         sizeof(canvas->canvas));
   return ZX_OK;
 fail:
   aml_canvas_release(canvas);

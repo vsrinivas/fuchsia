@@ -8,8 +8,6 @@
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/amlogiccanvas.h>
-#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <hw/reg.h>
 #include <threads.h>
@@ -58,7 +56,6 @@ typedef struct {
   pdev_protocol_t pdev;
   mmio_buffer_t dmc_regs;
   mtx_t lock;
-  amlogic_canvas_protocol_t canvas;
   zx_handle_t bti;
   zx_handle_t pmt_handle[NUM_CANVAS_ENTRIES];
 } aml_canvas_t;

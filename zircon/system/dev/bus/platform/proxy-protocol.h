@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/protocol/platform/device.h>
 
 namespace platform_bus {
@@ -97,24 +96,6 @@ enum {
 struct rpc_sysmem_req_t {
     platform_proxy_req_t header;
     uint64_t heap;
-};
-
-// ZX_PROTOCOL_AMLOGIC_CANVAS proxy support.
-enum {
-    AMLOGIC_CANVAS_CONFIG,
-    AMLOGIC_CANVAS_FREE,
-};
-
-struct rpc_amlogic_canvas_req_t {
-    platform_proxy_req_t header;
-    size_t offset;
-    canvas_info_t info;
-    uint8_t canvas_idx;
-};
-
-struct rpc_amlogic_canvas_rsp_t {
-    platform_proxy_rsp_t header;
-    uint8_t canvas_idx;
 };
 
 } // namespace platform_bus

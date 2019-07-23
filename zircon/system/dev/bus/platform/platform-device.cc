@@ -294,23 +294,6 @@ zx_status_t PlatformDevice::RpcSysmemConnect(zx::channel allocator_request) {
     return bus_->sysmem()->Connect(std::move(allocator_request));
 }
 
-zx_status_t PlatformDevice::RpcCanvasConfig(zx::vmo vmo, size_t offset, const canvas_info_t* info,
-                                            uint8_t* out_canvas_idx) {
-    if (bus_->canvas() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    return bus_->canvas()->Config(std::move(vmo), offset, info, out_canvas_idx);
-}
-
-zx_status_t PlatformDevice::RpcCanvasFree(uint8_t canvas_index) {
-    if (bus_->canvas() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    return bus_->canvas()->Free(canvas_index);
-}
-
 zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
     if (channel == ZX_HANDLE_INVALID) {
         // proxy device has connected
@@ -438,40 +421,6 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             break;
         default:
             zxlogf(ERROR, "%s: unknown sysmem op %u\n", __func__, req_header->op);
-            return ZX_ERR_INTERNAL;
-        }
-        break;
-    }
-    case ZX_PROTOCOL_AMLOGIC_CANVAS: {
-        auto req = reinterpret_cast<rpc_amlogic_canvas_req_t*>(&req_buf);
-        if (actual < sizeof(*req)) {
-            zxlogf(ERROR, "%s received %u, expecting %zu (CANVAS)\n", __func__, actual,
-                   sizeof(*req));
-            return ZX_ERR_INTERNAL;
-        }
-        auto resp = reinterpret_cast<rpc_amlogic_canvas_rsp_t*>(&resp_buf);
-        resp_len = sizeof(*resp);
-
-        switch (req_header->op) {
-        case AMLOGIC_CANVAS_CONFIG:
-            if (req_handle_count != 1) {
-                zxlogf(ERROR, "%s received %u handles, expecting 1 (CANVAS CONFIG) \n", __func__,
-                       req_handle_count);
-                return ZX_ERR_INTERNAL;
-            }
-            status = RpcCanvasConfig(zx::vmo(req_handles[0]), req->offset, &req->info,
-                                     &resp->canvas_idx);
-            break;
-        case AMLOGIC_CANVAS_FREE:
-            if (req_handle_count != 0) {
-                zxlogf(ERROR, "%s received %u handles, expecting 0 (CANVAS FREE) \n", __func__,
-                       req_handle_count);
-                return ZX_ERR_INTERNAL;
-            }
-            status = RpcCanvasFree(req->canvas_idx);
-            break;
-        default:
-            zxlogf(ERROR, "%s: unknown CANVAS op %u\n", __func__, req_header->op);
             return ZX_ERR_INTERNAL;
         }
         break;

@@ -42,10 +42,9 @@ static const pbus_dev_t canvas_dev = []() {
 }();
 
 zx_status_t Astro::CanvasInit() {
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_AMLOGIC_CANVAS,
-                                                 &canvas_dev);
+    zx_status_t status = pbus_.DeviceAdd(&canvas_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d\n",
+        zxlogf(ERROR, "%s: DeviceAdd failed: %d\n",
                __func__, status);
         return status;
     }

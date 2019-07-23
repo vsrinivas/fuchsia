@@ -8,7 +8,6 @@ driver("aml-canvas") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.amlogiccanvas",
-    "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/ulib/ddk",

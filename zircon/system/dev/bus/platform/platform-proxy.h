@@ -5,7 +5,6 @@
 #pragma once
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/sysmem.h>
@@ -62,25 +61,6 @@ private:
     PlatformProxy* proxy_;
 };
 
-class ProxyAmlogicCanvas : public ddk::AmlogicCanvasProtocol<ProxyAmlogicCanvas> {
-public:
-    explicit ProxyAmlogicCanvas(PlatformProxy* proxy)
-        : proxy_(proxy) {}
-
-    // Amlogic Canvas protocol implementation.
-    zx_status_t AmlogicCanvasConfig(zx::vmo vmo, size_t offset, const canvas_info_t* info,
-                                    uint8_t* out_canvas_idx);
-    zx_status_t AmlogicCanvasFree(uint8_t canvas_idx);
-
-    void GetProtocol(amlogic_canvas_protocol_t* proto) {
-        proto->ops = &amlogic_canvas_protocol_ops_;
-        proto->ctx = this;
-    }
-
-private:
-    PlatformProxy* proxy_;
-};
-
 using PlatformProxyType = ddk::Device<PlatformProxy, ddk::GetProtocolable>;
 
 // This is the main class for the proxy side platform bus driver.
@@ -90,7 +70,7 @@ class PlatformProxy : public PlatformProxyType,
                       public ddk::PDevProtocol<PlatformProxy, ddk::base_protocol> {
 public:
     explicit PlatformProxy(zx_device_t* parent, zx_handle_t rpc_channel)
-        :  PlatformProxyType(parent), rpc_channel_(rpc_channel), sysmem_(this), canvas_(this) {}
+        :  PlatformProxyType(parent), rpc_channel_(rpc_channel), sysmem_(this) {}
 
     static zx_status_t Create(void* ctx, zx_device_t* parent, const char* name,
                               const char* args, zx_handle_t rpc_channel);
@@ -146,7 +126,6 @@ private:
     fbl::Vector<Irq> irqs_;
     fbl::Vector<ProxyClock> clocks_;
     ProxySysmem sysmem_;
-    ProxyAmlogicCanvas canvas_;
 };
 
 } // namespace platform_bus

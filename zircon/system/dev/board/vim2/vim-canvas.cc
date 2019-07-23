@@ -36,10 +36,9 @@ zx_status_t Vim::CanvasInit() {
     canvas_dev.bti_list = vim_canvas_btis;
     canvas_dev.bti_count = countof(vim_canvas_btis);
 
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_AMLOGIC_CANVAS,
-                                                 &canvas_dev);
+    zx_status_t status = pbus_.DeviceAdd(&canvas_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "CanvasInit: pbus_protocol_device_add Canvas failed: %d\n", status);
+        zxlogf(ERROR, "CanvasInit: DeviceAdd Canvas failed: %d\n", status);
         return status;
     }
     return ZX_OK;
