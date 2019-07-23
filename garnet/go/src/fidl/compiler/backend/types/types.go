@@ -31,6 +31,7 @@ type LibraryIdentifier []Identifier
 type CompoundIdentifier struct {
 	Library LibraryIdentifier
 	Name    Identifier
+	Member  Identifier
 }
 
 type EncodedLibraryIdentifier string
@@ -82,8 +83,13 @@ func ParseCompoundIdentifier(eci EncodedCompoundIdentifier) CompoundIdentifier {
 		raw_name = parts[1]
 	}
 	library := ParseLibraryName(EncodedLibraryIdentifier(raw_library))
-	name := Identifier(raw_name)
-	return CompoundIdentifier{library, name}
+	name_parts := strings.SplitN(raw_name, ".", 2)
+	name := Identifier(name_parts[0])
+	member := Identifier("")
+	if len(name_parts) == 2 {
+		member = Identifier(name_parts[1])
+	}
+	return CompoundIdentifier{library, name, member}
 }
 
 func EnsureLibrary(l EncodedLibraryIdentifier, eci EncodedCompoundIdentifier) EncodedCompoundIdentifier {
