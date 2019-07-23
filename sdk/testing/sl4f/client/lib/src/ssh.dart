@@ -5,6 +5,7 @@
 import 'dart:io';
 
 import 'package:logging/logging.dart';
+import 'package:meta/meta.dart';
 
 class Ssh {
   static const _sshUser = 'fuchsia';
@@ -18,42 +19,22 @@ class Ssh {
   /// the resolved path of `//.ssh/pkey`.
   final String sshKeyPath;
 
+  /// Builds an SSH object that uses the credentials from a file.
   Ssh(this.target, this.sshKeyPath)
       : assert(target != null && target.isNotEmpty),
         assert(sshKeyPath != null && sshKeyPath.isNotEmpty) {
     _log.info('SSH key path: $sshKeyPath');
   }
 
+  /// Builds an SSH object that uses the credentials from ssh-agent only.
+  Ssh.useAgent(this.target) : sshKeyPath = null;
+
   /// Starts an ssh [Process], sending [cmd] to the target using ssh.
   Future<Process> start(String cmd,
       {ProcessStartMode mode = ProcessStartMode.normal}) {
     _log.fine('Running over ssh: $cmd');
-    return Process.start(
-        'ssh',
-        [
-          // Private key file path.
-          '-i', sshKeyPath,
-          // Don't check known_hosts.
-          '-o', 'UserKnownHostsFile=/dev/null',
-          // Auto add the fingerprint of remote host.
-          '-o', 'StrictHostKeyChecking=no',
-          // Timeout to connect, keeping it short makes the logs more sensical.
-          '-o', 'ConnectTimeout=2',
-          // These five arguments allow ssh to reuse its connection.
-          '-o', 'ControlPersist=yes',
-          '-o', 'ControlMaster=auto',
-          '-o', 'ControlPath=/tmp/fuchsia--%r@%h:%p',
-          '-o', 'ServerAliveInterval=1',
-          '-o', 'ServerAliveCountMax=1',
-          // These two arguments determine the connection timeout,
-          // in the case the ssh connection gets lost.
-          // They say if the target doesn't respond within 10 seconds, six
-          // times in a row, terminate the connection.
-          '-o', 'ServerAliveInterval=10',
-          '-o', 'ServerAliveCountMax=6',
-          '$_sshUser@$target',
-          cmd
-        ],
+
+    return Process.start('ssh', makeArgs(cmd),
         // If not run in a shell it doesn't seem like the PATH is searched.
         runInShell: true,
         mode: mode);
@@ -61,8 +42,8 @@ class Ssh {
 
   /// Runs the command given by [cmd] on the target using ssh.
   ///
-  /// It can optionally send input via [stdin]. If the exit code is nonzero, diagnostic warnings
-  /// are logged.
+  /// It can optionally send input via [stdin]. If the exit code is nonzero,
+  /// diagnostic warnings are logged.
   Future<ProcessResult> run(String cmd, {String stdin}) async {
     final process = await start(cmd);
     if (stdin != null) {
@@ -85,5 +66,37 @@ class Ssh {
     }
 
     return result;
+  }
+
+  @visibleForTesting
+  List<String> makeArgs(String cmd) {
+    List<String> sshKeyArg = [];
+    if (sshKeyPath != null) {
+      // Private key file path.
+      sshKeyArg = ['-i', sshKeyPath];
+    }
+    return sshKeyArg +
+        [
+          // Don't check known_hosts.
+          '-o', 'UserKnownHostsFile=/dev/null',
+          // Auto add the fingerprint of remote host.
+          '-o', 'StrictHostKeyChecking=no',
+          // Timeout to connect, short so the logs can make sense.
+          '-o', 'ConnectTimeout=2',
+          // These five arguments allow ssh to reuse its connection.
+          '-o', 'ControlPersist=yes',
+          '-o', 'ControlMaster=auto',
+          '-o', 'ControlPath=/tmp/fuchsia--%r@%h:%p',
+          '-o', 'ServerAliveInterval=1',
+          '-o', 'ServerAliveCountMax=1',
+          // These two arguments determine the connection timeout,
+          // in the case the ssh connection gets lost.
+          // They say if the target doesn't respond within 10 seconds, six
+          // times in a row, terminate the connection.
+          '-o', 'ServerAliveInterval=10',
+          '-o', 'ServerAliveCountMax=6',
+          '$_sshUser@$target',
+          cmd
+        ];
   }
 }

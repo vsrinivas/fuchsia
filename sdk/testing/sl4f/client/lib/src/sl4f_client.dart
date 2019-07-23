@@ -25,6 +25,8 @@ final _log = Logger('sl4f_client');
 /// and move on.
 const _diagnosticTimeout = Duration(minutes: 2);
 
+bool _isNullOrEmpty(String str) => str == null || str.isEmpty;
+
 /// Handles the SL4F server and communication with it.
 class Sl4f {
   static const diagnostics = [
@@ -53,14 +55,35 @@ class Sl4f {
 
   /// Constructs an SL4F client from the `FUCHSIA_IPV4_ADDR` and
   /// `FUCHSIA_SSH_KEY` environment variables.
-  factory Sl4f.fromEnvironment() {
-    final address = Platform.environment['FUCHSIA_IPV4_ADDR'];
+  ///
+  /// If `FUCHSIA_SSH_KEY` is not set but `SSH_AUTH_SOCK` is, then it's
+  /// assumed that ssh-agent can provide the credentials to connect to the
+  /// device. Otherwise an [Sl4fException] is thrown.
+  factory Sl4f.fromEnvironment({Map<String, String> environment}) {
+    environment ??= Platform.environment;
+    final address = environment['FUCHSIA_IPV4_ADDR'];
+    if (_isNullOrEmpty(address)) {
+      throw Sl4fException(
+          'No FUCHSIA_IPV4_ADDR provided when starting SL4F from env');
+    }
+
+    Ssh ssh;
+    if (!_isNullOrEmpty(environment['FUCHSIA_SSH_KEY'])) {
+      ssh = Ssh(address, environment['FUCHSIA_SSH_KEY']);
+    } else if (!_isNullOrEmpty(environment['SSH_AUTH_SOCK'])) {
+      ssh = Ssh.useAgent(address);
+    } else {
+      throw Sl4fException(
+          'No FUCHSIA_SSH_KEY provided and SSH_AUTH_SOCK is not defined. '
+          'Cannot start sl4f.');
+    }
+
     String host = address;
     // This same code exists in the dart/sdk/lib/_http/http_impl.dart.
     if (host.contains(':')) {
       host = '[$host]';
     }
-    return Sl4f(host, Ssh(address, Platform.environment['FUCHSIA_SSH_KEY']));
+    return Sl4f(host, ssh);
   }
 
   /// Closes the underlying HTTP client.

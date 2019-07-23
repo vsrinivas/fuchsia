@@ -46,6 +46,7 @@ dart_test("sl4f_client_tests") {
     "performance_test.dart",
     "scenic_test.dart",
     "sl4f_client_test.dart",
+    "ssh_test.dart",
     "storage_test.dart",
     "webdriver_test.dart",
   ]
