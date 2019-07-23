@@ -13,6 +13,7 @@ use omaha_client::state_machine::StateMachine;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+mod channel;
 mod configuration;
 mod fidl;
 mod http_request;

@@ -2,7 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"
+                "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx",
+                "fuchsia.update.ChannelWriter": "fuchsia-pkg://fuchsia.com/fake_channel_writer#meta/fake_channel_writer.cmx"
             }
         }
     },
@@ -12,7 +13,8 @@
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.stash.Store"
+            "fuchsia.stash.Store",
+            "fuchsia.update.ChannelWriter"
         ]
     }
 }
