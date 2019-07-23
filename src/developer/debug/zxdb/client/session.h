@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/zxdb/client/download_observer.h"
 #include "src/developer/debug/zxdb/client/filter_observer.h"
 #include "src/developer/debug/zxdb/client/session_observer.h"
 #include "src/developer/debug/zxdb/client/system_impl.h"
@@ -58,6 +59,9 @@ class Session : public SettingStoreObserver {
 
   void AddFilterObserver(FilterObserver* observer);
   void RemoveFilterObserver(FilterObserver* observer);
+
+  void AddDownloadObserver(DownloadObserver* observer);
+  void RemoveDownloadObserver(DownloadObserver* observer);
 
   // Returns information about whether this session is connected to a minidump
   // instead of a live system.
@@ -119,6 +123,9 @@ class Session : public SettingStoreObserver {
 
   // Get the list of filter observers.
   fxl::ObserverList<FilterObserver>& filter_observers() { return filter_observers_; }
+
+  // Get the list of filter observers.
+  fxl::ObserverList<DownloadObserver>& download_observers() { return download_observers_; }
 
   // When the client tells the agent to launch a component, it will return an
   // unique id identifying that launch. Later, when the component effectively
@@ -206,6 +213,9 @@ class Session : public SettingStoreObserver {
 
   // Observers for filter changes within this session.
   fxl::ObserverList<FilterObserver> filter_observers_;
+  //
+  // Observers for download activity.
+  fxl::ObserverList<DownloadObserver> download_observers_;
 
   // Non-owning pointer to the connected stream. If this is non-null and
   // connection_storage_ is null, the connection is persistent (made via the

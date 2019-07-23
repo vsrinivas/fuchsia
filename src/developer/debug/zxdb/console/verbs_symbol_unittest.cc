@@ -45,6 +45,18 @@ TEST_F(VerbsSymbolTest, SymStat) {
   auto text = event.output.AsString();
   EXPECT_NE(text.find("Process 1 symbol status"), std::string::npos);
   EXPECT_NE(text.find("Build ID: abc123 (Downloading...)"), std::string::npos);
+
+  event = console.GetOutputEvent();
+  EXPECT_EQ("Downloading symbols...", event.output.AsString());
+
+  // Releasing the download will cause it to register a failure.
+  download = nullptr;
+
+  event = console.GetOutputEvent();
+  EXPECT_EQ("Process 1 [Running] koid=1234 <mock>", event.output.AsString());
+
+  event = console.GetOutputEvent();
+  EXPECT_EQ("Symbol downloading complete. 0 succeeded, 1 failed.", event.output.AsString());
 }
 
 }  // namespace zxdb

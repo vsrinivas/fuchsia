@@ -95,6 +95,12 @@ class SystemImpl final : public System,
   // Called when a symbol server under our control enters the Ready state.
   void OnSymbolServerBecomesReady(SymbolServer* server);
 
+  // Called every time a new download starts.
+  void DownloadStarted();
+
+  // Called every time a download ends.
+  void DownloadFinished();
+
   // Create a new download obect for downloading a given build ID. If quiet is
   // set, don't report the status of this download.
   //
@@ -106,6 +112,16 @@ class SystemImpl final : public System,
 
   // Set up a symbol server after it has been added to symbol_servers_.
   void AddSymbolServer(SymbolServer* server);
+
+  // The number of downloads currently active.
+  size_t download_count_ = 0;
+
+  // The number of downloads that have succeeded. Every time download_count_ reaches 0, this number
+  // is reported via an event, and then cleared to zero.
+  size_t download_success_count_ = 0;
+
+  // The number of downloads that have failed. Semantics are the same as download_success_count_
+  size_t download_fail_count_ = 0;
 
   std::vector<std::unique_ptr<SymbolServer>> symbol_servers_;
   std::vector<std::unique_ptr<TargetImpl>> targets_;

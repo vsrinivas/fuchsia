@@ -29,6 +29,7 @@ namespace zxdb {
 
 ConsoleContext::ConsoleContext(Session* session) : session_(session) {
   session->AddObserver(this);
+  session->AddDownloadObserver(this);
   session->system().AddObserver(this);
 
   // Pick up any previously created targets. This will normally just be the
@@ -698,6 +699,13 @@ void ConsoleContext::OnThreadFramesInvalidated(Thread* thread) {
 
   // Reset the active frame.
   record->active_frame_id = 0;
+}
+
+void ConsoleContext::OnDownloadsStarted() { Console::get()->Output("Downloading symbols..."); }
+
+void ConsoleContext::OnDownloadsStopped(size_t success, size_t fail) {
+  Console::get()->Output(
+      fxl::StringPrintf("Symbol downloading complete. %zu succeeded, %zu failed.", success, fail));
 }
 
 ConsoleContext::TargetRecord* ConsoleContext::GetTargetRecord(int target_id) {

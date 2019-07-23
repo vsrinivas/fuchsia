@@ -767,6 +767,14 @@ void Session::RemoveFilterObserver(FilterObserver* observer) {
   filter_observers_.RemoveObserver(observer);
 }
 
+void Session::AddDownloadObserver(DownloadObserver* observer) {
+  download_observers_.AddObserver(observer);
+}
+
+void Session::RemoveDownloadObserver(DownloadObserver* observer) {
+  download_observers_.RemoveObserver(observer);
+}
+
 void Session::SendSessionNotification(SessionObserver::NotificationType type, const char* fmt,
                                       ...) {
   va_list ap;

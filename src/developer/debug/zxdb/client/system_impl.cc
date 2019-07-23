@@ -286,6 +286,8 @@ std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id,
     return existing;
   }
 
+  DownloadStarted();
+
   auto download = std::make_shared<Download>(
       build_id, file_type,
       [build_id, file_type, weak_this = weak_factory_.GetWeakPtr(), quiet](
@@ -294,13 +296,12 @@ std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id,
           return;
         }
 
-        auto& symbols = weak_this->symbols_;
-
         if (!path.empty()) {
+          weak_this->download_success_count_++;
           if (err.has_error()) {
             // If we got a path but still had an error, something went wrong
             // with the cache repo. Add the path manually.
-            symbols.build_id_index().AddBuildIDMapping(build_id, path, file_type);
+            weak_this->symbols_.build_id_index().AddBuildIDMapping(build_id, path, file_type);
           }
 
           for (const auto& target : weak_this->targets_) {
@@ -308,14 +309,42 @@ std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id,
               process->GetSymbols()->RetryLoadBuildID(build_id);
             }
           }
-        } else if (!quiet) {
-          weak_this->NotifyFailedToFindDebugSymbols(err, build_id, file_type);
+        } else {
+          weak_this->download_fail_count_++;
+
+          if (!quiet) {
+            weak_this->NotifyFailedToFindDebugSymbols(err, build_id, file_type);
+          }
         }
+
+        weak_this->DownloadFinished();
       });
 
   downloads_[{build_id, file_type}] = download;
 
   return download;
+}
+
+void SystemImpl::DownloadStarted() {
+  if (download_count_ == 0) {
+    for (auto& observer : session()->download_observers()) {
+      observer.OnDownloadsStarted();
+    }
+  }
+
+  download_count_++;
+}
+
+void SystemImpl::DownloadFinished() {
+  download_count_--;
+
+  if (download_count_ == 0) {
+    for (auto& observer : session()->download_observers()) {
+      observer.OnDownloadsStopped(download_success_count_, download_fail_count_);
+    }
+
+    download_success_count_ = download_fail_count_ = 0;
+  }
 }
 
 void SystemImpl::RequestDownload(const std::string& build_id, DebugSymbolFileType file_type,

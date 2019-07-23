@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_CONSOLE_CONTEXT_H_
 
 #include "src/developer/debug/zxdb/client/breakpoint_observer.h"
+#include "src/developer/debug/zxdb/client/download_observer.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/session_observer.h"
 #include "src/developer/debug/zxdb/client/system_observer.h"
@@ -32,7 +33,8 @@ class ConsoleContext : public ProcessObserver,
                        public SystemObserver,
                        public TargetObserver,
                        public ThreadObserver,
-                       public BreakpointObserver {
+                       public BreakpointObserver,
+                       public DownloadObserver {
  public:
   explicit ConsoleContext(Session* session);
   ~ConsoleContext();
@@ -167,6 +169,10 @@ class ConsoleContext : public ProcessObserver,
   void OnThreadStopped(Thread* thread, debug_ipc::NotifyException::Type type,
                        const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
   void OnThreadFramesInvalidated(Thread* thread) override;
+
+  // DownloadObserver implementation:
+  void OnDownloadsStarted() override;
+  void OnDownloadsStopped(size_t success, size_t fail) override;
 
   // Returns the record for the given target, or null (+ assertion) if not
   // found. These pointers are not stable across target list changes.
