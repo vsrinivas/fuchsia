@@ -674,10 +674,12 @@ mod experimental_api {
         fonts_exp::ListTypefacesRequest {
             flags: None,
             family: None,
-            styles: None,
+            slant: None,
+            weight: None,
+            width: None,
             languages: None,
             code_points: None,
-            generic_families: None,
+            generic_family: None,
         }
     }
 
@@ -752,10 +754,12 @@ mod experimental_api {
         fonts_exp::ListTypefacesRequest {
             flags: None,
             family: Some(fonts::FamilyName { name: String::from(name) }),
-            styles: None,
+            slant: None,
+            weight: None,
+            width: None,
             languages: None,
             code_points: None,
-            generic_families: None,
+            generic_family: None,
         }
     }
 
@@ -855,37 +859,167 @@ mod experimental_api {
         Ok(())
     }
 
-    fn style_query(
-        slant: Option<fonts::Slant>,
-        weight: Option<u16>,
-        width: Option<fonts::Width>,
-    ) -> fonts_exp::ListTypefacesRequest {
+    fn slant_query(lower: fonts::Slant, upper: fonts::Slant) -> fonts_exp::ListTypefacesRequest {
         fonts_exp::ListTypefacesRequest {
             flags: None,
             family: None,
-            styles: Some(vec![fonts::Style2 { slant, weight, width }]),
+            slant: Some(fonts_exp::SlantRange { lower, upper }),
+            weight: None,
+            width: None,
             languages: None,
             code_points: None,
-            generic_families: None,
+            generic_family: None,
         }
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_list_typefaces_by_style() -> Result<(), Error> {
-        let (_app, font_provider) = start_provider_with_test_fonts()?;
+    async fn test_list_typefaces_by_slant_range_() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_all_fonts()?;
         let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
 
-        let request = style_query(None, Some(300), None);
+        let request = slant_query(fonts::Slant::Upright, fonts::Slant::Italic);
 
-        await!(font_provider.list_typefaces(request, iterator.into()))?
+        await!(font_provider.list_typefaces(request, iterator))?
             .expect("ListTypefaces request failed");
 
         let response = await!(client.get_next())?;
         let results = response.results.unwrap();
 
-        assert!(results.len() >= 1, "{:?}", results);
+        assert!(!results.is_empty(), "{:?}", results);
         for result in results {
-            assert_eq!(result.style.as_ref().unwrap().weight.unwrap(), 300);
+            let slant = result.style.as_ref().unwrap().slant.unwrap();
+            assert!((fonts::Slant::Upright..=fonts::Slant::Italic).contains(&slant));
+        }
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_slant_range_is_inclusive() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_all_fonts()?;
+        let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
+
+        let request = slant_query(fonts::Slant::Italic, fonts::Slant::Italic);
+
+        await!(font_provider.list_typefaces(request, iterator))?
+            .expect("ListTypefaces request failed");
+
+        let response = await!(client.get_next())?;
+        let results = response.results.unwrap();
+
+        assert!(!results.is_empty(), "{:?}", results);
+        for result in results {
+            let slant = result.style.as_ref().unwrap().slant.unwrap();
+            assert_eq!(slant, fonts::Slant::Italic);
+        }
+        Ok(())
+    }
+
+    fn weight_query(lower: u16, upper: u16) -> fonts_exp::ListTypefacesRequest {
+        fonts_exp::ListTypefacesRequest {
+            flags: None,
+            family: None,
+            slant: None,
+            weight: Some(fonts_exp::WeightRange { lower, upper }),
+            width: None,
+            languages: None,
+            code_points: None,
+            generic_family: None,
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_weight_range() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+        let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
+
+        let request = weight_query(200, 300);
+
+        await!(font_provider.list_typefaces(request, iterator))?
+            .expect("ListTypefaces request failed");
+
+        let response = await!(client.get_next())?;
+        let results = response.results.unwrap();
+
+        assert!(!results.is_empty(), "{:?}", results);
+        for result in results {
+            let weight = result.style.as_ref().unwrap().weight.unwrap();
+            assert!((200..=300).contains(&weight));
+        }
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_weight_range_is_inclusive() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+        let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
+
+        let request = weight_query(300, 300);
+
+        await!(font_provider.list_typefaces(request, iterator))?
+            .expect("ListTypefaces request failed");
+
+        let response = await!(client.get_next())?;
+        let results = response.results.unwrap();
+
+        assert!(!results.is_empty(), "{:?}", results);
+        for result in results {
+            let weight = result.style.as_ref().unwrap().weight.unwrap();
+            assert_eq!(weight, 300);
+        }
+        Ok(())
+    }
+
+    fn width_query(lower: fonts::Width, upper: fonts::Width) -> fonts_exp::ListTypefacesRequest {
+        fonts_exp::ListTypefacesRequest {
+            flags: None,
+            family: None,
+            slant: None,
+            weight: None,
+            width: Some(fonts_exp::WidthRange { lower, upper }),
+            languages: None,
+            code_points: None,
+            generic_family: None,
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_width_range() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+        let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
+
+        let request = width_query(fonts::Width::Condensed, fonts::Width::Expanded);
+
+        await!(font_provider.list_typefaces(request, iterator))?
+            .expect("ListTypefaces request failed");
+
+        let response = await!(client.get_next())?;
+        let results = response.results.unwrap();
+
+        assert!(!results.is_empty(), "{:?}", results);
+        for result in results {
+            let width = result.style.as_ref().unwrap().width.unwrap();
+            assert!((fonts::Width::Condensed..=fonts::Width::Expanded).contains(&width));
+        }
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_width_range_is_inclusive() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+        let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
+
+        let request = width_query(fonts::Width::Normal, fonts::Width::Normal);
+
+        await!(font_provider.list_typefaces(request, iterator))?
+            .expect("ListTypefaces request failed");
+
+        let response = await!(client.get_next())?;
+        let results = response.results.unwrap();
+
+        assert!(!results.is_empty(), "{:?}", results);
+        for result in results {
+            let width = result.style.as_ref().unwrap().width.unwrap();
+            assert_eq!(width, fonts::Width::Normal);
         }
         Ok(())
     }
@@ -898,10 +1032,12 @@ mod experimental_api {
         fonts_exp::ListTypefacesRequest {
             flags: None,
             family: None,
-            styles: None,
+            slant: None,
+            weight: None,
+            width: None,
             languages: Some(langs),
             code_points: None,
-            generic_families: None,
+            generic_family: None,
         }
     }
 
@@ -929,10 +1065,12 @@ mod experimental_api {
         fonts_exp::ListTypefacesRequest {
             flags: None,
             family: None,
-            styles: None,
+            slant: None,
+            weight: None,
+            width: None,
             languages: None,
             code_points: Some(points),
-            generic_families: None,
+            generic_family: None,
         }
     }
 
@@ -957,15 +1095,17 @@ mod experimental_api {
     }
 
     fn generic_family_query(
-        families: Vec<fonts::GenericFontFamily>,
+        generic_family: fonts::GenericFontFamily,
     ) -> fonts_exp::ListTypefacesRequest {
         fonts_exp::ListTypefacesRequest {
             flags: None,
             family: None,
-            styles: None,
+            slant: None,
+            weight: None,
+            width: None,
             languages: None,
             code_points: None,
-            generic_families: Some(families),
+            generic_family: Some(generic_family),
         }
     }
 
@@ -974,7 +1114,7 @@ mod experimental_api {
         let (_app, font_provider) = start_provider_with_test_fonts()?;
         let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
 
-        let request = generic_family_query(vec![fonts::GenericFontFamily::SansSerif]);
+        let request = generic_family_query(fonts::GenericFontFamily::SansSerif);
 
         await!(font_provider.list_typefaces(request, iterator.into()))?
             .expect("ListTypefaces request failed");

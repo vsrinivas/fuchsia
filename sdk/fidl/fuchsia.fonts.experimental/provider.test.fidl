@@ -72,25 +72,27 @@ table ListTypefacesRequest {
     /// `MATCH_FAMILY_NAME_SUBSTRING` flag.
     2: ff.FamilyName family;
 
-    /// Styles to match. Note that combining styles will change results.
-    /// For example, `[{slant: UPRIGHT}, {weight: WEIGHT_BOLD}]` matches fonts
-    /// that are upright *or* bold but `[{slant: UPRIGHT, weight: WEIGHT_BOLD}]`
-    /// only matches fonts that are both upright *and* bold.
-    3: vector<ff.Style2>:ff.MAX_FAMILY_STYLES styles;
+    /// Results must have a slant within this inclusive range.
+    3: SlantRange slant;
+
+    /// Results must have a weight within this inclusive range.
+    4: WeightRange weight;
+
+    /// Results must have a width within this inclusive range.
+    5: WidthRange width;
 
     /// Languages that results must support.
     /// Each result must support all requested languages.
-    4: vector<fuchsia.intl.LocaleId>:ff.MAX_FACE_QUERY_LANGUAGES languages;
+    6: vector<fuchsia.intl.LocaleId>:ff.MAX_FACE_QUERY_LANGUAGES languages;
 
     /// Code points that results must include.
     /// Each result must include all requested code points.
-    5: vector<uint32> code_points;
+    7: vector<uint32> code_points;
 
-    /// Generic font families to match. Results will include fonts belonging to
-    /// any requested generic family. Note that a font can only belong to one
-    /// generic family, so there is no way to request a font belonging to
-    /// all requested generic families.
-    6: vector<ff.GenericFontFamily> generic_families;
+    /// Generic font family which results must belong to. If a font's generic
+    /// family is not set, it will only be matched if this field is also not
+    /// set. However, omitting this field will still cause it to match any font.
+    8: ff.GenericFontFamily generic_family;
 };
 
 bits ListTypefacesFlags : uint32 {
@@ -100,6 +102,24 @@ bits ListTypefacesFlags : uint32 {
     ///
     /// Note: Matching will always ignore case.
     MATCH_FAMILY_NAME_SUBSTRING = 0x00000001;
+};
+
+/// Represents a range of acceptable `Slant`s. Both bounds are inclusive.
+struct SlantRange {
+    ff.Slant lower;
+    ff.Slant upper;
+};
+
+/// Represents a range of acceptable `Weight`s. Both bounds are inclusive.
+struct WeightRange {
+    ff.Weight lower;
+    ff.Weight upper;
+};
+
+/// Represents a range of acceptable `Width`s. Both bounds are inclusive.
+struct WidthRange {
+    ff.Width lower;
+    ff.Width upper;
 };
 
 table TypefaceInfoResponse {

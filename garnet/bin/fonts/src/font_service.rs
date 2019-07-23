@@ -492,18 +492,31 @@ impl FontService {
         // Flatten matches into Iter<TypefaceInfoAndCharSet>
         let matched_faces = matched_families.flat_map(|family| family.extract_faces());
 
-        let styles_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
-            match request.styles.as_ref() {
-                Some(styles) => {
-                    // Unwraps are safe because manifest loading assigns default values if needed
-                    let face_slant = face.style.slant.as_ref().unwrap();
-                    let face_weight = face.style.weight.as_ref().unwrap();
-                    let face_width = face.style.width.as_ref().unwrap();
-                    styles.iter().any(|style| {
-                        style.slant.map_or(true, |slant| face_slant == &slant)
-                            && style.weight.map_or(true, |weight| face_weight == &weight)
-                            && style.width.map_or(true, |width| face_width == &width)
-                    })
+        let slant_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
+            match request.slant {
+                Some(fonts_exp::SlantRange { lower, upper }) => {
+                    // Unwrap is safe because manifest loading assigns default values if needed
+                    (lower..=upper).contains(&face.style.slant.unwrap())
+                }
+                None => true,
+            }
+        };
+
+        let weight_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
+            match request.weight {
+                Some(fonts_exp::WeightRange { lower, upper }) => {
+                    // Unwrap is safe because manifest loading assigns default values if needed
+                    (lower..=upper).contains(&face.style.weight.unwrap())
+                }
+                None => true,
+            }
+        };
+
+        let width_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
+            match request.width {
+                Some(fonts_exp::WidthRange { lower, upper }) => {
+                    // Unwrap is safe because manifest loading assigns default values if needed
+                    (lower..=upper).contains(&face.style.width.unwrap())
                 }
                 None => true,
             }
@@ -526,16 +539,18 @@ impl FontService {
         };
 
         let generic_family_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
-            match request.generic_families.as_ref() {
-                Some(generic_families) => {
-                    face.generic_family.map_or(false, |gf| generic_families.contains(&gf))
+            match request.generic_family.as_ref() {
+                Some(generic_family) => {
+                    face.generic_family.map_or(false, |gf| generic_family == &gf)
                 }
                 None => true,
             }
         };
 
         let total_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
-            styles_predicate(face)
+            slant_predicate(face)
+                && weight_predicate(face)
+                && width_predicate(face)
                 && lang_predicate(face)
                 && code_point_predicate(face)
                 && generic_family_predicate(face)
