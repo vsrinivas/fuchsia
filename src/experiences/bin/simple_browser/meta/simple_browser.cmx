@@ -3,7 +3,17 @@
         "fuchsia.modular": {
             "@version": 2,
             "binary": "simple_browser",
-            "intent_filters": []
+            "intent_filters": [
+                {
+                    "action": "NavigateToUrl",
+                    "parameters": [
+                        {
+                            "name": "url",
+                            "type": "string"
+                        }
+                    ]
+                }
+            ]
         }
     },
     "program": {
@@ -34,9 +44,6 @@
             "fuchsia.modular.ComponentContext",
             "fuchsia.vulkan.loader.Loader",
             "fuchsia.web.ContextProvider"
-        ],
-        "system": [
-            "deprecated-data/modules"
         ]
     }
 }

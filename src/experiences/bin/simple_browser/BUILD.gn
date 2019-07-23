@@ -8,8 +8,6 @@ import("//topaz/runtime/flutter_runner/flutter_app.gni")
 flutter_app("simple_browser") {
   main_dart = "lib/main.dart"
 
-  system_deprecated_data = "//build"  
-
   meta = [
     {
       path = rebase_path("meta/simple_browser.cmx")

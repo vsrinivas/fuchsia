@@ -6,27 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
 import 'package:simple_browser/src/blocs/webpage_bloc.dart';
 import 'src/blocs/tabs_bloc.dart';
-import 'src/models/tabs_action.dart';
 import 'src/widgets/navigation_bar.dart';
 import 'src/widgets/tabs_widget.dart';
 
-class App extends StatefulWidget {
-  @override
-  AppState createState() => AppState();
-}
+class App extends StatelessWidget {
+  final TabsBloc tabsBloc;
 
-class AppState extends State<App> {
-  final TabsBloc _tabsBloc = TabsBloc();
-
-  AppState() {
-    _tabsBloc.request.add(NewTabAction());
-  }
-
-  @override
-  void dispose() {
-    _tabsBloc.dispose();
-    super.dispose();
-  }
+  const App({@required this.tabsBloc});
 
   @override
   Widget build(BuildContext context) {
@@ -37,11 +23,13 @@ class AppState extends State<App> {
         body: Container(
           child: Column(
             children: <Widget>[
-              TabsWidget(bloc: _tabsBloc),
+              TabsWidget(bloc: tabsBloc),
               Expanded(
                 child: AnimatedBuilder(
-                  animation: _tabsBloc.currentTab,
-                  builder: (_, __) => _buildContent(_tabsBloc.currentTab.value),
+                  animation: tabsBloc.currentTab,
+                  builder: (_, __) => tabsBloc.currentTab.value == null
+                      ? Offstage()
+                      : _buildContent(tabsBloc.currentTab.value),
                 ),
               )
             ],
