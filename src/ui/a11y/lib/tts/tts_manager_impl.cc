@@ -53,6 +53,16 @@ void TtsManager::Enqueue(fuchsia::accessibility::tts::Utterance utterance,
   }
 }
 
+void TtsManager::Speak(SpeakCallback callback) {
+  fuchsia::accessibility::tts::Engine_Speak_Result result;
+  if (!engine_) {
+    result.set_err(fuchsia::accessibility::tts::Error::BAD_STATE);
+    callback(std::move(result));
+  } else {
+    engine_->Speak(std::move(callback));
+  }
+}
+
 void TtsManager::Cancel(CancelCallback callback) {
   if (engine_) {
     engine_->Cancel(std::move(callback));

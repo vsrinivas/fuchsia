@@ -40,8 +40,10 @@ class TtsManager : public fuchsia::accessibility::tts::TtsManager,
   // |fuchsia.accessibility.tts.Engine|
   void Enqueue(fuchsia::accessibility::tts::Utterance utterance, EnqueueCallback callback) override;
 
-  void Speak(SpeakCallback callback) override {}
+  // |fuchsia.accessibility.tts.Engine|
+  void Speak(SpeakCallback callback) override;
 
+  // |fuchsia.accessibility.tts.Engine|
   void Cancel(CancelCallback callback) override;
 
   // Bindings to services implemented by this class.
