@@ -160,8 +160,8 @@ impl GattClientFacade {
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
 
-        let status =
-            await!(write_long_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
+        let status = await!(write_long_characteristic)
+            .map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
             Some(e) => {

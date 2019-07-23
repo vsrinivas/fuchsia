@@ -17,6 +17,7 @@ use crate::bluetooth::bt_control_facade::BluetoothControlFacade;
 use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
+use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 use crate::bluetooth::types::{
     BleConnectPeripheralResponse, BluetoothMethod, GattcDiscoverCharacteristicResponse,
 };
@@ -389,6 +390,24 @@ pub async fn gatt_server_method_to_fidl(
             Ok(to_value(result)?)
         }
         _ => bail!("Invalid Gatt Server FIDL method: {:?}", method_name),
+    }
+}
+
+pub async fn profile_server_method_to_fidl(
+    method_name: String,
+    _args: Value,
+    facade: Arc<ProfileServerFacade>,
+) -> Result<Value, Error> {
+    match BluetoothMethod::from_str(&method_name) {
+        BluetoothMethod::ProfileServerInit => {
+            let result = await!(facade.init_profile_server_proxy())?;
+            Ok(to_value(result)?)
+        }
+        BluetoothMethod::ProfileServerCleanup => {
+            let result = await!(facade.cleanup())?;
+            Ok(to_value(result)?)
+        }
+        _ => bail!("Invalid Profile Server FIDL method: {:?}", method_name),
     }
 }
 

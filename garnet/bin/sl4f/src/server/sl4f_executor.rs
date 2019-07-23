@@ -24,6 +24,7 @@ use crate::bluetooth::commands::ble_method_to_fidl;
 use crate::bluetooth::commands::bt_control_method_to_fidl;
 use crate::bluetooth::commands::gatt_client_method_to_fidl;
 use crate::bluetooth::commands::gatt_server_method_to_fidl;
+use crate::bluetooth::commands::profile_server_method_to_fidl;
 use crate::file::commands::file_method_to_fidl;
 use crate::logging::commands::logging_method_to_fidl;
 use crate::netstack::commands::netstack_method_to_fidl;
@@ -134,6 +135,11 @@ async fn method_to_fidl(
             method_name,
             args,
             sl4f_session.read().get_netstack_facade(),
+        )),
+        FacadeType::ProfileServerFacade => await!(profile_server_method_to_fidl(
+            method_name,
+            args,
+            sl4f_session.read().get_profile_server_facade(),
         )),
         FacadeType::ScenicFacade => await!(scenic_method_to_fidl(
             method_name,
