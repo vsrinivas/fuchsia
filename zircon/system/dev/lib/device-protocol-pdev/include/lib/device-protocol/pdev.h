@@ -6,7 +6,6 @@
 
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/power.h>
 
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
@@ -43,7 +42,6 @@ public:
     }
 
     ClockProtocolClient GetClk(uint32_t index);
-    PowerProtocolClient GetPower(uint32_t index);
 };
 
 } // namespace ddk
