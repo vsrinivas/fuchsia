@@ -184,30 +184,17 @@ void TimestampProfiler::TraceGpuQueryResults(
     uint64_t start_ticks = real_start_ticks + trace_events[i].start_elapsed_ticks;
     uint64_t end_ticks = real_start_ticks + trace_events[i].end_elapsed_ticks;
 
-    switch (num_concurrent_events) {
-      case 1: {
-        TRACE_VTHREAD_DURATION_BEGIN(kCategoryLiteral, trace_events[i].names[0],
-                                     gpu_vthread_literal, gpu_vthread_id, start_ticks);
-        TRACE_VTHREAD_DURATION_END(kCategoryLiteral, trace_events[i].names[0], gpu_vthread_literal,
-                                   gpu_vthread_id, end_ticks);
-        break;
-      }
-      case 2: {
-        TRACE_VTHREAD_DURATION_BEGIN(kCategoryLiteral, trace_events[i].names[0],
-                                     gpu_vthread_literal, gpu_vthread_id, start_ticks,
-                                     "Second Event", trace_events[i].names[1]);
+    // Combine all additional events into a single string.
+    std::stringstream stream;
+    copy(trace_events[i].names.begin() + 1, trace_events[i].names.end(),
+         std::ostream_iterator<std::string>(stream, ",\n"));
+    std::string additional_events = stream.str();
 
-        TRACE_VTHREAD_DURATION_END(kCategoryLiteral, trace_events[i].names[0], gpu_vthread_literal,
-                                   gpu_vthread_id, end_ticks, "Second Event",
-                                   trace_events[i].names[1]);
-        break;
-      }
-      default: {
-        FXL_LOG(WARNING) << "We have more than 2 concurrent Vulkan timestamp events, \
-                                   dropping some traces. "
-                         << "Have: " << num_concurrent_events << ").";
-      }
-    }
+    TRACE_VTHREAD_DURATION_BEGIN(kCategoryLiteral, trace_events[i].names[0], gpu_vthread_literal,
+                                 gpu_vthread_id, start_ticks, "Additional Events",
+                                 additional_events);
+    TRACE_VTHREAD_DURATION_END(kCategoryLiteral, trace_events[i].names[0], gpu_vthread_literal,
+                               gpu_vthread_id, end_ticks, "Additional Events", additional_events);
   }
 
   // Flow event tracking the progress of a Scenic frame.
