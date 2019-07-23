@@ -4,9 +4,10 @@
 
 #![feature(async_await, await_macro)]
 
-use fuchsia_async as fasync;
-
-mod test_utils;
+use {
+    fuchsia_async as fasync,
+    test_utils,
+};
 
 // The "real" test logic here is in storage_realm.rs. This just launches that component and checks
 // for a message it prints to stdout on success.

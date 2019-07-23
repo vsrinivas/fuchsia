@@ -1,0 +1,48 @@
+// Realm for integration test that creates and binds to component instances in a collection.
+{
+    "program": {
+        "binary": "bin/collection_realm",
+    },
+    "use": [
+        {
+            "service": "/svc/fuchsia.logger.LogSink",
+        },
+        {
+            "service": "/svc/fuchsia.sys2.Realm",
+            "from": "framework",
+        },
+    ],
+    // Route Echo service from server to collection.
+    "offer": [
+        {
+            "service": "/svc/fuchsia.logger.LogSink",
+            "from": "realm",
+            "to": [
+                {
+                    "dest": "#coll",
+                },
+            ],
+        },
+        {
+            "service": "/svc/fidl.examples.routing.echo.Echo",
+            "from": "#echo_server",
+            "to": [
+                {
+                    "dest": "#coll",
+                },
+            ],
+        },
+    ],
+    "children": [
+        {
+            "name": "echo_server",
+            "url": "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/echo_server.cm",
+        },
+    ],
+    "collections": [
+        {
+            "name": "coll",
+            "durability": "transient",
+        },
+    ],
+}

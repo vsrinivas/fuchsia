@@ -4,14 +4,28 @@
 
 import("//build/package/component.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
+
+rustc_library("test_utils") {
+  name = "test_utils"
+  edition = "2018"
+  source_root = "test_utils.rs"
+  deps = [
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fdio",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+  ]
+}
 
 rustc_test("hub_integration_test_bin") {
   name = "hub_integration_test"
   edition = "2018"
   source_root = "hub_integration_test.rs"
   deps = [
+    ":test_utils",
     "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/cm_fidl_translator",
     "//garnet/lib/rust/cm_rust",
@@ -93,6 +107,7 @@ rustc_test("routing_integration_test_bin") {
   edition = "2018"
   source_root = "routing_integration_test.rs"
   deps = [
+    ":test_utils",
     "//garnet/lib/rust/cm_fidl_translator",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
@@ -108,6 +123,7 @@ rustc_test("storage_integration_test_bin") {
   edition = "2018"
   source_root = "storage_integration_test.rs"
   deps = [
+    ":test_utils",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
@@ -262,6 +278,7 @@ test_package("routing_integration_test") {
   deps = [
     ":mock_pkg_resolver_bin",
     ":routing_integration_test_bin",
+    ":test_utils",
     "//examples/components/routing/echo_client",
     "//examples/components/routing/echo_server",
   ]
