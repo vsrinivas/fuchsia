@@ -4,7 +4,6 @@
 
 #include "device.h"
 
-#include <ddk/protocol/bt/hci.h>
 #include <lib/async/cpp/task.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -12,6 +11,8 @@
 #include <cstdio>
 #include <future>
 #include <thread>
+
+#include <ddk/protocol/bt/hci.h>
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_peer.h"
 #include "src/connectivity/bluetooth/hci/emulator/log.h"
@@ -25,41 +26,32 @@ using bt::testing::FakePeer;
 namespace bt_hci_emulator {
 namespace {
 
-const DeviceAddress kAddress0(DeviceAddress::Type::kLEPublic,
-                              "00:00:00:00:00:01");
-const DeviceAddress kAddress1(DeviceAddress::Type::kBREDR, "00:00:00:00:00:02");
-const DeviceAddress kAddress2(DeviceAddress::Type::kLEPublic,
-                              "00:00:00:00:00:03");
+const DeviceAddress kAddress0(DeviceAddress::Type::kLEPublic, {0x01, 0x00, 0x00, 0x00, 0x00, 0x00});
+const DeviceAddress kAddress1(DeviceAddress::Type::kBREDR, {0x02, 0x00, 0x00, 0x00, 0x00, 0x00});
+const DeviceAddress kAddress2(DeviceAddress::Type::kLEPublic, {0x03, 0x00, 0x00, 0x00, 0x00, 0x00});
 
-FakeController::Settings SettingsFromFidl(
-    const ftest::EmulatorSettings& input) {
+FakeController::Settings SettingsFromFidl(const ftest::EmulatorSettings& input) {
   FakeController::Settings settings;
-  if (input.has_hci_config() &&
-      input.hci_config() == ftest::HciConfig::LE_ONLY) {
+  if (input.has_hci_config() && input.hci_config() == ftest::HciConfig::LE_ONLY) {
     settings.ApplyLEOnlyDefaults();
   } else {
     settings.ApplyDualModeDefaults();
   }
 
   if (input.has_address()) {
-    settings.bd_addr =
-        DeviceAddress(DeviceAddress::Type::kBREDR, input.address().bytes);
+    settings.bd_addr = DeviceAddress(DeviceAddress::Type::kBREDR, input.address().bytes);
   }
 
   // TODO(armansito): Don't ignore "extended_advertising" setting when
   // supported.
   if (input.has_acl_buffer_settings()) {
-    settings.acl_data_packet_length =
-        input.acl_buffer_settings().data_packet_length;
-    settings.total_num_acl_data_packets =
-        input.acl_buffer_settings().total_num_data_packets;
+    settings.acl_data_packet_length = input.acl_buffer_settings().data_packet_length;
+    settings.total_num_acl_data_packets = input.acl_buffer_settings().total_num_data_packets;
   }
 
   if (input.has_le_acl_buffer_settings()) {
-    settings.le_acl_data_packet_length =
-        input.le_acl_buffer_settings().data_packet_length;
-    settings.le_total_num_acl_data_packets =
-        input.le_acl_buffer_settings().total_num_data_packets;
+    settings.le_acl_data_packet_length = input.le_acl_buffer_settings().data_packet_length;
+    settings.le_total_num_acl_data_packets = input.le_acl_buffer_settings().total_num_data_packets;
   }
 
   return settings;
@@ -78,14 +70,13 @@ Device::Device(zx_device_t* device)
 
 static zx_protocol_device_t bt_emulator_device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .get_protocol = [](void* ctx, uint32_t proto_id, void* out_proto)
-        -> zx_status_t { return DEV(ctx)->GetProtocol(proto_id, out_proto); },
+    .get_protocol = [](void* ctx, uint32_t proto_id, void* out_proto) -> zx_status_t {
+      return DEV(ctx)->GetProtocol(proto_id, out_proto);
+    },
     .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
-    .message =
-        [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-          return DEV(ctx)->EmulatorMessage(msg, txn);
-        }};
+    .message = [](void* ctx, fidl_msg_t* msg,
+                  fidl_txn_t* txn) { return DEV(ctx)->EmulatorMessage(msg, txn); }};
 
 // NOTE: We do not implement unbind and release. The lifecycle of the bt-hci
 // device is strictly tied to the bt-emulator device (i.e. it can never out-live
@@ -93,8 +84,9 @@ static zx_protocol_device_t bt_emulator_device_ops = {
 // messages.
 static zx_protocol_device_t bt_hci_device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .get_protocol = [](void* ctx, uint32_t proto_id, void* out_proto)
-        -> zx_status_t { return DEV(ctx)->GetProtocol(proto_id, out_proto); },
+    .get_protocol = [](void* ctx, uint32_t proto_id, void* out_proto) -> zx_status_t {
+      return DEV(ctx)->GetProtocol(proto_id, out_proto);
+    },
     .message = [](void* ctx, fidl_msg_t* msg,
                   fidl_txn_t* txn) { return DEV(ctx)->HciMessage(msg, txn); }};
 
@@ -127,8 +119,7 @@ zx_status_t Device::Bind() {
   };
   zx_status_t status = device_add(parent_, &args, &emulator_dev_);
   if (status != ZX_OK) {
-    logf(ERROR, "could not add bt-emulator device: %s\n",
-         zx_status_get_string(status));
+    logf(ERROR, "could not add bt-emulator device: %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -184,12 +175,11 @@ void Device::Unbind() {
     // dispatcher thread, due to the FakeController object's thread-safety
     // requirements. It is OK to capture references to members in the task since
     // this function will block until the dispatcher loop has terminated.
-    async::PostTask(loop_.dispatcher(),
-                    [binding = &binding_, dev = fake_device_, loop = &loop_] {
-                      binding->Unbind();
-                      dev->Stop();
-                      loop->Quit();
-                    });
+    async::PostTask(loop_.dispatcher(), [binding = &binding_, dev = fake_device_, loop = &loop_] {
+      binding->Unbind();
+      dev->Stop();
+      loop->Quit();
+    });
 
     loop_.JoinThreads();
 
@@ -213,14 +203,12 @@ void Device::Unbind() {
 
 zx_status_t Device::HciMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   logf(TRACE, "HciMessage\n");
-  return fuchsia_hardware_bluetooth_Hci_dispatch(this, txn, msg,
-                                                 &hci_fidl_ops_);
+  return fuchsia_hardware_bluetooth_Hci_dispatch(this, txn, msg, &hci_fidl_ops_);
 }
 
 zx_status_t Device::EmulatorMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   logf(TRACE, "EmulatorMessage\n");
-  return fuchsia_hardware_bluetooth_Emulator_dispatch(this, txn, msg,
-                                                      &emul_fidl_ops_);
+  return fuchsia_hardware_bluetooth_Emulator_dispatch(this, txn, msg, &emul_fidl_ops_);
 }
 
 zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t in_h) {
@@ -230,20 +218,17 @@ zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t in_h) {
   std::lock_guard<std::mutex> lock(device_lock_);
 
   if (chan_type == Channel::COMMAND) {
-    async::PostTask(loop_.dispatcher(),
-                    [device = fake_device_, in = std::move(in)]() mutable {
-                      device->StartCmdChannel(std::move(in));
-                    });
+    async::PostTask(loop_.dispatcher(), [device = fake_device_, in = std::move(in)]() mutable {
+      device->StartCmdChannel(std::move(in));
+    });
   } else if (chan_type == Channel::ACL) {
-    async::PostTask(loop_.dispatcher(),
-                    [device = fake_device_, in = std::move(in)]() mutable {
-                      device->StartAclChannel(std::move(in));
-                    });
+    async::PostTask(loop_.dispatcher(), [device = fake_device_, in = std::move(in)]() mutable {
+      device->StartAclChannel(std::move(in));
+    });
   } else if (chan_type == Channel::SNOOP) {
-    async::PostTask(loop_.dispatcher(),
-                    [device = fake_device_, in = std::move(in)]() mutable {
-                      device->StartSnoopChannel(std::move(in));
-                    });
+    async::PostTask(loop_.dispatcher(), [device = fake_device_, in = std::move(in)]() mutable {
+      device->StartSnoopChannel(std::move(in));
+    });
   } else if (chan_type == Channel::EMULATOR) {
     async::PostTask(loop_.dispatcher(), [this, in = std::move(in)]() mutable {
       StartEmulatorInterface(std::move(in));
@@ -278,8 +263,7 @@ void Device::StartEmulatorInterface(zx::channel chan) {
   });
 }
 
-void Device::Publish(ftest::EmulatorSettings in_settings,
-                     PublishCallback callback) {
+void Device::Publish(ftest::EmulatorSettings in_settings, PublishCallback callback) {
   logf(TRACE, "HciEmulator.Publish\n");
 
   std::lock_guard<std::mutex> lock(device_lock_);
@@ -316,8 +300,7 @@ void Device::AddPeer(ftest::FakePeer peer, AddPeerCallback callback) {
   // TODO(BT-229): Implement
 }
 
-void Device::RemovePeer(::fuchsia::bluetooth::PeerId id,
-                        RemovePeerCallback callback) {
+void Device::RemovePeer(::fuchsia::bluetooth::PeerId id, RemovePeerCallback callback) {
   // TODO(BT-229): Implement
 }
 
