@@ -37,7 +37,7 @@ impl<A, B> Either<A, B> {
     pub fn map_a<AA, F: FnOnce(A) -> AA>(self, f: F) -> Either<AA, B> {
         match self {
             Either::A(a) => Either::A(f(a)),
-            Either::B(b) => Either::B(b)
+            Either::B(b) => Either::B(b),
         }
     }
 
@@ -50,6 +50,30 @@ impl<A, B> Either<A, B> {
         match self {
             Either::A(a) => Either::A(a),
             Either::B(b) => Either::B(f(b)),
+        }
+    }
+
+    /// Return the `A` variant in an `Either<A, B>`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if this `Either<A, B>` does not hold the `A` variant.
+    pub fn unwrap_a(self) -> A {
+        match self {
+            Either::A(x) => x,
+            Either::B(_) => panic!("This `Either<A, B>` does not hold the `A` variant"),
+        }
+    }
+
+    /// Return the `B` variant in an `Either<A, B>`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if this `Either<A, B>` does not hold the `B` variant.
+    pub fn unwrap_b(self) -> B {
+        match self {
+            Either::A(_) => panic!("This `Either<A, B>` does not hold the `B` variant"),
+            Either::B(x) => x,
         }
     }
 }
@@ -1840,6 +1864,24 @@ mod tests {
 
         assert_eq!(ret_either(1, 2, true).into_inner(), 1);
         assert_eq!(ret_either(1, 2, false).into_inner(), 2);
+    }
+
+    #[test]
+    fn test_either_unwrap_success() {
+        assert_eq!(Either::<u16, u32>::A(5).unwrap_a(), 5);
+        assert_eq!(Either::<u16, u32>::B(10).unwrap_b(), 10);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_either_unwrap_a_panic() {
+        Either::<u16, u32>::B(10).unwrap_a();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_either_unwrap_b_panic() {
+        Either::<u16, u32>::A(5).unwrap_b();
     }
 
     #[test]
