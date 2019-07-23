@@ -20,7 +20,7 @@ namespace fbl {
 
 // Arena is a fast memory allocator for objects of a single size.
 // Both Alloc() and Free() are always O(1) and memory always comes
-// from a single contigous chunck of page-aligned memory.
+// from a single contiguous chunk of page-aligned memory.
 //
 // The control structures and data are not interleaved so it is
 // more resilient to memory bugs than traditional pool allocators.
@@ -121,7 +121,7 @@ class Arena {
 };
 
 // TypedArena Convenience wrapper that handles:
-// 1- C++ type enformcement
+// 1- C++ type enforcement
 // 2- Calls constructors and destructors
 // 3- Serializes access according to the Mtx type or
 //    use fbl::NullMutex to use external serialization.
