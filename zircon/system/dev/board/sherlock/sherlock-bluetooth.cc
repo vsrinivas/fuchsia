@@ -2,23 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <unistd.h>
+
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/gpioimpl.h>
+#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/serial.h>
-#include <ddktl/protocol/gpioimpl.h>
 #include <fuchsia/hardware/serial/c/fidl.h>
+#include <hw/reg.h>
+#include <lib/mmio/mmio.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
-#include <unistd.h>
 
 #include "sherlock.h"
 
-#define BT_REG_ON T931_GPIOX(17)
-
 namespace sherlock {
 
-namespace {
+#define SOC_WIFI_LPO_32k768 T931_GPIOX(16)
+#define SOC_BT_REG_ON T931_GPIOX(17)
 
 constexpr pbus_mmio_t bt_uart_mmios[] = {
     {
@@ -34,7 +37,7 @@ constexpr pbus_irq_t bt_uart_irqs[] = {
     },
 };
 
-constexpr serial_port_info_t bt_uart_port_info = {
+constexpr serial_port_info_t bt_uart_serial_info = {
     .serial_class = fuchsia_hardware_serial_Class_BLUETOOTH_HCI,
     .serial_vid = PDEV_VID_BROADCOM,
     .serial_pid = PDEV_PID_BCM43458,
@@ -43,8 +46,8 @@ constexpr serial_port_info_t bt_uart_port_info = {
 constexpr pbus_metadata_t bt_uart_metadata[] = {
     {
         .type = DEVICE_METADATA_SERIAL_PORT_INFO,
-        .data_buffer = &bt_uart_port_info,
-        .data_size = sizeof(bt_uart_port_info),
+        .data_buffer = &bt_uart_serial_info,
+        .data_size = sizeof(bt_uart_serial_info),
     },
 };
 
@@ -55,7 +58,7 @@ constexpr pbus_boot_metadata_t bt_uart_boot_metadata[] = {
     },
 };
 
-const pbus_dev_t bt_uart_dev = []() {
+static const pbus_dev_t bt_uart_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "bt-uart";
   dev.vid = PDEV_VID_AMLOGIC;
@@ -72,28 +75,83 @@ const pbus_dev_t bt_uart_dev = []() {
   return dev;
 }();
 
-}  // namespace
+// Enables and configures PWM_E on the SOC_WIFI_LPO_32k768 line for the
+// Wifi/Bluetooth module
+zx_status_t Sherlock::EnableWifi32K() {
+  // Configure SOC_WIFI_LPO_32k768 pin for PWM_E
+  zx_status_t status = gpio_impl_.SetAltFunction(SOC_WIFI_LPO_32k768, 1);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx::bti bti;
+  status = iommu_.GetBti(BTI_BOARD, 0, &bti);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: GetBti failed: %d\n", __func__, status);
+    return status;
+  }
+
+  std::optional<ddk::MmioBuffer> pwm_base;
+
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  zx::unowned_resource resource(get_root_resource());
+  status = ddk::MmioBuffer::Create(T931_PWM_EF_BASE, 0x1a000, *resource,
+                                   ZX_CACHE_POLICY_UNCACHED_DEVICE, &pwm_base);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Create(pwm_base) error: %d\n", __func__, status);
+  }
+  // these magic numbers were gleaned by instrumenting
+  // drivers/amlogic/pwm/pwm_meson.c
+  // TODO(voydanoff) write a proper PWM driver
+  pwm_base->Write32(0x016d016e, T931_PWM_PWM_E << 2);
+  pwm_base->Write32(0x016d016d, T931_PWM_E2 << 2);
+  pwm_base->Write32(0x0a0a0609, T931_PWM_TIME_EF << 2);
+  pwm_base->Write32(0x02808003, T931_PWM_MISC_REG_EF << 2);
+
+  return ZX_OK;
+}
 
 zx_status_t Sherlock::BluetoothInit() {
   zx_status_t status;
 
-  if (((status = gpio_impl_.SetAltFunction(T931_UART_A_TX, T931_UART_A_TX_FN)) != ZX_OK) ||
-      ((status = gpio_impl_.SetAltFunction(T931_UART_A_RX, T931_UART_A_RX_FN)) != ZX_OK) ||
-      ((status = gpio_impl_.SetAltFunction(T931_UART_A_CTS, T931_UART_A_CTS_FN)) != ZX_OK) ||
-      ((status = gpio_impl_.SetAltFunction(T931_UART_A_RTS, T931_UART_A_RTS_FN)) != ZX_OK)) {
+  // set alternate functions to enable Bluetooth UART
+  status = gpio_impl_.SetAltFunction(T931_UART_A_TX, T931_UART_A_TX_FN);
+  if (status != ZX_OK) {
     return status;
   }
 
-  if ((status = gpio_impl_.ConfigOut(BT_REG_ON, 0) != ZX_OK))
+  status = gpio_impl_.SetAltFunction(T931_UART_A_RX, T931_UART_A_RX_FN);
+  if (status != ZX_OK) {
     return status;
-  usleep(10 * 1000);
-  if ((status = gpio_impl_.Write(BT_REG_ON, 1) != ZX_OK))
-    return status;
-  usleep(10 * 1000);
+  }
 
+  status = gpio_impl_.SetAltFunction(T931_UART_A_CTS, T931_UART_A_CTS_FN);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = gpio_impl_.SetAltFunction(T931_UART_A_RTS, T931_UART_A_RTS_FN);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Configure the SOC_WIFI_LPO_32k768 PWM, which is needed for the
+  // Bluetooth module to work properly
+  status = EnableWifi32K();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // set GPIO to reset Bluetooth module
+  gpio_impl_.ConfigOut(SOC_BT_REG_ON, 0);
+  usleep(10 * 1000);
+  gpio_impl_.Write(SOC_BT_REG_ON, 1);
+  usleep(100 * 1000);
+
+  // Bind UART for Bluetooth HCI
   status = pbus_.DeviceAdd(&bt_uart_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd() error: %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
     return status;
   }
 

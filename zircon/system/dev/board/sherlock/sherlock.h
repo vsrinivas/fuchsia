@@ -101,6 +101,8 @@ class Sherlock : public SherlockType {
   zx_status_t LightInit();
   int Thread();
 
+  zx_status_t EnableWifi32K(void);
+
   ddk::PBusProtocolClient pbus_;
   ddk::IommuProtocolClient iommu_;
   ddk::GpioImplProtocolClient gpio_impl_;
