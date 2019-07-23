@@ -95,7 +95,7 @@ template("clang_toolchain") {
     forward_variables_from(invoker, [ "use_strip" ])
     if (use_strip) {
       if (invoker.toolchain_os == "mac") {
-        strip = "xcrun strip"
+        strip = "xcrun strip -Sx"
       } else {
         strip = "${prefix}/llvm-objcopy"
         buildidtool = rebase_path("//prebuilt/tools/buildidtool/${host_platform}/buildidtool",
@@ -578,6 +578,6 @@ template("clang_host_toolchain_suite") {
     toolchain_os = host_os
 
     with_shared = false
-    use_strip = false
+    use_strip = true
   }
 }
