@@ -33,6 +33,15 @@ source_set("modules") {
 source_set("isp-blocks") {
   sources = [
     "isp-block-registers.h",
+    "isp-mem-array.cpp",
+    "isp-mem-array.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/zx",
   ]
 }
 
@@ -47,6 +56,23 @@ source_set("isp-registers") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
+  ]
+}
+
+executable("isp-mem-array") {
+  testonly = true
+  sources = [
+    "isp-mem-array.cpp",
+    "isp-mem-array.h",
+    "test/isp-mem-array-test.cpp",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mock-mmio-reg",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
