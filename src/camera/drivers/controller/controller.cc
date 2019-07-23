@@ -33,6 +33,10 @@ void Controller::DdkRelease() { delete this; }
 
 void Controller::ShutDown() {}
 
+zx_status_t Controller::StartThread() {
+  return controller_loop_.StartThread("camera-controller-loop", &loop_thread_);
+}
+
 // static
 zx_status_t Controller::Setup(zx_device_t* parent, std::unique_ptr<Controller>* out) {
   ddk::CompositeProtocolClient composite(parent);
@@ -64,6 +68,11 @@ zx_status_t Controller::Setup(zx_device_t* parent, std::unique_ptr<Controller>* 
   auto controller =
       std::make_unique<Controller>(parent, components[COMPONENT_ISP], components[COMPONENT_GDC]);
 
+  auto status = controller->StartThread();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Could not start loop thread\n", __func__);
+    return status;
+  }
   *out = std::move(controller);
   return ZX_OK;
 }

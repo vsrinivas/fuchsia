@@ -10,6 +10,7 @@
 #define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
 #include <threads.h>
 #endif
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
@@ -35,7 +36,10 @@ class Controller : public ControllerDeviceType, public ddk::EmptyProtocol<ZX_PRO
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Controller);
   explicit Controller(zx_device_t* parent, zx_device_t* isp, zx_device_t* gdc)
-      : ControllerDeviceType(parent), isp_(isp), gdc_(gdc) {}
+      : ControllerDeviceType(parent),
+        isp_(isp),
+        gdc_(gdc),
+        controller_loop_(&kAsyncLoopConfigNoAttachToThread) {}
 
   ~Controller() = default;
 
@@ -48,9 +52,12 @@ class Controller : public ControllerDeviceType, public ddk::EmptyProtocol<ZX_PRO
 
  private:
   void ShutDown();
+  zx_status_t StartThread();
 
   ddk::IspProtocolClient isp_;
   ddk::GdcProtocolClient gdc_;
+  async::Loop controller_loop_;
+  thrd_t loop_thread_;
 };
 
 }  // namespace camera
