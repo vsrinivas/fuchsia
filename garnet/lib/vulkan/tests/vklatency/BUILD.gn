@@ -48,7 +48,7 @@ source_set("vklatency") {
     "$zircon_build_root/public/lib/trace-provider-with-fdio",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/input",
-    "//garnet/public/lib/vulkan",
+    "//src/graphics/lib/vulkan",
     "//third_party/skia",
   ]
 }
