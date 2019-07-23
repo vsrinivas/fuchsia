@@ -58,6 +58,7 @@ if (is_mac) {
       "util/block_allocator_unittest.cc",
       "util/enum_flags_unittest.cc",
       "util/enum_utils_unittest.cc",
+      "util/epsilon_compare_unittest.cc",
       "util/hash_cache_unittest.cc",
       "util/hash_unittest.cc",
       "util/hashable_unittest.cc",

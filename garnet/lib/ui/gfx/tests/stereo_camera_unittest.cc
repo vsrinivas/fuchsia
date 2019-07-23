@@ -4,17 +4,14 @@
 
 #include "garnet/lib/ui/gfx/resources/stereo_camera.h"
 
-#include <math.h>
+#include <lib/ui/scenic/cpp/commands.h>
 
-#include <chrono>
-#include <glm/gtc/type_ptr.hpp>
-#include <thread>
+#include <gtest/gtest.h>
 
 #include "garnet/lib/ui/gfx/tests/session_test.h"
-#include "garnet/lib/ui/gfx/tests/util.h"
-#include "gtest/gtest.h"
-#include "lib/ui/scenic/cpp/commands.h"
 #include "src/ui/lib/escher/util/epsilon_compare.h"
+
+#include <glm/gtc/type_ptr.hpp>
 
 namespace scenic_impl {
 namespace gfx {
@@ -23,9 +20,9 @@ namespace test {
 using StereoCameraTest = SessionTest;
 
 TEST_F(StereoCameraTest, Basic) {
-  const ResourceId invalid_id = 0;
-  const ResourceId scene_id = 1;
-  const ResourceId camera_id = 2;
+  constexpr ResourceId invalid_id = 0;
+  constexpr ResourceId scene_id = 1;
+  constexpr ResourceId camera_id = 2;
   ASSERT_TRUE(Apply(scenic::NewCreateSceneCmd(scene_id)));
   EXPECT_TRUE(Apply(scenic::NewCreateStereoCameraCmd(camera_id, scene_id)));
   EXPECT_FALSE(Apply(scenic::NewCreateStereoCameraCmd(camera_id, invalid_id)));
