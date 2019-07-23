@@ -199,6 +199,26 @@ static const device_component_t imx227_sensor_components[] = {
     {countof(mipicsi_component), mipicsi_component},
 };
 
+// Composite device binding rules for Camera Controller
+static const zx_bind_inst_t isp_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ISP),
+};
+static const zx_bind_inst_t gdc_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GDC),
+};
+static const device_component_part_t isp_component[] = {
+    {countof(root_match), root_match},
+    {countof(isp_match), isp_match},
+};
+static const device_component_part_t gdc_component[] = {
+    {countof(root_match), root_match},
+    {countof(gdc_match), gdc_match},
+};
+static const device_component_t camera_controller_components[] = {
+    {countof(isp_component), isp_component},
+    {countof(gdc_component), gdc_component},
+};
+
 constexpr pbus_mmio_t mipi_mmios[] = {
     // CSI PHY0
     {
@@ -298,6 +318,19 @@ zx_status_t Sherlock::CameraInit() {
     zxlogf(ERROR, "%s: ISP DeviceAdd failed %d\n", __func__, status);
     return status;
   }
+
+  constexpr zx_device_prop_t camera_controller_props[] = {
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_CAMERA_CONTROLLER},
+  };
+
+  status = DdkAddComposite("camera-controller", camera_controller_props,
+                           countof(camera_controller_props), camera_controller_components,
+                           countof(camera_controller_components), 0);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Camera Controller DeviceAdd failed %d\n", __func__, status);
+    return status;
+  }
+
   return status;
 }
 

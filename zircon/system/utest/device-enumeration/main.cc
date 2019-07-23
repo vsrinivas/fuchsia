@@ -253,6 +253,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
         "sys/platform/12:02:2/gdc",
         "imx227-sensor",
         "isp",
+        "camera-controller",
         "sys/platform/05:04:e/amlogic_video",
         "sys/platform/05:04:17/aml-gpu",
         "sys/platform/05:04:16/sherlock-audio-in",

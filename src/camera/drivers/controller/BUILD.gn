@@ -1,0 +1,56 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("controller-driver") {
+  output_name = "controller"
+  sources = [
+    "controller.cc",
+  ]
+  deps = [
+    "//zircon/public/banjo/ddk.protocol.composite",
+    "//zircon/public/banjo/ddk.protocol.gdc",
+    "//zircon/public/banjo/ddk.protocol.isp",
+    "//zircon/public/banjo/ddk.protocol.sysmem",
+    "//zircon/public/fidl/fuchsia-camera-common:fuchsia-camera-common_c",
+    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/device-protocol-pdev",
+    "//zircon/public/lib/device-protocol-platform-device",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/image-format",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/syslog",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}
+
+package("controller") {
+  deprecated_system_image = true
+
+  deps = [
+    ":controller-driver",
+  ]
+
+  drivers = [
+    {
+      name = "controller.so"
+    },
+  ]
+}

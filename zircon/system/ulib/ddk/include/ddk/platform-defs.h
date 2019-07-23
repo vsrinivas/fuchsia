@@ -45,6 +45,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_DW_DSI             30  // Designware DSI
 #define PDEV_DID_USB_XHCI_COMPOSITE 31  // XHCI USB Controller, as a composite device
 #define PDEV_DID_SSD1306            32  // Oled Display
+#define PDEV_DID_CAMERA_CONTROLLER  33  // Camera Controller
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1
