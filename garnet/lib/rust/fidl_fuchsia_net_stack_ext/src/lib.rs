@@ -119,6 +119,7 @@ impl std::fmt::Display for PhysicalStatus {
 }
 
 pub struct InterfaceProperties {
+    name: String,
     path: String,
     mac: Option<fidl_fuchsia_hardware_ethernet_ext::MacAddress>,
     mtu: u32,
@@ -131,6 +132,7 @@ pub struct InterfaceProperties {
 impl From<fidl::InterfaceProperties> for InterfaceProperties {
     fn from(
         fidl::InterfaceProperties {
+            name,
             path,
             mac,
             mtu,
@@ -146,13 +148,14 @@ impl From<fidl::InterfaceProperties> for InterfaceProperties {
         let administrative_status = AdministrativeStatus::from(administrative_status);
         let physical_status = PhysicalStatus::from(physical_status);
         let addresses = addresses.into_iter().map(Into::into).collect();
-        Self { path, mac, mtu, features, administrative_status, physical_status, addresses }
+        Self { name, path, mac, mtu, features, administrative_status, physical_status, addresses }
     }
 }
 
 impl std::fmt::Display for InterfaceProperties {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         let InterfaceProperties {
+            name,
             path,
             mac,
             mtu,
@@ -161,16 +164,21 @@ impl std::fmt::Display for InterfaceProperties {
             physical_status,
             addresses,
         } = self;
-        write!(f, "  path: {}\n", path)?;
+        write!(f, "  {:10} : {}\n", "name", name)?;
+        write!(f, "  {:10} : {}\n", "path", path)?;
         if let Some(mac) = mac {
-            write!(f, "  mac: {}\n", mac)?;
+            write!(f, "  {:10} : {}\n", "mac", mac)?;
+        } else {
+            write!(f, "  {:10} : {}\n", "mac", "-")?;
         }
-        write!(f, "  mtu: {}\n", mtu)?;
-        write!(f, "  features: {:?}\n", features)?;
-        write!(f, "  status: {} | {}\n", administrative_status, physical_status)?;
-        write!(f, "  Addresses:")?;
-        for address in addresses {
-            write!(f, "\n    {}", address)?;
+        write!(f, "  {:10} : {}\n", "mtu", mtu)?;
+        write!(f, "  {:10} : {:?}\n", "features", features)?;
+        write!(f, "  {:10} : {} | {}\n", "status", administrative_status, physical_status)?;
+        for (idx, addr) in addresses.iter().enumerate() {
+            if idx != 0 {
+                write!(f, "\n")?;
+            }
+            write!(f, "  {:10} : {}", "addr", addr)?;
         }
         Ok(())
     }
@@ -190,8 +198,7 @@ impl From<fidl::InterfaceInfo> for InterfaceInfo {
 impl std::fmt::Display for InterfaceInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         let InterfaceInfo { id, properties } = self;
-        write!(f, "Interface Info\n")?;
-        write!(f, "  id: {}\n", id)?;
+        write!(f, "Network interface ID {}\n", id)?;
         write!(f, "{}", properties)?;
         Ok(())
     }
@@ -205,6 +212,7 @@ fn test_display_interfaceinfo() {
             InterfaceInfo {
                 id: 1,
                 properties: InterfaceProperties {
+                    name: "eth000".to_owned(),
                     path: "/all/the/way/home".to_owned(),
                     mac: Some(fidl_fuchsia_hardware_ethernet_ext::MacAddress {
                         octets: [0, 1, 2, 255, 254, 253]
@@ -230,15 +238,14 @@ fn test_display_interfaceinfo() {
                 }
             }
         ),
-        r#"Interface Info
-  id: 1
-  path: /all/the/way/home
-  mac: 00:01:02:ff:fe:fd
-  mtu: 1500
-  features: WLAN | SYNTHETIC | LOOPBACK
-  status: ENABLED | LINK_UP
-  Addresses:
-    255.255.255.0/4
-    255.255.255.1/4"#
+        r#"Network interface ID 1
+  name       : eth000
+  path       : /all/the/way/home
+  mac        : 00:01:02:ff:fe:fd
+  mtu        : 1500
+  features   : WLAN | SYNTHETIC | LOOPBACK
+  status     : ENABLED | LINK_UP
+  addr       : 255.255.255.0/4
+  addr       : 255.255.255.1/4"#
     );
 }

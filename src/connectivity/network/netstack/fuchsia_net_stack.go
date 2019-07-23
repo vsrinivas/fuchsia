@@ -27,7 +27,7 @@ type stackImpl struct {
 	ns *Netstack
 }
 
-func getInterfaceInfo(ifs *ifState, addresses []tcpip.ProtocolAddress, subnets []tcpip.Subnet) *stack.InterfaceInfo {
+func getInterfaceInfo(ifs *ifState, addresses []tcpip.ProtocolAddress, subnets []tcpip.Subnet) stack.InterfaceInfo {
 	ifs.mu.Lock()
 	defer ifs.mu.Unlock()
 
@@ -64,9 +64,10 @@ func getInterfaceInfo(ifs *ifState, addresses []tcpip.ProtocolAddress, subnets [
 		path = eth.Path()
 	}
 
-	return &stack.InterfaceInfo{
+	return stack.InterfaceInfo{
 		Id: uint64(ifs.nicid),
 		Properties: stack.InterfaceProperties{
+			Name:                 ifs.ns.nameLocked(ifs.nicid),
 			Path:                 path,
 			Mac:                  mac,
 			Mtu:                  uint32(ifs.endpoint.MTU()),
@@ -93,7 +94,7 @@ func (ns *Netstack) getNetInterfaces() []stack.InterfaceInfo {
 	out := make([]stack.InterfaceInfo, 0, len(ns.mu.ifStates))
 	for _, ifs := range ns.mu.ifStates {
 		addresses, subnets := ns.getAddressesLocked(ifs.nicid)
-		out = append(out, *getInterfaceInfo(ifs, addresses, subnets))
+		out = append(out, getInterfaceInfo(ifs, addresses, subnets))
 	}
 	ns.mu.Unlock()
 
@@ -135,9 +136,10 @@ func (ns *Netstack) getInterface(id uint64) (*stack.InterfaceInfo, *stack.Error)
 		return nil, &stack.Error{Type: stack.ErrorTypeNotFound}
 	}
 	addresses, subnets := ns.getAddressesLocked(ifs.nicid)
+	interfaceInfo := getInterfaceInfo(ifs, addresses, subnets)
 	ns.mu.Unlock()
 
-	return getInterfaceInfo(ifs, addresses, subnets), nil
+	return &interfaceInfo, nil
 }
 
 func (ns *Netstack) setInterfaceState(id uint64, enabled bool) *stack.Error {

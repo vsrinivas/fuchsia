@@ -53,6 +53,9 @@ struct InterfaceInfo {
 };
 
 struct InterfaceProperties {
+    /// Human friendly name of the interface. eg. eth001, wlanx35.
+    string name;
+
     /// The topological path to the device, representing a stable identifier for the interface
     /// hardware.
     string path;

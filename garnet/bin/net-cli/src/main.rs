@@ -44,7 +44,7 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
         IfCmd::List => {
             let response = await!(stack.list_interfaces()).context("error getting response")?;
             for info in response {
-                println!("{}", pretty::InterfaceInfo::from(info));
+                println!("{}\n", pretty::InterfaceInfo::from(info));
             }
         }
         IfCmd::Add { path } => {

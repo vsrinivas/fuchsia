@@ -28,6 +28,7 @@ fn test_display_interfaceinfo() {
     let info: InterfaceInfo = fidl::InterfaceInfo {
         name: "eth0".to_owned(),
         properties: fidl_fuchsia_net_stack::InterfaceProperties {
+            name: "eth0".to_owned(),
             path: "/all/the/way/home".to_owned(),
             mac: Some(Box::new(fidl_fuchsia_hardware_ethernet::MacAddress {
                 octets: [0, 1, 2, 255, 254, 253],
@@ -56,13 +57,13 @@ fn test_display_interfaceinfo() {
     assert_eq!(
         &format!("{}", info),
         r#"eth0
-  path: /all/the/way/home
-  mac: 00:01:02:ff:fe:fd
-  mtu: 1500
-  features: SYNTHETIC
-  status: ENABLED | LINK_UP
-  Addresses:
-    255.255.255.0/4
-    255.255.255.1/4"#
+  name       : eth0
+  path       : /all/the/way/home
+  mac        : 00:01:02:ff:fe:fd
+  mtu        : 1500
+  features   : SYNTHETIC
+  status     : ENABLED | LINK_UP
+  addr       : 255.255.255.0/4
+  addr       : 255.255.255.1/4"#
     );
 }

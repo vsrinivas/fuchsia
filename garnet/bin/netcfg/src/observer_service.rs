@@ -103,6 +103,7 @@ mod tests {
 
     fn build_interface_properties() -> fidl_fuchsia_net_stack::InterfaceProperties {
         fidl_fuchsia_net_stack::InterfaceProperties {
+            name: "eth000".to_owned(),
             path: "/all/the/way/home".to_owned(),
             mac: Some(Box::new(fidl_fuchsia_hardware_ethernet::MacAddress {
                 octets: [0, 1, 2, 255, 254, 253],
