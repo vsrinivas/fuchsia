@@ -2,33 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gpt/c/gpt.h>
-#include <zircon/types.h>
-#include <lib/fdio/io.h>
 #include <dirent.h>
-#include <fcntl.h>
-#include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <limits.h>
-
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
+#include <gpt/c/gpt.h>
+#include <inttypes.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
 #include <lib/fzl/fdio.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
+#include <limits.h>
 #include <pretty/hexdump.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <storage-metrics/block-metrics.h>
+#include <string.h>
+#include <unistd.h>
 #include <zircon/device/block.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #define DEV_BLOCK "/dev/class/block"
 #define DEV_SKIP_BLOCK "/dev/class/skip-block"
@@ -325,12 +325,8 @@ static int cmd_stats(const char* dev, bool clear) {
         return -1;
     }
 
-    printf("total submitted block ops:      %zu\n", stats.ops);
-    printf("total submitted blocks:         %zu\n", stats.blocks);
-    printf("total submitted read ops:       %zu\n", stats.reads);
-    printf("total submitted blocks read:    %zu\n", stats.blocks_read);
-    printf("total submitted write ops:      %zu\n", stats.writes);
-    printf("total submitted blocks written: %zu\n", stats.blocks_written);
+    storage_metrics::BlockDeviceMetrics metrics(&stats);
+    metrics.Dump(stdout);
     return 0;
 }
 

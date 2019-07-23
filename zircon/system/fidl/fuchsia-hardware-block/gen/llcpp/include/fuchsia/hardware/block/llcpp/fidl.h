@@ -16,17 +16,41 @@
 #include <lib/zx/vmo.h>
 #include <zircon/fidl.h>
 
+#include <fuchsia/storage/metrics/llcpp/fidl.h>
+
 namespace llcpp {
 
 namespace fuchsia {
 namespace hardware {
 namespace block {
 
+struct BlockStats;
 struct VmoID;
 class Ftl;
 class Block;
-struct BlockStats;
 struct BlockInfo;
+
+
+
+struct BlockStats {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 480;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  ::llcpp::fuchsia::storage::metrics::CallStat read{};
+
+  ::llcpp::fuchsia::storage::metrics::CallStat write{};
+
+  ::llcpp::fuchsia::storage::metrics::CallStat trim{};
+
+  ::llcpp::fuchsia::storage::metrics::CallStat flush{};
+
+  ::llcpp::fuchsia::storage::metrics::CallStat barrier_before{};
+
+  ::llcpp::fuchsia::storage::metrics::CallStat barrier_after{};
+};
 
 
 
@@ -231,7 +255,7 @@ class Block final {
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockGetStatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 48;
+    static constexpr uint32_t MaxOutOfLine = 480;
   };
   struct GetStatsRequest final {
     FIDL_ALIGNDECL
@@ -767,28 +791,6 @@ constexpr uint32_t FLAG_BOOTPART = 4u;
 
 
 
-struct BlockStats {
-  static constexpr const fidl_type_t* Type = nullptr;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 48;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
-  int64_t ops{};
-
-  int64_t blocks{};
-
-  int64_t reads{};
-
-  int64_t blocks_read{};
-
-  int64_t writes{};
-
-  int64_t blocks_written{};
-};
-
-
-
 struct BlockInfo {
   static constexpr const fidl_type_t* Type = nullptr;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -813,6 +815,17 @@ struct BlockInfo {
 }  // namespace llcpp
 
 namespace fidl {
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::block::BlockStats> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::block::BlockStats>);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::BlockStats, read) == 0);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::BlockStats, write) == 80);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::BlockStats, trim) == 160);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::BlockStats, flush) == 240);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::BlockStats, barrier_before) == 320);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::BlockStats, barrier_after) == 400);
+static_assert(sizeof(::llcpp::fuchsia::hardware::block::BlockStats) == ::llcpp::fuchsia::hardware::block::BlockStats::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::block::VmoID> : public std::true_type {};
@@ -895,17 +908,6 @@ struct IsFidlMessage<::llcpp::fuchsia::hardware::block::Block::RebindDeviceRespo
 static_assert(sizeof(::llcpp::fuchsia::hardware::block::Block::RebindDeviceResponse)
     == ::llcpp::fuchsia::hardware::block::Block::RebindDeviceResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::block::Block::RebindDeviceResponse, status) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::block::BlockStats> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::block::BlockStats>);
-static_assert(offsetof(::llcpp::fuchsia::hardware::block::BlockStats, ops) == 0);
-static_assert(offsetof(::llcpp::fuchsia::hardware::block::BlockStats, blocks) == 8);
-static_assert(offsetof(::llcpp::fuchsia::hardware::block::BlockStats, reads) == 16);
-static_assert(offsetof(::llcpp::fuchsia::hardware::block::BlockStats, blocks_read) == 24);
-static_assert(offsetof(::llcpp::fuchsia::hardware::block::BlockStats, writes) == 32);
-static_assert(offsetof(::llcpp::fuchsia::hardware::block::BlockStats, blocks_written) == 40);
-static_assert(sizeof(::llcpp::fuchsia::hardware::block::BlockStats) == ::llcpp::fuchsia::hardware::block::BlockStats::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::block::BlockInfo> : public std::true_type {};

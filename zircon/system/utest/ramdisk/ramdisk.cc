@@ -184,8 +184,10 @@ static bool RamdiskTestStats(void) {
     ASSERT_EQ(fuchsia_hardware_block_BlockGetStats(channel->get(), clear,
                                                    &status, &block_stats), ZX_OK);
     ASSERT_EQ(status, ZX_OK);
-    ASSERT_EQ(block_stats.writes, 0);
-    ASSERT_EQ(block_stats.blocks_written, 0);
+    ASSERT_EQ(block_stats.write.success.total_calls, 0);
+    ASSERT_EQ(block_stats.write.failure.total_calls, 0);
+    ASSERT_EQ(block_stats.write.success.bytes_transferred, 0);
+    ASSERT_EQ(block_stats.write.failure.bytes_transferred, 0);
 
     // Write a couple blocks to the device.
     ASSERT_EQ(write(ramdisk->block_fd(), buf, sizeof(buf)), (ssize_t)sizeof(buf));
@@ -194,8 +196,10 @@ static bool RamdiskTestStats(void) {
     ASSERT_EQ(fuchsia_hardware_block_BlockGetStats(channel->get(), clear,
                                                    &status, &block_stats), ZX_OK);
     ASSERT_EQ(status, ZX_OK);
-    ASSERT_EQ(block_stats.writes, 1);
-    ASSERT_EQ(block_stats.blocks_written, kBlocksToWrite);
+    ASSERT_EQ(block_stats.write.success.total_calls, 1);
+    ASSERT_EQ(block_stats.write.failure.total_calls, 0);
+    ASSERT_EQ(block_stats.write.success.bytes_transferred, kBlocksToWrite * kBlockSize);
+    ASSERT_EQ(block_stats.write.failure.bytes_transferred, 0);
 
     END_TEST;
 }

@@ -16,6 +16,7 @@ executable("lsblk") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/pretty",
+    "$zx/system/ulib/storage-metrics",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/cksum",

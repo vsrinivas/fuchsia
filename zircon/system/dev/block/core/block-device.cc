@@ -18,18 +18,20 @@
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/operation/block.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <storage-metrics/block-metrics.h>
 #include <string.h>
 #include <sys/param.h>
 #include <threads.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/process.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 #include <algorithm>
 #include <limits>
@@ -40,8 +42,23 @@
 
 class BlockDevice;
 
+namespace {
+
+using storage_metrics::BlockDeviceMetrics;
 using BlockDeviceType = ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::Messageable,
                                     ddk::Unbindable, ddk::Readable, ddk::Writable, ddk::GetSizable>;
+
+struct StatsCookie {
+  zx::ticks start_tick;
+};
+
+// To maintian stats related to time taken by a command or its success/failure, we need to
+// intercept command completion with a callback routine. This might introduce memory
+// overhead.
+// TODO(auradkar): We should be able to turn on/off stats either at compile-time or load-time.
+using Transaction = block::BorrowedOperation<StatsCookie>;
+
+}  // namespace
 
 class BlockDevice : public BlockDeviceType,
                     public ddk::BlockProtocol<BlockDevice, ddk::base_protocol> {
@@ -57,6 +74,11 @@ class BlockDevice : public BlockDeviceType,
 
   static zx_status_t Bind(void* ctx, zx_device_t* dev);
 
+  constexpr size_t OpSize() {
+    ZX_DEBUG_ASSERT(parent_op_size_ > 0);
+    return Transaction::OperationSize(parent_op_size_);
+  }
+
   void DdkUnbind();
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
@@ -68,6 +90,7 @@ class BlockDevice : public BlockDeviceType,
   void BlockQuery(block_info_t* block_info, size_t* op_size);
   void BlockQueue(block_op_t* op, block_impl_queue_callback completion_cb, void* cookie);
   zx_status_t GetStats(bool clear, block_stats_t* out);
+  void UpdateStats(bool success, zx::ticks start_tick, block_op_t* op);
 
  private:
   static int ServerThread(void* arg);
@@ -92,6 +115,13 @@ class BlockDevice : public BlockDeviceType,
   zx_status_t FidlVolumeExtend(uint64_t start_slice, uint64_t slice_count, fidl_txn_t* txn);
   zx_status_t FidlVolumeShrink(uint64_t start_slice, uint64_t slice_count, fidl_txn_t* txn);
   zx_status_t FidlVolumeDestroy(fidl_txn_t* txn);
+
+  // Converts BlockDeviceMetrics to block_stats_t
+  void ConvertToBlockStats(block_stats_t* out) __TA_REQUIRES(stat_lock_);
+
+  // Completion callback that expects StatsCookie as |cookie| and calls upper
+  // layer completion cookie.
+  static void UpdateStatsAndCallCompletion(void* cookie, zx_status_t status, block_op_t* op);
 
   static const fuchsia_hardware_block_Block_ops* BlockOps() {
     using Binder = fidl::Binder<BlockDevice>;
@@ -153,7 +183,10 @@ class BlockDevice : public BlockDeviceType,
   // but may also collect auxiliary information like statistics.
   ddk::BlockProtocolClient self_protocol_;
   block_info_t info_ = {};
-  size_t block_op_size_ = 0;
+
+  // parent device's op size
+  size_t parent_op_size_ = 0;
+
   // True if we have metadata for a ZBI partition map.
   bool has_bootpart_ = false;
 
@@ -169,7 +202,14 @@ class BlockDevice : public BlockDeviceType,
   fbl::Mutex stat_lock_;
   // TODO(kmerrick) have this start as false and create IOCTL to toggle it.
   bool enable_stats_ TA_GUARDED(stat_lock_) = true;
-  block_stats_t stats_ TA_GUARDED(stat_lock_) = {};
+  BlockDeviceMetrics stats_ TA_GUARDED(stat_lock_) = {};
+
+  // To maintian stats related to time taken by a command or its success/failure, we need to
+  // intercept command completion with a callback routine. This might introduce cpu
+  // overhead.
+  // TODO(auradkar): We should be able to turn on/off stats at run-time.
+  //                 Create fidl interface to control how stats are maintained.
+  bool completion_status_stats_ = true;
 };
 
 zx_status_t BlockDevice::GetFifos(zx_handle_t* out_buf, size_t out_len, size_t* out_actual) {
@@ -239,6 +279,31 @@ zx_status_t BlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_hardware_block_partition_Partition_dispatch(this, txn, msg, PartitionOps());
   } else {
     return fuchsia_hardware_block_Block_dispatch(this, txn, msg, BlockOps());
+  }
+}
+
+void BlockDevice::UpdateStats(bool success, zx::ticks start_tick, block_op_t* op) {
+  uint64_t command = op->command & BLOCK_OP_MASK;
+  zx::ticks duration = zx::ticks::now() - start_tick;
+  fbl::AutoLock lock(&stat_lock_);
+
+  uint64_t bytes_transfered = op->rw.length * info_.block_size;
+  if ((command & BLOCK_OP_WRITE) == BLOCK_OP_WRITE) {
+    stats_.UpdateWriteStat(success, duration.get(), bytes_transfered);
+  } else if ((command & BLOCK_OP_READ) == BLOCK_OP_READ) {
+    stats_.UpdateReadStat(success, duration.get(), bytes_transfered);
+  } else if ((command & BLOCK_OP_FLUSH) == BLOCK_OP_FLUSH) {
+    stats_.UpdateFlushStat(success, duration.get(), bytes_transfered);
+  } else if ((command & BLOCK_OP_TRIM) == BLOCK_OP_TRIM) {
+    stats_.UpdateTrimStat(success, duration.get(), bytes_transfered);
+  }
+
+  if ((command & BLOCK_FL_BARRIER_BEFORE) == BLOCK_FL_BARRIER_BEFORE) {
+    stats_.UpdateBarrierBeforeStat(success, duration.get(), bytes_transfered);
+  }
+
+  if ((command & BLOCK_FL_BARRIER_AFTER) == BLOCK_FL_BARRIER_AFTER) {
+    stats_.UpdateBarrierAfterStat(success, duration.get(), bytes_transfered);
   }
 }
 
@@ -340,44 +405,62 @@ void BlockDevice::BlockQuery(block_info_t* block_info, size_t* op_size) {
   // It is important that all devices sitting on top of the volume protocol avoid
   // caching a copy of block info for query. The "block_count" field is dynamic,
   // and may change during the lifetime of the volume.
-  parent_protocol_.Query(block_info, op_size);
+  size_t parent_op_size;
+  parent_protocol_.Query(block_info, &parent_op_size);
+
+  // Safety check that parent op size doesn't change dynamically.
+  ZX_DEBUG_ASSERT(parent_op_size == parent_op_size_);
+
+  *op_size = OpSize();
+}
+
+void BlockDevice::UpdateStatsAndCallCompletion(void* cookie, zx_status_t status, block_op_t* op) {
+  BlockDevice* block_device = static_cast<BlockDevice*>(cookie);
+  Transaction txn(op, block_device->parent_op_size_);
+  StatsCookie* stats_cookie = txn.private_storage();
+
+  block_device->UpdateStats(status == ZX_OK, stats_cookie->start_tick, op);
+  txn.Complete(status);
 }
 
 void BlockDevice::BlockQueue(block_op_t* op, block_impl_queue_callback completion_cb,
                              void* cookie) {
-  uint64_t command = op->command & BLOCK_OP_MASK;
-  {
-    fbl::AutoLock lock(&stat_lock_);
-    stats_.total_ops++;
-    if (command == BLOCK_OP_READ) {
-      stats_.total_reads++;
-      stats_.total_blocks_read += op->rw.length;
-      stats_.total_blocks += op->rw.length;
-    } else if (command == BLOCK_OP_WRITE) {
-      stats_.total_writes++;
-      stats_.total_blocks_written += op->rw.length;
-      stats_.total_blocks += op->rw.length;
-    }
+  zx::ticks start_tick = zx::ticks::now();
+
+  if (completion_status_stats_) {
+    Transaction txn(op, completion_cb, cookie, parent_op_size_);
+    StatsCookie* stats_cookie = txn.private_storage();
+    stats_cookie->start_tick = start_tick;
+    parent_protocol_.Queue(txn.take(), UpdateStatsAndCallCompletion, this);
+  } else {
+    // Since we don't know the return status, we assume all commands succeeded.
+    UpdateStats(true, start_tick, op);
+    parent_protocol_.Queue(op, completion_cb, cookie);
   }
-  parent_protocol_.Queue(op, completion_cb, cookie);
+}
+
+void BlockDevice::ConvertToBlockStats(block_stats_t* out) {
+  fuchsia_hardware_block_BlockStats metrics;
+  stats_.CopyToFidl(&metrics);
+  out->total_ops = stats_.TotalCalls();
+  out->total_blocks = stats_.TotalBytesTransferred() / info_.block_size;
+  out->total_reads = metrics.read.success.total_calls + metrics.read.failure.total_calls;
+  out->total_blocks_read =
+      (metrics.read.success.bytes_transferred + metrics.read.failure.bytes_transferred) /
+      info_.block_size;
+  out->total_writes = metrics.write.success.total_calls + metrics.write.failure.total_calls;
+  out->total_blocks_written =
+      (metrics.write.success.bytes_transferred + metrics.write.failure.bytes_transferred) /
+      info_.block_size;
 }
 
 zx_status_t BlockDevice::GetStats(bool clear, block_stats_t* out) {
   fbl::AutoLock lock(&stat_lock_);
-  if (enable_stats_) {
-    out->total_ops = stats_.total_ops;
-    out->total_blocks = stats_.total_blocks;
-    out->total_reads = stats_.total_reads;
-    out->total_blocks_read = stats_.total_blocks_read;
-    out->total_writes = stats_.total_writes;
-    out->total_blocks_written = stats_.total_blocks_written;
+
+  if (stats_.Enabled()) {
+    ConvertToBlockStats(out);
     if (clear) {
-      stats_.total_ops = 0;
-      stats_.total_blocks = 0;
-      stats_.total_reads = 0;
-      stats_.total_blocks_read = 0;
-      stats_.total_writes = 0;
-      stats_.total_blocks_written = 0;
+      stats_.Reset();
     }
     return ZX_OK;
   } else {
@@ -410,19 +493,9 @@ zx_status_t BlockDevice::FidlBlockGetStats(bool clear, fidl_txn_t* txn) {
   }
 
   fuchsia_hardware_block_BlockStats stats = {};
-  stats.ops = stats_.total_ops;
-  stats.blocks = stats_.total_blocks;
-  stats.reads = stats_.total_reads;
-  stats.blocks_read = stats_.total_blocks_read;
-  stats.writes = stats_.total_writes;
-  stats.blocks_written = stats_.total_blocks_written;
+  stats_.CopyToFidl(&stats);
   if (clear) {
-    stats_.total_ops = 0;
-    stats_.total_blocks = 0;
-    stats_.total_reads = 0;
-    stats_.total_blocks_read = 0;
-    stats_.total_writes = 0;
-    stats_.total_blocks_written = 0;
+    stats_.Reset();
   }
   return fuchsia_hardware_block_BlockGetStats_reply(txn, ZX_OK, &stats);
 }
@@ -534,7 +607,7 @@ zx_status_t BlockDevice::Bind(void* ctx, zx_device_t* dev) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  bdev->parent_protocol_.Query(&bdev->info_, &bdev->block_op_size_);
+  bdev->parent_protocol_.Query(&bdev->info_, &bdev->parent_op_size_);
 
   if (bdev->info_.max_transfer_size < bdev->info_.block_size) {
     printf("ERROR: block device '%s': has smaller max xfer (0x%x) than block size (0x%x)\n",
@@ -542,8 +615,7 @@ zx_status_t BlockDevice::Bind(void* ctx, zx_device_t* dev) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t status;
-  bdev->io_op_ = std::make_unique<uint8_t[]>(bdev->block_op_size_);
+  bdev->io_op_ = std::make_unique<uint8_t[]>(bdev->OpSize());
   size_t block_size = bdev->info_.block_size;
   if ((block_size < 512) || (block_size & (block_size - 1))) {
     printf("block: device '%s': invalid block size: %zu\n", device_get_name(dev), block_size);
@@ -554,7 +626,8 @@ zx_status_t BlockDevice::Bind(void* ctx, zx_device_t* dev) {
   // and set BLOCK_FLAG_BOOTPART accordingly
   uint8_t buffer[METADATA_PARTITION_MAP_MAX];
   size_t actual;
-  status = device_get_metadata(dev, DEVICE_METADATA_PARTITION_MAP, buffer, sizeof(buffer), &actual);
+  zx_status_t status =
+      device_get_metadata(dev, DEVICE_METADATA_PARTITION_MAP, buffer, sizeof(buffer), &actual);
   if (status == ZX_OK && actual >= sizeof(zbi_partition_map_t)) {
     bdev->has_bootpart_ = true;
   }

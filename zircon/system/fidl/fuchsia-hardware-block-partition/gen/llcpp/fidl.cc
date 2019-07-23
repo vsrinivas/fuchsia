@@ -1140,7 +1140,8 @@ void Partition::Interface::GetInfoCompleterBase::Reply(::fidl::DecodedMessage<Ge
 
 void Partition::Interface::GetStatsCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::block::BlockStats* stats) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStatsResponse>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   GetStatsResponse _response = {};
   _response._hdr.ordinal = kPartition_GetStats_Ordinal;
   _response.status = std::move(status);

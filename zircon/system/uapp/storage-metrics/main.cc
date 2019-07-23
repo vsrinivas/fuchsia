@@ -3,22 +3,22 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <fcntl.h>
-#include <getopt.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
+#include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
 #include <fuchsia/storage/metrics/c/fidl.h>
+#include <getopt.h>
 #include <lib/fzl/fdio.h>
 #include <minfs/metrics.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <storage-metrics/block-metrics.h>
 #include <storage-metrics/fs-metrics.h>
+#include <string.h>
+#include <unistd.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
@@ -103,17 +103,9 @@ zx_status_t GetFsMetrics(const char* path, MinfsFidlMetrics* out_metrics) {
 }
 
 void PrintBlockMetrics(const char* dev, const fuchsia_hardware_block_BlockStats& stats) {
-    printf(R"(
-Block Metrics for device path: %s 
-total submitted block ops:      %zu
-total submitted blocks:         %zu
-total submitted read ops:       %zu
-total submitted blocks read:    %zu
-total submitted write ops:      %zu
-total submitted blocks written: %zu
-)",
-           dev, stats.ops, stats.blocks, stats.reads,
-           stats.blocks_read, stats.writes, stats.blocks_written);
+  printf("Block Metrics for device path: %s\n", dev);
+  storage_metrics::BlockDeviceMetrics metrics(&stats);
+  metrics.Dump(stdout);
 }
 
 // Retrieves metrics for the block device at dev. Clears metrics if clear is true.
@@ -263,8 +255,17 @@ void RunBlockMetrics(const fbl::StringBuffer<PATH_MAX> path, const StorageMetric
                     path.c_str(), rc);
         }
     } else {
-        fprintf(stderr, "storage-metrics could not get the block device for %s\n",
-                path.c_str());
+      // Maybe this is not a filesystem. See if this happens to be a block device.
+      // TODO(auradkar): We need better args parsing to consider fs and block
+      // device seperately.
+      rc = GetBlockMetrics(path.c_str(), options.clear_block, &stats);
+      if (rc != ZX_OK) {
+        fprintf(stderr,
+                "storage-metrics could not retrieve block metrics for %s,"
+                " status %d\n",
+                path.c_str(), rc);
+      }
+      PrintBlockMetrics(path.c_str(), stats);
     }
 }
 

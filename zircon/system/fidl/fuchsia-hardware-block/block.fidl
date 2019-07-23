@@ -4,6 +4,7 @@
 
 library fuchsia.hardware.block;
 using zx;
+using fuchsia.storage.metrics as storage_metrics;
 
 // All writes to the block device will fail.
 const uint32 FLAG_READONLY = 0x00000001;
@@ -37,24 +38,26 @@ struct BlockInfo {
 };
 
 // Describes statistics about the operations on the block device since boot.
+// storage_metrics.CallStat.bytes_transferred is number of bytes requested
+// to be transferred.
 struct BlockStats {
-    // The total number of operations which have been processed.
-    int64 ops;
+    // The stats about read from the device.
+    storage_metrics.CallStat read;
 
-    // The total number of blocks which have been acted upon.
-    int64 blocks;
+    // The stats about write to the device.
+    storage_metrics.CallStat write;
 
-    // The total number of requests to read from the device.
-    int64 reads;
+    // The stats about trim commands.
+    storage_metrics.CallStat trim;
 
-    // The total number of blocks which have been read from the device.
-    int64 blocks_read;
+    // The stats about flush commands.
+    storage_metrics.CallStat flush;
 
-    // The total number of requests to write to the device.
-    int64 writes;
+    // The stats about barrier before commands.
+    storage_metrics.CallStat barrier_before;
 
-    // The total number of blocks which have been written to the device.
-    int64 blocks_written;
+    // The stats about barrier after commands.
+    storage_metrics.CallStat barrier_after;
 };
 
 // A client-identifier to a VMO.

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <algorithm>
-
+#include <storage-metrics/block-metrics.h>
 #include <storage-metrics/fs-metrics.h>
 #include <storage-metrics/storage-metrics.h>
+
+#include <algorithm>
 
 namespace storage_metrics {
 CallStat::CallStatRaw::CallStatRaw() {
@@ -202,6 +203,47 @@ void FsMetrics::Dump(FILE* stream, std::optional<bool> success) const {
     rename_.Dump(stream, "rename", success);
     lookup_.Dump(stream, "lookup", success);
     open_.Dump(stream, "open", success);
+}
+
+BlockDeviceMetrics::BlockDeviceMetrics(const fuchsia_hardware_block_BlockStats* metrics) {
+  read_.CopyFromFidl(&metrics->read);
+  write_.CopyFromFidl(&metrics->write);
+  trim_.CopyFromFidl(&metrics->trim);
+  flush_.CopyFromFidl(&metrics->flush);
+  barrier_before_.CopyFromFidl(&metrics->barrier_before);
+  barrier_after_.CopyFromFidl(&metrics->barrier_after);
+
+  SetEnable(true);
+}
+
+void BlockDeviceMetrics::CopyToFidl(fuchsia_hardware_block_BlockStats* metrics) const {
+  read_.CopyToFidl(&metrics->read);
+  write_.CopyToFidl(&metrics->write);
+  trim_.CopyToFidl(&metrics->trim);
+  flush_.CopyToFidl(&metrics->flush);
+  barrier_before_.CopyToFidl(&metrics->barrier_before);
+  barrier_after_.CopyToFidl(&metrics->barrier_after);
+}
+
+uint64_t BlockDeviceMetrics::TotalCalls(std::optional<bool> success) const {
+  // Barriers are modifiers of a command so we don't count them here
+  return read_.total_calls(success) + write_.total_calls(success) + trim_.total_calls(success) +
+         flush_.total_calls(success);
+}
+
+uint64_t BlockDeviceMetrics::TotalBytesTransferred(std::optional<bool> success) const {
+  // Barriers are modifiers of a command so we don't count their bytes
+  return read_.bytes_transferred(success) + write_.bytes_transferred(success) +
+         trim_.bytes_transferred(success) + flush_.bytes_transferred(success);
+}
+
+void BlockDeviceMetrics::Dump(FILE* stream, std::optional<bool> success) const {
+  read_.Dump(stream, "read", success);
+  write_.Dump(stream, "write", success);
+  trim_.Dump(stream, "trim", success);
+  flush_.Dump(stream, "flush", success);
+  barrier_before_.Dump(stream, "barrier_before", success);
+  barrier_after_.Dump(stream, "barrier_after", success);
 }
 
 } // namespace storage_metrics

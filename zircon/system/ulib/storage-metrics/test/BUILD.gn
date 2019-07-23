@@ -11,7 +11,7 @@ group("test") {
 
 test("storage-metrics") {
   sources = [
-    "storage-metrics.cc",
+    "storage-metrics-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",

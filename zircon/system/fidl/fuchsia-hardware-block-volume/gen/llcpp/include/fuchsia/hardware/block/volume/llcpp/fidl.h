@@ -110,7 +110,7 @@ class Volume final {
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeGetStatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 48;
+    static constexpr uint32_t MaxOutOfLine = 480;
   };
   struct GetStatsRequest final {
     FIDL_ALIGNDECL
