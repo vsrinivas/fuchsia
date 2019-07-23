@@ -27,6 +27,7 @@ group("tests") {
 
 test_package("camera_full_test") {
   deps = [
+    "//src/camera/drivers/controller/test:controller-test",
     "//src/camera/drivers/hw_accel/gdc/test:gdc-task",
     "//src/camera/drivers/isp/modules:gamma-rgb-registers",
     "//src/camera/drivers/isp/modules:isp-mem-array",
@@ -43,6 +44,11 @@ test_package("camera_full_test") {
     {
       name = "gdc-task"
       manifest = "drivers/hw_accel/gdc/test/meta/gdc-task.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "controller-test"
+      manifest = "drivers/controller/test/meta/controller-test.cmx"
       environments = basic_envs
     },
     {
