@@ -14,6 +14,7 @@ use net_types::MulticastAddress;
 use packet::{BufferMut, Serializer, TruncateDirection, TruncatingSerializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
+use super::mld;
 use crate::device::{ndp, DeviceId, FrameDestination};
 use crate::error;
 use crate::ip::path_mtu::{update_pmtu_if_less, update_pmtu_next_lower};
@@ -272,6 +273,17 @@ pub(crate) fn receive_icmp_packet<B: BufferMut, D: BufferDispatcher<B>, A: IpAdd
                 // the Packet Too Big message's mtu field had a value that was less than
                 // the IPv6 minimum mtu (which as per IPv6 RFC 8200, must not happen).
                 update_pmtu_if_less(ctx, dst_ip, src_ip, packet_too_big.message().mtu());
+            }
+            Icmpv6Packet::MulticastListenerQuery(_)
+            | Icmpv6Packet::MulticastListenerReport(_)
+            | Icmpv6Packet::MulticastListenerDone(_) => {
+                mld::receive_mld_packet(
+                    ctx,
+                    device.expect("MLD messages must come from a device"),
+                    src_ip,
+                    dst_ip,
+                    packet,
+                );
             }
             _ => log_unimplemented!(
                 (),

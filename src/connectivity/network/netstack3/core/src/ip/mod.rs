@@ -34,6 +34,7 @@ use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::ip::icmp::IcmpState;
 use crate::ip::igmp::{IgmpInterface, IgmpTimerId};
 use crate::ip::ipv6::Ipv6PacketAction;
+use crate::ip::mld::{MldInterface, MldReportDelay};
 use crate::ip::path_mtu::{handle_pmtu_timeout, IpLayerPathMtuCache};
 use crate::ip::reassembly::{
     handle_reassembly_timeout, process_fragment, reassemble_packet, FragmentCacheKeyEither,
@@ -53,8 +54,11 @@ const DEFAULT_TTL: u8 = 64;
 // Minimum MTU required by all IPv6 devices.
 pub(crate) const IPV6_MIN_MTU: u32 = 1280;
 
-// The multicast address for all routers.
-const ALL_ROUTERS: Ipv4Addr = Ipv4Addr::new([224, 0, 0, 2]);
+// The ipv4 multicast address for all routers.
+const IPV4_ALL_ROUTERS: Ipv4Addr = Ipv4Addr::new([224, 0, 0, 2]);
+// The ipv6 multicast address for all routers.
+const IPV6_ALL_ROUTERS: Ipv6Addr =
+    Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
 
 /// A builder for IP layer state.
 pub struct IpStateBuilder {
@@ -101,6 +105,7 @@ impl IpStateBuilder {
             },
             icmp: self.icmp.build(),
             igmp: IdMap::default(),
+            mld: IdMap::default(),
         }
     }
 }
@@ -111,6 +116,7 @@ pub(crate) struct IpLayerState<D: EventDispatcher> {
     v6: IpLayerStateInner<Ipv6, D>,
     icmp: IcmpState<D>,
     igmp: IdMap<IgmpInterface<D::Instant>>,
+    mld: IdMap<MldInterface<D::Instant>>,
 }
 
 impl<D: EventDispatcher> IpLayerState<D> {
@@ -123,6 +129,14 @@ impl<D: EventDispatcher> IpLayerState<D> {
             self.igmp.insert(device_id, IgmpInterface::default());
         }
         self.igmp.get_mut(device_id).unwrap()
+    }
+
+    /// Get the MLD state associated with the device.
+    pub(crate) fn get_mld_state_mut(&mut self, device_id: usize) -> &mut MldInterface<D::Instant> {
+        if let None = self.mld.get(device_id) {
+            self.mld.insert(device_id, MldInterface::default());
+        }
+        self.mld.get_mut(device_id).unwrap()
     }
 }
 
@@ -146,6 +160,7 @@ pub(crate) enum IpLayerTimerId {
     PmtuTimeout(IpVersion),
     /// Timer for IGMP protocol
     IgmpTimer(IgmpTimerId),
+    MldTimer(MldReportDelay),
 }
 
 impl IpLayerTimerId {
@@ -164,6 +179,7 @@ pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: IpLay
         IpLayerTimerId::ReassemblyTimeout(key) => handle_reassembly_timeout(ctx, key),
         IpLayerTimerId::PmtuTimeout(ip) => handle_pmtu_timeout(ctx, ip),
         IpLayerTimerId::IgmpTimer(timer) => crate::ip::igmp::handle_timeout(ctx, timer),
+        IpLayerTimerId::MldTimer(timer) => crate::ip::mld::handle_timeout(ctx, timer),
     }
 }
 

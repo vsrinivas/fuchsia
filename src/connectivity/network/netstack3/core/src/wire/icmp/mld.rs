@@ -120,7 +120,7 @@ impl TryFrom<Duration> for Mldv1ResponseDelay {
 #[derive(AsBytes, FromBytes, Unaligned, Copy, Clone, Debug)]
 pub(crate) struct Mldv1Message {
     /// Max Response Delay, in units of milliseconds.
-    max_response_delay: U16,
+    pub(crate) max_response_delay: U16,
     /// Initialized to zero by the sender; ignored by receivers.
     _reserved: U16,
     /// In a Query message, the Multicast Address field is set to zero when
@@ -130,7 +130,13 @@ pub(crate) struct Mldv1Message {
     /// In a Report or Done message, the Multicast Address field holds a
     /// specific IPv6 multicast address to which the message sender is
     /// listening or is ceasing to listen, respectively.
-    group_addr: Ipv6Addr,
+    pub(crate) group_addr: Ipv6Addr,
+}
+
+impl Mldv1Message {
+    pub(crate) fn max_response_delay(&self) -> Duration {
+        Mldv1ResponseDelay(self.max_response_delay.get()).into()
+    }
 }
 
 /// The on-wire structure for the body of an MLDv1 message.

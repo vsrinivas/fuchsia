@@ -354,7 +354,7 @@ fn run_action<D: EventDispatcher>(
                 ctx,
                 device,
                 group_addr,
-                MulticastAddr::new(crate::ip::ALL_ROUTERS).unwrap(),
+                MulticastAddr::new(crate::ip::IPV4_ALL_ROUTERS).unwrap(),
                 (),
             )?;
         }
@@ -398,14 +398,10 @@ impl<I: Instant> IgmpInterface<I> {
         &mut self,
         addr: MulticastAddr<Ipv4Addr>,
     ) -> IgmpResult<Actions<Igmpv2ProtocolSpecific>> {
-        let result = match self.groups.get_mut(&addr) {
+        match self.groups.remove(&addr).as_mut() {
             Some(state) => Ok(state.leave_group()),
-            None => Err(IgmpError::NotAMember { addr: *addr }),
-        };
-        if result.is_ok() {
-            self.groups.remove(&addr);
+            None => Err(IgmpError::NotAMember { addr: addr.get() }),
         }
-        result
     }
 }
 
