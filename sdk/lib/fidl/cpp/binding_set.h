@@ -43,7 +43,8 @@ class BindingSet final {
   // The given |ImplPtr| is bound to the channel underlying the
   // |InterfaceRequest|. The binding is removed (and the |~ImplPtr| called)
   // when the created binding has an error (e.g., if the remote endpoint of
-  // the channel sends an invalid message).
+  // the channel sends an invalid message). The binding can also be removed
+  // by calling |RemoveBinding()|.
   //
   // Whether this method takes ownership of |impl| depends on |ImplPtr|. If
   // |ImplPtr| is a raw pointer, then this method does not take ownership of
@@ -84,6 +85,14 @@ class BindingSet final {
       return nullptr;
     AddBinding(std::forward<ImplPtr>(impl), std::move(request), dispatcher);
     return handle;
+  }
+
+  // Removes a binding from the set.
+  //
+  // Returns true iff the binding was successfully found and removed.
+  // Upon removal, the server endpoint of the channel is closed.
+  bool RemoveBinding(const ImplPtr& impl) {
+    return RemoveBinding([&impl](const std::unique_ptr<Binding>& b) { return impl == b->impl(); });
   }
 
   // Returns an InterfaceRequestHandler that binds the incoming
@@ -127,10 +136,15 @@ class BindingSet final {
  private:
   // Called when a binding has an error to remove the binding from the set.
   void RemoveOnError(Binding* binding) {
-    auto it =
-        std::find_if(bindings_.begin(), bindings_.end(),
-                     [binding](const std::unique_ptr<Binding>& b) { return b.get() == binding; });
-    ZX_DEBUG_ASSERT(it != bindings_.end());
+    bool found =
+        RemoveBinding([binding](const std::unique_ptr<Binding>& b) { return b.get() == binding; });
+    ZX_DEBUG_ASSERT(found);
+  }
+
+  bool RemoveBinding(std::function<bool(const std::unique_ptr<Binding>&)> binding_matcher) {
+    auto it = std::find_if(bindings_.begin(), bindings_.end(), binding_matcher);
+    if (it == bindings_.end())
+      return false;
 
     {
       // Move ownership of binding out of storage, such that the binding is
@@ -142,6 +156,7 @@ class BindingSet final {
 
     if (bindings_.empty() && empty_set_handler_)
       empty_set_handler_();
+    return true;
   }
 
   StorageType bindings_;
