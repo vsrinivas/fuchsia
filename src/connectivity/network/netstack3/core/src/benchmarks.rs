@@ -6,9 +6,9 @@
 //!
 //! This module contains end-to-end and other high-level benchmarks for the
 //! netstack.
+use std::time::{Duration, Instant};
 
 use packet::{Buf, BufferMut, InnerPacketBuilder, Serializer};
-use std::time::{Duration, Instant};
 use rand_xorshift::XorShiftRng;
 
 use crate::device::ethernet::EtherType;
