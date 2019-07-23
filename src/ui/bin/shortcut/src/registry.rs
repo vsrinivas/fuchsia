@@ -75,7 +75,7 @@ impl RegistryStore {
             // arguments are not currently supported
             let key = event.key;
             let modifiers = event.modifiers;
-            async move |was_handled, registry| {
+            move |was_handled, registry| async move {
                 let handled =
                     await!(handle(registry, key, modifiers)).unwrap_or_else(|e: failure::Error| {
                         fx_log_err!("shortcut handle error: {:?}", e);

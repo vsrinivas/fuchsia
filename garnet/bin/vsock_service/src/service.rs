@@ -261,15 +261,16 @@ impl Vsock {
         self, request: ConnectorRequestStream,
     ) -> Result<(), failure::Error> {
         let self_ref = &self;
-        await!(request
+        let fut = request
             .map_err(|err| Error::ClientCommunication(err.into()))
             // TODO: The parallel limit of 4 is currently invented with no basis and should
             // made something more sensible.
-            .try_for_each_concurrent(4, async move |request| await!(
+            .try_for_each_concurrent(4, |request| {
                 self_ref.handle_request(request)
-            )
-            .or_else(|e| if e.is_comm_failure() { Err(e) } else { Ok(()) }))
-            .err_into())
+                    .or_else(|e| future::ready(if e.is_comm_failure() { Err(e) } else { Ok(()) }))
+            })
+            .err_into();
+        await!(fut)
     }
     fn alloc_ephemeral_port(self) -> Option<AllocatedPort> {
         let p = self.lock().used_ports.allocate();

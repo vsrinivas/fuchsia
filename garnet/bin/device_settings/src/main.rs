@@ -250,7 +250,7 @@ mod tests {
 
     #[test]
     fn test_int() {
-        async_test(&["TestKey"], async move |device_settings| {
+        async_test(&["TestKey"], |device_settings| async move {
             let response = await!(device_settings.set_integer("TestKey", 18))?;
             assert!(response, "set_integer failed");
             let response = await!(device_settings.get_integer("TestKey"))?;
@@ -261,7 +261,7 @@ mod tests {
 
     #[test]
     fn test_string() {
-        async_test(&["TestKey"], async move |device_settings| {
+        async_test(&["TestKey"], |device_settings| async move {
             let response = await!(device_settings.set_string("TestKey", "mystring"))?;
             assert!(response, "set_string failed");
             let response = await!(device_settings.get_string("TestKey"))?;
@@ -272,7 +272,7 @@ mod tests {
 
     #[test]
     fn test_invalid_key() {
-        async_test(&[], async move |device_settings| {
+        async_test(&[], |device_settings| async move {
             let response = await!(device_settings.get_string("TestKey"))?;
             assert_eq!(response, ("".to_string(), Status::ErrInvalidSetting));
             let response = await!(device_settings.get_integer("TestKey"))?;
@@ -283,7 +283,7 @@ mod tests {
 
     #[test]
     fn test_incorrect_type() {
-        async_test(&["TestKey"], async move |device_settings| {
+        async_test(&["TestKey"], |device_settings| async move {
             let response = await!(device_settings.set_string("TestKey", "mystring"))?;
             assert!(response, "set_string failed");
             let response = await!(device_settings.get_integer("TestKey"))?;
@@ -294,7 +294,7 @@ mod tests {
 
     #[test]
     fn test_not_set_err() {
-        async_test(&["TestKey"], async move |device_settings| {
+        async_test(&["TestKey"], |device_settings| async move {
             let response = await!(device_settings.get_integer("TestKey"))?;
             assert_eq!(response, (0, Status::ErrNotSet));
             let response = await!(device_settings.get_string("TestKey"))?;
@@ -305,7 +305,7 @@ mod tests {
 
     #[test]
     fn test_multiple_keys() {
-        async_test(&["TestKey1", "TestKey2"], async move |device_settings| {
+        async_test(&["TestKey1", "TestKey2"], |device_settings| async move {
             let response = await!(device_settings.set_integer("TestKey1", 18))?;
             assert!(response, "set_integer failed");
             let response = await!(device_settings.set_string("TestKey2", "mystring"))?;

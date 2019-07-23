@@ -455,9 +455,9 @@ mod tests {
                 .unwrap();
         }
 
-        let run_test = async move |sm: Arc<Mutex<store::StoreManager>>,
-                                   prefix: String,
-                                   mut expected: Vec<String>| {
+        let run_test = |sm: Arc<Mutex<store::StoreManager>>,
+                       prefix: String,
+                       mut expected: Vec<String>| async move {
             let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
             let (list_iterator, server_end) = create_proxy().unwrap();
             await!(acc.list_prefix(prefix.to_string(), server_end));
@@ -512,9 +512,9 @@ mod tests {
                 .unwrap();
         }
 
-        let run_test = async move |sm: Arc<Mutex<store::StoreManager>>,
+        let run_test = |sm: Arc<Mutex<store::StoreManager>>,
                                    prefix: String,
-                                   mut expected: Vec<String>| {
+                                   mut expected: Vec<String>| async move {
             let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
             let (list_iterator, server_end) = create_proxy().unwrap();
             await!(acc.list_prefix(prefix.to_string(), server_end));
@@ -577,9 +577,9 @@ mod tests {
                 .unwrap();
         }
 
-        let run_test = async move |sm: Arc<Mutex<store::StoreManager>>,
+        let run_test = |sm: Arc<Mutex<store::StoreManager>>,
                                    prefix: String,
-                                   mut expected: Vec<(String, bool)>| {
+                                   mut expected: Vec<(String, bool)>| async move {
             let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
             let (get_iterator, server_end) = create_proxy().unwrap();
             await!(acc.get_prefix(prefix.to_string(), server_end)).unwrap();

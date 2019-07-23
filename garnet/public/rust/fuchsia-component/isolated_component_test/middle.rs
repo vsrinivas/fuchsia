@@ -25,7 +25,7 @@ use {
 fn echo_exposed_server(stream: EchoExposedByParentRequestStream) -> impl Future<Output = ()> {
     stream
         .err_into::<failure::Error>()
-        .try_for_each(async move |EchoExposedByParentRequest::Echo { value: _, responder }| {
+        .try_for_each(|EchoExposedByParentRequest::Echo { value: _, responder }| async move {
             responder.send(42).context("sending response")?;
             Ok(())
         })
