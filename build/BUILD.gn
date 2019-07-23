@@ -122,12 +122,6 @@ group("system_deprecated_data_allowlist") {
   # other build entities that your component would like to use at run time.
   visibility = [
     "//garnet/bin/appmgr/integration_tests/sandbox/features/system-deprecated-data:uses_system_deprecated_data",
-    "//garnet/bin/sysmgr",
-    "//garnet/bin/sysmgr/integration_tests",
-    "//peridot/bin/module_resolver",
     "//src/experiences/bin/simple_browser:simple_browser_pkg",
-    "//src/connectivity/wlan/wlanstack",
-    "//topaz/bin/datetime_settings:datetime_settings_pkg",
-    "//topaz/public/dart/fuchsia_webview_flutter/examples/webview_mod:webview_mod_pkg",
   ]
 }
