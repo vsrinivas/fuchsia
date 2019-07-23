@@ -83,27 +83,15 @@ impl<B: ByteSlice, A: IpAddress> FromRaw<UdpPacketRaw<B>, UdpParseArgs<A>> for U
             // = 0xFFFF, we expect the sum to be 0xFFFF.
             let target = if checksum == 0xFFFF { 0xFFFF } else { 0 };
 
-            // We try to calculate the checksum using a "joined" view of the
-            // header and body in the UDP packet. Joining into a single byte
-            // slice gives us performance benefits when calculating checksum. If
-            // joining fails, we fall back to compute_transport_checksum_parts.
-            // In practice, a UdpPacketRaw that was parsed from some buffer data
-            // will always succeed joining its header and body, so we won't be
-            // hitting the slow path unless the given UdpPacketRaw was
-            // hand-crafted in some other way.
-            let checksum =
-                if let Some(joined) = zerocopy::join(header.bytes(), body.deref().as_ref()) {
-                    compute_transport_checksum(args.src_ip, args.dst_ip, IpProto::Udp, joined)
-                } else {
-                    let parts = [header.bytes(), body.deref().as_ref()];
-                    compute_transport_checksum_parts(
-                        args.src_ip,
-                        args.dst_ip,
-                        IpProto::Udp,
-                        parts.iter(),
-                    )
-                }
-                .ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?;
+            let parts = [header.bytes(), body.deref().as_ref()];
+            let checksum = compute_transport_checksum_parts(
+                args.src_ip,
+                args.dst_ip,
+                IpProto::Udp,
+                parts.iter(),
+            )
+            .ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?;
+
             if target != checksum {
                 return debug_err!(
                     Err(ParseError::Checksum),

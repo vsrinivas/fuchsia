@@ -130,20 +130,9 @@ impl<B: ByteSlice, A: IpAddress> FromRaw<TcpSegmentRaw<B>, TcpParseArgs<A>> for 
         }
 
         let parts = [hdr_prefix.bytes(), options.bytes(), body.deref().as_ref()];
-        // We try to calculate the checksum using a "joined" view of the three
-        // components of the TCP segment: header, options, and body. Joining
-        // into a single byte slice gives us performance benefits when
-        // calculating checksum. If joining fails, we fall back to
-        // compute_transport_checksum_parts. In practice, a TcpSegmentRaw that
-        // was parsed from some buffer data will always succeed joining its
-        // part, so we won't be hitting the slow path unless the given
-        // TcpSegmentRaw was hand-crafted in some other way.
-        let checksum = if let Some(joined) = zerocopy::join_iter(parts.iter().map(|x| *x)) {
-            compute_transport_checksum(args.src_ip, args.dst_ip, IpProto::Tcp, joined)
-        } else {
+        let checksum =
             compute_transport_checksum_parts(args.src_ip, args.dst_ip, IpProto::Tcp, parts.iter())
-        }
-        .ok_or_else(debug_err_fn!(ParseError::Format, "segment too large"))?;
+                .ok_or_else(debug_err_fn!(ParseError::Format, "segment too large"))?;
 
         if checksum != 0 {
             return debug_err!(Err(ParseError::Checksum), "invalid checksum");
@@ -853,25 +842,6 @@ mod tests {
         /// partial parsing:
         let mut buf = &bytes[0..4];
         assert!(buf.parse::<TcpSegmentRaw<_>>().is_ok());
-
-        // With a complete TCP segment, hdr_prefix, options and body should
-        // be joinable with zerocopy::join_iter:
-        let mut hdr_prefix = new_hdr_prefix();
-        hdr_prefix.set_data_offset(6);
-        let mut bytes = hdr_prefix_to_bytes(hdr_prefix)[..].to_owned();
-        bytes.extend(&[1, 2, 3, 4, 10, 20, 30, 40]);
-        let mut buf = &bytes[..];
-        let packet = buf.parse::<TcpSegmentRaw<_>>().unwrap();
-        let parts = [
-            packet.hdr_prefix.as_ref().unwrap().bytes(),
-            packet.options.as_ref().unwrap().bytes(),
-            packet.body,
-        ];
-        assert_eq!(parts[0], &bytes[0..20]);
-        assert_eq!(parts[1], &bytes[20..24]);
-        assert_eq!(parts[2], &bytes[24..]);
-        let joined = zerocopy::join_iter(parts.iter().map(|x| *x)).unwrap();
-        assert_eq!(joined, &bytes[..]);
     }
 
     //
