@@ -82,14 +82,15 @@ zx_status_t iwl_mvm_send_cmd(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd) {
   }
 
   /* Silently ignore failures if ZX_ERR_BAD_STATE is asserted */
-  if (!ret || ret == ZX_ERR_BAD_STATE) {
+  if (ret == ZX_ERR_BAD_STATE) {
     return ZX_OK;
   }
+
   return ret;
 }
 
-int iwl_mvm_send_cmd_pdu(struct iwl_mvm* mvm, uint32_t id, uint32_t flags, uint16_t len,
-                         const void* data) {
+zx_status_t iwl_mvm_send_cmd_pdu(struct iwl_mvm* mvm, uint32_t id, uint32_t flags, uint16_t len,
+                                 const void* data) {
   struct iwl_host_cmd cmd = {
       .id = id,
       .len =
@@ -140,7 +141,7 @@ zx_status_t iwl_mvm_send_cmd_status(struct iwl_mvm* mvm, struct iwl_host_cmd* cm
      * the status, leave it as success and return 0.
      */
     return ZX_OK;
-  } else if (ret) {
+  } else if (ret != ZX_OK) {
     return ret;
   }
 
@@ -164,8 +165,8 @@ out_free_resp:
 /*
  * We assume that the caller set the status to the sucess value
  */
-int iwl_mvm_send_cmd_pdu_status(struct iwl_mvm* mvm, uint32_t id, uint16_t len, const void* data,
-                                uint32_t* status) {
+zx_status_t iwl_mvm_send_cmd_pdu_status(struct iwl_mvm* mvm, uint32_t id, uint16_t len,
+                                        const void* data, uint32_t* status) {
   struct iwl_host_cmd cmd = {
       .id = id,
       .len =
@@ -625,7 +626,7 @@ zx_status_t iwl_mvm_reconfig_scd(struct iwl_mvm* mvm, int queue, int fifo, int s
  * this case to clear the state indicating that station creation is in
  * progress.
  */
-int iwl_mvm_send_lq_cmd(struct iwl_mvm* mvm, struct iwl_lq_cmd* lq, bool sync) {
+zx_status_t iwl_mvm_send_lq_cmd(struct iwl_mvm* mvm, struct iwl_lq_cmd* lq, bool sync) {
   return ZX_ERR_NOT_SUPPORTED;
 #if 0   // NEEDS_PORTING
     struct iwl_host_cmd cmd = {
@@ -692,7 +693,7 @@ void iwl_mvm_update_smps(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
 #endif  // NEEDS_PORTING
 }
 
-int iwl_mvm_request_statistics(struct iwl_mvm* mvm, bool clear) {
+zx_status_t iwl_mvm_request_statistics(struct iwl_mvm* mvm, bool clear) {
   return ZX_ERR_NOT_SUPPORTED;
 #if 0   // NEEDS_PORTING
     struct iwl_statistics_cmd scmd = {

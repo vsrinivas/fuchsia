@@ -1483,12 +1483,12 @@ void iwl_mvm_get_sync_time(struct iwl_mvm* mvm, uint32_t* gp2, uint64_t* boottim
 
 /* Tx / Host Commands */
 zx_status_t __must_check iwl_mvm_send_cmd(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd);
-int __must_check iwl_mvm_send_cmd_pdu(struct iwl_mvm* mvm, uint32_t id, uint32_t flags,
-                                      uint16_t len, const void* data);
+zx_status_t __must_check iwl_mvm_send_cmd_pdu(struct iwl_mvm* mvm, uint32_t id, uint32_t flags,
+                                              uint16_t len, const void* data);
 zx_status_t __must_check iwl_mvm_send_cmd_status(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd,
                                                  uint32_t* status);
-int __must_check iwl_mvm_send_cmd_pdu_status(struct iwl_mvm* mvm, uint32_t id, uint16_t len,
-                                             const void* data, uint32_t* status);
+zx_status_t __must_check iwl_mvm_send_cmd_pdu_status(struct iwl_mvm* mvm, uint32_t id, uint16_t len,
+                                                     const void* data, uint32_t* status);
 int iwl_mvm_tx_skb(struct iwl_mvm* mvm, struct sk_buff* skb, struct ieee80211_sta* sta);
 int iwl_mvm_tx_skb_non_sta(struct iwl_mvm* mvm, struct sk_buff* skb);
 void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, struct sk_buff* skb, struct iwl_tx_cmd* tx_cmd,
@@ -1529,7 +1529,7 @@ static inline void iwl_mvm_wait_for_async_handlers(struct iwl_mvm* mvm) {
 /* Statistics */
 void iwl_mvm_handle_rx_statistics(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt);
 void iwl_mvm_rx_statistics(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
-int iwl_mvm_request_statistics(struct iwl_mvm* mvm, bool clear);
+zx_status_t iwl_mvm_request_statistics(struct iwl_mvm* mvm, bool clear);
 void iwl_mvm_accu_radio_stats(struct iwl_mvm* mvm);
 
 /* NVM */
@@ -1713,7 +1713,7 @@ static inline void iwl_mvm_vif_dbgfs_clean(struct iwl_mvm* mvm, struct ieee80211
 #endif /* CPTCFG_IWLWIFI_DEBUGFS */
 
 /* rate scaling */
-int iwl_mvm_send_lq_cmd(struct iwl_mvm* mvm, struct iwl_lq_cmd* lq, bool sync);
+zx_status_t iwl_mvm_send_lq_cmd(struct iwl_mvm* mvm, struct iwl_lq_cmd* lq, bool sync);
 void iwl_mvm_update_frame_stats(struct iwl_mvm* mvm, uint32_t rate, bool agg);
 int rs_pretty_print_rate(char* buf, int bufsz, const uint32_t rate);
 void rs_update_last_rssi(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta,
