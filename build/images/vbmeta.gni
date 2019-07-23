@@ -1,0 +1,179 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/zircon.gni")
+
+declare_args() {
+  # If true, then a vbmeta image will be generated for provided ZBI
+  # and the paving script will pave vbmeta images to the target device.
+  use_vbmeta = false
+
+  # a key which will be used to sign VBMETA and images for AVB
+  avb_key = ""
+
+  # AVB metadata which will be used to validate public key
+  avb_atx_metadata = ""
+
+  # AVB algorithm type.Supported options:
+  #   SHA256_RSA2048
+  #   SHA256_RSA4096
+  #   SHA256_RSA8192
+  #   SHA512_RSA2048
+  #   SHA512_RSA4096
+  #   SHA512_RSA8192
+  avb_algorithm = "SHA512_RSA4096"
+}
+
+# Template for producing VBMETA image for AVB
+#
+# Parameters
+#
+#   output_name (optional, default: target_name)
+#
+#   zbi (required)
+#       [list-of-strings] path to a ZBI image to be included in AVB chain.
+#       Must only contain a single entry.
+#
+#   prop_from_file (required)
+#       [list of type/file] a list of pairs |type| and |file|.
+#       |type| is one of ZBI item types (w/o ZBI_TYPE_ prefix);
+#       |file| is a path to file to be stored in a vbmeta image
+#       as ZBI_TYPE_|type| items in 'zbi' property.
+#
+#   deps (usually required)
+#   testonly (optional)
+#       Same as for any GN `action` target.
+template("vbmeta") {
+  if (defined(invoker.output_name)) {
+    output_file = invoker.output_name
+  } else {
+    output_file = target_name
+  }
+
+  output_file += ".vbmeta"
+
+  zbi = invoker.zbi
+  assert([ zbi[0] ] == zbi, "zbi parameter must contain a single entry")
+  assert(avb_key != "", "avb_key must be specified")
+  assert(avb_atx_metadata != "", "avb metadata must be specified")
+  output_file = "$root_out_dir/$output_file"
+  output_vbmeta_desc_file = "${output_file}.desc"
+  if (defined(invoker.prop_from_file)) {
+    output_vbmeta_props_zbi_file = "${output_file}.props.zbi"
+  }
+
+  if (defined(invoker.prop_from_file)) {
+    action("${target_name}__zbi_props") {
+      script = "$zircon_tools_dir/zbi"
+
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                               "deps",
+                             ])
+
+      outputs = [
+        output_vbmeta_props_zbi_file,
+      ]
+      args = [
+        "--output",
+        rebase_path(outputs[0], root_build_dir),
+      ]
+      sources = []
+      foreach(entry, invoker.prop_from_file) {
+        file = rebase_path(entry.file, root_build_dir)
+        sources += [ entry.file ]
+        args += [
+          "-T",
+          "${entry.type}",
+          "${file}",
+        ]
+      }
+    }
+  }
+
+  action("${target_name}__vb_desc") {
+    script = "//zircon/third_party/tools/android/avb/avbtool"
+
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "deps",
+                           ])
+
+    inputs = [
+      zbi[0],
+    ]
+    outputs = [
+      output_vbmeta_desc_file,
+    ]
+    args = [
+      "add_hash_footer",
+      "--image",
+      rebase_path(inputs[0], root_build_dir),
+      "--partition_name",
+      "zircon",
+      "--do_not_append_vbmeta_image",
+      "--output_vbmeta_image",
+      rebase_path(outputs[0], root_build_dir),
+      "--partition_size",
+
+      # we are not going to add footer into image,
+      # so, we do not care about a partition size checking.
+      # `partition_size' is a mandatory option, thus let
+      # use obviously big number for the partition size to pass
+      # verification. 100M should be good enough.
+      # TODO (dmitryya@) fix avbtool to do not check partition
+      # size if --do_not_append_vbmeta_image is specified.
+      "104857600",
+    ]
+  }
+
+  action(target_name) {
+    script = "//zircon/third_party/tools/android/avb/avbtool"
+
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "deps",
+                           ])
+
+    deps += [ ":${target_name}__vb_desc" ]
+    if (defined(invoker.prop_from_file)) {
+      deps += [ ":${target_name}__zbi_props" ]
+    }
+
+    inputs = [
+      avb_key,
+      avb_atx_metadata,
+      output_vbmeta_desc_file,
+    ]
+    outputs = [
+      output_file,
+    ]
+    args = [
+      "make_vbmeta_image",
+      "--output",  # output of VBMETA image
+      rebase_path(outputs[0], root_build_dir),
+      "--key",  # a key for signing
+      rebase_path(avb_key, root_build_dir),
+      "--algorithm",  # an algorithm for signing
+      avb_algorithm,
+      "--public_key_metadata",  # avb metadata
+      rebase_path(avb_atx_metadata, root_build_dir),
+      "--include_descriptors_from_image",
+      rebase_path(output_vbmeta_desc_file, root_build_dir),
+    ]
+    if (defined(invoker.prop_from_file)) {
+      inputs += [ output_vbmeta_props_zbi_file ]
+      args += [
+        "--prop_from_file",
+        "zbi:" + rebase_path(output_vbmeta_props_zbi_file, root_build_dir),
+      ]
+    }
+  }
+}

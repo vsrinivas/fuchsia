@@ -10,17 +10,12 @@ declare_args() {
   # the output signed zbi path. The path must be in GN-label syntax (i.e.
   # starts with //).
   custom_signing_script = ""
-
-  # If true, then the paving script will pave vbmeta images to the target device.
-  # It is assumed that the vbmeta image will be created by the custom_signing_script.
-  use_vbmeta = false
 }
 
 # Template for producing signed ZBI images given a custom signing script.
 # The signing script is required to accept two parameters:
 #  -z  the path to the ZBI image to be signed
 #  -o  the path to the image file to be output
-#  -v  the path to the vbmeta file to be output (scripts not using AVB may ignore this)
 #  -B  the path to the zircon build directory
 #
 # TODO(BLD-323): add flags for producing depfiles
@@ -54,8 +49,6 @@ template("custom_signed_zbi") {
     output_file = target_name
   }
 
-  vbmeta_file = output_file + ".vbmeta"
-
   if (defined(invoker.output_extension)) {
     if (invoker.output_extension != "") {
       output_file += ".${invoker.output_extension}"
@@ -74,7 +67,6 @@ template("custom_signed_zbi") {
   assert([ zbi[0] ] == zbi, "zbi parameter must contain a single entry")
 
   output_file = "$root_out_dir/$output_file"
-  vbmeta_file = "$root_out_dir/$vbmeta_file"
   action(target_name) {
     script = custom_signing_script
 
@@ -82,16 +74,11 @@ template("custom_signed_zbi") {
     outputs = [
       output_file,
     ]
-    if (use_vbmeta) {
-      outputs += [ vbmeta_file ]
-    }
     args = [
       "-z",
       rebase_path(inputs[0], root_build_dir),
       "-o",
       rebase_path(outputs[0], root_build_dir),
-      "-v",
-      rebase_path(vbmeta_file, root_build_dir),
       "-B",
       rebase_path(zircon_root_build_dir, root_build_dir),
     ]
