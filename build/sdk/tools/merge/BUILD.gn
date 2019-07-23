@@ -11,6 +11,10 @@ rustc_binary("merge_sdk") {
 
   edition = "2018"
 
+  force_opt = "3"
+
+  with_lto = "fat"
+
   deps = [
     "//build/sdk/meta:rust",
     "//third_party/rust_crates:failure",
