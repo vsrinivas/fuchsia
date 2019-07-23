@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/fidl.gni")
+
+if (is_fuchsia) {
+  group("test") {
+    testonly = true
+    deps = [
+      ":service-proxy-dir",
+    ]
+  }
+
+  test("service-proxy-dir") {
+    sources = [
+      "service-proxy-dir.cc",
+    ]
+    deps = [
+      ":fidl.test.echo.c",
+      "$zx/system/fidl/fuchsia-io:llcpp",
+      "$zx/system/ulib/async-loop:async-loop-cpp",
+      "$zx/system/ulib/fidl",
+      "$zx/system/ulib/fidl-async:fidl-async-cpp",
+      "$zx/system/ulib/fidl-utils",
+      "$zx/system/ulib/fs",
+      "$zx/system/ulib/runtests-utils",
+      "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxtest",
+    ]
+  }
+}
+
+fidl_library("fidl.test.echo") {
+  testonly = true
+  visibility = [ ":*" ]
+  sources = [
+    "echo.test.fidl",
+  ]
+}
