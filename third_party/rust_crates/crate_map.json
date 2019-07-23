@@ -693,6 +693,11 @@
             "package_name": "unic-ucd-block"
         },
         {
+            "crate_name": "url",
+            "crate_type": "lib",
+            "package_name": "url"
+        },
+        {
             "crate_name": "uuid",
             "crate_type": "lib",
             "package_name": "uuid"
