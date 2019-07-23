@@ -2145,6 +2145,7 @@ extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibl
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibleResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_ScheduleRemove_Ordinal = 0x65a3b60600000000lu;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleRemoveRequestTable;
 [[maybe_unused]]
 constexpr uint64_t kCoordinator_ScheduleUnbindChildren_Ordinal = 0x59a4dcaf00000000lu;
 [[maybe_unused]]
@@ -2532,35 +2533,62 @@ zx_status_t Coordinator::Call::AddDeviceInvisible_Deprecated(zx::unowned_channel
 }
 
 
-Coordinator::ResultOf::ScheduleRemove_Impl::ScheduleRemove_Impl(zx::unowned_channel _client_end) {
+Coordinator::ResultOf::ScheduleRemove_Impl::ScheduleRemove_Impl(zx::unowned_channel _client_end, bool unbind_self) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleRemoveRequest>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, ScheduleRemoveRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ScheduleRemoveRequest*>(_write_bytes);
+  _request.unbind_self = std::move(unbind_self);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ScheduleRemoveRequest));
   ::fidl::DecodedMessage<ScheduleRemoveRequest> _decoded_request(std::move(_request_bytes));
   Super::operator=(
-      Coordinator::InPlace::ScheduleRemove(std::move(_client_end)));
+      Coordinator::InPlace::ScheduleRemove(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Coordinator::ResultOf::ScheduleRemove Coordinator::SyncClient::ScheduleRemove() {
-  return ResultOf::ScheduleRemove(zx::unowned_channel(this->channel_));
+Coordinator::ResultOf::ScheduleRemove Coordinator::SyncClient::ScheduleRemove(bool unbind_self) {
+  return ResultOf::ScheduleRemove(zx::unowned_channel(this->channel_), std::move(unbind_self));
 }
 
-Coordinator::ResultOf::ScheduleRemove Coordinator::Call::ScheduleRemove(zx::unowned_channel _client_end) {
-  return ResultOf::ScheduleRemove(std::move(_client_end));
+Coordinator::ResultOf::ScheduleRemove Coordinator::Call::ScheduleRemove(zx::unowned_channel _client_end, bool unbind_self) {
+  return ResultOf::ScheduleRemove(std::move(_client_end), std::move(unbind_self));
 }
 
-zx_status_t Coordinator::SyncClient::ScheduleRemove_Deprecated() {
-  return Coordinator::Call::ScheduleRemove_Deprecated(zx::unowned_channel(this->channel_));
+
+Coordinator::UnownedResultOf::ScheduleRemove_Impl::ScheduleRemove_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool unbind_self) {
+  if (_request_buffer.capacity() < ScheduleRemoveRequest::PrimarySize) {
+    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
+    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    return;
+  }
+  memset(_request_buffer.data(), 0, ScheduleRemoveRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ScheduleRemoveRequest*>(_request_buffer.data());
+  _request.unbind_self = std::move(unbind_self);
+  _request_buffer.set_actual(sizeof(ScheduleRemoveRequest));
+  ::fidl::DecodedMessage<ScheduleRemoveRequest> _decoded_request(std::move(_request_buffer));
+  Super::operator=(
+      Coordinator::InPlace::ScheduleRemove(std::move(_client_end), std::move(_decoded_request)));
 }
 
-zx_status_t Coordinator::Call::ScheduleRemove_Deprecated(zx::unowned_channel _client_end) {
+Coordinator::UnownedResultOf::ScheduleRemove Coordinator::SyncClient::ScheduleRemove(::fidl::BytePart _request_buffer, bool unbind_self) {
+  return UnownedResultOf::ScheduleRemove(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(unbind_self));
+}
+
+Coordinator::UnownedResultOf::ScheduleRemove Coordinator::Call::ScheduleRemove(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool unbind_self) {
+  return UnownedResultOf::ScheduleRemove(std::move(_client_end), std::move(_request_buffer), std::move(unbind_self));
+}
+
+zx_status_t Coordinator::SyncClient::ScheduleRemove_Deprecated(bool unbind_self) {
+  return Coordinator::Call::ScheduleRemove_Deprecated(zx::unowned_channel(this->channel_), std::move(unbind_self));
+}
+
+zx_status_t Coordinator::Call::ScheduleRemove_Deprecated(zx::unowned_channel _client_end, bool unbind_self) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleRemoveRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<ScheduleRemoveRequest*>(_write_bytes);
   _request._hdr.ordinal = kCoordinator_ScheduleRemove_Ordinal;
+  _request.unbind_self = std::move(unbind_self);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ScheduleRemoveRequest));
   ::fidl::DecodedMessage<ScheduleRemoveRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -2570,12 +2598,27 @@ zx_status_t Coordinator::Call::ScheduleRemove_Deprecated(zx::unowned_channel _cl
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
-::fidl::internal::StatusAndError Coordinator::InPlace::ScheduleRemove(zx::unowned_channel _client_end) {
-  constexpr uint32_t _write_num_bytes = sizeof(ScheduleRemoveRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<ScheduleRemoveRequest> params(std::move(_request_buffer));
+zx_status_t Coordinator::SyncClient::ScheduleRemove_Deprecated(::fidl::BytePart _request_buffer, bool unbind_self) {
+  return Coordinator::Call::ScheduleRemove_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(unbind_self));
+}
+
+zx_status_t Coordinator::Call::ScheduleRemove_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool unbind_self) {
+  if (_request_buffer.capacity() < ScheduleRemoveRequest::PrimarySize) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  auto& _request = *reinterpret_cast<ScheduleRemoveRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kCoordinator_ScheduleRemove_Ordinal;
+  _request.unbind_self = std::move(unbind_self);
+  _request_buffer.set_actual(sizeof(ScheduleRemoveRequest));
+  ::fidl::DecodedMessage<ScheduleRemoveRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+}
+
+::fidl::internal::StatusAndError Coordinator::InPlace::ScheduleRemove(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ScheduleRemoveRequest> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kCoordinator_ScheduleRemove_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
@@ -4310,7 +4353,8 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         txn->Close(ZX_ERR_INVALID_ARGS);
         return true;
       }
-      impl->ScheduleRemove(
+      auto message = result.message.message();
+      impl->ScheduleRemove(std::move(message->unbind_self),
         Interface::ScheduleRemoveCompleter::Sync(txn));
       return true;
     }

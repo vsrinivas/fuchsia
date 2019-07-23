@@ -544,10 +544,10 @@ static zx_status_t fidl_DeviceControllerRunCompatibilityTests(void* ctx, int64_t
     return device_run_compatibility_tests(conn->dev, hook_wait_time);
 }
 
-static zx_status_t fidl_DeviceControllerUnbind(void* ctx, fidl_txn_t* txn) {
+static zx_status_t fidl_DeviceControllerScheduleUnbind(void* ctx, fidl_txn_t* txn) {
   auto conn = static_cast<DevfsConnection*>(ctx);
   zx_status_t status = device_unbind(conn->dev);
-  return fuchsia_device_ControllerUnbind_reply(txn, status);
+  return fuchsia_device_ControllerScheduleUnbind_reply(txn, status);
 }
 
 static zx_status_t fidl_DeviceControllerGetDriverName(void* ctx, fidl_txn_t* txn) {
@@ -629,7 +629,7 @@ static zx_status_t fidl_DeviceControllerDebugResume(void* ctx, fidl_txn_t* txn) 
 
 static const fuchsia_device_Controller_ops_t kDeviceControllerOps = {
     .Bind = fidl_DeviceControllerBind,
-    .Unbind = fidl_DeviceControllerUnbind,
+    .ScheduleUnbind = fidl_DeviceControllerScheduleUnbind,
     .GetDriverName = fidl_DeviceControllerGetDriverName,
     .GetDeviceName = fidl_DeviceControllerGetDeviceName,
     .GetTopologicalPath = fidl_DeviceControllerGetTopologicalPath,

@@ -55,7 +55,7 @@ public:
     ~NandDevice() {
         if (linked_) {
             zx_status_t call_status;
-            fuchsia_device_ControllerUnbind(channel(), &call_status);
+            fuchsia_device_ControllerScheduleUnbind(channel(), &call_status);
         }
     }
 

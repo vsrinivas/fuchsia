@@ -954,7 +954,7 @@ class UnbindTestCase : public MultipleDeviceTestCase {
   // schedule removal of.
   // If |unbind_children_only| is true, it will skip removal of the target device.
   void UnbindTest(DeviceDesc devices[], size_t num_devices, size_t target_device_index,
-                  bool unbind_children_only = false);
+                  bool unbind_children_only = false, bool unbind_target_device = false);
 };
 
 TEST_F(UnbindTestCase, UnbindLeaf) {
@@ -1025,8 +1025,24 @@ TEST_F(UnbindTestCase, UnbindChildrenOnly) {
                                       true /* unbind_children_only */));
 }
 
+TEST_F(UnbindTestCase, UnbindSelf) {
+  DeviceDesc devices[] = {
+    { UINT32_MAX, "root_child1", Action::kUnbind },  // Require unbinding of the target device.
+    { UINT32_MAX, "root_child2" },
+    { 0, "root_child1_1", Action::kUnbind },
+    { 0, "root_child1_2", Action::kUnbind },
+    { 2, "root_child1_1_1", Action::kUnbind },
+    { 1, "root_child2_1" },
+  };
+  // Unbind root_child1.
+  size_t index_to_remove = 0;
+  ASSERT_NO_FATAL_FAILURES(UnbindTest(devices, fbl::count_of(devices), index_to_remove,
+                           false /* unbind_children_only */, true /* unbind_target_device */));
+}
+
 void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
-                                size_t target_device_index, bool unbind_children_only) {
+                                size_t target_device_index, bool unbind_children_only,
+                                bool unbind_target_device) {
   size_t num_to_unbind = 0;
   for (size_t i = 0; i < num_devices; i++) {
     auto& desc = devices[i];
@@ -1050,7 +1066,8 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
         coordinator_.ScheduleDevhostRequestedUnbindChildren(device(desc.index)->device));
   } else {
     ASSERT_NO_FATAL_FAILURES(
-        coordinator_.ScheduleDevhostRequestedRemove(device(desc.index)->device));
+        coordinator_.ScheduleDevhostRequestedRemove(
+            device(desc.index)->device, unbind_target_device));
   }
   loop()->RunUntilIdle();
 

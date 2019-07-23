@@ -188,7 +188,8 @@ protocol Coordinator {
 
     /// Requests the devcoordinator schedule the removal of this device,
     /// and the unbinding of its children.
-    ScheduleRemove();
+    /// If |unbind_self| is true, the unbind hook for this device will also be called.
+    ScheduleRemove(bool unbind_self);
 
     /// Requests the devcoordinator schedule the unbinding of this device's children.
     ScheduleUnbindChildren();

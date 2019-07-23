@@ -247,7 +247,7 @@ private:
 
     static zx_status_t DestroyByHandle(zx::channel ramdisk) {
         zx_status_t call_status;
-        zx_status_t status = fuchsia_device_ControllerUnbind(ramdisk.get(), &call_status);
+        zx_status_t status = fuchsia_device_ControllerScheduleUnbind(ramdisk.get(), &call_status);
         if (status != ZX_OK) {
             return status;
         }

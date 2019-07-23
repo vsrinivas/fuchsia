@@ -38,7 +38,8 @@ protocol Controller {
     /// Attempt to bind the requested driver to this device
     Bind(string:MAX_DRIVER_PATH_LEN driver) -> (zx.status status);
     /// Disconnect this device and allow its parent to be bound again.
-    Unbind() -> (zx.status status);
+    /// This may not complete before it returns.
+    ScheduleUnbind() -> (zx.status status);
 
     /// Return the name of the driver managing this the device
     GetDriverName() -> (zx.status status, string:MAX_DRIVER_NAME_LEN? name);

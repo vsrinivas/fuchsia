@@ -15,8 +15,8 @@ constexpr uint64_t kController_Bind_Ordinal = 0x30b1cd5d00000000lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kController_Unbind_Ordinal = 0x5f6dd84800000000lu;
-extern "C" const fidl_type_t fuchsia_device_ControllerUnbindResponseTable;
+constexpr uint64_t kController_ScheduleUnbind_Ordinal = 0xd0cd4ba00000000lu;
+extern "C" const fidl_type_t fuchsia_device_ControllerScheduleUnbindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDriverName_Ordinal = 0x76995acd00000000lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDriverNameResponseTable;
@@ -186,64 +186,64 @@ zx_status_t Controller::Call::Bind_Deprecated(zx::unowned_channel _client_end, :
 }
 
 template <>
-Controller::ResultOf::Unbind_Impl<Controller::UnbindResponse>::Unbind_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnbindRequest>();
+Controller::ResultOf::ScheduleUnbind_Impl<Controller::ScheduleUnbindResponse>::ScheduleUnbind_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindRequest>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, UnbindRequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(UnbindRequest));
-  ::fidl::DecodedMessage<UnbindRequest> _decoded_request(std::move(_request_bytes));
+  memset(_write_bytes, 0, ScheduleUnbindRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ScheduleUnbindRequest));
+  ::fidl::DecodedMessage<ScheduleUnbindRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Controller::InPlace::Unbind(std::move(_client_end), Super::response_buffer()));
+      Controller::InPlace::ScheduleUnbind(std::move(_client_end), Super::response_buffer()));
 }
 
-Controller::ResultOf::Unbind Controller::SyncClient::Unbind() {
-  return ResultOf::Unbind(zx::unowned_channel(this->channel_));
+Controller::ResultOf::ScheduleUnbind Controller::SyncClient::ScheduleUnbind() {
+  return ResultOf::ScheduleUnbind(zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::Unbind Controller::Call::Unbind(zx::unowned_channel _client_end) {
-  return ResultOf::Unbind(std::move(_client_end));
+Controller::ResultOf::ScheduleUnbind Controller::Call::ScheduleUnbind(zx::unowned_channel _client_end) {
+  return ResultOf::ScheduleUnbind(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::Unbind_Impl<Controller::UnbindResponse>::Unbind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(UnbindRequest)] = {};
+Controller::UnownedResultOf::ScheduleUnbind_Impl<Controller::ScheduleUnbindResponse>::ScheduleUnbind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ScheduleUnbindRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, UnbindRequest::PrimarySize);
-  _request_buffer.set_actual(sizeof(UnbindRequest));
-  ::fidl::DecodedMessage<UnbindRequest> _decoded_request(std::move(_request_buffer));
+  memset(_request_buffer.data(), 0, ScheduleUnbindRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(ScheduleUnbindRequest));
+  ::fidl::DecodedMessage<ScheduleUnbindRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Controller::InPlace::Unbind(std::move(_client_end), std::move(_response_buffer)));
+      Controller::InPlace::ScheduleUnbind(std::move(_client_end), std::move(_response_buffer)));
 }
 
-Controller::UnownedResultOf::Unbind Controller::SyncClient::Unbind(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Unbind(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+Controller::UnownedResultOf::ScheduleUnbind Controller::SyncClient::ScheduleUnbind(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::ScheduleUnbind(zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::Unbind Controller::Call::Unbind(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Unbind(std::move(_client_end), std::move(_response_buffer));
+Controller::UnownedResultOf::ScheduleUnbind Controller::Call::ScheduleUnbind(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::ScheduleUnbind(std::move(_client_end), std::move(_response_buffer));
 }
 
-zx_status_t Controller::SyncClient::Unbind_Deprecated(int32_t* out_status) {
-  return Controller::Call::Unbind_Deprecated(zx::unowned_channel(this->channel_), out_status);
+zx_status_t Controller::SyncClient::ScheduleUnbind_Deprecated(int32_t* out_status) {
+  return Controller::Call::ScheduleUnbind_Deprecated(zx::unowned_channel(this->channel_), out_status);
 }
 
-zx_status_t Controller::Call::Unbind_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnbindRequest>();
+zx_status_t Controller::Call::ScheduleUnbind_Deprecated(zx::unowned_channel _client_end, int32_t* out_status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _request = *reinterpret_cast<UnbindRequest*>(_write_bytes);
-  _request._hdr.ordinal = kController_Unbind_Ordinal;
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(UnbindRequest));
-  ::fidl::DecodedMessage<UnbindRequest> _decoded_request(std::move(_request_bytes));
+  auto& _request = *reinterpret_cast<ScheduleUnbindRequest*>(_write_bytes);
+  _request._hdr.ordinal = kController_ScheduleUnbind_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ScheduleUnbindRequest));
+  ::fidl::DecodedMessage<ScheduleUnbindRequest> _decoded_request(std::move(_request_bytes));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<UnbindResponse>();
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindResponse>();
   FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
   ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
-  auto _call_result = ::fidl::Call<UnbindRequest, UnbindResponse>(
+  auto _call_result = ::fidl::Call<ScheduleUnbindRequest, ScheduleUnbindResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_bytes));
   if (_call_result.status != ZX_OK) {
     return _call_result.status;
@@ -257,25 +257,25 @@ zx_status_t Controller::Call::Unbind_Deprecated(zx::unowned_channel _client_end,
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Controller::UnbindResponse> Controller::SyncClient::Unbind_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Controller::Call::Unbind_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Controller::ScheduleUnbindResponse> Controller::SyncClient::ScheduleUnbind_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Controller::Call::ScheduleUnbind_Deprecated(zx::unowned_channel(this->channel_), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Controller::UnbindResponse> Controller::Call::Unbind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(UnbindRequest)] = {};
+::fidl::DecodeResult<Controller::ScheduleUnbindResponse> Controller::Call::ScheduleUnbind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ScheduleUnbindRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  auto& _request = *reinterpret_cast<UnbindRequest*>(_request_buffer.data());
-  _request._hdr.ordinal = kController_Unbind_Ordinal;
-  _request_buffer.set_actual(sizeof(UnbindRequest));
-  ::fidl::DecodedMessage<UnbindRequest> _decoded_request(std::move(_request_buffer));
+  auto& _request = *reinterpret_cast<ScheduleUnbindRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kController_ScheduleUnbind_Ordinal;
+  _request_buffer.set_actual(sizeof(ScheduleUnbindRequest));
+  ::fidl::DecodedMessage<ScheduleUnbindRequest> _decoded_request(std::move(_request_buffer));
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<UnbindResponse>(_encode_request_result.status, _encode_request_result.error);
+    return ::fidl::DecodeResult<ScheduleUnbindResponse>(_encode_request_result.status, _encode_request_result.error);
   }
-  auto _call_result = ::fidl::Call<UnbindRequest, UnbindResponse>(
+  auto _call_result = ::fidl::Call<ScheduleUnbindRequest, ScheduleUnbindResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(_response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<UnbindResponse>(_call_result.status, _call_result.error);
+    return ::fidl::DecodeResult<ScheduleUnbindResponse>(_call_result.status, _call_result.error);
   }
   auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
   if (_decode_result.status != ZX_OK) {
@@ -286,23 +286,23 @@ zx_status_t Controller::Call::Unbind_Deprecated(zx::unowned_channel _client_end,
   return _decode_result;
 }
 
-::fidl::DecodeResult<Controller::UnbindResponse> Controller::InPlace::Unbind(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(UnbindRequest);
+::fidl::DecodeResult<Controller::ScheduleUnbindResponse> Controller::InPlace::ScheduleUnbind(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(ScheduleUnbindRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<UnbindRequest> params(std::move(_request_buffer));
+  ::fidl::DecodedMessage<ScheduleUnbindRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kController_Unbind_Ordinal;
+  params.message()->_hdr.ordinal = kController_ScheduleUnbind_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Controller::UnbindResponse>::FromFailure(
+    return ::fidl::DecodeResult<Controller::ScheduleUnbindResponse>::FromFailure(
         std::move(_encode_request_result));
   }
-  auto _call_result = ::fidl::Call<UnbindRequest, UnbindResponse>(
+  auto _call_result = ::fidl::Call<ScheduleUnbindRequest, ScheduleUnbindResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Controller::UnbindResponse>::FromFailure(
+    return ::fidl::DecodeResult<Controller::ScheduleUnbindResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -1358,15 +1358,15 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         Interface::BindCompleter::Sync(txn));
       return true;
     }
-    case kController_Unbind_Ordinal:
+    case kController_ScheduleUnbind_Ordinal:
     {
-      auto result = ::fidl::DecodeAs<UnbindRequest>(msg);
+      auto result = ::fidl::DecodeAs<ScheduleUnbindRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
         return true;
       }
-      impl->Unbind(
-        Interface::UnbindCompleter::Sync(txn));
+      impl->ScheduleUnbind(
+        Interface::ScheduleUnbindCompleter::Sync(txn));
       return true;
     }
     case kController_GetDriverName_Ordinal:
@@ -1515,31 +1515,31 @@ void Controller::Interface::BindCompleterBase::Reply(::fidl::DecodedMessage<Bind
 }
 
 
-void Controller::Interface::UnbindCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnbindResponse>();
+void Controller::Interface::ScheduleUnbindCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<UnbindResponse*>(_write_bytes);
-  _response._hdr.ordinal = kController_Unbind_Ordinal;
+  auto& _response = *reinterpret_cast<ScheduleUnbindResponse*>(_write_bytes);
+  _response._hdr.ordinal = kController_ScheduleUnbind_Ordinal;
   _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(UnbindResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<UnbindResponse>(std::move(_response_bytes)));
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ScheduleUnbindResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ScheduleUnbindResponse>(std::move(_response_bytes)));
 }
 
-void Controller::Interface::UnbindCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
-  if (_buffer.capacity() < UnbindResponse::PrimarySize) {
+void Controller::Interface::ScheduleUnbindCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < ScheduleUnbindResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<UnbindResponse*>(_buffer.data());
-  _response._hdr.ordinal = kController_Unbind_Ordinal;
+  auto& _response = *reinterpret_cast<ScheduleUnbindResponse*>(_buffer.data());
+  _response._hdr.ordinal = kController_ScheduleUnbind_Ordinal;
   _response.status = std::move(status);
-  _buffer.set_actual(sizeof(UnbindResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<UnbindResponse>(std::move(_buffer)));
+  _buffer.set_actual(sizeof(ScheduleUnbindResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ScheduleUnbindResponse>(std::move(_buffer)));
 }
 
-void Controller::Interface::UnbindCompleterBase::Reply(::fidl::DecodedMessage<UnbindResponse> params) {
+void Controller::Interface::ScheduleUnbindCompleterBase::Reply(::fidl::DecodedMessage<ScheduleUnbindResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kController_Unbind_Ordinal;
+  params.message()->_hdr.ordinal = kController_ScheduleUnbind_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

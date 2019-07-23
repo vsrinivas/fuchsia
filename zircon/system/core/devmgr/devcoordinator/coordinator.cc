@@ -630,9 +630,9 @@ void Coordinator::ScheduleRemove(const fbl::RefPtr<Device>& dev) {
       UnbindTaskOpts{.do_unbind = false, .post_on_create = true, .devhost_requested = false});
 }
 
-void Coordinator::ScheduleDevhostRequestedRemove(const fbl::RefPtr<Device>& dev) {
+void Coordinator::ScheduleDevhostRequestedRemove(const fbl::RefPtr<Device>& dev, bool do_unbind) {
   dev->RequestUnbindTask(
-      UnbindTaskOpts{.do_unbind = false, .post_on_create = true, .devhost_requested = true});
+      UnbindTaskOpts{.do_unbind = do_unbind, .post_on_create = true, .devhost_requested = true});
 }
 
 void Coordinator::ScheduleDevhostRequestedUnbindChildren(const fbl::RefPtr<Device>& parent) {

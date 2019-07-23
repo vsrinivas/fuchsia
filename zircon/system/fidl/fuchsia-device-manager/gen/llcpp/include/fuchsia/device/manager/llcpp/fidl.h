@@ -1881,6 +1881,7 @@ extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceRequestT
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibleRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibleResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleRemoveRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDeviceResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorMakeVisibleResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorBindDeviceRequestTable;
@@ -1965,7 +1966,16 @@ class Coordinator final {
     using ResponseType = AddDeviceInvisibleResponse;
   };
 
-  using ScheduleRemoveRequest = ::fidl::AnyZeroArgMessage;
+  struct ScheduleRemoveRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    bool unbind_self;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorScheduleRemoveRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+  };
 
   using ScheduleUnbindChildrenRequest = ::fidl::AnyZeroArgMessage;
 
@@ -2250,7 +2260,7 @@ class Coordinator final {
     class ScheduleRemove_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      ScheduleRemove_Impl(zx::unowned_channel _client_end);
+      ScheduleRemove_Impl(zx::unowned_channel _client_end, bool unbind_self);
       ~ScheduleRemove_Impl() = default;
       ScheduleRemove_Impl(ScheduleRemove_Impl&& other) = default;
       ScheduleRemove_Impl& operator=(ScheduleRemove_Impl&& other) = default;
@@ -2473,7 +2483,7 @@ class Coordinator final {
     class ScheduleRemove_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      ScheduleRemove_Impl(zx::unowned_channel _client_end);
+      ScheduleRemove_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool unbind_self);
       ~ScheduleRemove_Impl() = default;
       ScheduleRemove_Impl(ScheduleRemove_Impl&& other) = default;
       ScheduleRemove_Impl& operator=(ScheduleRemove_Impl&& other) = default;
@@ -2740,12 +2750,25 @@ class Coordinator final {
 
     // Requests the devcoordinator schedule the removal of this device,
     // and the unbinding of its children.
-    ResultOf::ScheduleRemove ScheduleRemove();
-
+    // If |unbind_self| is true, the unbind hook for this device will also be called.
+    ResultOf::ScheduleRemove ScheduleRemove(bool unbind_self);
 
     // Requests the devcoordinator schedule the removal of this device,
     // and the unbinding of its children.
-    zx_status_t ScheduleRemove_Deprecated();
+    // If |unbind_self| is true, the unbind hook for this device will also be called.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::ScheduleRemove ScheduleRemove(::fidl::BytePart _request_buffer, bool unbind_self);
+
+    // Requests the devcoordinator schedule the removal of this device,
+    // and the unbinding of its children.
+    // If |unbind_self| is true, the unbind hook for this device will also be called.
+    zx_status_t ScheduleRemove_Deprecated(bool unbind_self);
+
+    // Requests the devcoordinator schedule the removal of this device,
+    // and the unbinding of its children.
+    // If |unbind_self| is true, the unbind hook for this device will also be called.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    zx_status_t ScheduleRemove_Deprecated(::fidl::BytePart _request_buffer, bool unbind_self);
 
     // Requests the devcoordinator schedule the unbinding of this device's children.
     ResultOf::ScheduleUnbindChildren ScheduleUnbindChildren();
@@ -3081,12 +3104,25 @@ class Coordinator final {
 
     // Requests the devcoordinator schedule the removal of this device,
     // and the unbinding of its children.
-    static ResultOf::ScheduleRemove ScheduleRemove(zx::unowned_channel _client_end);
-
+    // If |unbind_self| is true, the unbind hook for this device will also be called.
+    static ResultOf::ScheduleRemove ScheduleRemove(zx::unowned_channel _client_end, bool unbind_self);
 
     // Requests the devcoordinator schedule the removal of this device,
     // and the unbinding of its children.
-    static zx_status_t ScheduleRemove_Deprecated(zx::unowned_channel _client_end);
+    // If |unbind_self| is true, the unbind hook for this device will also be called.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::ScheduleRemove ScheduleRemove(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool unbind_self);
+
+    // Requests the devcoordinator schedule the removal of this device,
+    // and the unbinding of its children.
+    // If |unbind_self| is true, the unbind hook for this device will also be called.
+    static zx_status_t ScheduleRemove_Deprecated(zx::unowned_channel _client_end, bool unbind_self);
+
+    // Requests the devcoordinator schedule the removal of this device,
+    // and the unbinding of its children.
+    // If |unbind_self| is true, the unbind hook for this device will also be called.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t ScheduleRemove_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool unbind_self);
 
     // Requests the devcoordinator schedule the unbinding of this device's children.
     static ResultOf::ScheduleUnbindChildren ScheduleUnbindChildren(zx::unowned_channel _client_end);
@@ -3373,7 +3409,8 @@ class Coordinator final {
 
     // Requests the devcoordinator schedule the removal of this device,
     // and the unbinding of its children.
-    static ::fidl::internal::StatusAndError ScheduleRemove(zx::unowned_channel _client_end);
+    // If |unbind_self| is true, the unbind hook for this device will also be called.
+    static ::fidl::internal::StatusAndError ScheduleRemove(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ScheduleRemoveRequest> params);
 
     // Requests the devcoordinator schedule the unbinding of this device's children.
     static ::fidl::internal::StatusAndError ScheduleUnbindChildren(zx::unowned_channel _client_end);
@@ -3475,7 +3512,7 @@ class Coordinator final {
 
     using ScheduleRemoveCompleter = ::fidl::Completer<>;
 
-    virtual void ScheduleRemove(ScheduleRemoveCompleter::Sync _completer) = 0;
+    virtual void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync _completer) = 0;
 
     using ScheduleUnbindChildrenCompleter = ::fidl::Completer<>;
 
@@ -3909,6 +3946,14 @@ static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceIn
     == ::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleResponse, status) == 16);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleResponse, local_device_id) == 24);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::ScheduleRemoveRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::Coordinator::ScheduleRemoveRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::ScheduleRemoveRequest)
+    == ::llcpp::fuchsia::device::manager::Coordinator::ScheduleRemoveRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::ScheduleRemoveRequest, unbind_self) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::RemoveDeviceResponse> : public std::true_type {};

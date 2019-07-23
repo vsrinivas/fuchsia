@@ -27,7 +27,7 @@ class NameProvider;
 
 extern "C" const fidl_type_t fuchsia_device_ControllerBindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindResponseTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerUnbindResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerScheduleUnbindResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDriverNameResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDeviceNameResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathResponseTable;
@@ -63,17 +63,17 @@ class Controller final {
     using ResponseType = BindResponse;
   };
 
-  struct UnbindResponse final {
+  struct ScheduleUnbindResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerUnbindResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerScheduleUnbindResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
   };
-  using UnbindRequest = ::fidl::AnyZeroArgMessage;
+  using ScheduleUnbindRequest = ::fidl::AnyZeroArgMessage;
 
   struct GetDriverNameResponse final {
     FIDL_ALIGNDECL
@@ -225,13 +225,13 @@ class Controller final {
       using Super::Unwrap;
     };
     template <typename ResponseType>
-    class Unbind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class ScheduleUnbind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Unbind_Impl(zx::unowned_channel _client_end);
-      ~Unbind_Impl() = default;
-      Unbind_Impl(Unbind_Impl&& other) = default;
-      Unbind_Impl& operator=(Unbind_Impl&& other) = default;
+      ScheduleUnbind_Impl(zx::unowned_channel _client_end);
+      ~ScheduleUnbind_Impl() = default;
+      ScheduleUnbind_Impl(ScheduleUnbind_Impl&& other) = default;
+      ScheduleUnbind_Impl& operator=(ScheduleUnbind_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::Unwrap;
@@ -347,7 +347,7 @@ class Controller final {
 
    public:
     using Bind = Bind_Impl<BindResponse>;
-    using Unbind = Unbind_Impl<UnbindResponse>;
+    using ScheduleUnbind = ScheduleUnbind_Impl<ScheduleUnbindResponse>;
     using GetDriverName = GetDriverName_Impl<GetDriverNameResponse>;
     using GetDeviceName = GetDeviceName_Impl<GetDeviceNameResponse>;
     using GetTopologicalPath = GetTopologicalPath_Impl<GetTopologicalPathResponse>;
@@ -376,13 +376,13 @@ class Controller final {
       using Super::Unwrap;
     };
     template <typename ResponseType>
-    class Unbind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class ScheduleUnbind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Unbind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~Unbind_Impl() = default;
-      Unbind_Impl(Unbind_Impl&& other) = default;
-      Unbind_Impl& operator=(Unbind_Impl&& other) = default;
+      ScheduleUnbind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~ScheduleUnbind_Impl() = default;
+      ScheduleUnbind_Impl(ScheduleUnbind_Impl&& other) = default;
+      ScheduleUnbind_Impl& operator=(ScheduleUnbind_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::Unwrap;
@@ -498,7 +498,7 @@ class Controller final {
 
    public:
     using Bind = Bind_Impl<BindResponse>;
-    using Unbind = Unbind_Impl<UnbindResponse>;
+    using ScheduleUnbind = ScheduleUnbind_Impl<ScheduleUnbindResponse>;
     using GetDriverName = GetDriverName_Impl<GetDriverNameResponse>;
     using GetDeviceName = GetDeviceName_Impl<GetDeviceNameResponse>;
     using GetTopologicalPath = GetTopologicalPath_Impl<GetTopologicalPathResponse>;
@@ -537,19 +537,23 @@ class Controller final {
     ::fidl::DecodeResult<BindResponse> Bind_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Disconnect this device and allow its parent to be bound again.
-    ResultOf::Unbind Unbind();
+    // This may not complete before it returns.
+    ResultOf::ScheduleUnbind ScheduleUnbind();
 
     // Disconnect this device and allow its parent to be bound again.
+    // This may not complete before it returns.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::Unbind Unbind(::fidl::BytePart _response_buffer);
+    UnownedResultOf::ScheduleUnbind ScheduleUnbind(::fidl::BytePart _response_buffer);
 
     // Disconnect this device and allow its parent to be bound again.
-    zx_status_t Unbind_Deprecated(int32_t* out_status);
+    // This may not complete before it returns.
+    zx_status_t ScheduleUnbind_Deprecated(int32_t* out_status);
 
     // Disconnect this device and allow its parent to be bound again.
+    // This may not complete before it returns.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<UnbindResponse> Unbind_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
+    ::fidl::DecodeResult<ScheduleUnbindResponse> ScheduleUnbind_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Return the name of the driver managing this the device
     ResultOf::GetDriverName GetDriverName();
@@ -724,19 +728,23 @@ class Controller final {
     static ::fidl::DecodeResult<BindResponse> Bind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Disconnect this device and allow its parent to be bound again.
-    static ResultOf::Unbind Unbind(zx::unowned_channel _client_end);
+    // This may not complete before it returns.
+    static ResultOf::ScheduleUnbind ScheduleUnbind(zx::unowned_channel _client_end);
 
     // Disconnect this device and allow its parent to be bound again.
+    // This may not complete before it returns.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Unbind Unbind(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ScheduleUnbind ScheduleUnbind(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Disconnect this device and allow its parent to be bound again.
-    static zx_status_t Unbind_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
+    // This may not complete before it returns.
+    static zx_status_t ScheduleUnbind_Deprecated(zx::unowned_channel _client_end, int32_t* out_status);
 
     // Disconnect this device and allow its parent to be bound again.
+    // This may not complete before it returns.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<UnbindResponse> Unbind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
+    static ::fidl::DecodeResult<ScheduleUnbindResponse> ScheduleUnbind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Return the name of the driver managing this the device
     static ResultOf::GetDriverName GetDriverName(zx::unowned_channel _client_end);
@@ -898,7 +906,8 @@ class Controller final {
     static ::fidl::DecodeResult<BindResponse> Bind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer);
 
     // Disconnect this device and allow its parent to be bound again.
-    static ::fidl::DecodeResult<UnbindResponse> Unbind(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    // This may not complete before it returns.
+    static ::fidl::DecodeResult<ScheduleUnbindResponse> ScheduleUnbind(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Return the name of the driver managing this the device
     static ::fidl::DecodeResult<GetDriverNameResponse> GetDriverName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
@@ -956,19 +965,19 @@ class Controller final {
 
     virtual void Bind(::fidl::StringView driver, BindCompleter::Sync _completer) = 0;
 
-    class UnbindCompleterBase : public _Base {
+    class ScheduleUnbindCompleterBase : public _Base {
      public:
       void Reply(int32_t status);
       void Reply(::fidl::BytePart _buffer, int32_t status);
-      void Reply(::fidl::DecodedMessage<UnbindResponse> params);
+      void Reply(::fidl::DecodedMessage<ScheduleUnbindResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using UnbindCompleter = ::fidl::Completer<UnbindCompleterBase>;
+    using ScheduleUnbindCompleter = ::fidl::Completer<ScheduleUnbindCompleterBase>;
 
-    virtual void Unbind(UnbindCompleter::Sync _completer) = 0;
+    virtual void ScheduleUnbind(ScheduleUnbindCompleter::Sync _completer) = 0;
 
     class GetDriverNameCompleterBase : public _Base {
      public:
@@ -1433,12 +1442,12 @@ static_assert(sizeof(::llcpp::fuchsia::device::Controller::BindResponse)
 static_assert(offsetof(::llcpp::fuchsia::device::Controller::BindResponse, status) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::device::Controller::UnbindResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::device::Controller::ScheduleUnbindResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::Controller::UnbindResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::Controller::UnbindResponse)
-    == ::llcpp::fuchsia::device::Controller::UnbindResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::Controller::UnbindResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::device::Controller::ScheduleUnbindResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::Controller::ScheduleUnbindResponse)
+    == ::llcpp::fuchsia::device::Controller::ScheduleUnbindResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::ScheduleUnbindResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller::GetDriverNameResponse> : public std::true_type {};

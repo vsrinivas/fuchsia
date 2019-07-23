@@ -145,7 +145,7 @@ TEST_F(CompositeDeviceTest, DISABLED_UnbindComponent) {
         PROMISE_ASSERT(ASSERT_EQ(status, ZX_OK));
 
         fit::bridge<void, Error> bridge;
-        child1_controller->Unbind([completer=std::move(bridge.completer)](
+        child1_controller->ScheduleUnbind([completer=std::move(bridge.completer)](
                 zx_status_t status) mutable {
             if (status == ZX_OK) {
                 completer.complete_ok();

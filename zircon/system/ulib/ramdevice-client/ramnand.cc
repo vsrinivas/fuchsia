@@ -153,7 +153,7 @@ RamNand::~RamNand() {
             return;
         }
         zx_status_t call_status;
-        status = fuchsia_device_ControllerUnbind(dev.get(), &call_status);
+        status = fuchsia_device_ControllerScheduleUnbind(dev.get(), &call_status);
         if (status == ZX_OK) {
             status = call_status;
         }

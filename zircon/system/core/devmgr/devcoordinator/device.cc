@@ -433,7 +433,7 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
                                            size_t driver_path_size, const char* args_data,
                                            size_t args_size, zx_handle_t raw_client_remote,
                                            fidl_txn_t* txn);
-static zx_status_t fidl_ScheduleRemove(void* ctx);
+static zx_status_t fidl_ScheduleRemove(void* ctx, bool unbind_self);
 static zx_status_t fidl_ScheduleUnbindChildren(void* ctx);
 static zx_status_t fidl_UnbindDone(void* ctx);
 static zx_status_t fidl_RemoveDevice(void* ctx, fidl_txn_t* txn);
@@ -827,12 +827,12 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
   return fuchsia_device_manager_CoordinatorAddDeviceInvisible_reply(txn, status, local_id);
 }
 
-static zx_status_t fidl_ScheduleRemove(void* ctx) {
+static zx_status_t fidl_ScheduleRemove(void* ctx, bool unbind_self) {
   auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
 
   log(DEVLC, "devcoordinator: schedule remove '%s'\n", dev->name().data());
 
-  dev->coordinator->ScheduleDevhostRequestedRemove(dev);
+  dev->coordinator->ScheduleDevhostRequestedRemove(dev, unbind_self);
 
   return ZX_OK;
 }

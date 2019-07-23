@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     }
 
     zx_status_t call_status;
-    status = fuchsia_device_ControllerUnbind(local.get(), &call_status);
+    status = fuchsia_device_ControllerScheduleUnbind(local.get(), &call_status);
     if (status == ZX_OK) {
         status = call_status;
     }
