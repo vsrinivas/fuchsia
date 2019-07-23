@@ -9,10 +9,10 @@ pub mod tests {
         fidl, fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device as wlan_device,
         fidl_fuchsia_wlan_device_service as fidl_wlan_service, fidl_fuchsia_wlan_sme as fidl_sme,
         fidl_fuchsia_wlan_tap as wlantap,
-        fuchsia_async::{self as fasync, temp::TempStreamExt, DurationExt, TimeoutExt},
+        fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
         fuchsia_component as app,
         fuchsia_zircon::{self as zx, prelude::*},
-        futures::channel::mpsc,
+        futures::channel::oneshot,
         futures::prelude::*,
         hex,
         std::panic,
@@ -95,7 +95,8 @@ pub mod tests {
     }
 
     fn verify_auth_resp(helper: &mut test_utils::TestHelper, exec: &mut fasync::Executor) {
-        let (mut sender, receiver) = mpsc::channel::<()>(1);
+        let (sender, receiver) = oneshot::channel::<()>();
+        let mut sender = Some(sender);
         let event_handler = move |event| match event {
             wlantap::WlantapPhyEvent::Tx { args } => {
                 if let Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) =
@@ -105,7 +106,7 @@ pub mod tests {
                         mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body),
                         Some(mac::MgmtBody::Authentication { auth_hdr, .. }) => {
                             assert_eq!({ auth_hdr.status_code }, mac::StatusCode::SUCCESS);
-                            sender.try_send(()).unwrap();
+                            sender.take().map(|s| s.send(()));
                         },
                         "expected authentication frame"
                     );
@@ -119,13 +120,14 @@ pub mod tests {
                 5.seconds(),
                 "waiting for authentication response",
                 event_handler,
-                receiver.map(Ok).try_into_future(),
+                receiver,
             )
-            .unwrap_or_else(|()| unreachable!());
+            .unwrap_or_else(|oneshot::Canceled| panic!());
     }
 
     fn verify_assoc_resp(helper: &mut test_utils::TestHelper, exec: &mut fasync::Executor) {
-        let (mut sender, receiver) = mpsc::channel::<()>(1);
+        let (sender, receiver) = oneshot::channel::<()>();
+        let mut sender = Some(sender);
         let event_handler = move |event| match event {
             wlantap::WlantapPhyEvent::Tx { args } => {
                 if let Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) =
@@ -134,7 +136,7 @@ pub mod tests {
                     match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
                         Some(mac::MgmtBody::AssociationResp { assoc_resp_hdr, .. }) => {
                             assert_eq!({ assoc_resp_hdr.status_code }, mac::StatusCode::SUCCESS);
-                            sender.try_send(()).unwrap();
+                            sender.take().map(|s| s.send(()));
                         }
                         Some(mac::MgmtBody::Unsupported { subtype })
                             if subtype == mac::MgmtSubtype::ACTION => {}
@@ -152,9 +154,9 @@ pub mod tests {
                 5.seconds(),
                 "waiting for association response",
                 event_handler,
-                receiver.map(Ok).try_into_future(),
+                receiver,
             )
-            .unwrap_or_else(|()| unreachable!());
+            .unwrap_or_else(|oneshot::Canceled| panic!());
     }
 
     async fn get_new_added_iface(
