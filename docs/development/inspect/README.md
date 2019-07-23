@@ -20,8 +20,8 @@ that expose information.
 
 # Concepts
 
-Components may expose a tree of **Nodes** (formerly Objects), each of which has a set of
-string-valued **Properties** and numeric **Metrics**.
+Components may expose a tree of **Nodes**, each of which has a set of
+**Properties**.
 
 ![Figure: A tree of **Nodes**s](tree.png)
 
@@ -31,29 +31,44 @@ A node is an exported entity within a component that may have 0 or
 more children. Each node has a name, and each child of a node
 must have a unique name among the children.
 
-![Figure: An **Node**](node.png)
+![Figure: A **Node**](node.png)
 
 ## Property
 
-Nodes may have any number of properties. A property has a key and a
-value which are both strings.
+Nodes may have any number of properties. A property has a string key and a value
+which may be any one of a number of types:
 
-## Metric
+### Numeric Types
 
-Nodes may have any number of metrics. A metric has a string key and numeric value.
+- `UintProperty` - 64-bit unsigned integer.
+- `IntProperty` - 64-bit signed integer.
+- `DoubleProperty` - 64-bit floating point value.
 
-There are three types of metric values:
+### String Types
 
-- `UINT`, a 64-bit unsigned integer.
-- `INT`, a 64-bit signed integer.
-- `DOUBLE`, a 64-bit floating point value.
+- `StringProperty` - UTF-8 string.
+- `ByteVectorProperty` - Vector of bytes.
 
-## Events
+### Array Types
 
-**WORK IN PROGRESS**: Streaming events are planned to be supported in
-the future.
+- `UintArray`, `IntArray`, `DoubleArray` - An array of the corresponding numeric type.
 
-# API
+### Histogram Types
+
+- `LinearUintHistogram`, `LinearIntHistogram`, `LinearDoubleHistogram`
+
+A histogram with fixed-size buckets stored in an array.
+
+- `ExponentialUintHistogram`, `ExponentialIntHistogram`, `ExponentialDoubleHistogram`
+
+A histogram with exponentially sized buckets stored in an array.
+
+## Inspect File Format
+
+The [Inspect File Format](vmo-format/README.md) is a binary format
+that supports efficient insertion, modification, and deletion of Nodes and
+Properties at runtime. Readers take a consistent snapshot of the contents
+without communicating with writers.
 
 ## Filesystem Interface
 
@@ -64,90 +79,99 @@ their hub.
 It is customary for components to expose their primary or root tree as
 `out/objects/root.inspect`.
 
-For the deprecated FIDL interface, a component exposes its root tree as a
-`fuchsia.inspect.Inspect` service file at `out/objects`. Both FIDL and VMO
-reading are currently supported by the `iquery` tool.
-
 The manager for a component's environment may expose its own information
 about the component to the hub. For instance, appmgr exposes
 `system_objects` for each component.
 
-# [C++ Interface](/garnet/public/lib/inspect_deprecated/inspect.h)
+# Language Libraries
 
-Class `Inspector` is the main entrypoint into using the Inspect API.
-Method `CreateTree` returns a new `Tree` object that wraps a VMO.
+## [C++](/zircon/system/ulib/inspect)
 
-Each `Tree` has a root `Node` that can be obtained with `GetRoot`.
+The C++ Inspect Library provides full [writing][cpp-1] and
+[reading][cpp-2] support for the Inspect File Format.
 
-New children can be created underneath the root node, and each node may
-contain any number of metrics and properties. Creation methods return
-an RAII wrapper around the value. This wrapper owns the value stored in
-the VMO, and it automatically removes the wrapped value when deleted.
+Components that write inspect data should refrain from reading that data.
+Reading requires traversing the entire buffer, which is very expensive.
 
-## FIDL Compatibility Mode
+The `Inspector` class provides a wrapper around creating a new buffer
+with one root Node that can be added to. Nodes and Properties have typed
+[wrappers][cpp-3] that automatically delete the underlying data from the
+buffer when they go out of scope.
 
-The C++ interface supports wrapping the deprecated FIDL interface using
-a compatibility mode.
+The [sys\_inspect][cpp-4] library provides a simple `ComponentInspector`
+singleton interface to help with the common case of exposing a single
+hierarchy from the component.
 
-Instead of using `CreateTree` and `Inspector`, you may instead construct
-a node directly with a name to retrieve an exposable node using FIDL.
+The [health][cpp-5] feature supports exposing structured health information
+in a format known by health checking tools.
 
-# Deprecated C++ Interface
+The [test matchers][cpp-6] library provides GMock matchers for verifying
+data that is read out of an Inspect hierarchy in tests.
 
-This interface supports exposing nodes using the fuchsia.inspect.Inspect
-FIDL interface. The main feature this supports over the VMO solution is
-dynamic children and values, though these features are planned for VMO.
+[cpp-1]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/inspect.h
+[cpp-2]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/reader.h
+[cpp-3]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/types.h
+[cpp-4]: /sdk/lib/sys/inspect
+[cpp-5]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/health.h
+[cpp-6]: /sdk/lib/inspect/testing
 
-> Since this interface is deprecated, you will see the term "object"
-> instead of "node".
+## [Rust](/garnet/public/rust/fuchsia-inspect)
 
-## [Object Wrapper](/garnet/public/lib/inspect_deprecated/deprecated/expose.h)
+The Rust Inspect Library provides full [writing][rust-1] and
+[reading][rust-2] support for the Inspect File Format.
 
-Class `Object` is the implementation of a node in C++. It implements
-the `Vnode` and `Inspect` interfaces to expose the node through the
-filesystem and raw FIDL protocols respectively.
+Components that write inspect data should refrain from reading that data.
+Reading requires traversing the entire buffer, which is very expensive.
 
-Helper classes `Property` and `Metric` wrap the functionality of dealing
-with their respective values and serializing to FIDL.
+The `Inspector` class provides a wrapper around creating a new buffer
+with one root Node that can be added to. Nodes and Properties have typed
+[wrappers][rust-3] that automatically delete the underlying data from the
+buffer when they go out of scope.
 
-### On-Demand Values
+The [component][rust-4] module supports a simple `inspector` function to
+handle the common use of exposing a single hierarchy from the component.
 
-Property values, metric values, and even the set of children may be set
-on-demand through callbacks.
+The [health][rust-5] module supports exposing structured health information
+in a format known by health checking tools.
 
-Properties and metrics utilizing a callback will *only* get their value
-by callback until they are set to an explicit value.
+The [testing][rust-6] module supports the `assert_inspect_tree!` macro to
+match Inspect data for testing.
 
-The set of children for a node is the union of its explicitly set
-children and on-demand children provided by callback.
+[rust-1]: https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/struct.Inspector.html
+[rust-2]: https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/reader/index.html
+[rust-3]: https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/index.html
+[rust-4]: https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/component/index.html
+[rust-5]: https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/health/index.html
+[rust-6]: https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/testing/index.html
 
-### Arithmetic
+## [Dart](https://fuchsia.googlesource.com/topaz/+/refs/heads/master/public/dart/fuchsia_inspect/)
 
-`Metric` allows for typed addition and subtraction. The `Set*` methods set
-the type of the metric, and arithmetic operations do not modify this type.
+The Dart Inspect Library provides [write][dart-1] support for the Inspect File Format.
 
-## [ObjectDir](/garnet/public/lib/inspect_deprecated/deprecated/object_dir.h)
+The `Inspect` class provides a wrapper around exposing and writing
+to named Inspect files on the Hub.  Nodes and Properties have typed
+[wrappers][dart-2].
 
-Class `ObjectDir` is a lightweight wrapper around a refcounted pointer
-to an `Object`. `ObjectDirs` are safe to copy, and provide a stable
-reference to a single node.
+Node children and properties are deduplicated automatically by the
+library, so creating the same named property twice simply returns a
+reference to the previously existing property.
 
-`ObjectDir` simplifies traversing a tree of nodes by name and setting
-properties/metrics on those nodes with an STL-style wrapper.
+[Deletion][dart-3] is manual, but it is compatible with Futures and callbacks in Dart:
 
-## [ExposedObject](/garnet/public/lib/inspect_deprecated/deprecated/exposed_object.h)
+```
+var item = parent.child('item');
+itemDeletedFuture.then(() => item.delete());
+```
 
-Class `ExposedObject` is a base class simplifying management of complex
-persistent hierarchies of nodes. It is the recommended implementation
-point for exposing nodes from your components.
-
-An `ExposedObject` is not a node itself, rather it contains a reference
-to the node itself as well as a reference to the (optional) parent for
-the node. On destruction, the `ExposedObject` automatically removes
-itself from its parent without invalidating underlying references to
-the node. This enables developers to expose complex, rapidly changing
-hierarchies of nodes without worrying about node lifetime.
+[dart-1]: https://fuchsia-docs.firebaseapp.com/dart/package-fuchsia_inspect_inspect/Inspect-class.html
+[dart-2]: https://fuchsia-docs.firebaseapp.com/dart/package-fuchsia_inspect_inspect/package-fuchsia_inspect_inspect-library.html
+[dart-3]: https://fuchsia-docs.firebaseapp.com/dart/package-fuchsia_inspect_inspect/Node/delete.html
 
 # Userspace Tools
 
-The primary userspace tool is [iquery](iquery.md), which has its own manual page.
+The primary userspace tool is [iquery](iquery.md), which has its own
+manual page.
+
+You can use the `fx iquery` command to dump out data for the entire
+system, or `fx bugreport` to generate a directory of diagnostic
+information from the system (which includes inspect).
