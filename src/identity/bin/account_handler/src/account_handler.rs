@@ -330,7 +330,7 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            async move |proxy, _| {
+            |proxy, _| async move {
                 let (_, account_server_end) = create_endpoints().unwrap();
                 let (acp_client_end, _) = create_endpoints().unwrap();
                 assert_eq!(
@@ -348,7 +348,7 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            async move |proxy, ahc_client_end| {
+            |proxy, ahc_client_end| async move {
                 let status =
                     await!(proxy
                         .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into()))?;
@@ -375,7 +375,7 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::clone(&inspector),
-            async move |account_handler_proxy, ahc_client_end| {
+            |account_handler_proxy, ahc_client_end| async move {
                 let status = await!(account_handler_proxy
                     .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into()))?;
                 assert_eq!(status, Status::Ok, "wtf");
@@ -421,7 +421,7 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            async move |proxy, ahc_client_end| {
+            |proxy, ahc_client_end| async move {
                 let status =
                     await!(proxy
                         .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into()))?;
@@ -432,7 +432,7 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            async move |proxy, ahc_client_end| {
+            |proxy, ahc_client_end| async move {
                 assert_eq!(
                     await!(
                         proxy.load_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into())
@@ -449,7 +449,7 @@ mod tests {
         request_stream_test(
             AccountLifetime::Ephemeral,
             Arc::new(Inspector::new()),
-            async move |proxy, ahc_client_end| {
+            |proxy, ahc_client_end| async move {
                 let mut expected_id = TEST_ACCOUNT_ID.clone();
                 assert_eq!(
                     await!(proxy.load_account(ahc_client_end, expected_id.as_mut().into()))?,
@@ -467,7 +467,7 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::clone(&inspector),
-            async move |proxy, ahc_client_end| {
+            |proxy, ahc_client_end| async move {
                 assert_inspect_tree!(inspector, root: {
                     account_handler: {
                         lifecycle: "uninitialized",
@@ -527,7 +527,7 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            async move |proxy, _| {
+            |proxy, _| async move {
                 assert_eq!(await!(proxy.remove_account(FORCE_REMOVE_ON))?, Status::InvalidRequest);
                 Ok(())
             },
@@ -540,7 +540,7 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            async move |proxy, ahc_client_end| {
+            |proxy, ahc_client_end| async move {
                 let status =
                     await!(proxy
                         .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into()))?;
@@ -577,7 +577,7 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            async move |proxy, ahc_client_end| {
+            |proxy, ahc_client_end| async move {
                 assert_eq!(
                     await!(proxy.load_account(
                         ahc_client_end,

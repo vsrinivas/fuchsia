@@ -450,7 +450,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_account_name() {
         let mut test = Test::new();
-        await!(test.run(await!(test.create_persistent_account()).unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_persistent_account()).unwrap(), |proxy| async move {
             assert_eq!(await!(proxy.get_account_name())?, Account::DEFAULT_ACCOUNT_NAME);
             Ok(())
         }));
@@ -459,7 +459,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_lifetime_ephemeral() {
         let mut test = Test::new();
-        await!(test.run(await!(test.create_ephemeral_account()).unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_ephemeral_account()).unwrap(), |proxy| async move {
             assert_eq!(await!(proxy.get_lifetime())?, Lifetime::Ephemeral);
             Ok(())
         }));
@@ -468,7 +468,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_lifetime_persistent() {
         let mut test = Test::new();
-        await!(test.run(await!(test.create_persistent_account()).unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_persistent_account()).unwrap(), |proxy| async move {
             assert_eq!(await!(proxy.get_lifetime())?, Lifetime::Persistent);
             Ok(())
         }));
@@ -517,7 +517,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_auth_state() {
         let mut test = Test::new();
-        await!(test.run(await!(test.create_persistent_account()).unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_persistent_account()).unwrap(), |proxy| async move {
             assert_eq!(
                 await!(proxy.get_auth_state())?,
                 (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
@@ -529,7 +529,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_register_auth_listener() {
         let mut test = Test::new();
-        await!(test.run(await!(test.create_persistent_account()).unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_persistent_account()).unwrap(), |proxy| async move {
             let (auth_listener_client_end, _) = create_endpoints().unwrap();
             assert_eq!(
                 await!(proxy.register_auth_listener(
@@ -550,7 +550,7 @@ mod tests {
         let account = await!(test.create_persistent_account()).unwrap();
         let persona_id = &account.default_persona.id().clone();
 
-        await!(test.run(account, async move |proxy| {
+        await!(test.run(account, |proxy| async move {
             let response = await!(proxy.get_persona_ids())?;
             assert_eq!(response.len(), 1);
             assert_eq!(&LocalPersonaId::new(response[0].id), persona_id);
@@ -565,7 +565,7 @@ mod tests {
         let account = await!(test.create_persistent_account()).unwrap();
         let persona_id = &account.default_persona.id().clone();
 
-        await!(test.run(account, async move |account_proxy| {
+        await!(test.run(account, |account_proxy| async move {
             let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
             let response = await!(account_proxy.get_default_persona(persona_server_end))?;
             assert_eq!(response.0, Status::Ok);
@@ -588,7 +588,7 @@ mod tests {
     async fn test_ephemeral_account_has_ephemeral_persona() {
         let mut test = Test::new();
         let account = await!(test.create_ephemeral_account()).unwrap();
-        await!(test.run(account, async move |account_proxy| {
+        await!(test.run(account, |account_proxy| async move {
             let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
             assert_eq!(
                 await!(account_proxy.get_default_persona(persona_server_end))?.0,
@@ -607,7 +607,7 @@ mod tests {
         let account = await!(test.create_persistent_account()).unwrap();
         let persona_id = account.default_persona.id().clone();
 
-        await!(test.run(account, async move |account_proxy| {
+        await!(test.run(account, |account_proxy| async move {
             let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
             assert_eq!(
                 await!(account_proxy
@@ -634,7 +634,7 @@ mod tests {
         // one.
         let wrong_id = LocalPersonaId::new(13);
 
-        await!(test.run(account, async move |proxy| {
+        await!(test.run(account, |proxy| async move {
             let (_, persona_server_end) = create_endpoints().unwrap();
             assert_eq!(
                 await!(proxy.get_persona(&mut wrong_id.into(), persona_server_end))?,
@@ -653,7 +653,7 @@ mod tests {
             user_profile_id: "test_obfuscated_gaia_id".to_string(),
         };
 
-        await!(test.run(await!(test.create_persistent_account()).unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_persistent_account()).unwrap(), |proxy| async move {
             assert_eq!(
                 await!(proxy.set_recovery_account(&mut service_provider_account))?,
                 Status::InternalError
@@ -666,7 +666,7 @@ mod tests {
     async fn test_get_recovery_account() {
         let mut test = Test::new();
         let expectation = (Status::InternalError, None);
-        await!(test.run(await!(test.create_persistent_account()).unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_persistent_account()).unwrap(), |proxy| async move {
             assert_eq!(await!(proxy.get_recovery_account())?, expectation);
             Ok(())
         }));

@@ -309,7 +309,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_auth_state() {
         let mut test = Test::new();
-        await!(test.run(test.create_persona(), async move |proxy| {
+        await!(test.run(test.create_persona(), |proxy| async move {
             assert_eq!(
                 await!(proxy.get_auth_state())?,
                 (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
@@ -321,7 +321,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_register_auth_listener() {
         let mut test = Test::new();
-        await!(test.run(test.create_persona(), async move |proxy| {
+        await!(test.run(test.create_persona(), |proxy| async move {
             let (auth_listener_client_end, _) = create_endpoints().unwrap();
             assert_eq!(
                 await!(proxy.register_auth_listener(
@@ -338,7 +338,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_token_manager() {
         let mut test = Test::new();
-        await!(test.run(test.create_persona(), async move |proxy| {
+        await!(test.run(test.create_persona(), |proxy| async move {
             let (token_manager_client_end, token_manager_server_end) = create_endpoints().unwrap();
             assert_eq!(
                 await!(proxy.get_token_manager(&TEST_APPLICATION_URL, token_manager_server_end))?,

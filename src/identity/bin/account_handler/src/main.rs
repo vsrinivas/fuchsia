@@ -8,7 +8,7 @@
 
 #![deny(warnings)]
 #![deny(missing_docs)]
-#![feature(async_await, await_macro, result_map_or_else)]
+#![feature(async_await, await_macro)]
 
 mod account;
 mod account_handler;
