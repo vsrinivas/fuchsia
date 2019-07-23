@@ -6,8 +6,6 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/clock.h>
-#include <ddktl/protocol/power.h>
-#include <ddktl/protocol/sysmem.h>
 #include <ddktl/protocol/platform/device.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
@@ -43,24 +41,6 @@ private:
     PlatformProxy* proxy_;
 };
 
-class ProxySysmem : public ddk::SysmemProtocol<ProxySysmem> {
-public:
-    explicit ProxySysmem(PlatformProxy* proxy)
-        : proxy_(proxy) {}
-
-    // Sysmem protocol implementation.
-    zx_status_t SysmemConnect(zx::channel allocator2_request);
-    zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection);
-
-    void GetProtocol(sysmem_protocol_t* proto) {
-        proto->ops = &sysmem_protocol_ops_;
-        proto->ctx = this;
-    }
-
-private:
-    PlatformProxy* proxy_;
-};
-
 using PlatformProxyType = ddk::Device<PlatformProxy, ddk::GetProtocolable>;
 
 // This is the main class for the proxy side platform bus driver.
@@ -70,7 +50,7 @@ class PlatformProxy : public PlatformProxyType,
                       public ddk::PDevProtocol<PlatformProxy, ddk::base_protocol> {
 public:
     explicit PlatformProxy(zx_device_t* parent, zx_handle_t rpc_channel)
-        :  PlatformProxyType(parent), rpc_channel_(rpc_channel), sysmem_(this) {}
+        :  PlatformProxyType(parent), rpc_channel_(rpc_channel) {}
 
     static zx_status_t Create(void* ctx, zx_device_t* parent, const char* name,
                               const char* args, zx_handle_t rpc_channel);
@@ -125,7 +105,6 @@ private:
     fbl::Vector<Mmio> mmios_;
     fbl::Vector<Irq> irqs_;
     fbl::Vector<ProxyClock> clocks_;
-    ProxySysmem sysmem_;
 };
 
 } // namespace platform_bus

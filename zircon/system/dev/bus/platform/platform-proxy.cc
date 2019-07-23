@@ -108,30 +108,6 @@ zx_status_t ProxyClock::ClockGetRate(uint64_t* out_current_rate) {
     return status;
 }
 
-zx_status_t ProxySysmem::SysmemConnect(zx::channel allocator_request) {
-    rpc_sysmem_req_t req = {};
-    platform_proxy_rsp_t resp = {};
-    req.header.proto_id = ZX_PROTOCOL_SYSMEM;
-    req.header.op = SYSMEM_CONNECT;
-    zx_handle_t handle = allocator_request.release();
-
-    return proxy_->Rpc(&req.header, sizeof(req), &resp, sizeof(resp), &handle,
-                       1, nullptr, 0, nullptr);
-}
-
-zx_status_t ProxySysmem::SysmemRegisterHeap(uint64_t heap,
-                                            zx::channel heap_connection) {
-    rpc_sysmem_req_t req = {};
-    platform_proxy_rsp_t resp = {};
-    req.header.proto_id = ZX_PROTOCOL_SYSMEM;
-    req.header.op = SYSMEM_REGISTER_HEAP;
-    req.heap = heap;
-    zx_handle_t handle = heap_connection.release();
-
-    return proxy_->Rpc(&req.header, sizeof(req), &resp, sizeof(resp), &handle,
-                       1, nullptr, 0, nullptr);
-}
-
 zx_status_t PlatformProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     auto* proto = static_cast<ddk::AnyProtocol*>(out);
 
@@ -152,11 +128,6 @@ zx_status_t PlatformProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
         // Return zeroth clock resource.
         auto* proto = static_cast<clock_protocol_t*>(out);
         clocks_[0].GetProtocol(proto);
-        return ZX_OK;
-    }
-    case ZX_PROTOCOL_SYSMEM: {
-        auto* proto = static_cast<sysmem_protocol_t*>(out);
-        sysmem_.GetProtocol(proto);
         return ZX_OK;
     }
     default:

@@ -87,15 +87,4 @@ struct rpc_clk_rsp_t {
     uint64_t rate;
 };
 
-// ZX_PROTOCOL_SYSMEM proxy support.
-enum {
-    SYSMEM_CONNECT,
-    SYSMEM_REGISTER_HEAP,
-};
-
-struct rpc_sysmem_req_t {
-    platform_proxy_req_t header;
-    uint64_t heap;
-};
-
 } // namespace platform_bus

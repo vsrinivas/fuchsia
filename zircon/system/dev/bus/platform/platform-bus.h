@@ -74,8 +74,6 @@ public:
     // Protocol accessors for PlatformDevice.
     inline ddk::ClockImplProtocolClient* clk() { return &*clk_; }
     inline ddk::GpioImplProtocolClient* gpio() { return &*gpio_; }
-    inline ddk::PowerImplProtocolClient* power() { return &*power_; }
-    inline ddk::SysmemProtocolClient* sysmem() { return &*sysmem_; }
 
     pbus_sys_suspend_t suspend_cb() { return suspend_cb_; }
 

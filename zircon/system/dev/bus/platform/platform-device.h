@@ -74,8 +74,6 @@ private:
     zx_status_t RpcClockQuerySupportedRate(uint32_t index, uint64_t max_rate, uint64_t* out_rate);
     zx_status_t RpcClockGetRate(uint32_t index, uint64_t* out_current_rate);
 
-    zx_status_t RpcSysmemConnect(zx::channel allocator2_request);
-
     PlatformBus* bus_;
     char name_[ZX_DEVICE_NAME_MAX + 1];
     const uint32_t vid_;

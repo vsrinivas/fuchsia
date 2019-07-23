@@ -287,13 +287,6 @@ zx_status_t PlatformDevice::RpcClockGetRate(uint32_t index, uint64_t* out_curren
     return bus_->clk()->GetRate(resources_.clk(index).clk, out_current_rate);
 }
 
-zx_status_t PlatformDevice::RpcSysmemConnect(zx::channel allocator_request) {
-    if (bus_->sysmem() == nullptr) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return bus_->sysmem()->Connect(std::move(allocator_request));
-}
-
 zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
     if (channel == ZX_HANDLE_INVALID) {
         // proxy device has connected
@@ -397,30 +390,6 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
             break;
         default:
             zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, req_header->op);
-            return ZX_ERR_INTERNAL;
-        }
-        break;
-    }
-    case ZX_PROTOCOL_SYSMEM: {
-        auto req = reinterpret_cast<platform_proxy_req_t*>(&req_buf);
-        if (actual < sizeof(*req)) {
-            zxlogf(ERROR, "%s received %u, expecting %zu (SYSMEM)\n", __func__, actual,
-                   sizeof(*req));
-            return ZX_ERR_INTERNAL;
-        }
-        if (req_handle_count != 1) {
-            zxlogf(ERROR, "%s received %u handles, expecting 1 (SYSMEM)\n", __func__,
-                   req_handle_count);
-            return ZX_ERR_INTERNAL;
-        }
-        resp_len = sizeof(*resp_header);
-
-        switch (req_header->op) {
-        case SYSMEM_CONNECT:
-            status = RpcSysmemConnect(zx::channel(req_handles[0]));
-            break;
-        default:
-            zxlogf(ERROR, "%s: unknown sysmem op %u\n", __func__, req_header->op);
             return ZX_ERR_INTERNAL;
         }
         break;
