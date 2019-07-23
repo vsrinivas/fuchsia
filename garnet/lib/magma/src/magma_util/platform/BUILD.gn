@@ -177,43 +177,6 @@ source_set("device") {
   }
 }
 
-source_set("firmware_loader_header") {
-  public_configs = [ ":platform_include_config" ]
-
-  public_deps = [
-    "$magma_build_root/src/magma_util",
-  ]
-
-  sources = [
-    "platform_firmware_loader.h",
-  ]
-
-  deps = [
-    ":buffer_header",
-  ]
-}
-
-source_set("firmware_loader") {
-  public_configs = [ ":platform_include_config" ]
-
-  public_deps = [
-    ":buffer",
-    ":firmware_loader_header",
-    ":handle",
-    "$magma_build_root/src/magma_util:common",
-  ]
-
-  if (is_fuchsia) {
-    deps = [
-      "zircon:firmware_loader",
-    ]
-  } else {
-    deps = [
-      "linux:firmware_loader",
-    ]
-  }
-}
-
 source_set("random_header") {
   public_configs = [ ":platform_include_config" ]
 

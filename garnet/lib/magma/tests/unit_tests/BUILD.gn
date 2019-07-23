@@ -134,7 +134,6 @@ source_set("magma_platform_hardware_tests") {
   sources = [
     "test_platform_buffer.cc",
     "test_platform_bus_mapper.cc",
-    "test_platform_firmware_loader.cc",
     "test_platform_interrupt.cc",
   ]
 
@@ -145,7 +144,6 @@ source_set("magma_platform_hardware_tests") {
     "$magma_build_root/src/magma_util/platform:buffer",
     "$magma_build_root/src/magma_util/platform:bus_mapper",
     "$magma_build_root/src/magma_util/platform:device",
-    "$magma_build_root/src/magma_util/platform:firmware_loader",
     "$magma_build_root/src/magma_util/platform:thread",
     "$magma_build_root/tests/helper:platform_device_helper",
     "//third_party/googletest:gtest",
