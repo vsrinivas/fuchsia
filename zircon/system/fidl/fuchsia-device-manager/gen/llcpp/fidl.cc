@@ -3896,7 +3896,7 @@ zx_status_t Coordinator::Call::PublishMetadata_Deprecated(zx::unowned_channel _c
 }
 
 template <>
-Coordinator::ResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeDeviceResponse>::AddCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index) {
+Coordinator::ResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeDeviceResponse>::AddCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddCompositeDeviceRequest>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -3904,7 +3904,6 @@ Coordinator::ResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeDeviceRe
   _request.name = std::move(name);
   _request.props = std::move(props);
   _request.components = std::move(components);
-  _request.components_count = std::move(components_count);
   _request.coresident_device_index = std::move(coresident_device_index);
   auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
   if (_linearize_result.status != ZX_OK) {
@@ -3916,16 +3915,16 @@ Coordinator::ResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeDeviceRe
       Coordinator::InPlace::AddCompositeDevice(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Coordinator::ResultOf::AddCompositeDevice Coordinator::SyncClient::AddCompositeDevice(::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index) {
-  return ResultOf::AddCompositeDevice(zx::unowned_channel(this->channel_), std::move(name), std::move(props), std::move(components), std::move(components_count), std::move(coresident_device_index));
+Coordinator::ResultOf::AddCompositeDevice Coordinator::SyncClient::AddCompositeDevice(::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index) {
+  return ResultOf::AddCompositeDevice(zx::unowned_channel(this->channel_), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index));
 }
 
-Coordinator::ResultOf::AddCompositeDevice Coordinator::Call::AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index) {
-  return ResultOf::AddCompositeDevice(std::move(_client_end), std::move(name), std::move(props), std::move(components), std::move(components_count), std::move(coresident_device_index));
+Coordinator::ResultOf::AddCompositeDevice Coordinator::Call::AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index) {
+  return ResultOf::AddCompositeDevice(std::move(_client_end), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index));
 }
 
 template <>
-Coordinator::UnownedResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeDeviceResponse>::AddCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
+Coordinator::UnownedResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeDeviceResponse>::AddCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < AddCompositeDeviceRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<AddCompositeDeviceResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -3934,7 +3933,6 @@ Coordinator::UnownedResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeD
   _request.name = std::move(name);
   _request.props = std::move(props);
   _request.components = std::move(components);
-  _request.components_count = std::move(components_count);
   _request.coresident_device_index = std::move(coresident_device_index);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -3946,19 +3944,19 @@ Coordinator::UnownedResultOf::AddCompositeDevice_Impl<Coordinator::AddCompositeD
       Coordinator::InPlace::AddCompositeDevice(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Coordinator::UnownedResultOf::AddCompositeDevice Coordinator::SyncClient::AddCompositeDevice(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AddCompositeDevice(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(name), std::move(props), std::move(components), std::move(components_count), std::move(coresident_device_index), std::move(_response_buffer));
+Coordinator::UnownedResultOf::AddCompositeDevice Coordinator::SyncClient::AddCompositeDevice(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddCompositeDevice(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index), std::move(_response_buffer));
 }
 
-Coordinator::UnownedResultOf::AddCompositeDevice Coordinator::Call::AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AddCompositeDevice(std::move(_client_end), std::move(_request_buffer), std::move(name), std::move(props), std::move(components), std::move(components_count), std::move(coresident_device_index), std::move(_response_buffer));
+Coordinator::UnownedResultOf::AddCompositeDevice Coordinator::Call::AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddCompositeDevice(std::move(_client_end), std::move(_request_buffer), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index), std::move(_response_buffer));
 }
 
-zx_status_t Coordinator::SyncClient::AddCompositeDevice_Deprecated(::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index, int32_t* out_status) {
-  return Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(name), std::move(props), std::move(components), std::move(components_count), std::move(coresident_device_index), out_status);
+zx_status_t Coordinator::SyncClient::AddCompositeDevice_Deprecated(::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, int32_t* out_status) {
+  return Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index), out_status);
 }
 
-zx_status_t Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index, int32_t* out_status) {
+zx_status_t Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddCompositeDeviceRequest>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -3967,7 +3965,6 @@ zx_status_t Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel
   _request.name = std::move(name);
   _request.props = std::move(props);
   _request.components = std::move(components);
-  _request.components_count = std::move(components_count);
   _request.coresident_device_index = std::move(coresident_device_index);
   auto _linearize_result = ::fidl::Linearize(&_request, ::fidl::BytePart(_write_bytes,
                                                                          _kWriteAllocSize));
@@ -3996,11 +3993,11 @@ zx_status_t Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel
   return ZX_OK;
 }
 
-::fidl::DecodeResult<Coordinator::AddCompositeDeviceResponse> Coordinator::SyncClient::AddCompositeDevice_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer, int32_t* out_status) {
-  return Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(name), std::move(props), std::move(components), std::move(components_count), std::move(coresident_device_index), std::move(_response_buffer), out_status);
+::fidl::DecodeResult<Coordinator::AddCompositeDeviceResponse> Coordinator::SyncClient::AddCompositeDevice_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+  return Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(name), std::move(props), std::move(components), std::move(coresident_device_index), std::move(_response_buffer), out_status);
 }
 
-::fidl::DecodeResult<Coordinator::AddCompositeDeviceResponse> Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::Array<DeviceComponent, 8> components, uint32_t components_count, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer, int32_t* out_status) {
+::fidl::DecodeResult<Coordinator::AddCompositeDeviceResponse> Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index, ::fidl::BytePart _response_buffer, int32_t* out_status) {
   if (_request_buffer.capacity() < AddCompositeDeviceRequest::PrimarySize) {
     return ::fidl::DecodeResult<AddCompositeDeviceResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -4009,7 +4006,6 @@ zx_status_t Coordinator::Call::AddCompositeDevice_Deprecated(zx::unowned_channel
   _request.name = std::move(name);
   _request.props = std::move(props);
   _request.components = std::move(components);
-  _request.components_count = std::move(components_count);
   _request.coresident_device_index = std::move(coresident_device_index);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -4493,7 +4489,7 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         return true;
       }
       auto message = result.message.message();
-      impl->AddCompositeDevice(std::move(message->name), std::move(message->props), std::move(message->components), std::move(message->components_count), std::move(message->coresident_device_index),
+      impl->AddCompositeDevice(std::move(message->name), std::move(message->props), std::move(message->components), std::move(message->coresident_device_index),
         Interface::AddCompositeDeviceCompleter::Sync(txn));
       return true;
     }

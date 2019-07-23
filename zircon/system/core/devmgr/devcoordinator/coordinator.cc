@@ -5,11 +5,7 @@
 #include "coordinator.h"
 
 #include <ctype.h>
-#include <ddk/driver.h>
-#include <driver-info/driver-info.h>
 #include <errno.h>
-#include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
 #include <fcntl.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
@@ -27,7 +23,6 @@
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/job.h>
-#include <libzbi/zbi-cpp.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -41,6 +36,12 @@
 #include <zircon/syscalls/system.h>
 
 #include <utility>
+
+#include <ddk/driver.h>
+#include <driver-info/driver-info.h>
+#include <fbl/auto_call.h>
+#include <fbl/unique_ptr.h>
+#include <libzbi/zbi-cpp.h>
 
 #include "../shared/env.h"
 #include "../shared/fdio.h"
@@ -803,9 +804,9 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
 }
 
 zx_status_t Coordinator::AddCompositeDevice(
-    const fbl::RefPtr<Device>& dev, fbl::StringPiece name, const zx_device_prop_t* props_data,
-    size_t props_count, const fuchsia_device_manager_DeviceComponent* components,
-    size_t components_count, uint32_t coresident_device_index) {
+    const fbl::RefPtr<Device>& dev, fbl::StringPiece name, ::fidl::VectorView<uint64_t> props,
+    ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceComponent> components,
+    uint32_t coresident_device_index) {
   // Only the platform bus driver should be able to use this.  It is the
   // descendant of the sys device node.
   if (dev->parent() != sys_device_) {
@@ -814,8 +815,7 @@ zx_status_t Coordinator::AddCompositeDevice(
 
   std::unique_ptr<CompositeDevice> new_device;
   zx_status_t status =
-      CompositeDevice::Create(name, props_data, props_count, components, components_count,
-                              coresident_device_index, &new_device);
+      CompositeDevice::Create(name, props, components, coresident_device_index, &new_device);
   if (status != ZX_OK) {
     return status;
   }
@@ -1013,19 +1013,6 @@ zx_status_t Coordinator::PublishMetadata(const fbl::RefPtr<Device>& dev, const c
   return ZX_OK;
 }
 
-zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options, zx_handle_t raw_watcher,
-                                fidl_txn_t* txn) {
-  auto dev = static_cast<Device*>(ctx);
-  zx::channel watcher(raw_watcher);
-
-  if (mask & (~fuchsia_io_WATCH_MASK_ALL) || options != 0) {
-    return fuchsia_device_manager_CoordinatorDirectoryWatch_reply(txn, ZX_ERR_INVALID_ARGS);
-  }
-
-  zx_status_t status = devfs_watch(dev->self, std::move(watcher), mask);
-  return fuchsia_device_manager_CoordinatorDirectoryWatch_reply(txn, status);
-}
-
 // send message to devhost, requesting the creation of a device
 static zx_status_t dh_create_device(const fbl::RefPtr<Device>& dev, Devhost* dh, const char* args,
                                     zx::handle rpc_proxy) {
@@ -1150,7 +1137,7 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* t
 zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev) {
   // cannot bind driver to already bound device
   if ((dev->flags & DEV_CTX_BOUND) &&
-       !(dev->flags & (DEV_CTX_MULTI_BIND | DEV_CTX_ALLOW_MULTI_COMPOSITE))) {
+      !(dev->flags & (DEV_CTX_MULTI_BIND | DEV_CTX_ALLOW_MULTI_COMPOSITE))) {
     return ZX_ERR_BAD_STATE;
   }
   if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
@@ -1206,8 +1193,7 @@ static void dump_suspend_task_dependencies(const SuspendTask& task, int depth = 
     }
     status = dependence ? "<dependence>" : "<suspending>";
   }
-  log(INFO, "%sSuspend %s: %s\n", fbl::String(2 * depth, ' ').data(),
-      task.device().name().data(),
+  log(INFO, "%sSuspend %s: %s\n", fbl::String(2 * depth, ' ').data(), task.device().name().data(),
       status);
   for (const auto* dependency : task.Dependencies()) {
     dump_suspend_task_dependencies(*reinterpret_cast<const SuspendTask*>(dependency), depth + 1);
@@ -1258,18 +1244,21 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
   auto task = SuspendTask::Create(sys_device(), ctx.sflags(), std::move(completion));
   suspend_context().set_task(std::move(task));
 
-  auto status = async::PostDelayedTask(dispatcher(), [this] {
-      if (!InSuspend()) {
-        return;  // Suspend failed to complete.
-      }
-      auto& ctx = suspend_context();
-      log(ERROR, "devcoordinator: suspend time out\n");
-      log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
-      dump_suspend_task_dependencies(ctx.task());
-      if (suspend_fallback()) {
-        ::suspend_fallback(root_resource(), ctx.sflags());
-      }
-  }, zx::sec(10));
+  auto status = async::PostDelayedTask(
+      dispatcher(),
+      [this] {
+        if (!InSuspend()) {
+          return;  // Suspend failed to complete.
+        }
+        auto& ctx = suspend_context();
+        log(ERROR, "devcoordinator: suspend time out\n");
+        log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
+        dump_suspend_task_dependencies(ctx.task());
+        if (suspend_fallback()) {
+          ::suspend_fallback(root_resource(), ctx.sflags());
+        }
+      },
+      zx::sec(10));
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: Failed to create suspend timeout watchdog\n");
   }

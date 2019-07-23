@@ -26,22 +26,17 @@ CompositeDevice::CompositeDevice(fbl::String name, fbl::Array<const zx_device_pr
 
 CompositeDevice::~CompositeDevice() = default;
 
-zx_status_t CompositeDevice::Create(const fbl::StringPiece& name,
-                                    const zx_device_prop_t* props_data, size_t props_count,
-                                    const fuchsia_device_manager_DeviceComponent* components,
-                                    size_t components_count, uint32_t coresident_device_index,
-                                    std::unique_ptr<CompositeDevice>* out) {
-  if (components_count > UINT32_MAX) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
+zx_status_t CompositeDevice::Create(
+    const fbl::StringPiece& name, ::fidl::VectorView<uint64_t> props,
+    ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceComponent> components,
+    uint32_t coresident_device_index, std::unique_ptr<CompositeDevice>* out) {
   fbl::String name_obj(name);
-  fbl::Array<zx_device_prop_t> properties(new zx_device_prop_t[props_count], props_count);
-  memcpy(properties.get(), props_data, props_count * sizeof(props_data[0]));
+  fbl::Array<zx_device_prop_t> properties(new zx_device_prop_t[props.count()], props.count());
+  memcpy(properties.get(), props.data(), props.count() * sizeof(props.data()[0]));
 
   auto dev = std::make_unique<CompositeDevice>(std::move(name), std::move(properties),
-                                               components_count, coresident_device_index);
-  for (uint32_t i = 0; i < components_count; ++i) {
+                                               components.count(), coresident_device_index);
+  for (uint32_t i = 0; i < components.count(); ++i) {
     const auto& fidl_component = components[i];
     size_t parts_count = fidl_component.parts_count;
     fbl::Array<ComponentPartDescriptor> parts(new ComponentPartDescriptor[parts_count],
@@ -50,8 +45,12 @@ zx_status_t CompositeDevice::Create(const fbl::StringPiece& name,
       const auto& fidl_part = fidl_component.parts[j];
       size_t program_count = fidl_part.match_program_count;
       fbl::Array<zx_bind_inst_t> match_program(new zx_bind_inst_t[program_count], program_count);
-      static_assert(sizeof(zx_bind_inst_t) == sizeof(fidl_part.match_program[0]));
-      memcpy(match_program.get(), fidl_part.match_program, sizeof(zx_bind_inst_t) * program_count);
+      for (size_t k = 0; k < program_count; ++k) {
+        match_program[k] = zx_bind_inst_t{
+            .op = fidl_part.match_program[k].op,
+            .arg = fidl_part.match_program[k].arg,
+        };
+      }
       parts[j] = {std::move(match_program)};
     }
 

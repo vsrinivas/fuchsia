@@ -14,8 +14,14 @@ using zx;
 // we can make this reflect the actual structure.
 using DeviceProperty = uint64;
 
-// Same as above, but for bind zx_bind_inst_t.
-using BindInstruction = uint64;
+// TODO(bwb): Make this descriptive of binding, not zx_bind_inst_t
+// currently a magic bitfield defined in binding.h
+struct BindInstruction {
+    /// bitfield that encodes the operation and execution conditions
+    uint32 op;
+    /// bitfield that encodes the arguments
+    uint32 arg;
+};
 
 // Identifier used to let the devcoordinator describe specific devices during
 // composite construction
@@ -159,7 +165,6 @@ protocol DevhostController {
 };
 
 /// Interface for the devices in devhosts to coordinate with the devcoordinator.
-[Layout = "Simple"]
 protocol Coordinator {
     /// Record the addition of a new device that can be communicated with via `rpc`.
     /// For binding purposes, it is has properties `props`. `name` and `driver_path`
@@ -242,12 +247,8 @@ protocol Coordinator {
     /// Adds the given composite device.  This causes the devcoordinator to try to match the
     /// components against the existing device tree, and to monitor all new device additions
     /// in order to find the components as they are created.
-    // The treatment of `components` is an awful hack around the LLCPP bindings not being ready
-    // yet.  Since we're using the C ones for now, we can only embed these structures as arrays
-    // instead of vectors.
     AddCompositeDevice(string:DEVICE_NAME_MAX name, vector<DeviceProperty>:PROPERTIES_MAX props,
-                       array<DeviceComponent>:COMPONENTS_MAX components, uint32 components_count,
-                       uint32 coresident_device_index) -> (zx.status status);
+                       vector<DeviceComponent> components, uint32 coresident_device_index) -> (zx.status status);
 
     /// Watches a directory, receiving events of added messages on the
     /// watcher request channel.

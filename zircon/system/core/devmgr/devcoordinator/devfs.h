@@ -12,7 +12,7 @@
 
 namespace devmgr {
 
-struct Device;
+class Device;
 struct Devnode;
 
 // Initializes a devfs directory from |device|.

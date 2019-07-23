@@ -5,19 +5,21 @@
 #ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_DEVICE_H_
 #define ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_DEVICE_H_
 
-#include <ddk/device.h>
-#include <fbl/array.h>
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
-#include <fbl/ref_counted.h>
-#include <fbl/string.h>
 #include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 
 #include <variant>
+
+#include <ddk/device.h>
+#include <fbl/array.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
+#include <fbl/string.h>
 
 #include "../shared/async-loop-ref-counted-rpc-handler.h"
 #include "composite-device.h"
@@ -76,7 +78,43 @@ constexpr zx::duration kDefaultTestTimeout = zx::sec(5);
 
 // clang-format on
 
-struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHandler<Device> {
+class Device : public fbl::RefCounted<Device>,
+               public llcpp::fuchsia::device::manager::Coordinator::Interface,
+               public AsyncLoopRefCountedRpcHandler<Device> {
+ public:
+  void AddDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name,
+                 uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args,
+                 llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config,
+                 ::zx::channel client_remote, AddDeviceCompleter::Sync _completer) override;
+  void UnbindDone(UnbindDoneCompleter::Sync _completer) override;
+  void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync _completer) override;
+  void AddCompositeDevice(
+      ::fidl::StringView name, ::fidl::VectorView<uint64_t> props,
+      ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceComponent> components,
+      uint32_t coresident_device_index, AddCompositeDeviceCompleter::Sync _completer) override;
+  void PublishMetadata(::fidl::StringView device_path, uint32_t key,
+                       ::fidl::VectorView<uint8_t> data,
+                       PublishMetadataCompleter::Sync _completer) override;
+  void AddDeviceInvisible(::zx::channel rpc, ::fidl::VectorView<uint64_t> props,
+                          ::fidl::StringView name, uint32_t protocol_id,
+                          ::fidl::StringView driver_path, ::fidl::StringView args,
+                          ::zx::channel client_remote,
+                          AddDeviceInvisibleCompleter::Sync _completer) override;
+  void RemoveDevice(RemoveDeviceCompleter::Sync _completer) override;
+  void MakeVisible(MakeVisibleCompleter::Sync _completer) override;
+  void BindDevice(::fidl::StringView driver_path, BindDeviceCompleter::Sync _completer) override;
+  void GetTopologicalPath(GetTopologicalPathCompleter::Sync _completer) override;
+  void LoadFirmware(::fidl::StringView fw_path, LoadFirmwareCompleter::Sync _completer) override;
+  void GetMetadata(uint32_t key, GetMetadataCompleter::Sync _completer) override;
+  void GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync _completer) override;
+  void AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data,
+                   AddMetadataCompleter::Sync _completer) override;
+  void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync _completer) override;
+  void RunCompatibilityTests(int64_t hook_wait_time,
+                             RunCompatibilityTestsCompleter::Sync _completer) override;
+  void DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watcher,
+                      DirectoryWatchCompleter::Sync _completer) override;
+
   // Node for entry in device child list
   struct Node {
     static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) { return obj.node_; }
@@ -127,7 +165,7 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
             if constexpr (std::is_same_v<T, IterType>) {
               ++arg;
             } else if constexpr (std::is_same_v<T, Composite>) {
-                cur_component_++;
+              cur_component_++;
             } else if constexpr (std::is_same_v<T, Done>) {
               state_ = Done{};
             }
@@ -192,8 +230,8 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
       }
     }
 
-    using Composite =
-        fbl::DoublyLinkedList<CompositeDeviceComponent*, CompositeDeviceComponent::DeviceNode>::iterator;
+    using Composite = fbl::DoublyLinkedList<CompositeDeviceComponent*,
+                                            CompositeDeviceComponent::DeviceNode>::iterator;
     struct Done {
       bool operator==(Done) const { return true; }
     };
@@ -377,8 +415,8 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     kActive,
     kSuspending,  // The devhost is in the process of suspending the device.
     kSuspended,
-    kUnbinding,   // The devhost is in the process of unbinding the device.
-    kDead,        // The device has been remove()'d
+    kUnbinding,  // The devhost is in the process of unbinding the device.
+    kDead,       // The device has been remove()'d
   };
 
   void set_state(Device::State state) { state_ = state; }

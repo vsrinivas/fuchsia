@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
 
 #include <utility>
+
+#include <ddk/debug.h>
+#include <ddk/device.h>
 
 #include "devhost.h"
 #include "scheduler_profile.h"
@@ -23,9 +24,9 @@ using namespace devmgr;
 
 // LibDriver Device Interface
 
-#define ALLOWED_FLAGS \
-  (DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE | \
-   DEVICE_ADD_MUST_ISOLATE | DEVICE_ADD_INVISIBLE | DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
+#define ALLOWED_FLAGS                                                        \
+  (DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE | DEVICE_ADD_MUST_ISOLATE | \
+   DEVICE_ADD_INVISIBLE | DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
 
 __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent,
                                             device_add_args_t* args, zx_device_t** out) {
@@ -203,6 +204,7 @@ __EXPORT zx_status_t load_firmware(zx_device_t* dev, const char* path, zx_handle
                                    size_t* size) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
+  // TODO(bwb): Can we propogate zx::vmo further up?
   return devhost_load_firmware(dev_ref, path, fw, size);
 }
 
@@ -220,8 +222,8 @@ zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev) {
 
 zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
                                            int64_t hook_wait_time) {
-    ApiAutoLock lock;
-    return devhost_device_run_compatibility_tests(dev, hook_wait_time);
+  ApiAutoLock lock;
+  return devhost_device_run_compatibility_tests(dev, hook_wait_time);
 }
 
 zx_status_t device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,

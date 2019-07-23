@@ -5,17 +5,18 @@
 #ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_DEVHOST_H_
 #define ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_DEVHOST_H_
 
-#include <fbl/intrusive_double_list.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/process.h>
 
 #include <utility>
 
+#include <fbl/intrusive_double_list.h>
+
 #include "device.h"
 
 namespace devmgr {
 
-struct Device;
+class Device;
 
 class Devhost {
  public:

@@ -5,12 +5,6 @@
 #ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_COORDINATOR_H_
 #define ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_COORDINATOR_H_
 
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <fbl/intrusive_double_list.h>
-#include <fbl/string.h>
-#include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/channel.h>
@@ -20,6 +14,13 @@
 #include <lib/zx/vmo.h>
 
 #include <utility>
+
+#include <ddk/binding.h>
+#include <ddk/device.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/string.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 
 #include "boot-args.h"
 #include "composite-device.h"
@@ -44,9 +45,7 @@ class SuspendContext {
 
   SuspendContext() = default;
 
-  SuspendContext(Flags flags, uint32_t sflags)
-      : flags_(flags),
-        sflags_(sflags) {}
+  SuspendContext(Flags flags, uint32_t sflags) : flags_(flags), sflags_(sflags) {}
 
   ~SuspendContext() {}
 
@@ -182,10 +181,10 @@ class Coordinator {
                           uint32_t length);
   zx_status_t PublishMetadata(const fbl::RefPtr<Device>& dev, const char* path, uint32_t type,
                               const void* data, uint32_t length);
-  zx_status_t AddCompositeDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece name,
-                                 const zx_device_prop_t* props_data, size_t props_count,
-                                 const fuchsia_device_manager_DeviceComponent* components,
-                                 size_t components_count, uint32_t coresident_device_index);
+  zx_status_t AddCompositeDevice(
+      const fbl::RefPtr<Device>& dev, fbl::StringPiece name, ::fidl::VectorView<uint64_t> props,
+      ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceComponent> components,
+      uint32_t coresident_device_index);
 
   void DmMexec(zx::vmo kernel, zx::vmo bootdata);
 

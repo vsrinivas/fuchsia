@@ -5,21 +5,23 @@
 #ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_COMPOSITE_DEVICE_H_
 #define ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_COMPOSITE_DEVICE_H_
 
+#include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/device/manager/llcpp/fidl.h>
+
+#include <memory>
+
 #include <ddk/binding.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
-#include <fuchsia/device/manager/c/fidl.h>
-
-#include <memory>
 
 namespace devmgr {
 
 // Forward declaration
 class CompositeDevice;
 class Coordinator;
-struct Device;
+class Device;
 
 // Describes a device on the path to a component of a composite device
 struct ComponentPartDescriptor {
@@ -114,10 +116,9 @@ class CompositeDevice {
 
   ~CompositeDevice();
 
-  static zx_status_t Create(const fbl::StringPiece& name, const zx_device_prop_t* props_data,
-                            size_t props_count,
-                            const fuchsia_device_manager_DeviceComponent* components,
-                            size_t components_count, uint32_t coresident_device_index,
+  static zx_status_t Create(const fbl::StringPiece& name, ::fidl::VectorView<uint64_t> props,
+                            ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceComponent>,
+                            uint32_t coresident_device_index,
                             std::unique_ptr<CompositeDevice>* out);
 
   const fbl::String& name() const { return name_; }

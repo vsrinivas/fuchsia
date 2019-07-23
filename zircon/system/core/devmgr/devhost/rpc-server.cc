@@ -3,14 +3,10 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <fbl/auto_lock.h>
 #include <fcntl.h>
-#include <fs/connection.h>
-#include <fs/handler.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
@@ -31,6 +27,12 @@
 
 #include <new>
 #include <utility>
+
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <fbl/auto_lock.h>
+#include <fs/connection.h>
+#include <fs/handler.h>
 
 #include "devhost.h"
 #include "zx-device.h"
@@ -253,8 +255,8 @@ static zx_status_t fidl_directory_watch(void* ctx, uint32_t mask, uint32_t optio
   }
 
   zx_status_t call_status;
-  zx_status_t status = fuchsia_device_manager_CoordinatorDirectoryWatch(
-      rpc.get(), mask, options, watcher.release(), &call_status);
+  zx_status_t status = fuchsia::device::manager::Coordinator::Call::DirectoryWatch_Deprecated(
+      zx::unowned_channel(rpc.get()), mask, options, std::move(watcher), &call_status);
 
   return fuchsia_io_DirectoryWatch_reply(txn, status != ZX_OK ? status : call_status);
 }
@@ -539,9 +541,9 @@ static zx_status_t fidl_DeviceControllerBind(void* ctx, const char* driver_data,
 
 static zx_status_t fidl_DeviceControllerRunCompatibilityTests(void* ctx, int64_t hook_wait_time,
                                                               fidl_txn_t* txn) {
-    auto conn = static_cast<DevfsConnection*>(ctx);
-    conn->dev->PushTestCompatibilityConn(fs::FidlConnection::CopyTxn(txn));
-    return device_run_compatibility_tests(conn->dev, hook_wait_time);
+  auto conn = static_cast<DevfsConnection*>(ctx);
+  conn->dev->PushTestCompatibilityConn(fs::FidlConnection::CopyTxn(txn));
+  return device_run_compatibility_tests(conn->dev, hook_wait_time);
 }
 
 static zx_status_t fidl_DeviceControllerScheduleUnbind(void* ctx, fidl_txn_t* txn) {
