@@ -37,6 +37,7 @@ library("zxtest") {
     # Needed for <fbl/string.h>, <fbl/vector.h> and <fbl/function.h>.
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fit:headers",
+    "$zx/system/ulib/zircon:headers",
   ]
   deps = [
     "$zx/system/ulib/fbl",

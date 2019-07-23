@@ -116,7 +116,7 @@
 #define _DEFAULT_PRINTER [](const auto& val) { return zxtest::PrintValue(val); }
 
 #ifdef __Fuchsia__
-#define _STATUS_PRINTER [](const zx_status_t& status) { return zx_status_get_string(status); }
+#define _STATUS_PRINTER [](zx_status_t status) { return zxtest::PrintStatus(status); }
 #else
 #define _STATUS_PRINTER _DEFAULT_PRINTER
 #endif

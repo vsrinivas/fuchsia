@@ -103,6 +103,14 @@ fbl::String PrintValue(const fbl::String& value) {
   return value;
 }
 
+fbl::String PrintStatus(zx_status_t status) {
+#ifdef __Fuchsia__
+  return fbl::StringPrintf("%s(%d)", zx_status_get_string(status), status);
+#else
+  return fbl::String("%d", status);
+#endif
+}
+
 bool StrCmp(const fbl::String& actual, const fbl::String& expected) {
   return actual == expected;
 }

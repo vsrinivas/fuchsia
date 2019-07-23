@@ -8,6 +8,7 @@
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <zxtest/base/types.h>
+#include <zircon/status.h>
 
 namespace zxtest {
 
@@ -121,6 +122,10 @@ template <>
 fbl::String PrintValue(const uint64_t& value);
 template <>
 fbl::String PrintValue(const fbl::String& value);
+
+// Print a string form of the status, can't be a specializiation of PrintValue
+// because zx_status_t is a uint32_t.
+fbl::String PrintStatus(zx_status_t status);
 
 // For pointers just print the address.
 template <typename T>
