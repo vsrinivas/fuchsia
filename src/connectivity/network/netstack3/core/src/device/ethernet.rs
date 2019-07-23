@@ -807,6 +807,14 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         get_device_state(state, device_id).mac
     }
 
+    fn get_link_local_addr<D: EventDispatcher>(
+        state: &StackState<D>,
+        device_id: usize,
+    ) -> Option<Tentative<Ipv6Addr>> {
+        let state = get_device_state(state, device_id);
+        Some(Tentative::new_permanent(state.mac.to_ipv6_link_local().get()))
+    }
+
     fn get_ipv6_addr<D: EventDispatcher>(
         state: &StackState<D>,
         device_id: usize,

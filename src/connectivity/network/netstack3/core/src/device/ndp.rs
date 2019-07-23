@@ -37,7 +37,8 @@ use crate::device::{DeviceId, DeviceLayerTimerId, DeviceProtocol, Tentative};
 use crate::ip::{IpDeviceIdContext, IpProto};
 use crate::wire::icmp::ndp::options::{NdpOption, PrefixInformation};
 use crate::wire::icmp::ndp::{
-    self, NeighborAdvertisement, NeighborSolicitation, Options, RouterSolicitation,
+    self, NeighborAdvertisement, NeighborSolicitation, Options, RouterAdvertisement,
+    RouterSolicitation,
 };
 use crate::wire::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode, Icmpv6Packet};
 use crate::wire::ipv6::Ipv6PacketBuilder;
@@ -201,6 +202,15 @@ pub(crate) trait NdpDevice: Sized {
         state: &StackState<D>,
         device_id: usize,
     ) -> Self::LinkAddress;
+
+    /// Get the link-local address for a device.
+    ///
+    /// If no link-local address is assigned for `device_id`, `None` will be returned. Otherwise,
+    /// a `Some(a)` will be returned.
+    fn get_link_local_addr<D: EventDispatcher>(
+        state: &StackState<D>,
+        device_id: usize,
+    ) -> Option<Tentative<Ipv6Addr>>;
 
     /// Get a (possibly tentative) IPv6 address for this device.
     ///
@@ -580,6 +590,18 @@ impl Default for NdpRouterConfigurations {
 }
 
 impl NdpRouterConfigurations {
+    /// Create a new Router Advertisement from the configurations in this `NdpRouterConfigurations`.
+    fn new_router_advertisement(&self) -> RouterAdvertisement {
+        RouterAdvertisement::new(
+            self.get_advertised_current_hop_limit(),
+            self.get_advertised_managed_flag(),
+            self.get_advertised_other_config_flag(),
+            self.get_advertised_default_lifetime().map_or(0, |x| x.get()),
+            self.get_advertised_reachable_time(),
+            self.get_advertised_retransmit_timer(),
+        )
+    }
+
     /// Get enable/disable status of sending periodic Router Advertisements and responding to Router
     /// Solicitations.
     pub fn get_should_send_advertisements(&self) -> bool {
@@ -799,7 +821,7 @@ impl NdpRouterConfigurations {
     ///
     /// [RFC 4861 section 6.2]: https://tools.ietf.org/html/rfc4861#section-6.2
     pub fn set_advertised_prefix_list(&mut self, v: Vec<PrefixInformation>) {
-        // TODO(ghanan): Check for duplicates.
+        // TODO(ghanan): Check for duplicates and link local prefixes.
         self.advertised_prefix_list = v;
     }
 }
@@ -1820,6 +1842,87 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
         .unwrap_or_else(|_| debug!("Failed to send neighbor advertisement: MTU exceeded"));
 }
 
+/// Send a router advertisement message from `device_id` to `dst_ip`.
+///
+/// `dst_ip` is typically the source address of an invoking Router Solicitation, or the all-nodes
+/// multicast address.
+///
+/// `send_router_advertisement` does nothing if `device_id` is configured to not send Router
+/// Advertisements.
+///
+/// # Panics
+///
+/// Panics if `device_id` does not have an assigned (non-tentative) link-local address, if it is
+/// not operating as a router, or if it is not configured to send router advertisements.
+fn send_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+    dst_ip: Ipv6Addr,
+) {
+    assert!(ND::is_router(ctx, device_id));
+
+    // If we are attempting to send a router advertisement, we need to have a valid
+    // link-local address, as per RFC 4861 section 4.2. The call to either `unwrap` may
+    // panic if `device_id` does not have an assigned (non-tentative) link-local address,
+    // but this is documented for this function.
+    let src_ip =
+        ND::get_link_local_addr(ctx.state(), device_id).unwrap().try_into_permanent().unwrap();
+
+    let router_configurations =
+        ND::get_ndp_state(ctx.state(), device_id).configs.get_router_configurations();
+
+    // Device MUST be configured to send router advertisements if we reach this point. If it is not
+    // configured to send router advertisements, we should not have called this method.
+    assert!(router_configurations.get_should_send_advertisements());
+
+    trace!(
+        "send_router_advertisement: sending router advertisement from {:?} (dev = {:?}) to {:?}",
+        src_ip,
+        ND::get_device_id(device_id),
+        dst_ip
+    );
+
+    let src_ll = ND::get_link_layer_addr(ctx.state(), device_id);
+    let mut options = vec![NdpOption::SourceLinkLayerAddress(src_ll.bytes())];
+
+    let router_configurations =
+        ND::get_ndp_state(ctx.state_mut(), device_id).configs.get_router_configurations();
+
+    // If the link mtu is set to `None`, do not include the mtu option.
+    //
+    // See AdvLinkMtu in RFC 4861 section 6.2.1 for more information.
+    if let Some(mtu) = router_configurations.get_advertised_link_mtu() {
+        options.push(NdpOption::MTU(mtu.get()));
+    }
+
+    let prefix_list = router_configurations.get_advertised_prefix_list().clone();
+    for p in &prefix_list {
+        // We know that `unwrap` will not panic because `new_unaligned` checks to make sure that the
+        // byte slice we give it has exactly the number of bytes required for a `PrefixInformation`.
+        // Here, we pass it the byte slice representation of a `PrefixInformation`, so we know that
+        // `new_unaligned` will not return `None`.
+        options.push(NdpOption::PrefixInformation(&p));
+    }
+
+    let message = router_configurations.new_router_advertisement();
+
+    let body = ndp::OptionsSerializer::<_>::new(options.iter())
+        .into_serializer()
+        .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+            src_ip,
+            dst_ip,
+            IcmpUnusedCode,
+            message,
+        ))
+        // The hop limit of a Router Advertisement message is set to `255` by RFC 4861 section 4.2.
+        .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, 255, IpProto::Icmpv6));
+
+    // Attempt to send the router advertisement message.
+    ND::send_ipv6_frame(ctx, device_id, dst_ip, body).unwrap_or_else(|_| {
+        error!("send_router_advertisement: failed to send router advertisement")
+    });
+}
+
 /// Helper function to send ndp packet over an NdpDevice
 fn send_ndp_packet<D: EventDispatcher, ND: NdpDevice, B: ByteSlice, M>(
     ctx: &mut Context<D>,
@@ -2372,7 +2475,6 @@ mod tests {
     use net_types::ethernet::Mac;
     use net_types::ip::AddrSubnet;
     use packet::{Buf, Buffer, ParseBuffer};
-    use zerocopy::LayoutVerified;
 
     use crate::device::{
         ethernet::EthernetNdpDevice, get_ip_addr_subnet, get_ipv6_hop_limit, get_mtu,
@@ -2405,7 +2507,8 @@ mod tests {
         src_ip: Ipv6Addr,
         dst_ip: Ipv6Addr,
         current_hop_limit: u8,
-        configuration_mo: u8,
+        managed_flag: bool,
+        other_config_flag: bool,
         router_lifetime: u16,
         reachable_time: u32,
         retransmit_timer: u32,
@@ -2417,7 +2520,8 @@ mod tests {
                 IcmpUnusedCode,
                 RouterAdvertisement::new(
                     current_hop_limit,
-                    configuration_mo,
+                    managed_flag,
+                    other_config_flag,
                     router_lifetime,
                     reachable_time,
                     retransmit_timer,
@@ -3334,7 +3438,7 @@ mod tests {
         //
 
         let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip, config.local_ip, 1, 2, 3, 4, 5);
+            router_advertisement_message(src_ip, config.local_ip, 1, false, false, 3, 4, 5);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
@@ -3347,7 +3451,7 @@ mod tests {
 
         let src_ip = Mac::new(src_mac).to_ipv6_link_local().get();
         let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip, config.local_ip, 1, 2, 3, 4, 5);
+            router_advertisement_message(src_ip, config.local_ip, 1, false, false, 3, 4, 5);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
@@ -3369,7 +3473,7 @@ mod tests {
         //
 
         let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip.get(), config.local_ip, 1, 2, 3, 4, 5);
+            router_advertisement_message(src_ip.get(), config.local_ip, 1, false, false, 3, 4, 5);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
@@ -3395,7 +3499,7 @@ mod tests {
         //
 
         let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip.get(), config.local_ip, 7, 8, 9, 10, 11);
+            router_advertisement_message(src_ip.get(), config.local_ip, 7, false, false, 9, 10, 11);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
@@ -3421,8 +3525,16 @@ mod tests {
 
         // Zero value for Reachable Time should not update base_reachable_time.
         // Other non zero values should update.
-        let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip.get(), config.local_ip, 13, 14, 15, 0, 17);
+        let mut icmpv6_packet_buf = router_advertisement_message(
+            src_ip.get(),
+            config.local_ip,
+            13,
+            false,
+            false,
+            15,
+            0,
+            17,
+        );
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
@@ -3441,8 +3553,16 @@ mod tests {
 
         // Zero value for Retransmit Time should not update our retrans_time.
         // Other non zero values should update.
-        let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip.get(), config.local_ip, 19, 20, 21, 22, 0);
+        let mut icmpv6_packet_buf = router_advertisement_message(
+            src_ip.get(),
+            config.local_ip,
+            19,
+            false,
+            false,
+            21,
+            22,
+            0,
+        );
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
@@ -3465,8 +3585,16 @@ mod tests {
 
         // Zero value for CurrHopLimit should not update our hop_limit.
         // Other non zero values should update.
-        let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip.get(), config.local_ip, 0, 26, 27, 28, 29);
+        let mut icmpv6_packet_buf = router_advertisement_message(
+            src_ip.get(),
+            config.local_ip,
+            0,
+            false,
+            false,
+            27,
+            28,
+            29,
+        );
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
@@ -3491,8 +3619,16 @@ mod tests {
         // Receive new router advertisement with 0 router lifetime, but new parameters.
         //
 
-        let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip.get(), config.local_ip, 31, 32, 0, 34, 35);
+        let mut icmpv6_packet_buf = router_advertisement_message(
+            src_ip.get(),
+            config.local_ip,
+            31,
+            false,
+            false,
+            0,
+            34,
+            35,
+        );
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
@@ -3520,8 +3656,16 @@ mod tests {
         // Receive new router advertisement with non-0 router lifetime, but let it get invalidated
         //
 
-        let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip.get(), config.local_ip, 37, 38, 39, 40, 41);
+        let mut icmpv6_packet_buf = router_advertisement_message(
+            src_ip.get(),
+            config.local_ip,
+            37,
+            false,
+            false,
+            39,
+            40,
+            41,
+        );
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
@@ -3561,8 +3705,16 @@ mod tests {
             let device_id = device.map(|x| x.id()).unwrap();
             let src_ip = config.remote_mac.to_ipv6_link_local();
 
-            let mut icmpv6_packet_buf =
-                router_advertisement_message(src_ip.get(), config.local_ip, hop_limit, 0, 0, 0, 0);
+            let mut icmpv6_packet_buf = router_advertisement_message(
+                src_ip.get(),
+                config.local_ip,
+                hop_limit,
+                false,
+                false,
+                0,
+                0,
+                0,
+            );
             let icmpv6_packet = icmpv6_packet_buf
                 .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
                 .unwrap();
@@ -3615,7 +3767,7 @@ mod tests {
         //
 
         let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip.get(), config.local_ip, 1, 2, 3, 4, 5);
+            router_advertisement_message(src_ip.get(), config.local_ip, 1, false, false, 3, 4, 5);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
@@ -3640,7 +3792,7 @@ mod tests {
                 src_ip.get(),
                 config.local_ip,
                 IcmpUnusedCode,
-                RouterAdvertisement::new(1, 2, 3, 4, 5),
+                RouterAdvertisement::new(1, false, false, 3, 4, 5),
             ))
             .serialize_vec_outer()
             .unwrap();
@@ -3668,7 +3820,7 @@ mod tests {
                     src_ip,
                     dst_ip,
                     IcmpUnusedCode,
-                    RouterAdvertisement::new(1, 2, 3, 4, 5),
+                    RouterAdvertisement::new(1, false, false, 3, 4, 5),
                 ))
                 .serialize_vec_outer()
                 .unwrap()
@@ -3743,26 +3895,22 @@ mod tests {
             valid_lifetime: u32,
             preferred_lifetime: u32,
         ) -> Buf<Vec<u8>> {
-            let mut bytes = [0; 30];
-            *LayoutVerified::<_, PrefixInformation>::new(&mut bytes[..]).unwrap() =
-                PrefixInformation::new(
-                    prefix_length,
-                    on_link_flag,
-                    autonomous_address_configuration_flag,
-                    valid_lifetime,
-                    preferred_lifetime,
-                    prefix,
-                );
-            let options = &[NdpOption::PrefixInformation(
-                LayoutVerified::<_, PrefixInformation>::new(&bytes[..]).unwrap(),
-            )];
+            let p = PrefixInformation::new(
+                prefix_length,
+                on_link_flag,
+                autonomous_address_configuration_flag,
+                valid_lifetime,
+                preferred_lifetime,
+                prefix,
+            );
+            let options = &[NdpOption::PrefixInformation(&p)];
             OptionsSerializer::new(options.iter())
                 .into_serializer()
                 .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                     src_ip,
                     dst_ip,
                     IcmpUnusedCode,
-                    RouterAdvertisement::new(1, 2, 0, 4, 5),
+                    RouterAdvertisement::new(1, false, false, 0, 4, 5),
                 ))
                 .serialize_vec_outer()
                 .unwrap()
@@ -4204,5 +4352,173 @@ mod tests {
             EthernetNdpDevice::ipv6_addr_state(ctx.state(), device.id(), &dummy_config.local_ip),
             AddressState::Assigned
         );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_send_router_advertisement_as_non_router_panic() {
+        //
+        // Attempting to send a router advertisement when a device is not a router should result in
+        // a panic.
+        //
+        let dummy_config = get_dummy_config::<Ipv6Addr>();
+        let mut stack_builder = StackStateBuilder::default();
+        let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
+        ndp_configs.set_dup_addr_detect_transmits(None);
+        ndp_configs.set_max_router_solicitations(None);
+        stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        stack_builder.ip_builder().forward(true);
+        let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
+        let device = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+
+        // Enable sending router advertisements (`device`) is still not a router though.
+        EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
+            .configs
+            .router_configurations
+            .set_should_send_advertisements(true);
+
+        // Should panic since `device` is not a router.
+        send_router_advertisement::<_, EthernetNdpDevice>(
+            &mut ctx,
+            device.id(),
+            Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_send_router_advertisement_with_should_send_advertisement_unset_panic() {
+        //
+        // Attempting to send a router advertisements when it is configured to not do so should
+        // result in a panic.
+        //
+
+        let dummy_config = get_dummy_config::<Ipv6Addr>();
+        let mut stack_builder = StackStateBuilder::default();
+        let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
+        ndp_configs.set_dup_addr_detect_transmits(None);
+        ndp_configs.set_max_router_solicitations(None);
+        stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        stack_builder.ip_builder().forward(true);
+        let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
+        let device = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+
+        // Make `device` a router (netstack is configured to forward packets already).
+        crate::device::set_forwarding_enabled::<_, Ipv6>(&mut ctx, device, true);
+
+        // Should panic since sending router advertisements is disabled.
+        send_router_advertisement::<_, EthernetNdpDevice>(
+            &mut ctx,
+            device.id(),
+            Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
+        );
+    }
+
+    #[test]
+    fn test_sending_router_advertisement() {
+        //
+        // Test that valid router advertisements are sent based on the device's
+        // NDP router configurations (`NdpRouterConfigurations`).
+        //
+
+        let dummy_config = get_dummy_config::<Ipv6Addr>();
+        let mut stack_builder = StackStateBuilder::default();
+        let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
+        ndp_configs.set_dup_addr_detect_transmits(None);
+        ndp_configs.set_max_router_solicitations(None);
+        stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        stack_builder.ip_builder().forward(true);
+        let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
+        let device = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+
+        // Make `device` a router (netstack is configured to forward packets already).
+        crate::device::set_forwarding_enabled::<_, Ipv6>(&mut ctx, device, true);
+
+        // Enable and send router advertisements.
+        EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
+            .configs
+            .router_configurations
+            .set_should_send_advertisements(true);
+        send_router_advertisement::<_, EthernetNdpDevice>(
+            &mut ctx,
+            device.id(),
+            Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
+        );
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+            parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterAdvertisement, _>(
+                &ctx.dispatcher().frames_sent()[0].1,
+                |p| {
+                    assert_eq!(p.body().iter().count(), 1);
+                    assert!(p
+                        .body()
+                        .iter()
+                        .any(|x| x == NdpOption::SourceLinkLayerAddress(&TEST_LOCAL_MAC.bytes())));
+                },
+            )
+            .unwrap();
+        assert_eq!(src_ip, TEST_LOCAL_MAC.to_ipv6_link_local().get());
+        assert_eq!(dst_ip, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
+        assert_eq!(code, IcmpUnusedCode);
+        assert_eq!(message, RouterAdvertisement::new(64, false, false, 1800, 0, 0));
+
+        // Set new values for a new router advertisement.
+        let mut router_configs =
+            &mut EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
+                .configs
+                .router_configurations;
+        router_configs.set_advertised_managed_flag(true);
+        router_configs.set_advertised_link_mtu(NonZeroU32::new(1500));
+        router_configs.set_advertised_reachable_time(50);
+        router_configs.set_advertised_retransmit_timer(200);
+        router_configs.set_advertised_current_hop_limit(75);
+        router_configs.set_advertised_default_lifetime(NonZeroU16::new(2000));
+        let prefix1 = PrefixInformation::new(
+            64,
+            true,
+            false,
+            500,
+            400,
+            Ipv6Addr::new([51, 52, 53, 54, 55, 56, 57, 58, 0, 0, 0, 0, 0, 0, 0, 0]),
+        );
+        let prefix2 = PrefixInformation::new(
+            70,
+            false,
+            true,
+            501,
+            401,
+            Ipv6Addr::new([51, 52, 53, 54, 55, 56, 57, 59, 0, 0, 0, 0, 0, 0, 0, 0]),
+        );
+        router_configs.set_advertised_prefix_list(vec![prefix1.clone(), prefix2.clone()]);
+        send_router_advertisement::<_, EthernetNdpDevice>(
+            &mut ctx,
+            device.id(),
+            Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
+        );
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
+        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+            parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterAdvertisement, _>(
+                &ctx.dispatcher().frames_sent()[1].1,
+                |p| {
+                    assert_eq!(p.body().iter().count(), 4);
+
+                    let mtu = 1500;
+                    assert!(p.body().iter().any(|x| x == NdpOption::MTU(mtu)));
+                    assert!(p.body().iter().any(|x| x == NdpOption::PrefixInformation(&prefix1)));
+                    assert!(p.body().iter().any(|x| x == NdpOption::PrefixInformation(&prefix2)));
+                    assert!(p
+                        .body()
+                        .iter()
+                        .any(|x| x == NdpOption::SourceLinkLayerAddress(&TEST_LOCAL_MAC.bytes())));
+                },
+            )
+            .unwrap();
+        assert_eq!(src_ip, TEST_LOCAL_MAC.to_ipv6_link_local().get());
+        assert_eq!(dst_ip, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
+        assert_eq!(code, IcmpUnusedCode);
+        assert_eq!(message, RouterAdvertisement::new(75, true, false, 2000, 50, 200));
     }
 }

@@ -51,13 +51,40 @@ pub(crate) struct RouterAdvertisement {
 impl_icmp_message!(Ipv6, RouterAdvertisement, RouterAdvertisement, IcmpUnusedCode, Options<B>);
 
 impl RouterAdvertisement {
+    /// Managed address configuration flag.
+    ///
+    /// When set, it indicates that addresses are available via Dynamic Host Configuration Protocol
+    /// (DHCPv6).
+    ///
+    /// If set, the "Pther configuration" flag is redundant and can be ignored because DHCPv6 will
+    /// return all available configuration information.
+    const MANAGED_FLAG: u8 = 0x80;
+
+    /// Other configuration flag.
+    ///
+    /// When set, it indicates that other configuration information is available via DHCPv6.
+    /// Examples of such information are DNS-related information or information on other servers
+    /// within the network.
+    const OTHER_CONFIGURATION_FLAG: u8 = 0x40;
+
     pub(crate) fn new(
         current_hop_limit: u8,
-        configuration_mo: u8,
+        managed_flag: bool,
+        other_config_flag: bool,
         router_lifetime: u16,
         reachable_time: u32,
         retransmit_timer: u32,
     ) -> Self {
+        let mut configuration_mo = 0;
+
+        if managed_flag {
+            configuration_mo |= Self::MANAGED_FLAG;
+        }
+
+        if other_config_flag {
+            configuration_mo |= Self::OTHER_CONFIGURATION_FLAG;
+        }
+
         Self {
             current_hop_limit,
             configuration_mo,
@@ -81,6 +108,14 @@ impl RouterAdvertisement {
 
     pub(crate) fn retransmit_timer(&self) -> u32 {
         self.retransmit_timer.get()
+    }
+
+    pub(crate) fn managed_flag(&self) -> bool {
+        ((self.configuration_mo & Self::MANAGED_FLAG) != 0)
+    }
+
+    pub(crate) fn other_configuration_flag(&self) -> bool {
+        ((self.configuration_mo & Self::OTHER_CONFIGURATION_FLAG) != 0)
     }
 }
 
@@ -329,11 +364,11 @@ pub(crate) mod options {
     }
 
     #[allow(missing_docs)]
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, Eq)]
     pub(crate) enum NdpOption<'a> {
         SourceLinkLayerAddress(&'a [u8]),
         TargetLinkLayerAddress(&'a [u8]),
-        PrefixInformation(LayoutVerified<&'a [u8], PrefixInformation>),
+        PrefixInformation(&'a PrefixInformation),
 
         RedirectedHeader { original_packet: &'a [u8] },
 
@@ -379,7 +414,8 @@ pub(crate) mod options {
                 }
                 Some(NdpOptionType::PrefixInformation) => NdpOption::PrefixInformation(
                     LayoutVerified::<_, PrefixInformation>::new(data)
-                        .ok_or_else(|| "No parse data".to_string())?,
+                        .ok_or_else(|| "No parse data".to_string())?
+                        .into_ref(),
                 ),
                 Some(NdpOptionType::RedirectedHeader) => {
                     NdpOption::RedirectedHeader { original_packet: &data[6..] }
@@ -415,7 +451,7 @@ pub(crate) mod options {
                     buffer.copy_from_slice(data);
                 }
                 NdpOption::PrefixInformation(pfx_info) => {
-                    buffer.copy_from_slice(pfx_info.bytes());
+                    buffer.copy_from_slice(pfx_info.as_bytes());
                 }
                 NdpOption::MTU(mtu) => {
                     buffer[..2].copy_from_slice(&[0; 2]);
@@ -460,7 +496,6 @@ mod tests {
 
     #[test]
     fn parse_serialize_prefix_option() {
-        let mut bytes = [0; 30];
         let expected_prefix_info = options::PrefixInformation::new(
             120,
             true,
@@ -469,11 +504,7 @@ mod tests {
             100,
             Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]),
         );
-        *LayoutVerified::<_, options::PrefixInformation>::new(&mut bytes[..]).unwrap() =
-            expected_prefix_info.clone();
-        let options = &[options::NdpOption::PrefixInformation(
-            LayoutVerified::<_, options::PrefixInformation>::new(&bytes[..]).unwrap(),
-        )];
+        let options = &[options::NdpOption::PrefixInformation(&expected_prefix_info)];
         let serialized = OptionsSerializer::<_>::new(options.iter())
             .into_serializer()
             .serialize_vec_outer()
@@ -481,7 +512,7 @@ mod tests {
         let mut expected = [0; 32];
         expected[0] = 3;
         expected[1] = 4;
-        (&mut expected[2..]).copy_from_slice(&bytes[..]);
+        (&mut expected[2..]).copy_from_slice(expected_prefix_info.as_bytes());
         assert_eq!(serialized.as_ref(), expected);
 
         let parsed = Options::parse(&expected[..]).unwrap();
