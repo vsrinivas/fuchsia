@@ -257,7 +257,7 @@ mod tests {
             test_utils::{run_client, run_server_client, DirentsSameInodeBuilder},
         },
         execution_scope::ExecutionScope,
-        file::asynchronous::{read_only, read_write, write_only},
+        file::asynchronous::{read_only_static, read_write, write_only},
         path::Path,
         test_utils::open_get_proxy,
     };
@@ -273,6 +273,7 @@ mod tests {
         },
         fuchsia_async::Executor,
         fuchsia_zircon::sys::ZX_OK,
+        futures::future,
         libc::{S_IRUSR, S_IWUSR},
         std::sync::{
             atomic::{AtomicUsize, Ordering},
@@ -282,14 +283,14 @@ mod tests {
 
     #[test]
     fn empty_directory() {
-        run_server_client(OPEN_RIGHT_READABLE, empty(), async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, empty(), |root| async move {
             assert_close!(root);
         });
     }
 
     #[test]
     fn empty_directory_get_attr() {
-        run_server_client(OPEN_RIGHT_READABLE, empty(), async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, empty(), |root| async move {
             assert_get_attr!(
                 root,
                 NodeAttributes {
@@ -308,7 +309,7 @@ mod tests {
 
     #[test]
     fn empty_directory_describe() {
-        run_server_client(OPEN_RIGHT_READABLE, empty(), async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, empty(), |root| async move {
             assert_describe!(root, NodeInfo::Directory(DirectoryObject));
             assert_close!(root);
         });
@@ -321,7 +322,7 @@ mod tests {
 
         let server = empty();
 
-        run_client(exec, async move || {
+        run_client(exec, || async move {
             let (root, server_end) =
                 create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
@@ -342,9 +343,9 @@ mod tests {
         // };
 
         let root = empty();
-        root.clone().add_entry("file", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |first_proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |first_proxy| async move {
             async fn assert_read_file(root: &DirectoryProxy) {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
@@ -376,9 +377,9 @@ mod tests {
         // };
 
         let root = empty();
-        root.clone().add_entry("file", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |first_proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |first_proxy| async move {
             async fn assert_read_file(root: &DirectoryProxy) {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
@@ -408,9 +409,9 @@ mod tests {
         // };
 
         let root = empty();
-        root.clone().add_entry("file", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             async fn assert_read_file(root: &DirectoryProxy) {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
@@ -440,9 +441,9 @@ mod tests {
         // };
 
         let root = empty();
-        root.clone().add_entry("file", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
 
@@ -466,9 +467,9 @@ mod tests {
         // };
 
         let root = empty();
-        root.clone().add_entry("file", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
 
@@ -486,9 +487,9 @@ mod tests {
         // };
 
         let root = empty();
-        root.clone().add_entry("file", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             open_as_file_assert_err!(&root, flags, "file2", Status::NOT_FOUND);
 
@@ -513,13 +514,13 @@ mod tests {
             .add_entry("etc", {
                 let etc = empty();
                 etc.clone()
-                    .add_entry("fstab", read_only(async || Ok(b"/dev/fs /".to_vec())))
+                    .add_entry("fstab", read_only_static(b"/dev/fs /"))
                     .unwrap();
                 etc.clone()
                     .add_entry("ssh", {
                         let ssh = empty();
                         ssh.clone()
-                            .add_entry("sshd_config", read_only(async || Ok(b"# Empty".to_vec())))
+                            .add_entry("sshd_config", read_only_static(b"# Empty"))
                             .unwrap();
                         ssh
                     })
@@ -527,9 +528,9 @@ mod tests {
                 etc
             })
             .unwrap();
-        root.clone().add_entry("uname", read_only(async || Ok(b"Fuchsia".to_vec()))).unwrap();
+        root.clone().add_entry("uname", read_only_static(b"Fuchsia")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             async fn open_read_close<'a>(
                 from_dir: &'a DirectoryProxy,
                 path: &'a str,
@@ -586,7 +587,7 @@ mod tests {
                         ssh.clone()
                             .add_entry(
                                 "sshd_config",
-                                read_write(async || Ok(b"# Empty".to_vec()), 100, {
+                                read_write(|| future::ready(Ok(b"# Empty".to_vec())), 100, {
                                     let write_count = write_count.clone();
                                     move |content| {
                                         let write_count = write_count.clone();
@@ -609,7 +610,7 @@ mod tests {
             })
             .unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| async move {
             async fn open_read_write_close<'a>(
                 from_dir: &'a DirectoryProxy,
                 path: &'a str,
@@ -701,7 +702,7 @@ mod tests {
             })
             .unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| async move {
             async fn open_write_close<'a>(
                 from_dir: &'a DirectoryProxy,
                 new_content: &'a str,
@@ -737,14 +738,14 @@ mod tests {
             .add_entry("dir", {
                 let dir = empty();
                 dir.clone()
-                    .add_entry("file1", read_only(async || Ok(b"Content 1".to_vec())))
+                    .add_entry("file1", read_only_static(b"Content 1"))
                     .unwrap();
                 dir
             })
             .unwrap();
-        root.clone().add_entry("file2", read_only(async || Ok(b"Content 2".to_vec()))).unwrap();
+        root.clone().add_entry("file2", read_only_static(b"Content 2")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             open_as_file_assert_err!(&root, flags, "non-existing", Status::NOT_FOUND);
             open_as_file_assert_err!(&root, flags, "dir/file10", Status::NOT_FOUND);
@@ -762,9 +763,9 @@ mod tests {
         // };
 
         let root = empty();
-        root.clone().add_entry("file_foo", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("file_foo", read_only_static(b"Content")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             open_as_file_assert_err!(&root, flags, "", Status::BAD_PATH);
 
@@ -786,14 +787,14 @@ mod tests {
             .add_entry("dir", {
                 let dir = empty();
                 dir.clone()
-                    .add_entry("file1", read_only(async || Ok(b"Content 1".to_vec())))
+                    .add_entry("file1", read_only_static(b"Content 1"))
                     .unwrap();
                 dir
             })
             .unwrap();
-        root.clone().add_entry("file2", read_only(async || Ok(b"Content 2".to_vec()))).unwrap();
+        root.clone().add_entry("file2", read_only_static(b"Content 2")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             open_as_file_assert_err!(&root, flags, "file2/file1", Status::NOT_DIR);
             open_as_file_assert_err!(&root, flags, "dir/file1/file3", Status::NOT_DIR);
@@ -816,14 +817,14 @@ mod tests {
             .add_entry("dir", {
                 let dir = empty();
                 dir.clone()
-                    .add_entry("file1", read_only(async || Ok(b"Content 1".to_vec())))
+                    .add_entry("file1", read_only_static(b"Content 1"))
                     .unwrap();
                 dir
             })
             .unwrap();
-        root.clone().add_entry("file2", read_only(async || Ok(b"Content 2".to_vec()))).unwrap();
+        root.clone().add_entry("file2", read_only_static(b"Content 2")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             let mode = MODE_TYPE_DIRECTORY;
             {
@@ -862,7 +863,7 @@ mod tests {
             })
             .unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             let mode = MODE_TYPE_FILE;
             {
@@ -892,10 +893,10 @@ mod tests {
         // };
 
         let root = empty();
-        root.clone().add_entry("file", read_only(async || Ok(b"Content2".to_vec()))).unwrap();
+        root.clone().add_entry("file", read_only_static(b"Content2")).unwrap();
         root.clone().add_entry("dir", empty()).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
             open_as_file_assert_err!(&root, flags, "file/", Status::NOT_DIR);
@@ -925,7 +926,7 @@ mod tests {
         // };
 
         let root = empty();
-        root.clone().add_entry("file", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
         root.clone()
             .add_entry("dir", {
                 let dir = empty();
@@ -934,7 +935,7 @@ mod tests {
             })
             .unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::INVALID_ARGS);
             open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::INVALID_ARGS);
@@ -961,7 +962,7 @@ mod tests {
             })
             .unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::INVALID_ARGS);
             open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::INVALID_ARGS);
@@ -986,12 +987,12 @@ mod tests {
         root.clone()
             .add_entry("dir", {
                 let dir = empty();
-                dir.clone().add_entry("file", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+                dir.clone().add_entry("file", read_only_static(b"Content")).unwrap();
                 dir
             })
             .unwrap();
 
-        run_server_client(0, root, async move |root| {
+        run_server_client(0, root, |root| async move {
             open_as_file_assert_err!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
@@ -1020,7 +1021,7 @@ mod tests {
                 dir.clone()
                     .add_entry(
                         "file",
-                        write_only(100, async move |_content| {
+                        write_only(100, |_content| async move {
                             panic!("Access permissions should not allow this file to be written");
                         }),
                     )
@@ -1029,7 +1030,7 @@ mod tests {
             })
             .unwrap();
 
-        run_server_client(0, root, async move |root| {
+        run_server_client(0, root, |root| async move {
             open_as_file_assert_err!(
                 &root,
                 OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
@@ -1065,7 +1066,7 @@ mod tests {
                     .clone()
                     .add_entry(
                         "file",
-                        read_write(async || Ok(b"Content".to_vec()), 20, {
+                        read_write(|| future::ready(Ok(b"Content".to_vec())), 20, {
                             let write_count = write_count.clone();
                             move |content| {
                                 let write_count = write_count.clone();
@@ -1082,7 +1083,7 @@ mod tests {
             })
             .unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| async move {
             let nested = open_get_directory_proxy_assert_ok!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX | OPEN_FLAG_DESCRIBE,
@@ -1131,9 +1132,9 @@ mod tests {
             nested.clone().add_entry(
                     "file",
                     read_write(
-                        async || Ok(b"Content".to_vec()),
+                        || future::ready(Ok(b"Content".to_vec())),
                         20,
-                        async move |_content| {
+                        |_content| async move {
                             panic!("OPEN_FLAG_POSIX should not add OPEN_RIGHT_WRITABLE for directories");
                         },
                     )
@@ -1141,7 +1142,7 @@ mod tests {
             nested
         }).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let nested = open_get_directory_proxy_assert_ok!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX | OPEN_FLAG_DESCRIBE,
@@ -1193,19 +1194,19 @@ mod tests {
             .add_entry("etc", {
                 let etc = empty();
                 etc.clone()
-                    .add_entry("fstab", read_only(async || Ok(b"/dev/fs /".to_vec())))
+                    .add_entry("fstab", read_only_static(b"/dev/fs /"))
                     .unwrap();
                 etc.clone()
-                    .add_entry("passwd", read_only(async || Ok(b"[redacted]".to_vec())))
+                    .add_entry("passwd", read_only_static(b"[redacted]"))
                     .unwrap();
                 etc.clone()
-                    .add_entry("shells", read_only(async || Ok(b"/bin/bash".to_vec())))
+                    .add_entry("shells", read_only_static(b"/bin/bash"))
                     .unwrap();
                 etc.clone()
                     .add_entry("ssh", {
                         let ssh = empty();
                         ssh.clone()
-                            .add_entry("sshd_config", read_only(async || Ok(b"# Empty".to_vec())))
+                            .add_entry("sshd_config", read_only_static(b"# Empty"))
                             .unwrap();
                         ssh
                     })
@@ -1214,11 +1215,11 @@ mod tests {
             })
             .unwrap();
 
-        root.clone().add_entry("files", read_only(async || Ok(b"Content".to_vec()))).unwrap();
-        root.clone().add_entry("more", read_only(async || Ok(b"Content".to_vec()))).unwrap();
-        root.clone().add_entry("uname", read_only(async || Ok(b"Fuchsia".to_vec()))).unwrap();
+        root.clone().add_entry("files", read_only_static(b"Content")).unwrap();
+        root.clone().add_entry("more", read_only_static(b"Content")).unwrap();
+        root.clone().add_entry("uname", read_only_static(b"Fuchsia")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             {
                 let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
                 expected
@@ -1273,11 +1274,11 @@ mod tests {
 
         let root = empty();
         root.clone().add_entry("etc", empty()).unwrap();
-        root.clone().add_entry("files", read_only(async || Ok(b"Content".to_vec()))).unwrap();
-        root.clone().add_entry("more", read_only(async || Ok(b"Content".to_vec()))).unwrap();
-        root.clone().add_entry("uname", read_only(async || Ok(b"Fuchsia".to_vec()))).unwrap();
+        root.clone().add_entry("files", read_only_static(b"Content")).unwrap();
+        root.clone().add_entry("more", read_only_static(b"Content")).unwrap();
+        root.clone().add_entry("uname", read_only_static(b"Fuchsia")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             {
                 let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
                 // Entry header is 10 bytes + length of the name in bytes.
@@ -1314,9 +1315,9 @@ mod tests {
         // };
 
         let root = empty();
-        root.clone().add_entry("file", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             // Entry header is 10 bytes, so this read should not be able to return a single entry.
             assert_read_dirents_err!(root, 8, Status::BUFFER_TOO_SMALL);
             assert_close!(root);
@@ -1334,11 +1335,11 @@ mod tests {
 
         let root = empty();
         root.clone().add_entry("etc", empty()).unwrap();
-        root.clone().add_entry("files", read_only(async || Ok(b"Content".to_vec()))).unwrap();
-        root.clone().add_entry("more", read_only(async || Ok(b"Content".to_vec()))).unwrap();
-        root.clone().add_entry("uname", read_only(async || Ok(b"Fuchsia".to_vec()))).unwrap();
+        root.clone().add_entry("files", read_only_static(b"Content")).unwrap();
+        root.clone().add_entry("more", read_only_static(b"Content")).unwrap();
+        root.clone().add_entry("uname", read_only_static(b"Fuchsia")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             {
                 let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
                 // Entry header is 10 bytes + length of the name in bytes.
@@ -1386,12 +1387,12 @@ mod tests {
         // };
 
         let root = empty();
-        root.clone().add_entry("file", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
 
         run_server_client(
             OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE,
             root,
-            async move |root| {
+            |root| async move {
                 open_as_file_assert_err!(
                     &root,
                     OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
@@ -1417,12 +1418,12 @@ mod tests {
         // };
 
         let root = empty();
-        root.clone().add_entry("file", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("file", read_only_static(b"Content")).unwrap();
 
         run_server_client(
             OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_WRITABLE,
             root,
-            async move |root| {
+            |root| async move {
                 open_as_file_assert_err!(
                     &root,
                     OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
@@ -1458,13 +1459,13 @@ mod tests {
             .add_entry("etc", {
                 let etc = empty();
                 etc.clone()
-                    .add_entry("fstab", read_only(async || Ok(b"/dev/fs /".to_vec())))
+                    .add_entry("fstab", read_only_static(b"/dev/fs /"))
                     .unwrap();
                 etc.clone()
                     .add_entry("ssh", {
                         let ssh = empty();
                         ssh.clone()
-                            .add_entry("sshd_config", read_only(async || Ok(b"# Empty".to_vec())))
+                            .add_entry("sshd_config", read_only_static(b"# Empty"))
                             .unwrap();
                         ssh
                     })
@@ -1472,9 +1473,9 @@ mod tests {
                 etc
             })
             .unwrap();
-        root.clone().add_entry("files", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("files", read_only_static(b"Content")).unwrap();
 
-        run_server_client(OPEN_FLAG_NODE_REFERENCE, root, async move |root| {
+        run_server_client(OPEN_FLAG_NODE_REFERENCE, root, |root| async move {
             {
                 let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
                 expected
@@ -1518,9 +1519,9 @@ mod tests {
     fn simple_add_file() {
         let root = empty();
 
-        run_server_client(OPEN_RIGHT_READABLE, root.clone(), async move |proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, root.clone(), |proxy| async move {
             {
-                let file = read_only(async || Ok(b"Content".to_vec()));
+                let file = read_only_static(b"Content");
                 root.add_entry("file", file).unwrap();
             }
 
@@ -1547,13 +1548,13 @@ mod tests {
             })
             .unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |proxy| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
             open_as_file_assert_err!(&proxy, flags, "etc/fstab", Status::NOT_FOUND);
 
             {
-                let fstab = read_only(async || Ok(b"/dev/fs /".to_vec()));
+                let fstab = read_only_static(b"/dev/fs /");
                 etc.add_entry("fstab", fstab).unwrap();
             }
 
@@ -1584,7 +1585,7 @@ mod tests {
                     .add_entry("ssh", {
                         ssh = empty();
                         ssh.clone()
-                            .add_entry("sshd_config", read_only(async || Ok(b"# Empty".to_vec())))
+                            .add_entry("sshd_config", read_only_static(b"# Empty"))
                             .unwrap();
                         ssh.clone()
                     })
@@ -1596,7 +1597,7 @@ mod tests {
         let exec = Executor::new().expect("Executor creation failed");
         let scope = ExecutionScope::new(Box::new(exec.ehandle()));
 
-        run_client(exec, async move || {
+        run_client(exec, || async move {
             let (proxy, server_end) =
                 create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
@@ -1631,7 +1632,7 @@ mod tests {
                     .add_entry("ssh", {
                         let ssh = empty();
                         ssh.clone()
-                            .add_entry("sshd_config", read_only(async || Ok(b"# Empty".to_vec())))
+                            .add_entry("sshd_config", read_only_static(b"# Empty"))
                             .unwrap();
                         ssh
                     })
@@ -1643,7 +1644,7 @@ mod tests {
         let exec = Executor::new().expect("Executor creation failed");
         let scope = ExecutionScope::new(Box::new(exec.ehandle()));
 
-        run_client(exec, async move || {
+        run_client(exec, || async move {
             let (proxy, server_end) =
                 create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
@@ -1679,7 +1680,7 @@ mod tests {
                     .add_entry("ssh", {
                         let ssh = empty();
                         ssh.clone()
-                            .add_entry("sshd_config", read_only(async || Ok(b"# Empty".to_vec())))
+                            .add_entry("sshd_config", read_only_static(b"# Empty"))
                             .unwrap();
                         ssh
                     })
@@ -1691,7 +1692,7 @@ mod tests {
         let exec = Executor::new().expect("Executor creation failed");
         let scope = ExecutionScope::new(Box::new(exec.ehandle()));
 
-        run_client(exec, async move || {
+        run_client(exec, || async move {
             let (proxy, server_end) =
                 create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
@@ -1727,26 +1728,26 @@ mod tests {
                     .add_entry("ssh", {
                         let ssh = empty();
                         ssh.clone()
-                            .add_entry("sshd_config", read_only(async || Ok(b"# Empty".to_vec())))
+                            .add_entry("sshd_config", read_only_static(b"# Empty"))
                             .unwrap();
                         ssh
                     })
                     .unwrap();
                 etc.clone()
-                    .add_entry("passwd", read_only(async || Ok(b"[redacted]".to_vec())))
+                    .add_entry("passwd", read_only_static(b"[redacted]"))
                     .unwrap();
                 etc.clone()
             })
             .unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
             open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
             open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
 
             {
-                let fstab = read_only(async || Ok(b"/dev/fs /".to_vec()));
+                let fstab = read_only_static(b"/dev/fs /");
                 etc.add_entry("fstab", fstab).unwrap();
             }
 
@@ -1775,16 +1776,16 @@ mod tests {
             .add_entry("etc", {
                 etc = empty();
                 etc.clone()
-                    .add_entry("fstab", read_only(async || Ok(b"/dev/fs /".to_vec())))
+                    .add_entry("fstab", read_only_static(b"/dev/fs /"))
                     .unwrap();
                 etc.clone()
-                    .add_entry("passwd", read_only(async || Ok(b"[redacted]".to_vec())))
+                    .add_entry("passwd", read_only_static(b"[redacted]"))
                     .unwrap();
                 etc.clone()
             })
             .unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
             open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
@@ -1823,13 +1824,13 @@ mod tests {
             .add_entry("etc", {
                 etc = empty();
                 etc.clone()
-                    .add_entry("fstab", read_only(async || Ok(b"/dev/fs /".to_vec())))
+                    .add_entry("fstab", read_only_static(b"/dev/fs /"))
                     .unwrap();
                 etc.clone()
             })
             .unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
             open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
@@ -1852,7 +1853,7 @@ mod tests {
 
     #[test]
     fn watch_empty() {
-        run_server_client(OPEN_RIGHT_READABLE, empty(), async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, empty(), |root| async move {
             let mask =
                 WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher_client = assert_watch!(root, mask);
@@ -1882,13 +1883,13 @@ mod tests {
             .add_entry("etc", {
                 let etc = empty();
                 etc.clone()
-                    .add_entry("fstab", read_only(async || Ok(b"/dev/fs /".to_vec())))
+                    .add_entry("fstab", read_only_static(b"/dev/fs /"))
                     .unwrap();
                 etc.clone()
                     .add_entry("ssh", {
                         let ssh = empty();
                         ssh.clone()
-                            .add_entry("sshd_config", read_only(async || Ok(b"# Empty".to_vec())))
+                            .add_entry("sshd_config", read_only_static(b"# Empty"))
                             .unwrap();
                         ssh
                     })
@@ -1896,9 +1897,9 @@ mod tests {
                 etc
             })
             .unwrap();
-        root.clone().add_entry("files", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("files", read_only_static(b"Content")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let mask =
                 WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher_client = assert_watch!(root, mask);
@@ -1933,13 +1934,13 @@ mod tests {
             .add_entry("etc", {
                 let etc = empty();
                 etc.clone()
-                    .add_entry("fstab", read_only(async || Ok(b"/dev/fs /".to_vec())))
+                    .add_entry("fstab", read_only_static(b"/dev/fs /"))
                     .unwrap();
                 etc.clone()
                     .add_entry("ssh", {
                         let ssh = empty();
                         ssh.clone()
-                            .add_entry("sshd_config", read_only(async || Ok(b"# Empty".to_vec())))
+                            .add_entry("sshd_config", read_only_static(b"# Empty"))
                             .unwrap();
                         ssh
                     })
@@ -1947,9 +1948,9 @@ mod tests {
                 etc
             })
             .unwrap();
-        root.clone().add_entry("files", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("files", read_only_static(b"Content")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let mask =
                 WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher1_client = assert_watch!(root, mask);
@@ -2001,19 +2002,19 @@ mod tests {
                     .add_entry("ssh", {
                         let ssh = empty();
                         ssh.clone()
-                            .add_entry("sshd_config", read_only(async || Ok(b"# Empty".to_vec())))
+                            .add_entry("sshd_config", read_only_static(b"# Empty"))
                             .unwrap();
                         ssh
                     })
                     .unwrap();
                 etc.clone()
-                    .add_entry("passwd", read_only(async || Ok(b"[redacted]".to_vec())))
+                    .add_entry("passwd", read_only_static(b"[redacted]"))
                     .unwrap();
                 etc.clone()
             })
             .unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
             open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
@@ -2034,7 +2035,7 @@ mod tests {
             assert_watcher_one_message_watched_events!(watcher, { IDLE, vec![] });
 
             {
-                let fstab = read_only(async || Ok(b"/dev/fs /".to_vec()));
+                let fstab = read_only_static(b"/dev/fs /");
                 etc.add_entry("fstab", fstab).unwrap();
             }
 
@@ -2066,16 +2067,16 @@ mod tests {
             .add_entry("etc", {
                 etc = empty();
                 etc.clone()
-                    .add_entry("fstab", read_only(async || Ok(b"/dev/fs /".to_vec())))
+                    .add_entry("fstab", read_only_static(b"/dev/fs /"))
                     .unwrap();
                 etc.clone()
-                    .add_entry("passwd", read_only(async || Ok(b"[redacted]".to_vec())))
+                    .add_entry("passwd", read_only_static(b"[redacted]"))
                     .unwrap();
                 etc.clone()
             })
             .unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
             open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
@@ -2131,13 +2132,13 @@ mod tests {
             .add_entry("etc", {
                 let etc = empty();
                 etc.clone()
-                    .add_entry("fstab", read_only(async || Ok(b"/dev/fs /".to_vec())))
+                    .add_entry("fstab", read_only_static(b"/dev/fs /"))
                     .unwrap();
                 etc.clone()
                     .add_entry("ssh", {
                         let ssh = empty();
                         ssh.clone()
-                            .add_entry("sshd_config", read_only(async || Ok(b"# Empty".to_vec())))
+                            .add_entry("sshd_config", read_only_static(b"# Empty"))
                             .unwrap();
                         ssh
                     })
@@ -2145,9 +2146,9 @@ mod tests {
                 etc
             })
             .unwrap();
-        root.clone().add_entry("files", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+        root.clone().add_entry("files", read_only_static(b"Content")).unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
             let mask = WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher_client = assert_watch!(root, mask);
 
@@ -2175,7 +2176,7 @@ mod tests {
             .add_entry("etc", {
                 etc = empty();
                 etc.clone()
-                    .add_entry("passwd", read_only(async || Ok(b"[redacted]".to_vec())))
+                    .add_entry("passwd", read_only_static(b"[redacted]"))
                     .unwrap();
                 etc.clone()
             })
@@ -2185,7 +2186,7 @@ mod tests {
         let scope1 = ExecutionScope::new(Box::new(exec.ehandle()));
         let scope2 = ExecutionScope::new(Box::new(exec.ehandle()));
 
-        run_client(exec, async move || {
+        run_client(exec, || async move {
             async fn open_with_scope(
                 server: Arc<DirectoryEntry>,
                 scope: ExecutionScope,
@@ -2218,7 +2219,7 @@ mod tests {
             let watcher2_client = assert_watch!(etc2_proxy, mask);
 
             {
-                let fstab = read_only(async || Ok(b"/dev/fs /".to_vec()));
+                let fstab = read_only_static(b"/dev/fs /");
                 etc.clone().add_entry("fstab", fstab).unwrap();
             }
 
@@ -2236,7 +2237,7 @@ mod tests {
             assert_channel_closed!(etc2_proxy.into_channel().unwrap());
 
             {
-                let shells = read_only(async || Ok(b"/bin/bash".to_vec()));
+                let shells = read_only_static(b"/bin/bash");
                 etc.add_entry("shells", shells).unwrap();
             }
 
@@ -2270,13 +2271,13 @@ mod tests {
         root.clone()
             .add_entry("dir", {
                 let dir = empty();
-                dir.clone().add_entry("file", read_only(async || Ok(b"Content".to_vec()))).unwrap();
+                dir.clone().add_entry("file", read_only_static(b"Content")).unwrap();
                 dir.clone().add_entry("dir", dir.clone()).unwrap();
                 dir
             })
             .unwrap();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, root, |proxy| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             open_as_file_assert_content!(&proxy, flags, "dir/file", "Content");
             open_as_file_assert_content!(&proxy, flags, "dir/dir/file", "Content");

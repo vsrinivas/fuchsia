@@ -33,7 +33,12 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN},
     fuchsia_zircon::Status,
-    futures::{task::Context, Future, Poll},
+    futures::{
+        task::Context,
+        Future,
+        Poll,
+        future,
+    },
     std::{pin::Pin, sync::Arc},
 };
 
@@ -63,6 +68,18 @@ where
     InitBufferRes: Future<Output = Result<Vec<u8>, Status>> + Send + Sync + 'static,
 {
     AsyncPseudoFile::new(Some(init_buffer), 0, None)
+}
+
+/// Creates a new read-only `AsyncPseudoFile` which serves static content.
+pub fn read_only_static(
+    bytes: &'static [u8],
+) -> Arc<AsyncPseudoFile<
+    impl (Fn() -> future::Ready<Result<Vec<u8>, Status>>) + Send + Sync + 'static,
+    future::Ready<Result<Vec<u8>, Status>>,
+    fn(Vec<u8>) -> StubUpdateRes,
+    StubUpdateRes,
+>> {
+    read_only(move || future::ready(Ok(bytes.to_vec())))
 }
 
 /// This is a "stub" type used by [`write_only`] constructor, when it needs to generate type for
