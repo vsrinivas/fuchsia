@@ -198,12 +198,13 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
   mtx_init(&canvas->lock, mtx_plain);
 
   device_add_args_t args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "aml-canvas",
-      .ctx = canvas,
-      .ops = &aml_canvas_device_protocol,
-      .proto_id = ZX_PROTOCOL_AMLOGIC_CANVAS,
-      .proto_ops = &canvas_ops,
+    .version = DEVICE_ADD_ARGS_VERSION,
+    .name = "aml-canvas",
+    .ctx = canvas,
+    .ops = &aml_canvas_device_protocol,
+    .proto_id = ZX_PROTOCOL_AMLOGIC_CANVAS,
+    .proto_ops = &canvas_ops,
+    .flags = DEVICE_ADD_ALLOW_MULTI_COMPOSITE,
   };
 
   status = device_add(parent, &args, &canvas->zxdev);
@@ -215,6 +216,7 @@ static zx_status_t aml_canvas_bind(void* ctx, zx_device_t* parent) {
   canvas->canvas.ctx = canvas;
 
   // Register the canvas protocol with the platform bus
+  // TODO(ZX-3746) Remove this after all clients have switched to using composite protocol. 
   pbus_register_protocol(&pbus, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas->canvas,
                          sizeof(canvas->canvas));
   return ZX_OK;
@@ -230,8 +232,8 @@ static zx_driver_ops_t aml_canvas_driver_ops = {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(aml_canvas, aml_canvas_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_CANVAS),
+  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
+  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_CANVAS),
 ZIRCON_DRIVER_END(aml_canvas)

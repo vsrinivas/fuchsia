@@ -123,6 +123,7 @@ TEST_F(DeviceEnumerationTest, Vim2Test) {
         "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2/component",
         "sys/platform/05:02:b/aml-mailbox",
         "class/thermal/000",
+        "aml-video/amlogic_video",
     };
 
     ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
@@ -148,7 +149,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
         "display/astro-display/display-controller",
         "sys/platform/05:00:10/aml-canvas",
         "sys/platform/00:00:e/optee-tz",
-        "sys/platform/05:03:e/amlogic_video",
+        "aml-video/amlogic_video",
         "sys/platform/00:00:f/fallback-rtc",
         "sys/platform/05:00:f/aml-raw_nand/nand/tpl/skip-block",
         "sys/platform/05:00:f/aml-raw_nand/nand/fts/skip-block",
@@ -254,7 +255,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
         "imx227-sensor",
         "isp",
         "camera-controller",
-        "sys/platform/05:04:e/amlogic_video",
+        "aml-video/amlogic_video",
         "sys/platform/05:04:17/aml-gpu",
         "sys/platform/05:04:16/sherlock-audio-in",
         "SherlockAudio",

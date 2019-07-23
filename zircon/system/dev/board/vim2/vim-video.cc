@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
@@ -34,14 +35,14 @@ static pbus_mmio_t vim_video_mmios[] = {
     },
 };
 
-static const pbus_bti_t vim_video_btis[] = {
+constexpr pbus_bti_t vim_video_btis[] = {
     {
         .iommu_index = 0,
         .bti_id = BTI_VIDEO,
     },
 };
 
-static const pbus_irq_t vim_video_irqs[] = {
+constexpr pbus_irq_t vim_video_irqs[] = {
     {
         .irq = S912_DEMUX_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
@@ -64,9 +65,31 @@ static const pbus_irq_t vim_video_irqs[] = {
     },
 };
 
+constexpr zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+constexpr zx_bind_inst_t sysmem_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
+};
+constexpr zx_bind_inst_t canvas_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
+};
+constexpr device_component_part_t sysmem_component[] = {
+    { countof(root_match), root_match },
+    { countof(sysmem_match), sysmem_match },
+};
+constexpr device_component_part_t canvas_component[] = {
+    { countof(root_match), root_match },
+    { countof(canvas_match), canvas_match },
+};
+constexpr device_component_t components[] = {
+    { countof(sysmem_component), sysmem_component },
+    { countof(canvas_component), canvas_component },
+};
+
 zx_status_t Vim::VideoInit() {
     pbus_dev_t video_dev = {};
-    video_dev.name = "video";
+    video_dev.name = "aml-video";
     video_dev.vid = PDEV_VID_AMLOGIC;
     video_dev.pid = PDEV_PID_AMLOGIC_S912;
     video_dev.did = PDEV_DID_AMLOGIC_VIDEO;
@@ -79,8 +102,9 @@ zx_status_t Vim::VideoInit() {
 
     zx_status_t status;
 
-    if ((status = pbus_.DeviceAdd(&video_dev)) != ZX_OK) {
-        zxlogf(ERROR, "VideoInit: pbus_device_add() failed for video: %d\n", status);
+    if ((status = pbus_.CompositeDeviceAdd(&video_dev, components, countof(components),
+                                          UINT32_MAX)) != ZX_OK) {
+        zxlogf(ERROR, "VideoInit: CompositeDeviceAdd() failed for video: %d\n", status);
         return status;
     }
 

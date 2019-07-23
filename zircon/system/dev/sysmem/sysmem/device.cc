@@ -299,6 +299,8 @@ zx_status_t Device::Bind() {
     device_add_args.name = "sysmem";
     device_add_args.ctx = this;
     device_add_args.ops = &sysmem_device_ops;
+    device_add_args.proto_id = ZX_PROTOCOL_SYSMEM,
+    device_add_args.proto_ops = &in_proc_sysmem_protocol_,
 
     // ZX_PROTOCOL_SYSMEM causes /dev/class/sysmem to get created, and flags
     // support for the fuchsia.sysmem.DriverConnector protocol.  The .message
@@ -306,7 +308,7 @@ zx_status_t Device::Bind() {
     // sysmem_protocol_ops.message.
     device_add_args.proto_id = ZX_PROTOCOL_SYSMEM;
     device_add_args.proto_ops = &in_proc_sysmem_protocol_ops;
-    device_add_args.flags = DEVICE_ADD_INVISIBLE;
+    device_add_args.flags = DEVICE_ADD_ALLOW_MULTI_COMPOSITE;
 
     status = device_add(parent_device_, &device_add_args, &device_);
     if (status != ZX_OK) {
@@ -322,6 +324,7 @@ zx_status_t Device::Bind() {
     // We should only pbus_register_protocol() if device_add() succeeded, but if
     // pbus_register_protocol() fails, we should remove the device without it
     // ever being visible.
+    // TODO(ZX-3746) Remove this after all clients have switched to using composite protocol. 
     status = pbus_register_protocol(
         &pbus, ZX_PROTOCOL_SYSMEM, &in_proc_sysmem_protocol_,
         sizeof(in_proc_sysmem_protocol_));
@@ -333,10 +336,6 @@ zx_status_t Device::Bind() {
         ZX_DEBUG_ASSERT(remove_status == ZX_OK);
         return status;
     }
-
-    // We only do this if Bind() fully worked.  Else we don't want any client
-    // to be able to see the device.  This call returns void, thankfully.
-    device_make_visible(device_);
 
     return ZX_OK;
 }

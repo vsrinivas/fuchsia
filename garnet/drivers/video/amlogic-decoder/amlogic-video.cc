@@ -9,6 +9,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/composite.h>
 #include <ddk/protocol/platform/device.h>
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
@@ -50,6 +51,13 @@ enum Interrupt {
   kDosMbox0Irq,
   kDosMbox1Irq,
   kDosMbox2Irq,
+};
+
+enum {
+  kComponentPdev,
+  kComponentSysmem,
+  kComponentCanvas,
+  kComponentCount,
 };
 
 AmlogicVideo::AmlogicVideo() {
@@ -750,19 +758,34 @@ zx_status_t AmlogicVideo::SetProtected(ProtectableHardwareUnit unit,
 zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parent_ = parent;
 
-  zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev_);
+  composite_protocol_t composite;
+  auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    DECODE_ERROR("Failed to get parent protocol");
+      DECODE_ERROR("Could not get composite protocol\n");
+      return status;
+  }
+
+  zx_device_t* components[kComponentCount];
+  size_t actual;
+  composite_get_components(&composite, components, countof(components), &actual);
+  if (actual != countof(components)) {
+    DECODE_ERROR("could not get components\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  status = device_get_protocol(components[kComponentPdev], ZX_PROTOCOL_PDEV, &pdev_);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed to get pdev protocol\n");
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = device_get_protocol(parent_, ZX_PROTOCOL_SYSMEM, &sysmem_);
+  status = device_get_protocol(components[kComponentSysmem], ZX_PROTOCOL_SYSMEM, &sysmem_);
   if (status != ZX_OK) {
     DECODE_ERROR("Could not get SYSMEM protocol\n");
     return status;
   }
 
-  status = device_get_protocol(parent_, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
+  status = device_get_protocol(components[kComponentCanvas], ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
   if (status != ZX_OK) {
     DECODE_ERROR("Could not get video CANVAS protocol\n");
     return status;
