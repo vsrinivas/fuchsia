@@ -586,7 +586,7 @@ action("devmgr_config.txt") {
     # Add the backstop UTC value from the integration repo latest commit
     args += [
       "--contents",
-      "--entry=devmgr.epoch=" +
+      "--entry=clock.backstop=" +
           rebase_path(build_info_files.minimum_utc_stamp, root_build_dir),
       "--no-contents",
       "--reset-rewrite",

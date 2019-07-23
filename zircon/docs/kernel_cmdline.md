@@ -32,11 +32,11 @@ Arguments to the program can optionally be specified using a comma separator
 between the program and individual arguments. For example,
 'bootsvc.next=bin/mybin,arg1,arg2'.
 
-## devmgr\.epoch=\<seconds\>
+## clock\.backstop=\<seconds\>
 
 Sets the initial offset (from the Unix epoch, in seconds) for the UTC clock.
-This is useful for platforms lacking an RTC, where the UTC offset would
-otherwise remain at 0.
+The clock will be set by the device coordinator at boot time, and then later,
+if an RTC is present, the RTC clock will be sanitized to at least this time.
 
 ## devmgr\.require-system=\<bool\>
 
