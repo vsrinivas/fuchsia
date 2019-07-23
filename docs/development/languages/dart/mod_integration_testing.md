@@ -79,68 +79,67 @@ described [later](#build-gn-target). The tests for `driver_example_mod` are in
 ### Boilerplate
 
 You’ll need some boilerplate to set up and tear down your code. The following
-helper function starts a basemgr with dev shells, allowing you to inject your
-mod as the root view. This helper will eventually be factored into a Modular
-Framework service call.
+helper function starts Modular with test shells and launches the mod under test
+in a new story.
 
 ```dart
-import 'package:fidl/fidl.dart';
-import 'package:fidl_fuchsia_sys/fidl_async.dart';
-import 'package:fuchsia_services/services.dart';
+import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
+import 'package:fidl_fuchsia_modular_testing/fidl_async.dart';
+import 'package:fuchsia_modular_testing/test.dart';
 
-const _basemgrUrl = 'fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx';
+const Pattern _isolatePattern = 'driver_example_mod.cmx';
+const _testAppUrl =
+    'fuchsia-pkg://fuchsia.com/driver_example_mod#meta/driver_example_mod.cmx';
 
-// Starts basemgr with dev shells. This should be called from within a
+final _addModCommand = modular.AddMod(
+    modName: [_isolatePattern],
+    modNameTransitional: 'root',
+    intent: modular.Intent(action: 'action', handler: _testAppUrl),
+    surfaceRelation: modular.SurfaceRelation());
+
+// Starts Modular with test shells. This should be called from within a
 // try/finally or similar construct that closes the component controller.
-Future<void> _startBasemgr(
-    InterfaceRequest<ComponentController> controllerRequest,
-    String rootModUrl) async {
-  final context = StartupContext.fromStartupInfo();
+Future<void> _launchModUnderTest(TestHarnessProxy testHarness) async {
+  final puppetMaster = modular.PuppetMasterProxy();
+  await testHarness.connectToModularService(
+      ModularService.withPuppetMaster(puppetMaster.ctrl.request()));
 
-  final launchInfo = LaunchInfo(url: _basemgrUrl, arguments: [
-    '--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx',
-    '--session_shell=fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx',
-    '--session_shell_args=--root_module=$rootModUrl',
-    '--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx',
-    '--test',
-    '--enable_presenter',
-    '--run_base_shell_with_test_runner=false'
-  ]);
-  await context.launcher.createComponent(launchInfo, controllerRequest);
+  // Use PuppetMaster to start a fake story and launch the mod under test
+  final storyPuppetMaster = modular.StoryPuppetMasterProxy();
+  await puppetMaster.controlStory(
+      'driver_example_mod_test', storyPuppetMaster.ctrl.request());
+  await storyPuppetMaster
+      .enqueue([modular.StoryCommand.withAddMod(_addModCommand)]);
+  await storyPuppetMaster.execute();
 }
 ```
 
-The first four options start basemgr with dev shells, which simply start and
-display the given `root_module` using the Modular framework.
+The `Intent.handler` defines the mod that will be launched via
+`_addModCommand`. After starting the Modular TestHarness, you can use
+PuppetMaster to create a new story and execute this command.
 
-The `--test` option prevents basemgr from overriding your command-line options
-with the on-device base shell configuration, but then requires the next two
-options to turn off test-only behavior we don't want. `--enable_presenter`
-allows basemgr to be a root presenter (display) as it is in production, and
-`--run_base_shell_with_test_runner=false` prevents it from needing to connect to
-the `TestRunner` service (used for Modular multiprocess testing).
-
-In your test setup, you'll need to start basemgr with your app under test and
-connect to Flutter Driver.
+In your test setup, you'll need to launch and run the Modular TestHarness.
+You can specify any extra Modular configurations in the `TestHarnessSpec`.
+Once completed, you can launch your mod and connect to Flutter Driver.
 
 ```dart
 // ...
 import 'package:flutter_driver/flutter_driver.dart';
 import 'package:test/test.dart';
 
-const Pattern _isolatePattern = 'driver_example_mod';
-const _testAppUrl =
-    'fuchsia-pkg://fuchsia.com/driver_example_mod#meta/driver_example_mod.cmx';
-
-// ... _startBasemgr ...
+// ... _launchModUnderTest ...
 
 void main() {
   group('driver example tests', () {
-    final controller = ComponentControllerProxy();
+    TestHarnessProxy testHarness;
     FlutterDriver driver;
 
     setUpAll(() async {
-      await _startBasemgr(controller.ctrl.request(), _testAppUrl);
+      testHarness = await launchTestHarness();
+      await testHarness.run(TestHarnessSpec(
+          envServices:
+              EnvironmentServicesSpec(serviceDir: Channel.fromFile('/svc'))));
+      await _launchModUnderTest(testHarness);
 
       driver = await FlutterDriver.connect(
           fuchsiaModuleTarget: _isolatePattern,
@@ -150,7 +149,7 @@ void main() {
 
     tearDownAll(() async {
       await driver?.close();
-      controller.ctrl.close();
+      testHarness.ctrl.close();
     });
 
     // ...
@@ -195,6 +194,8 @@ The component manifest for our tests is
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.auth.account.AccountManager": "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx",
+                "fuchsia.devicesettings.DeviceSettingsManager": "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/device_settings_manager.cmx",
                 "fuchsia.fonts.Provider": "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx",
                 "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
@@ -215,13 +216,22 @@ The component manifest for our tests is
     },
     "sandbox": {
         "features": [
-            "shell"
+            "deprecated-shell",
+            "deprecated-ambient-replace-as-executable"
         ],
         "services": [
+            "fuchsia.auth.account.AccountManager",
+            "fuchsia.devicesettings.DeviceSettingsManager",
+            "fuchsia.fonts.Provider",
             "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider",
             "fuchsia.posix.socket.Provider",
-            "fuchsia.sys.Environment"
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.vulkan.loader.Loader"
         ]
     }
 }
@@ -231,7 +241,7 @@ The
 [injected-services](/docs/development/testing/test_component.md#run-external-services)
 entry starts the hermetic services our mod will need, mostly related to
 graphics. In addition, the `fuchsia.net.SocketProvider` system service and
-`shell` feature are needed to allow Flutter Driver to interact with the Dart
+`deprecated-shell` feature are needed to allow Flutter Driver to interact with the Dart
 Observatory.
 
 ### BUILD.gn target {:#build-gn-target}
@@ -245,6 +255,7 @@ dart_fuchsia_test("driver_example_mod_tests") {
     "//sdk/fidl/fuchsia.sys",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
     "//third_party/dart-pkg/pub/test",
+    "//topaz/public/dart/fuchsia_modular_testing",
     "//topaz/public/dart/fuchsia_services",
   ]
 
