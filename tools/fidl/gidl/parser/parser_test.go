@@ -174,6 +174,7 @@ func TestParseFailsToDecodeCase(t *testing.T) {
 	}.checkSuccess(map[string]interface{}{
 		`
 		fails_to_decode("OneStringOfMaxLengthFive-wrong-length") {
+			type = TypeName
 			bytes = {
 				1, 0, 0, 0, 0, 0, 0, 0, // length
 				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
@@ -182,6 +183,7 @@ func TestParseFailsToDecodeCase(t *testing.T) {
 			err = FIDL_STRING_TOO_LONG
 		}`: ir.FailsToDecode{
 			Name: "OneStringOfMaxLengthFive-wrong-length",
+			Type: "TypeName",
 			Bytes: []byte{
 				1, 0, 0, 0, 0, 0, 0, 0, // length
 				255, 255, 255, 255, 255, 255, 255, 255, // alloc present

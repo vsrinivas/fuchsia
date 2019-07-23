@@ -25,6 +25,7 @@ type FailsToEncode struct {
 
 type FailsToDecode struct {
 	Name  string
+	Type  string
 	Bytes []byte
 	Err   string
 }

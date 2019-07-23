@@ -449,3 +449,19 @@ success("Optionals") {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	}
 }
+
+fails_to_encode("StringExceedsLimit") {
+	value = Length2StringWrapper {
+		length2String: "abc", // exceeeds the string length
+	}
+	err = FIDL_STRING_TOO_LONG
+}
+
+fails_to_decode("NonEmptyStringWithNullPtrBody") {
+	type = StringWrapper
+	bytes = {
+		0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of string data
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // invalid null pointer to content
+	}
+	err = FIDL_NULLPTR_TO_NONEMPTY_STRING
+}

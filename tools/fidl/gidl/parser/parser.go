@@ -113,27 +113,29 @@ type bodyElement uint
 
 const (
 	_ bodyElement = iota
+	isType
 	isValue
 	isBytes
 	isErr
 )
 
-var bodyElementStrings = []string{
-	"<invalid>",
-	"value",
-	"bytes",
-	"err",
-}
-
 func (kind bodyElement) String() string {
-	if index := int(kind); index < len(bodyElementStrings) {
-		return bodyElementStrings[index]
-	} else {
-		return fmt.Sprintf("%d", kind)
+	switch kind {
+	case isType:
+		return "type"
+	case isValue:
+		return "value"
+	case isBytes:
+		return "bytes"
+	case isErr:
+		return "err"
+	default:
+		panic("unsupported kind")
 	}
 }
 
 type body struct {
+	Type  string
 	Value ir.Value
 	Bytes []byte
 	Err   string
@@ -166,10 +168,11 @@ var sections = map[string]sectionMetadata{
 		},
 	},
 	"fails_to_decode": {
-		kinds: []bodyElement{isBytes, isErr},
+		kinds: []bodyElement{isType, isBytes, isErr},
 		setter: func(name string, body body, all *ir.All) {
 			var result ir.FailsToDecode
 			result.Name = name
+			result.Type = body.Type
 			result.Bytes = body.Bytes
 			result.Err = body.Err
 			all.FailsToDecode = append(all.FailsToDecode, result)
@@ -255,6 +258,13 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) 
 	}
 	var kind bodyElement
 	switch tok.value {
+	case "type":
+		tok, ok := p.consumeToken(tText)
+		if !ok {
+			return p.failExpectedToken(tText, tok)
+		}
+		result.Type = tok.value
+		kind = isType
 	case "value":
 		val, err := p.parseValue()
 		if err != nil {
@@ -277,7 +287,7 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) 
 		result.Err = tok.value
 		kind = isErr
 	default:
-		return p.newParseError(tok, "must be value, bytes, or err")
+		return p.newParseError(tok, "must be type, value, bytes, or err")
 	}
 	if all[kind] {
 		return p.newParseError(tok, "duplicate %s found", kind)

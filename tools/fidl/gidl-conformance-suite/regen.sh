@@ -120,4 +120,4 @@ ${GIDL} \
     -language dart \
     -json "${json_path}" \
     -gidl "${gidl_path}" >> "${DART_TEST_PATH}"
-${FUCHSIA_DIR}/prebuilt/third_party/dart/linux-x64/bin/dartfmt -w ${DART_TEST_PATH}
+${FUCHSIA_DIR}/prebuilt/third_party/dart/linux-x64/bin/dartfmt -w ${DART_TEST_PATH} > /dev/null
