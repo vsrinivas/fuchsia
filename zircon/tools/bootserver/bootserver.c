@@ -87,8 +87,7 @@ void initialize_status(const char* name, size_t size) {
     total_file_size = size;
     progress_reported = 0;
     packets_sent = 0;
-    snprintf(filename_in_flight, sizeof(filename_in_flight),
-             "%s%s%s", ANSI(GREEN), name, ANSI(RESET));
+    snprintf(filename_in_flight, sizeof(filename_in_flight), "%s", name);
 }
 
 void update_status(size_t bytes_so_far) {
@@ -155,7 +154,16 @@ void update_status(size_t bytes_so_far) {
             } else {
                 UPDATE_LOG(" ");
             }
-            UPDATE_LOG("  %s", filename_in_flight);
+
+            // Simplify the file path if from "//out/".
+            char *relative_path = strstr(filename_in_flight, "/out/");
+            if (!relative_path) {
+                UPDATE_LOG("  %s%s%s", ANSI(GREEN), filename_in_flight, ANSI(RESET));
+            } else {
+                // Path starting with "//" indicates the relative path wrt
+                // the base directory of Fuchsia source code.
+                UPDATE_LOG("  %s/%s%s", ANSI(GREEN), relative_path, ANSI(RESET));
+            }
             fprintf(stderr, "%s%s", ANSI_CLEARLINE, progress_str);
         }
     }
