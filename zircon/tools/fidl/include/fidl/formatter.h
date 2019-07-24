@@ -19,8 +19,7 @@ namespace raw {
 
 class ScopedBool {
  public:
-  ScopedBool(bool& source, bool value = true)
-      : prev_value_(source), source_(source) {
+  ScopedBool(bool& source, bool value = true) : prev_value_(source), source_(source) {
     source_ = value;
   }
   ~ScopedBool() { source_ = prev_value_; }
@@ -32,8 +31,7 @@ class ScopedBool {
 
 class ScopedIncrement {
  public:
-  ScopedIncrement(int& source)
-      : source_(source) { source_++; }
+  ScopedIncrement(int& source) : source_(source) { source_++; }
   ~ScopedIncrement() { source_--; }
 
  private:
@@ -51,8 +49,7 @@ class ScopedIncrement {
 // struct, enum, and protocol declarations require leading blank lines.
 class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
  public:
-  FormattingTreeVisitor()
-      : last_location_(nullptr) {}
+  FormattingTreeVisitor() : last_location_(nullptr) {}
 
   virtual void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) override {
     OnBlankLineRequiringNode();
@@ -67,6 +64,13 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     OnSourceElementShared(element.end_);
   }
 
+  virtual void OnAttribute(const Attribute& element) override {
+    // Remove leading whitespace from the element.
+    remove_leading_ws_ = true;
+    TreeVisitor::OnAttribute(element);
+    // Remove leading whitespace from the closing square bracket after the element.
+    remove_leading_ws_ = true;
+  }
   virtual void OnAttributeList(std::unique_ptr<AttributeList> const& element) override {
     // Disabling these in case we're in a protocol method and it thinks
     // the next line needs to be indented more.  We don't want an indent
@@ -255,6 +259,10 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
   // When we complete a node and know the next thing needs to be whitespace
   bool ws_required_next_ = false;
 
+  // Remove all leading whitespace (regardless of whether it is part of the
+  // beginning / end of a line).
+  bool remove_leading_ws_ = false;
+
   // If the string str at offset pos is the beginning of a comment, pos is
   // modified to be the newline character at EOL.
   static void MaybeWindPastComment(std::string str, int& pos) {
@@ -270,10 +278,9 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
   // represented in this AST node.
   class Segment {
    public:
-    Segment(std::string input, FormattingTreeVisitor* outer)
-        : output_(input), visitor_(outer) {}
+    Segment(std::string input, FormattingTreeVisitor* outer) : output_(input), visitor_(outer) {}
 
-    void RemoveTrailingWS() {
+    void RemoveTrailingWSOnLine() {
       std::string re("[");
       re += utils::kWhitespaceNoNewlineChars;
       re += "]+\n";
@@ -282,11 +289,18 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
 
     // Removes all of the whitespace at the beginning of every line.  Will
     // add back indentation later.
-    void RemoveLeadingWS() {
+    void RemoveLeadingWSOnLine() {
       std::string re("\n[");
       re += utils::kWhitespaceNoNewlineChars;
       re += "]+";
       output_ = std::regex_replace(output_, std::regex(re), "\n");
+    }
+
+    void RemoveLeadingWS() {
+      std::string re("^[");
+      re += utils::kWhitespaceNoNewlineChars;
+      re += "]+";
+      output_ = std::regex_replace(output_, std::regex(re), "");
     }
 
     void RemoveExtraBlankLines(bool respects_trailing_blankline);
@@ -345,12 +359,18 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
 
   std::string FormatAndPrintSegment(const std::string& segment) {
     Segment seg(segment, this);
-    seg.RemoveTrailingWS();
-    seg.RemoveLeadingWS();
+    seg.RemoveTrailingWSOnLine();
+    seg.RemoveLeadingWSOnLine();
     seg.RemoveExtraBlankLines(blank_line_respecting_node_);
     seg.RegularizeSpaces(ws_required_next_);
     seg.InsertRequiredNewlines(blank_line_requiring_node_);
     seg.Indent(current_nesting_);
+    if (remove_leading_ws_) {
+      seg.RemoveLeadingWS();
+
+      // We've respected the removal of leading white space for this segment, and we should stop now
+      remove_leading_ws_ = false;
+    }
 
     std::string output = seg.GetOutput();
 

@@ -87,7 +87,7 @@ table Table3 {
 // This { should } not be indented
 // My protocol is so wonderful.
     // It is the most wonderful protocol of them all.
-                            [Discoverable]
+                            [	Discoverable     ]
 protocol PCol
 {
                        Foo()
