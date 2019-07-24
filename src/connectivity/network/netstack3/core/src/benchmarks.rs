@@ -6,18 +6,17 @@
 //!
 //! This module contains end-to-end and other high-level benchmarks for the
 //! netstack.
-use std::time::{Duration, Instant};
 
 use packet::{Buf, BufferMut, InnerPacketBuilder, Serializer};
 use rand_xorshift::XorShiftRng;
+use std::time::{Duration, Instant};
 
 use crate::device::ethernet::EtherType;
 use crate::device::{receive_frame, DeviceId, DeviceLayerEventDispatcher};
 use crate::ip::icmp::IcmpEventDispatcher;
 use crate::ip::IpProto;
-use crate::testutil::{
-    black_box, Bencher, DummyEventDispatcherBuilder, FakeCryptoRng, DUMMY_CONFIG_V4,
-};
+use crate::testutil::benchmarks::{black_box, Bencher};
+use crate::testutil::{DummyEventDispatcherBuilder, FakeCryptoRng, DUMMY_CONFIG_V4};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
 use crate::wire::ethernet::{
@@ -148,32 +147,8 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     });
 }
 
-#[cfg(feature = "benchmark")]
-#[bench]
-fn bench_forward_minimum_64(b: &mut test::Bencher) {
-    bench_forward_minimum(b, 64);
-}
-
-#[cfg(feature = "benchmark")]
-#[bench]
-fn bench_forward_minimum_128(b: &mut test::Bencher) {
-    bench_forward_minimum(b, 128);
-}
-
-#[cfg(feature = "benchmark")]
-#[bench]
-fn bench_forward_minimum_256(b: &mut test::Bencher) {
-    bench_forward_minimum(b, 256);
-}
-
-#[cfg(feature = "benchmark")]
-#[bench]
-fn bench_forward_minimum_512(b: &mut test::Bencher) {
-    bench_forward_minimum(b, 512);
-}
-
-#[cfg(feature = "benchmark")]
-#[bench]
-fn bench_forward_minimum_1024(b: &mut test::Bencher) {
-    bench_forward_minimum(b, 1024);
-}
+bench!(bench_forward_minimum_64, |b| bench_forward_minimum(b, 64));
+bench!(bench_forward_minimum_128, |b| bench_forward_minimum(b, 128));
+bench!(bench_forward_minimum_256, |b| bench_forward_minimum(b, 256));
+bench!(bench_forward_minimum_512, |b| bench_forward_minimum(b, 512));
+bench!(bench_forward_minimum_1024, |b| bench_forward_minimum(b, 1024));

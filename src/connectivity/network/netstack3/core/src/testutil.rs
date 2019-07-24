@@ -32,38 +32,45 @@ use crate::{handle_timeout, Context, EventDispatcher, Instant, StackStateBuilder
 
 use specialize_ip_macro::specialize_ip_address;
 
-/// A mock for the `test::Bencher` type.
+/// Utilities to allow running benchmarks as tests.
 ///
-/// `Bencher` provides a subset of the API of `test::Bencher`. It allows us to
-/// compile most benchmark code without using `test::Bencher`, which is
-/// unstable. This, in turn, allows us to compile most benchmark code without
-/// relying on an unstable feature that is disallowed in Fuchsia's build system.
-/// Only the top-level `#[bench]` functions need the actual `test::Bencher`
-/// type, and so only they need to be feature-gated.
-pub(crate) trait Bencher {
-    fn iter<T, F: FnMut() -> T>(&mut self, inner: F);
-}
-
-#[cfg(feature = "benchmark")]
-impl Bencher for test::Bencher {
-    fn iter<T, F: FnMut() -> T>(&mut self, inner: F) {
-        test::Bencher::iter(self, inner)
+/// Our benchmarks rely on the unstable `test` feature, which is disallowed in
+/// Fuchisa's build system. In order to ensure that our benchmarks are always
+/// compiled and tested, this module provides mocks that allow us to run our
+/// benchmarks as normal tests when the `benchmark` feature is disabled.
+///
+/// See the `bench!` macro for details on how this module is used.
+pub(crate) mod benchmarks {
+    /// A trait to allow mocking of the `test::Bencher` type.
+    pub(crate) trait Bencher {
+        fn iter<T, F: FnMut() -> T>(&mut self, inner: F);
     }
-}
 
-/// A mock for the `test::black_box` function.
-///
-/// `black_box` simply calls `test::black_box` when the `benchmark` feature is
-/// enabled, and is the identity function otherwise. This allows us to compile
-/// most benchmark code without relying on the `benchmark` feature, which in
-/// turn relies on the unstable `test` feature, which is disallowed in Fuchsia's
-/// build system.
-#[inline(always)]
-pub(crate) fn black_box<T>(dummy: T) -> T {
     #[cfg(feature = "benchmark")]
-    return test::black_box(dummy);
+    impl Bencher for test::Bencher {
+        fn iter<T, F: FnMut() -> T>(&mut self, inner: F) {
+            test::Bencher::iter(self, inner)
+        }
+    }
+
+    /// A `Bencher` whose `iter` method runs the provided argument once.
     #[cfg(not(feature = "benchmark"))]
-    return dummy;
+    pub(crate) struct TestBencher;
+
+    #[cfg(not(feature = "benchmark"))]
+    impl Bencher for TestBencher {
+        fn iter<T, F: FnMut() -> T>(&mut self, mut inner: F) {
+            inner();
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn black_box<T>(dummy: T) -> T {
+        #[cfg(feature = "benchmark")]
+        return test::black_box(dummy);
+        #[cfg(not(feature = "benchmark"))]
+        return dummy;
+    }
 }
 
 /// A wrapper which implements `RngCore` and `CryptoRng` for any `RngCore`.

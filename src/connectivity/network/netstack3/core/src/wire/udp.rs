@@ -404,7 +404,8 @@ mod tests {
 
     use super::*;
     use crate::device::ethernet::EtherType;
-    use crate::testutil::{black_box, parse_ip_packet_in_ethernet_frame, Bencher};
+    use crate::testutil::benchmarks::{black_box, Bencher};
+    use crate::testutil::parse_ip_packet_in_ethernet_frame;
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::ipv4::{Ipv4Header, Ipv4Packet};
     use crate::wire::ipv6::Ipv6Packet;
@@ -765,11 +766,7 @@ mod tests {
         })
     }
 
-    #[cfg(feature = "benchmark")]
-    #[bench]
-    fn bench_parse(b: &mut test::Bencher) {
-        bench_parse_inner(b);
-    }
+    bench!(bench_parse, bench_parse_inner);
 
     fn bench_serialize_inner<B: Bencher>(b: &mut B) {
         use crate::wire::testdata::dns_request_v4::*;
@@ -792,9 +789,5 @@ mod tests {
         })
     }
 
-    #[cfg(feature = "benchmark")]
-    #[bench]
-    fn bench_serialize(b: &mut test::Bencher) {
-        bench_serialize_inner(b);
-    }
+    bench!(bench_serialize, bench_serialize_inner);
 }
