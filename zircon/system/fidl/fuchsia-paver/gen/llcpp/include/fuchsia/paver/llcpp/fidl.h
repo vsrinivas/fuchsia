@@ -299,6 +299,7 @@ class PayloadStream final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Registers a VMO to stream into.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::RegisterVmo RegisterVmo(::zx::vmo vmo);
 
     // Registers a VMO to stream into.
@@ -314,6 +315,7 @@ class PayloadStream final {
     ::fidl::DecodeResult<RegisterVmoResponse> RegisterVmo_Deprecated(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Reads data into the pre-registered vmo.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ReadData ReadData();
 
     // Reads data into the pre-registered vmo.
@@ -338,6 +340,7 @@ class PayloadStream final {
    public:
 
     // Registers a VMO to stream into.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::RegisterVmo RegisterVmo(zx::unowned_channel _client_end, ::zx::vmo vmo);
 
     // Registers a VMO to stream into.
@@ -353,6 +356,7 @@ class PayloadStream final {
     static ::fidl::DecodeResult<RegisterVmoResponse> RegisterVmo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Reads data into the pre-registered vmo.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ReadData ReadData(zx::unowned_channel _client_end);
 
     // Reads data into the pre-registered vmo.
@@ -981,6 +985,7 @@ class Paver final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Queries active configuration.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::QueryActiveConfiguration QueryActiveConfiguration();
 
     // Queries active configuration.
@@ -998,6 +1003,7 @@ class Paver final {
     // Updates persistent metadata identifying which configuration should be selected as 'primary'
     // for booting purposes. Should only be called after `KERNEL` as well as optional
     // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetActiveConfiguration SetActiveConfiguration(Configuration configuration);
 
     // Updates persistent metadata identifying which configuration should be selected as 'primary'
@@ -1021,6 +1027,7 @@ class Paver final {
     // Updates persistent metadata identifying that active configuration is stable. Used to signal
     // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
     // boot attempt after `SetActiveConfiguration` was called.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::MarkActiveConfigurationSuccessful MarkActiveConfigurationSuccessful();
 
     // Updates persistent metadata identifying that active configuration is stable. Used to signal
@@ -1043,6 +1050,7 @@ class Paver final {
 
     // Force the next reboot to boot into the recovery configuration. Does not persist between
     // subsequent boots.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ForceRecoveryConfiguration ForceRecoveryConfiguration();
 
     // Force the next reboot to boot into the recovery configuration. Does not persist between
@@ -1065,6 +1073,7 @@ class Paver final {
     // being written.
     //
     // Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::WriteAsset WriteAsset(Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
@@ -1093,6 +1102,7 @@ class Paver final {
 
     // Writes FVM with data from streamed via `payload`. This potentially affects all
     // configurations.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::WriteVolumes WriteVolumes(::zx::channel payload);
 
     // Writes FVM with data from streamed via `payload`. This potentially affects all
@@ -1111,6 +1121,7 @@ class Paver final {
     ::fidl::DecodeResult<WriteVolumesResponse> WriteVolumes_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Writes bootloader partition with data from `payload`.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::WriteBootloader WriteBootloader(::llcpp::fuchsia::mem::Buffer payload);
 
     // Writes bootloader partition with data from `payload`.
@@ -1126,6 +1137,7 @@ class Paver final {
     ::fidl::DecodeResult<WriteBootloaderResponse> WriteBootloader_Deprecated(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::WriteDataFile WriteDataFile(::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload);
 
     // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
@@ -1145,6 +1157,7 @@ class Paver final {
     //
     // Notable use cases include recovering from corrupted FVM as well as setting device to a
     // "clean" state for automation.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::WipeVolumes WipeVolumes();
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
@@ -1181,6 +1194,7 @@ class Paver final {
    public:
 
     // Queries active configuration.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::QueryActiveConfiguration QueryActiveConfiguration(zx::unowned_channel _client_end);
 
     // Queries active configuration.
@@ -1198,6 +1212,7 @@ class Paver final {
     // Updates persistent metadata identifying which configuration should be selected as 'primary'
     // for booting purposes. Should only be called after `KERNEL` as well as optional
     // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetActiveConfiguration SetActiveConfiguration(zx::unowned_channel _client_end, Configuration configuration);
 
     // Updates persistent metadata identifying which configuration should be selected as 'primary'
@@ -1221,6 +1236,7 @@ class Paver final {
     // Updates persistent metadata identifying that active configuration is stable. Used to signal
     // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
     // boot attempt after `SetActiveConfiguration` was called.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::MarkActiveConfigurationSuccessful MarkActiveConfigurationSuccessful(zx::unowned_channel _client_end);
 
     // Updates persistent metadata identifying that active configuration is stable. Used to signal
@@ -1243,6 +1259,7 @@ class Paver final {
 
     // Force the next reboot to boot into the recovery configuration. Does not persist between
     // subsequent boots.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ForceRecoveryConfiguration ForceRecoveryConfiguration(zx::unowned_channel _client_end);
 
     // Force the next reboot to boot into the recovery configuration. Does not persist between
@@ -1265,6 +1282,7 @@ class Paver final {
     // being written.
     //
     // Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::WriteAsset WriteAsset(zx::unowned_channel _client_end, Configuration configuration, Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
 
     // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
@@ -1293,6 +1311,7 @@ class Paver final {
 
     // Writes FVM with data from streamed via `payload`. This potentially affects all
     // configurations.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::WriteVolumes WriteVolumes(zx::unowned_channel _client_end, ::zx::channel payload);
 
     // Writes FVM with data from streamed via `payload`. This potentially affects all
@@ -1311,6 +1330,7 @@ class Paver final {
     static ::fidl::DecodeResult<WriteVolumesResponse> WriteVolumes_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Writes bootloader partition with data from `payload`.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::WriteBootloader WriteBootloader(zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload);
 
     // Writes bootloader partition with data from `payload`.
@@ -1326,6 +1346,7 @@ class Paver final {
     static ::fidl::DecodeResult<WriteBootloaderResponse> WriteBootloader_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::WriteDataFile WriteDataFile(zx::unowned_channel _client_end, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload);
 
     // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
@@ -1345,6 +1366,7 @@ class Paver final {
     //
     // Notable use cases include recovering from corrupted FVM as well as setting device to a
     // "clean" state for automation.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::WipeVolumes WipeVolumes(zx::unowned_channel _client_end);
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which

@@ -117,6 +117,7 @@ class Provider final {
 
     // Requests a socket with the specified parameters. Values for `code` are defined in
     // errno.h.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Socket Socket(int16_t domain, int16_t type, int16_t protocol);
 
     // Requests a socket with the specified parameters. Values for `code` are defined in
@@ -145,6 +146,7 @@ class Provider final {
 
     // Requests a socket with the specified parameters. Values for `code` are defined in
     // errno.h.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Socket Socket(zx::unowned_channel _client_end, int16_t domain, int16_t type, int16_t protocol);
 
     // Requests a socket with the specified parameters. Values for `code` are defined in
@@ -1034,6 +1036,7 @@ class Control final {
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
     // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -1095,6 +1098,7 @@ class Control final {
     // Terminates connection with object.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Close Close();
 
     // Terminates connection with object.
@@ -1119,6 +1123,7 @@ class Control final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Describe Describe();
 
     // Returns extra information about the type of the object.
@@ -1145,6 +1150,7 @@ class Control final {
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Sync Sync();
 
     // Synchronizes updates to the node to the underlying media, if it exists.
@@ -1168,6 +1174,7 @@ class Control final {
     // Acquires information about the node.
     //
     // This method does not require any rights.
+    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetAttr GetAttr();
 
     // Acquires information about the node.
@@ -1192,6 +1199,7 @@ class Control final {
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetAttr SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
 
     // Updates information about the node.
@@ -1216,6 +1224,7 @@ class Control final {
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Deprecated. Only for use with compatibility with devhost.
+    // Request is heap-allocated. Response is heap-allocated.
     ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
     // Deprecated. Only for use with compatibility with devhost.
@@ -1229,6 +1238,7 @@ class Control final {
     ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
 
     // Sets the local address used for the socket.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Bind Bind(::fidl::VectorView<uint8_t> addr);
 
     // Sets the local address used for the socket.
@@ -1244,6 +1254,7 @@ class Control final {
     ::fidl::DecodeResult<BindResponse> Bind_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer, int16_t* out_code);
 
     // Initiates a connection to a network endpoint.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Connect Connect(::fidl::VectorView<uint8_t> addr);
 
     // Initiates a connection to a network endpoint.
@@ -1260,6 +1271,7 @@ class Control final {
 
     // Begin listening for new connections from network endpoints. At most `backlog` connections
     // will be buffered.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Listen Listen(int16_t backlog);
 
     // Begin listening for new connections from network endpoints. At most `backlog` connections
@@ -1278,6 +1290,7 @@ class Control final {
     ::fidl::DecodeResult<ListenResponse> Listen_Deprecated(::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer, int16_t* out_code);
 
     // Accepts an incoming connection from a network endpoint.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Accept Accept(int16_t flags);
 
     // Accepts an incoming connection from a network endpoint.
@@ -1293,6 +1306,7 @@ class Control final {
     ::fidl::DecodeResult<AcceptResponse> Accept_Deprecated(::fidl::BytePart _request_buffer, int16_t flags, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::channel* out_s);
 
     // Retrieves the local socket address.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetSockName GetSockName();
 
     // Retrieves the local socket address.
@@ -1306,6 +1320,7 @@ class Control final {
     ::fidl::DecodeResult<GetSockNameResponse> GetSockName_Deprecated(::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr);
 
     // Retrieves the remote socket address.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetPeerName GetPeerName();
 
     // Retrieves the remote socket address.
@@ -1319,6 +1334,7 @@ class Control final {
     ::fidl::DecodeResult<GetPeerNameResponse> GetPeerName_Deprecated(::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr);
 
     // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::SetSockOpt SetSockOpt(int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval);
 
     // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
@@ -1334,6 +1350,7 @@ class Control final {
     ::fidl::DecodeResult<SetSockOptResponse> SetSockOpt_Deprecated(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, ::fidl::BytePart _response_buffer, int16_t* out_code);
 
     // Retrieves the current value of a socket option.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetSockOpt GetSockOpt(int16_t level, int16_t optname);
 
     // Retrieves the current value of a socket option.
@@ -1347,6 +1364,7 @@ class Control final {
     ::fidl::DecodeResult<GetSockOptResponse> GetSockOpt_Deprecated(::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_optval);
 
     // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
+    // Request is heap-allocated. Response is heap-allocated.
     ResultOf::IoctlPOSIX IoctlPOSIX(int16_t req, ::fidl::VectorView<uint8_t> in);
 
     // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
@@ -1389,6 +1407,7 @@ class Control final {
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
     // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -1450,6 +1469,7 @@ class Control final {
     // Terminates connection with object.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Close Close(zx::unowned_channel _client_end);
 
     // Terminates connection with object.
@@ -1474,6 +1494,7 @@ class Control final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Describe Describe(zx::unowned_channel _client_end);
 
     // Returns extra information about the type of the object.
@@ -1500,6 +1521,7 @@ class Control final {
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Sync Sync(zx::unowned_channel _client_end);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
@@ -1523,6 +1545,7 @@ class Control final {
     // Acquires information about the node.
     //
     // This method does not require any rights.
+    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetAttr GetAttr(zx::unowned_channel _client_end);
 
     // Acquires information about the node.
@@ -1547,6 +1570,7 @@ class Control final {
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
 
     // Updates information about the node.
@@ -1571,6 +1595,7 @@ class Control final {
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Deprecated. Only for use with compatibility with devhost.
+    // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
     // Deprecated. Only for use with compatibility with devhost.
@@ -1584,6 +1609,7 @@ class Control final {
     static ::fidl::DecodeResult<IoctlResponse> Ioctl_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fidl::VectorView<::zx::handle>* out_handles, ::fidl::VectorView<uint8_t>* out_out);
 
     // Sets the local address used for the socket.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Bind Bind(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr);
 
     // Sets the local address used for the socket.
@@ -1599,6 +1625,7 @@ class Control final {
     static ::fidl::DecodeResult<BindResponse> Bind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> addr, ::fidl::BytePart _response_buffer, int16_t* out_code);
 
     // Initiates a connection to a network endpoint.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Connect Connect(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> addr);
 
     // Initiates a connection to a network endpoint.
@@ -1615,6 +1642,7 @@ class Control final {
 
     // Begin listening for new connections from network endpoints. At most `backlog` connections
     // will be buffered.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Listen Listen(zx::unowned_channel _client_end, int16_t backlog);
 
     // Begin listening for new connections from network endpoints. At most `backlog` connections
@@ -1633,6 +1661,7 @@ class Control final {
     static ::fidl::DecodeResult<ListenResponse> Listen_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer, int16_t* out_code);
 
     // Accepts an incoming connection from a network endpoint.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Accept Accept(zx::unowned_channel _client_end, int16_t flags);
 
     // Accepts an incoming connection from a network endpoint.
@@ -1648,6 +1677,7 @@ class Control final {
     static ::fidl::DecodeResult<AcceptResponse> Accept_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t flags, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::channel* out_s);
 
     // Retrieves the local socket address.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetSockName GetSockName(zx::unowned_channel _client_end);
 
     // Retrieves the local socket address.
@@ -1661,6 +1691,7 @@ class Control final {
     static ::fidl::DecodeResult<GetSockNameResponse> GetSockName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr);
 
     // Retrieves the remote socket address.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetPeerName GetPeerName(zx::unowned_channel _client_end);
 
     // Retrieves the remote socket address.
@@ -1674,6 +1705,7 @@ class Control final {
     static ::fidl::DecodeResult<GetPeerNameResponse> GetPeerName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_addr);
 
     // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::SetSockOpt SetSockOpt(zx::unowned_channel _client_end, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval);
 
     // Sets a socket option. TODO(NET-1699): link to description of supported socket options.
@@ -1689,6 +1721,7 @@ class Control final {
     static ::fidl::DecodeResult<SetSockOptResponse> SetSockOpt_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::VectorView<uint8_t> optval, ::fidl::BytePart _response_buffer, int16_t* out_code);
 
     // Retrieves the current value of a socket option.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetSockOpt GetSockOpt(zx::unowned_channel _client_end, int16_t level, int16_t optname);
 
     // Retrieves the current value of a socket option.
@@ -1702,6 +1735,7 @@ class Control final {
     static ::fidl::DecodeResult<GetSockOptResponse> GetSockOpt_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t level, int16_t optname, ::fidl::BytePart _response_buffer, int16_t* out_code, ::fidl::VectorView<uint8_t>* out_optval);
 
     // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
+    // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::IoctlPOSIX IoctlPOSIX(zx::unowned_channel _client_end, int16_t req, ::fidl::VectorView<uint8_t> in);
 
     // Runs operations (e.g., get the receive timestamp of the last packet) on the socket.

@@ -266,6 +266,7 @@ class Device final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetRootJob GetRootJob();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -277,6 +278,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetRootJobResponse> GetRootJob_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::job* out_job);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetRootResource GetRootResource();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -288,6 +290,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetRootResourceResponse> GetRootResource_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetHypervisorResource GetHypervisorResource();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -299,6 +302,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetHypervisorResourceResponse> GetHypervisorResource_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource);
 
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetBoardName GetBoardName();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -309,6 +313,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetBoardNameResponse> GetBoardName_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name);
 
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetInterruptControllerInfo GetInterruptControllerInfo();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -328,6 +333,7 @@ class Device final {
     Call() = delete;
    public:
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetRootJob GetRootJob(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -339,6 +345,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetRootJobResponse> GetRootJob_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::job* out_job);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetRootResource GetRootResource(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -350,6 +357,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetRootResourceResponse> GetRootResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetHypervisorResource GetHypervisorResource(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -361,6 +369,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetHypervisorResourceResponse> GetHypervisorResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::resource* out_resource);
 
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetBoardName GetBoardName(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -371,6 +380,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetBoardNameResponse> GetBoardName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name);
 
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetInterruptControllerInfo GetInterruptControllerInfo(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.

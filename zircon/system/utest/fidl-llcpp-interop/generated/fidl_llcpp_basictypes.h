@@ -261,6 +261,7 @@ class TestInterface final {
 
     // Verifies that all the handles are valid channels, then returns
     // ZX_OK and loops back the field member. Otherwise, returns an error.
+    // Allocates 128 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(SimpleStruct arg);
 
     // Verifies that all the handles are valid channels, then returns
@@ -279,6 +280,7 @@ class TestInterface final {
     ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct_Deprecated(::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
 
     // Loops back the field which is set, along with its index.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(SimpleUnion arg);
 
     // Loops back the field which is set, along with its index.
@@ -304,6 +306,7 @@ class TestInterface final {
 
     // Verifies that all the handles are valid channels, then returns
     // ZX_OK and loops back the field member. Otherwise, returns an error.
+    // Allocates 128 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(zx::unowned_channel _client_end, SimpleStruct arg);
 
     // Verifies that all the handles are valid channels, then returns
@@ -322,6 +325,7 @@ class TestInterface final {
     static ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
 
     // Loops back the field which is set, along with its index.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(zx::unowned_channel _client_end, SimpleUnion arg);
 
     // Loops back the field which is set, along with its index.

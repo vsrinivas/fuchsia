@@ -209,6 +209,7 @@ class Device final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Transmit Transmit(::fidl::VectorView<uint8_t> data);
 
     // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
@@ -224,6 +225,7 @@ class Device final {
     ::fidl::DecodeResult<TransmitResponse> Transmit_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Half-duplex receive data from a SPI device; always reads the full size requested.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::Receive Receive(uint32_t size);
 
     // Half-duplex receive data from a SPI device; always reads the full size requested.
@@ -238,6 +240,7 @@ class Device final {
 
     // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
     // buffer.
+    // Request is heap-allocated. Response is heap-allocated.
     ResultOf::Exchange Exchange(::fidl::VectorView<uint8_t> txdata);
 
     // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
@@ -262,6 +265,7 @@ class Device final {
    public:
 
     // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Transmit Transmit(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data);
 
     // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
@@ -277,6 +281,7 @@ class Device final {
     static ::fidl::DecodeResult<TransmitResponse> Transmit_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Half-duplex receive data from a SPI device; always reads the full size requested.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::Receive Receive(zx::unowned_channel _client_end, uint32_t size);
 
     // Half-duplex receive data from a SPI device; always reads the full size requested.
@@ -291,6 +296,7 @@ class Device final {
 
     // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
     // buffer.
+    // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::Exchange Exchange(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> txdata);
 
     // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit

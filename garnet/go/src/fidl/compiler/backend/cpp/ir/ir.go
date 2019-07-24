@@ -15,6 +15,8 @@ import (
 	"fidl/compiler/backend/types"
 )
 
+// This value needs to be kept in sync with the one defined in
+// zircon/system/ulib/fidl/include/lib/fidl/llcpp/sync_call.h
 const llcppMaxStackAllocSize = 512
 
 // These are used in header/impl templates to select the correct type-specific template
@@ -235,6 +237,7 @@ type LLProps struct {
 	LinearizeResponse  bool
 	StackAllocRequest  bool
 	StackAllocResponse bool
+	StackUse           int
 	EncodeRequest      bool
 	DecodeResponse     bool
 }
@@ -766,6 +769,15 @@ func (c *compiler) maxOutOfLineFromParameterArray(val []types.Parameter) int {
 }
 
 func (m Method) NewLLProps(r Interface) LLProps {
+	stackAllocRequest := len(m.Request) == 0 || (m.RequestSize+m.RequestMaxOutOfLine) < llcppMaxStackAllocSize
+	stackAllocResponse := len(m.Response) == 0 || (m.ResponseSize+m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize
+	stackUse := 0
+	if stackAllocRequest {
+		stackUse += m.RequestSize + m.RequestMaxOutOfLine
+	}
+	if stackAllocResponse {
+		stackUse += m.ResponseSize + m.ResponseMaxOutOfLine
+	}
 	return LLProps{
 		InterfaceName: r.Name,
 		// If the response is not inline, then we cannot generate an out-parameter-style binding,
@@ -773,8 +785,9 @@ func (m Method) NewLLProps(r Interface) LLProps {
 		CBindingCompatible: m.ResponseMaxOutOfLine == 0,
 		LinearizeRequest:   len(m.Request) > 0 && m.RequestMaxOutOfLine > 0,
 		LinearizeResponse:  len(m.Response) > 0 && m.ResponseMaxOutOfLine > 0,
-		StackAllocRequest:  len(m.Request) == 0 || (m.RequestSize+m.RequestMaxOutOfLine) < llcppMaxStackAllocSize,
-		StackAllocResponse: len(m.Response) == 0 || (m.ResponseSize+m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize,
+		StackAllocRequest:  stackAllocRequest,
+		StackAllocResponse: stackAllocResponse,
+		StackUse:           stackUse,
 		EncodeRequest:      m.RequestMaxOutOfLine > 0 || m.RequestMaxHandles > 0 || m.RequestPadding,
 		DecodeResponse:     m.ResponseMaxOutOfLine > 0 || m.ResponseMaxHandles > 0 || m.ResponsePadding,
 	}

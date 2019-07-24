@@ -88,6 +88,7 @@ class Events final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::FunctionRegistered FunctionRegistered();
 
 
@@ -102,6 +103,7 @@ class Events final {
     Call() = delete;
    public:
 
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::FunctionRegistered FunctionRegistered(zx::unowned_channel _client_end);
 
 
@@ -598,6 +600,7 @@ class Device final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetDeviceDescriptor SetDeviceDescriptor(DeviceDescriptor desc);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -609,6 +612,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor_Deprecated(::fidl::BytePart _request_buffer, DeviceDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::AllocStringDesc AllocStringDesc(::fidl::StringView name);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -620,6 +624,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<AllocStringDescResponse> AllocStringDesc_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer, int32_t* out_s, uint8_t* out_index);
 
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::AddFunction AddFunction(FunctionDescriptor desc);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -631,6 +636,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<AddFunctionResponse> AddFunction_Deprecated(::fidl::BytePart _request_buffer, FunctionDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::BindFunctions BindFunctions();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -642,6 +648,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<BindFunctionsResponse> BindFunctions_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ClearFunctions ClearFunctions();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -653,6 +660,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetMode GetMode();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -664,6 +672,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetModeResponse> GetMode_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, uint32_t* out_mode);
 
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetMode SetMode(uint32_t mode);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -675,6 +684,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SetModeResponse> SetMode_Deprecated(::fidl::BytePart _request_buffer, uint32_t mode, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetStateChangeListener SetStateChangeListener(::zx::channel listener);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -694,6 +704,7 @@ class Device final {
     Call() = delete;
    public:
 
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetDeviceDescriptor SetDeviceDescriptor(zx::unowned_channel _client_end, DeviceDescriptor desc);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -705,6 +716,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DeviceDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::AllocStringDesc AllocStringDesc(zx::unowned_channel _client_end, ::fidl::StringView name);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -716,6 +728,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<AllocStringDescResponse> AllocStringDesc_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer, int32_t* out_s, uint8_t* out_index);
 
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::AddFunction AddFunction(zx::unowned_channel _client_end, FunctionDescriptor desc);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -727,6 +740,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<AddFunctionResponse> AddFunction_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, FunctionDescriptor desc, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::BindFunctions BindFunctions(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -738,6 +752,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<BindFunctionsResponse> BindFunctions_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ClearFunctions ClearFunctions(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -749,6 +764,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetMode GetMode(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -760,6 +776,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetModeResponse> GetMode_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, uint32_t* out_mode);
 
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetMode SetMode(zx::unowned_channel _client_end, uint32_t mode);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -771,6 +788,7 @@ class Device final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SetModeResponse> SetMode_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mode, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetStateChangeListener SetStateChangeListener(zx::unowned_channel _client_end, ::zx::channel listener);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.

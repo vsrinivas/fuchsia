@@ -200,6 +200,7 @@ class Device final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Lookup what type of serial device this is.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetClass GetClass();
 
     // Lookup what type of serial device this is.
@@ -215,6 +216,7 @@ class Device final {
     ::fidl::DecodeResult<GetClassResponse> GetClass_Deprecated(::fidl::BytePart _response_buffer, Class* out_device_class);
 
     // Set the configuration of this serial device.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetConfig SetConfig(Config config);
 
     // Set the configuration of this serial device.
@@ -239,6 +241,7 @@ class Device final {
    public:
 
     // Lookup what type of serial device this is.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetClass GetClass(zx::unowned_channel _client_end);
 
     // Lookup what type of serial device this is.
@@ -254,6 +257,7 @@ class Device final {
     static ::fidl::DecodeResult<GetClassResponse> GetClass_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, Class* out_device_class);
 
     // Set the configuration of this serial device.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, Config config);
 
     // Set the configuration of this serial device.

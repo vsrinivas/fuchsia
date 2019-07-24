@@ -227,6 +227,7 @@ class DirectoryWatcher final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
+    // Request is heap-allocated.
     ResultOf::OnEvent OnEvent(::fidl::VectorView<uint8_t> events);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -246,6 +247,7 @@ class DirectoryWatcher final {
     Call() = delete;
    public:
 
+    // Request is heap-allocated.
     static ResultOf::OnEvent OnEvent(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> events);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1169,6 +1171,7 @@ class Node final {
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
     // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -1230,6 +1233,7 @@ class Node final {
     // Terminates connection with object.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Close Close();
 
     // Terminates connection with object.
@@ -1254,6 +1258,7 @@ class Node final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Describe Describe();
 
     // Returns extra information about the type of the object.
@@ -1280,6 +1285,7 @@ class Node final {
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Sync Sync();
 
     // Synchronizes updates to the node to the underlying media, if it exists.
@@ -1303,6 +1309,7 @@ class Node final {
     // Acquires information about the node.
     //
     // This method does not require any rights.
+    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetAttr GetAttr();
 
     // Acquires information about the node.
@@ -1327,6 +1334,7 @@ class Node final {
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetAttr SetAttr(uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
@@ -1351,6 +1359,7 @@ class Node final {
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Deprecated. Only for use with compatibility with devhost.
+    // Request is heap-allocated. Response is heap-allocated.
     ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
     // Deprecated. Only for use with compatibility with devhost.
@@ -1393,6 +1402,7 @@ class Node final {
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
     // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -1454,6 +1464,7 @@ class Node final {
     // Terminates connection with object.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Close Close(zx::unowned_channel _client_end);
 
     // Terminates connection with object.
@@ -1478,6 +1489,7 @@ class Node final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Describe Describe(zx::unowned_channel _client_end);
 
     // Returns extra information about the type of the object.
@@ -1504,6 +1516,7 @@ class Node final {
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Sync Sync(zx::unowned_channel _client_end);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
@@ -1527,6 +1540,7 @@ class Node final {
     // Acquires information about the node.
     //
     // This method does not require any rights.
+    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetAttr GetAttr(zx::unowned_channel _client_end);
 
     // Acquires information about the node.
@@ -1551,6 +1565,7 @@ class Node final {
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
@@ -1575,6 +1590,7 @@ class Node final {
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Deprecated. Only for use with compatibility with devhost.
+    // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
     // Deprecated. Only for use with compatibility with devhost.
@@ -2610,6 +2626,7 @@ class File final {
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
     // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -2671,6 +2688,7 @@ class File final {
     // Terminates connection with object.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Close Close();
 
     // Terminates connection with object.
@@ -2695,6 +2713,7 @@ class File final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Describe Describe();
 
     // Returns extra information about the type of the object.
@@ -2721,6 +2740,7 @@ class File final {
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Sync Sync();
 
     // Synchronizes updates to the node to the underlying media, if it exists.
@@ -2744,6 +2764,7 @@ class File final {
     // Acquires information about the node.
     //
     // This method does not require any rights.
+    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetAttr GetAttr();
 
     // Acquires information about the node.
@@ -2768,6 +2789,7 @@ class File final {
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetAttr SetAttr(uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
@@ -2792,6 +2814,7 @@ class File final {
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Deprecated. Only for use with compatibility with devhost.
+    // Request is heap-allocated. Response is heap-allocated.
     ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
     // Deprecated. Only for use with compatibility with devhost.
@@ -2808,6 +2831,7 @@ class File final {
     // The seek offset is moved forward by the number of bytes read.
     //
     // This method requires following rights: OPEN_RIGHT_READABLE.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::Read Read(uint64_t count);
 
     // Reads 'count' bytes at the seek offset.
@@ -2830,6 +2854,7 @@ class File final {
     // Does not affect the seek offset.
     //
     // This method requires following rights: OPEN_RIGHT_READABLE.
+    // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::ReadAt ReadAt(uint64_t count, uint64_t offset);
 
     // Reads 'count' bytes at the provided offset.
@@ -2852,6 +2877,7 @@ class File final {
     // The seek offset is moved forward by the number of bytes written.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Write Write(::fidl::VectorView<uint8_t> data);
 
     // Writes data at the seek offset.
@@ -2879,6 +2905,7 @@ class File final {
     // Does not affect the seek offset.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::WriteAt WriteAt(::fidl::VectorView<uint8_t> data, uint64_t offset);
 
     // Writes data to the provided offset.
@@ -2906,6 +2933,7 @@ class File final {
     // occur.
     //
     // This method does not require any rights.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Seek Seek(int64_t offset, SeekOrigin start);
 
     // Moves the offset at which the next invocation of `Read()` or `Write()` will
@@ -2932,6 +2960,7 @@ class File final {
     // Shrinks the file size to 'length' bytes.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Truncate Truncate(uint64_t length);
 
     // Shrinks the file size to 'length' bytes.
@@ -2955,6 +2984,7 @@ class File final {
     // Acquires the Directory::Open rights and flags used to access this file.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetFlags GetFlags();
 
     // Acquires the Directory::Open rights and flags used to access this file.
@@ -2980,6 +3010,7 @@ class File final {
     // - OPEN_FLAG_APPEND
     //
     // This method does not require any rights.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetFlags SetFlags(uint32_t flags);
 
     // Changes the Directory::Open flags used to access the file.
@@ -3014,6 +3045,7 @@ class File final {
     // This method requires following rights:
     // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
     // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetBuffer GetBuffer(uint32_t flags);
 
     // Acquires a buffer representing this file, if there is one, with the
@@ -3070,6 +3102,7 @@ class File final {
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
     // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -3131,6 +3164,7 @@ class File final {
     // Terminates connection with object.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Close Close(zx::unowned_channel _client_end);
 
     // Terminates connection with object.
@@ -3155,6 +3189,7 @@ class File final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Describe Describe(zx::unowned_channel _client_end);
 
     // Returns extra information about the type of the object.
@@ -3181,6 +3216,7 @@ class File final {
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Sync Sync(zx::unowned_channel _client_end);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
@@ -3204,6 +3240,7 @@ class File final {
     // Acquires information about the node.
     //
     // This method does not require any rights.
+    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetAttr GetAttr(zx::unowned_channel _client_end);
 
     // Acquires information about the node.
@@ -3228,6 +3265,7 @@ class File final {
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
@@ -3252,6 +3290,7 @@ class File final {
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Deprecated. Only for use with compatibility with devhost.
+    // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
     // Deprecated. Only for use with compatibility with devhost.
@@ -3268,6 +3307,7 @@ class File final {
     // The seek offset is moved forward by the number of bytes read.
     //
     // This method requires following rights: OPEN_RIGHT_READABLE.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::Read Read(zx::unowned_channel _client_end, uint64_t count);
 
     // Reads 'count' bytes at the seek offset.
@@ -3290,6 +3330,7 @@ class File final {
     // Does not affect the seek offset.
     //
     // This method requires following rights: OPEN_RIGHT_READABLE.
+    // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::ReadAt ReadAt(zx::unowned_channel _client_end, uint64_t count, uint64_t offset);
 
     // Reads 'count' bytes at the provided offset.
@@ -3312,6 +3353,7 @@ class File final {
     // The seek offset is moved forward by the number of bytes written.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Write Write(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data);
 
     // Writes data at the seek offset.
@@ -3339,6 +3381,7 @@ class File final {
     // Does not affect the seek offset.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::WriteAt WriteAt(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data, uint64_t offset);
 
     // Writes data to the provided offset.
@@ -3366,6 +3409,7 @@ class File final {
     // occur.
     //
     // This method does not require any rights.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Seek Seek(zx::unowned_channel _client_end, int64_t offset, SeekOrigin start);
 
     // Moves the offset at which the next invocation of `Read()` or `Write()` will
@@ -3392,6 +3436,7 @@ class File final {
     // Shrinks the file size to 'length' bytes.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Truncate Truncate(zx::unowned_channel _client_end, uint64_t length);
 
     // Shrinks the file size to 'length' bytes.
@@ -3415,6 +3460,7 @@ class File final {
     // Acquires the Directory::Open rights and flags used to access this file.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetFlags GetFlags(zx::unowned_channel _client_end);
 
     // Acquires the Directory::Open rights and flags used to access this file.
@@ -3440,6 +3486,7 @@ class File final {
     // - OPEN_FLAG_APPEND
     //
     // This method does not require any rights.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetFlags SetFlags(zx::unowned_channel _client_end, uint32_t flags);
 
     // Changes the Directory::Open flags used to access the file.
@@ -3474,6 +3521,7 @@ class File final {
     // This method requires following rights:
     // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
     // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetBuffer GetBuffer(zx::unowned_channel _client_end, uint32_t flags);
 
     // Acquires a buffer representing this file, if there is one, with the
@@ -4633,6 +4681,7 @@ class Directory final {
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
     // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -4694,6 +4743,7 @@ class Directory final {
     // Terminates connection with object.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Close Close();
 
     // Terminates connection with object.
@@ -4718,6 +4768,7 @@ class Directory final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Describe Describe();
 
     // Returns extra information about the type of the object.
@@ -4744,6 +4795,7 @@ class Directory final {
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Sync Sync();
 
     // Synchronizes updates to the node to the underlying media, if it exists.
@@ -4767,6 +4819,7 @@ class Directory final {
     // Acquires information about the node.
     //
     // This method does not require any rights.
+    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetAttr GetAttr();
 
     // Acquires information about the node.
@@ -4791,6 +4844,7 @@ class Directory final {
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetAttr SetAttr(uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
@@ -4815,6 +4869,7 @@ class Directory final {
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Deprecated. Only for use with compatibility with devhost.
+    // Request is heap-allocated. Response is heap-allocated.
     ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
     // Deprecated. Only for use with compatibility with devhost.
@@ -4849,6 +4904,7 @@ class Directory final {
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
+    // Request is heap-allocated.
     ResultOf::Open Open(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
     // Opens a new object relative to this directory object.
@@ -4952,6 +5008,7 @@ class Directory final {
     // Other errors may be returned for filesystem-specific reasons.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Unlink Unlink(::fidl::StringView path);
 
     // Detaches an object from this directory object.
@@ -5064,6 +5121,7 @@ class Directory final {
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::ReadDirents ReadDirents(uint64_t max_bytes);
 
     // Reads a collection of variably sized dirents into a buffer.
@@ -5117,6 +5175,7 @@ class Directory final {
     // Resets the directory seek offset.
     //
     // This method does not require any rights, similar to ReadDirents.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Rewind Rewind();
 
     // Resets the directory seek offset.
@@ -5141,6 +5200,7 @@ class Directory final {
     // access to it at a later point in time.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetToken GetToken();
 
     // Acquires a token to a Directory which can be used to identify
@@ -5172,6 +5232,7 @@ class Directory final {
     // directory, or else ZX_ERR_NOT_DIR should be returned.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Rename Rename(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
     // Renames an object named src to the name dst, in a directory represented by token.
@@ -5217,6 +5278,7 @@ class Directory final {
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Link Link(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
@@ -5275,6 +5337,7 @@ class Directory final {
     // Options must be zero; it is reserved.
     //
     // This method does not require any rights, similar to ReadDirents.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Watch Watch(uint32_t mask, uint32_t options, ::zx::channel watcher);
 
     // Watches a directory, receiving events of added messages on the
@@ -5367,6 +5430,7 @@ class Directory final {
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
     // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -5428,6 +5492,7 @@ class Directory final {
     // Terminates connection with object.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Close Close(zx::unowned_channel _client_end);
 
     // Terminates connection with object.
@@ -5452,6 +5517,7 @@ class Directory final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Describe Describe(zx::unowned_channel _client_end);
 
     // Returns extra information about the type of the object.
@@ -5478,6 +5544,7 @@ class Directory final {
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Sync Sync(zx::unowned_channel _client_end);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
@@ -5501,6 +5568,7 @@ class Directory final {
     // Acquires information about the node.
     //
     // This method does not require any rights.
+    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetAttr GetAttr(zx::unowned_channel _client_end);
 
     // Acquires information about the node.
@@ -5525,6 +5593,7 @@ class Directory final {
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
@@ -5549,6 +5618,7 @@ class Directory final {
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Deprecated. Only for use with compatibility with devhost.
+    // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
     // Deprecated. Only for use with compatibility with devhost.
@@ -5583,6 +5653,7 @@ class Directory final {
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
+    // Request is heap-allocated.
     static ResultOf::Open Open(zx::unowned_channel _client_end, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
     // Opens a new object relative to this directory object.
@@ -5686,6 +5757,7 @@ class Directory final {
     // Other errors may be returned for filesystem-specific reasons.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Unlink Unlink(zx::unowned_channel _client_end, ::fidl::StringView path);
 
     // Detaches an object from this directory object.
@@ -5798,6 +5870,7 @@ class Directory final {
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::ReadDirents ReadDirents(zx::unowned_channel _client_end, uint64_t max_bytes);
 
     // Reads a collection of variably sized dirents into a buffer.
@@ -5851,6 +5924,7 @@ class Directory final {
     // Resets the directory seek offset.
     //
     // This method does not require any rights, similar to ReadDirents.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Rewind Rewind(zx::unowned_channel _client_end);
 
     // Resets the directory seek offset.
@@ -5875,6 +5949,7 @@ class Directory final {
     // access to it at a later point in time.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetToken GetToken(zx::unowned_channel _client_end);
 
     // Acquires a token to a Directory which can be used to identify
@@ -5906,6 +5981,7 @@ class Directory final {
     // directory, or else ZX_ERR_NOT_DIR should be returned.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Rename Rename(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
     // Renames an object named src to the name dst, in a directory represented by token.
@@ -5951,6 +6027,7 @@ class Directory final {
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Link Link(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
@@ -6009,6 +6086,7 @@ class Directory final {
     // Options must be zero; it is reserved.
     //
     // This method does not require any rights, similar to ReadDirents.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Watch Watch(zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher);
 
     // Watches a directory, receiving events of added messages on the
@@ -7512,6 +7590,7 @@ class DirectoryAdmin final {
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
     // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Clone Clone(uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -7573,6 +7652,7 @@ class DirectoryAdmin final {
     // Terminates connection with object.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Close Close();
 
     // Terminates connection with object.
@@ -7597,6 +7677,7 @@ class DirectoryAdmin final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Describe Describe();
 
     // Returns extra information about the type of the object.
@@ -7623,6 +7704,7 @@ class DirectoryAdmin final {
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Sync Sync();
 
     // Synchronizes updates to the node to the underlying media, if it exists.
@@ -7646,6 +7728,7 @@ class DirectoryAdmin final {
     // Acquires information about the node.
     //
     // This method does not require any rights.
+    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetAttr GetAttr();
 
     // Acquires information about the node.
@@ -7670,6 +7753,7 @@ class DirectoryAdmin final {
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetAttr SetAttr(uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
@@ -7694,6 +7778,7 @@ class DirectoryAdmin final {
     ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Deprecated. Only for use with compatibility with devhost.
+    // Request is heap-allocated. Response is heap-allocated.
     ResultOf::Ioctl Ioctl(uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
     // Deprecated. Only for use with compatibility with devhost.
@@ -7728,6 +7813,7 @@ class DirectoryAdmin final {
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
+    // Request is heap-allocated.
     ResultOf::Open Open(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
     // Opens a new object relative to this directory object.
@@ -7831,6 +7917,7 @@ class DirectoryAdmin final {
     // Other errors may be returned for filesystem-specific reasons.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Unlink Unlink(::fidl::StringView path);
 
     // Detaches an object from this directory object.
@@ -7943,6 +8030,7 @@ class DirectoryAdmin final {
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::ReadDirents ReadDirents(uint64_t max_bytes);
 
     // Reads a collection of variably sized dirents into a buffer.
@@ -7996,6 +8084,7 @@ class DirectoryAdmin final {
     // Resets the directory seek offset.
     //
     // This method does not require any rights, similar to ReadDirents.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Rewind Rewind();
 
     // Resets the directory seek offset.
@@ -8020,6 +8109,7 @@ class DirectoryAdmin final {
     // access to it at a later point in time.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetToken GetToken();
 
     // Acquires a token to a Directory which can be used to identify
@@ -8051,6 +8141,7 @@ class DirectoryAdmin final {
     // directory, or else ZX_ERR_NOT_DIR should be returned.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Rename Rename(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
     // Renames an object named src to the name dst, in a directory represented by token.
@@ -8096,6 +8187,7 @@ class DirectoryAdmin final {
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Link Link(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
@@ -8154,6 +8246,7 @@ class DirectoryAdmin final {
     // Options must be zero; it is reserved.
     //
     // This method does not require any rights, similar to ReadDirents.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Watch Watch(uint32_t mask, uint32_t options, ::zx::channel watcher);
 
     // Watches a directory, receiving events of added messages on the
@@ -8220,6 +8313,7 @@ class DirectoryAdmin final {
     // All future requests to this node will be forwarded to the remote filesystem.
     // To re-open a node without forwarding to the remote target, the node
     // should be opened with OPEN_FLAG_NO_REMOTE.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Mount Mount(::zx::channel remote);
 
     // Mount a channel representing a remote filesystem onto this directory.
@@ -8245,6 +8339,7 @@ class DirectoryAdmin final {
 
     // Atomically create a directory with a provided path, and mount the
     // remote handle to the newly created directory.
+    // Allocates 328 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::MountAndCreate MountAndCreate(::zx::channel remote, ::fidl::StringView name, uint32_t flags);
 
     // Atomically create a directory with a provided path, and mount the
@@ -8264,6 +8359,7 @@ class DirectoryAdmin final {
 
     // Unmount this filesystem. After this function returns successfully,
     // all connections to the filesystem will be terminated.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Unmount Unmount();
 
     // Unmount this filesystem. After this function returns successfully,
@@ -8283,6 +8379,7 @@ class DirectoryAdmin final {
 
     // Detach a node which was previously attached to this directory
     // with Mount.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::UnmountNode UnmountNode();
 
     // Detach a node which was previously attached to this directory
@@ -8301,6 +8398,7 @@ class DirectoryAdmin final {
     ::fidl::DecodeResult<UnmountNodeResponse> UnmountNode_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::channel* out_remote);
 
     // Query the filesystem for filesystem-specific information.
+    // Allocates 144 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::QueryFilesystem QueryFilesystem();
 
     // Query the filesystem for filesystem-specific information.
@@ -8314,6 +8412,7 @@ class DirectoryAdmin final {
     ::fidl::DecodeResult<QueryFilesystemResponse> QueryFilesystem_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s, FilesystemInfo** out_info);
 
     // Acquire the path to the device backing this filesystem, if there is one.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetDevicePath GetDevicePath();
 
     // Acquire the path to the device backing this filesystem, if there is one.
@@ -8356,6 +8455,7 @@ class DirectoryAdmin final {
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
     // It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAG_SAME_RIGHTS.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
@@ -8417,6 +8517,7 @@ class DirectoryAdmin final {
     // Terminates connection with object.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Close Close(zx::unowned_channel _client_end);
 
     // Terminates connection with object.
@@ -8441,6 +8542,7 @@ class DirectoryAdmin final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Describe Describe(zx::unowned_channel _client_end);
 
     // Returns extra information about the type of the object.
@@ -8467,6 +8569,7 @@ class DirectoryAdmin final {
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Sync Sync(zx::unowned_channel _client_end);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
@@ -8490,6 +8593,7 @@ class DirectoryAdmin final {
     // Acquires information about the node.
     //
     // This method does not require any rights.
+    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetAttr GetAttr(zx::unowned_channel _client_end);
 
     // Acquires information about the node.
@@ -8514,6 +8618,7 @@ class DirectoryAdmin final {
     // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes);
 
     // Updates information about the node.
@@ -8538,6 +8643,7 @@ class DirectoryAdmin final {
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Deprecated. Only for use with compatibility with devhost.
+    // Request is heap-allocated. Response is heap-allocated.
     static ResultOf::Ioctl Ioctl(zx::unowned_channel _client_end, uint32_t opcode, uint64_t max_out, ::fidl::VectorView<::zx::handle> handles, ::fidl::VectorView<uint8_t> in);
 
     // Deprecated. Only for use with compatibility with devhost.
@@ -8572,6 +8678,7 @@ class DirectoryAdmin final {
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
+    // Request is heap-allocated.
     static ResultOf::Open Open(zx::unowned_channel _client_end, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
     // Opens a new object relative to this directory object.
@@ -8675,6 +8782,7 @@ class DirectoryAdmin final {
     // Other errors may be returned for filesystem-specific reasons.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Unlink Unlink(zx::unowned_channel _client_end, ::fidl::StringView path);
 
     // Detaches an object from this directory object.
@@ -8787,6 +8895,7 @@ class DirectoryAdmin final {
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::ReadDirents ReadDirents(zx::unowned_channel _client_end, uint64_t max_bytes);
 
     // Reads a collection of variably sized dirents into a buffer.
@@ -8840,6 +8949,7 @@ class DirectoryAdmin final {
     // Resets the directory seek offset.
     //
     // This method does not require any rights, similar to ReadDirents.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Rewind Rewind(zx::unowned_channel _client_end);
 
     // Resets the directory seek offset.
@@ -8864,6 +8974,7 @@ class DirectoryAdmin final {
     // access to it at a later point in time.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetToken GetToken(zx::unowned_channel _client_end);
 
     // Acquires a token to a Directory which can be used to identify
@@ -8895,6 +9006,7 @@ class DirectoryAdmin final {
     // directory, or else ZX_ERR_NOT_DIR should be returned.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Rename Rename(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
     // Renames an object named src to the name dst, in a directory represented by token.
@@ -8940,6 +9052,7 @@ class DirectoryAdmin final {
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Link Link(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
@@ -8998,6 +9111,7 @@ class DirectoryAdmin final {
     // Options must be zero; it is reserved.
     //
     // This method does not require any rights, similar to ReadDirents.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Watch Watch(zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher);
 
     // Watches a directory, receiving events of added messages on the
@@ -9064,6 +9178,7 @@ class DirectoryAdmin final {
     // All future requests to this node will be forwarded to the remote filesystem.
     // To re-open a node without forwarding to the remote target, the node
     // should be opened with OPEN_FLAG_NO_REMOTE.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Mount Mount(zx::unowned_channel _client_end, ::zx::channel remote);
 
     // Mount a channel representing a remote filesystem onto this directory.
@@ -9089,6 +9204,7 @@ class DirectoryAdmin final {
 
     // Atomically create a directory with a provided path, and mount the
     // remote handle to the newly created directory.
+    // Allocates 328 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::MountAndCreate MountAndCreate(zx::unowned_channel _client_end, ::zx::channel remote, ::fidl::StringView name, uint32_t flags);
 
     // Atomically create a directory with a provided path, and mount the
@@ -9108,6 +9224,7 @@ class DirectoryAdmin final {
 
     // Unmount this filesystem. After this function returns successfully,
     // all connections to the filesystem will be terminated.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Unmount Unmount(zx::unowned_channel _client_end);
 
     // Unmount this filesystem. After this function returns successfully,
@@ -9127,6 +9244,7 @@ class DirectoryAdmin final {
 
     // Detach a node which was previously attached to this directory
     // with Mount.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::UnmountNode UnmountNode(zx::unowned_channel _client_end);
 
     // Detach a node which was previously attached to this directory
@@ -9145,6 +9263,7 @@ class DirectoryAdmin final {
     static ::fidl::DecodeResult<UnmountNodeResponse> UnmountNode_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::channel* out_remote);
 
     // Query the filesystem for filesystem-specific information.
+    // Allocates 144 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::QueryFilesystem QueryFilesystem(zx::unowned_channel _client_end);
 
     // Query the filesystem for filesystem-specific information.
@@ -9158,6 +9277,7 @@ class DirectoryAdmin final {
     static ::fidl::DecodeResult<QueryFilesystemResponse> QueryFilesystem_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s, FilesystemInfo** out_info);
 
     // Acquire the path to the device backing this filesystem, if there is one.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetDevicePath GetDevicePath(zx::unowned_channel _client_end);
 
     // Acquire the path to the device backing this filesystem, if there is one.

@@ -245,6 +245,7 @@ class SkipBlock final {
     //
     // The block count can shrink in the event that a bad block is grown. It is
     // recommended to call this again after a bad block is grown.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetPartitionInfo GetPartitionInfo();
 
     // Returns information about the skip-block partition.
@@ -269,6 +270,7 @@ class SkipBlock final {
     ::fidl::DecodeResult<GetPartitionInfoResponse> GetPartitionInfo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, PartitionInfo* out_partition_info);
 
     // Reads the specified blocks into the provided vmo.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Read Read(ReadWriteOperation op);
 
     // Reads the specified blocks into the provided vmo.
@@ -290,6 +292,7 @@ class SkipBlock final {
     // physical block map to change, all previously written blocks at logical
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Write Write(ReadWriteOperation op);
 
     // Erases and writes the specified blocks from the provided vmo.
@@ -335,6 +338,7 @@ class SkipBlock final {
     //
     // The block count can shrink in the event that a bad block is grown. It is
     // recommended to call this again after a bad block is grown.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetPartitionInfo GetPartitionInfo(zx::unowned_channel _client_end);
 
     // Returns information about the skip-block partition.
@@ -359,6 +363,7 @@ class SkipBlock final {
     static ::fidl::DecodeResult<GetPartitionInfoResponse> GetPartitionInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, PartitionInfo* out_partition_info);
 
     // Reads the specified blocks into the provided vmo.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Read Read(zx::unowned_channel _client_end, ReadWriteOperation op);
 
     // Reads the specified blocks into the provided vmo.
@@ -380,6 +385,7 @@ class SkipBlock final {
     // physical block map to change, all previously written blocks at logical
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Write Write(zx::unowned_channel _client_end, ReadWriteOperation op);
 
     // Erases and writes the specified blocks from the provided vmo.

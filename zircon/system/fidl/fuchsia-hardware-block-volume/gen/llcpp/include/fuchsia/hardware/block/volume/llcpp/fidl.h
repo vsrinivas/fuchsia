@@ -712,6 +712,7 @@ class Volume final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetInfo GetInfo();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -722,6 +723,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetInfoResponse> GetInfo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::BlockInfo** out_info);
 
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetStats GetStats(bool clear);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -732,6 +734,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetStatsResponse> GetStats_Deprecated(::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::BlockStats** out_stats);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetFifo GetFifo();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -743,6 +746,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetFifoResponse> GetFifo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::fifo* out_fifo);
 
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::AttachVmo AttachVmo(::zx::vmo vmo);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -753,6 +757,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<AttachVmoResponse> AttachVmo_Deprecated(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::VmoID** out_vmoid);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CloseFifo CloseFifo();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -764,6 +769,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<CloseFifoResponse> CloseFifo_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::RebindDevice RebindDevice();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -775,6 +781,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<RebindDeviceResponse> RebindDevice_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetTypeGuid GetTypeGuid();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -785,6 +792,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetTypeGuidResponse> GetTypeGuid_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::partition::GUID** out_guid);
 
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetInstanceGuid GetInstanceGuid();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -795,6 +803,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetInstanceGuidResponse> GetInstanceGuid_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::partition::GUID** out_guid);
 
+    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetName GetName();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -805,6 +814,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetNameResponse> GetName_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name);
 
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Query Query();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -815,6 +825,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<QueryResponse> Query_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, VolumeInfo** out_info);
 
+    // Allocates 448 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::QuerySlices QuerySlices(::fidl::VectorView<uint64_t> start_slices);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -826,6 +837,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<QuerySlicesResponse> QuerySlices_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint64_t> start_slices, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::Array<VsliceRange, 16>* out_response, uint64_t* out_response_count);
 
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Extend Extend(uint64_t start_slice, uint64_t slice_count);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -837,6 +849,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ExtendResponse> Extend_Deprecated(::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Shrink Shrink(uint64_t start_slice, uint64_t slice_count);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -848,6 +861,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ShrinkResponse> Shrink_Deprecated(::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Destroy Destroy();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -868,6 +882,7 @@ class Volume final {
     Call() = delete;
    public:
 
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetInfo GetInfo(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -878,6 +893,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetInfoResponse> GetInfo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::BlockInfo** out_info);
 
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetStats GetStats(zx::unowned_channel _client_end, bool clear);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -888,6 +904,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetStatsResponse> GetStats_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::BlockStats** out_stats);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetFifo GetFifo(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -899,6 +916,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetFifoResponse> GetFifo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::fifo* out_fifo);
 
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::AttachVmo AttachVmo(zx::unowned_channel _client_end, ::zx::vmo vmo);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -909,6 +927,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<AttachVmoResponse> AttachVmo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::VmoID** out_vmoid);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CloseFifo CloseFifo(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -920,6 +939,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<CloseFifoResponse> CloseFifo_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::RebindDevice RebindDevice(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -931,6 +951,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<RebindDeviceResponse> RebindDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetTypeGuid GetTypeGuid(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -941,6 +962,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetTypeGuidResponse> GetTypeGuid_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::partition::GUID** out_guid);
 
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetInstanceGuid GetInstanceGuid(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -951,6 +973,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetInstanceGuidResponse> GetInstanceGuid_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::llcpp::fuchsia::hardware::block::partition::GUID** out_guid);
 
+    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetName GetName(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -961,6 +984,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetNameResponse> GetName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name);
 
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Query Query(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -971,6 +995,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<QueryResponse> Query_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, VolumeInfo** out_info);
 
+    // Allocates 448 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::QuerySlices QuerySlices(zx::unowned_channel _client_end, ::fidl::VectorView<uint64_t> start_slices);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -982,6 +1007,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<QuerySlicesResponse> QuerySlices_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint64_t> start_slices, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::Array<VsliceRange, 16>* out_response, uint64_t* out_response_count);
 
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Extend Extend(zx::unowned_channel _client_end, uint64_t start_slice, uint64_t slice_count);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -993,6 +1019,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ExtendResponse> Extend_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Shrink Shrink(zx::unowned_channel _client_end, uint64_t start_slice, uint64_t slice_count);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1004,6 +1031,7 @@ class Volume final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ShrinkResponse> Shrink_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Destroy Destroy(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1457,6 +1485,7 @@ class VolumeManager final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
+    // Allocates 232 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::AllocatePartition AllocatePartition(uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1468,6 +1497,7 @@ class VolumeManager final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<AllocatePartitionResponse> AllocatePartition_Deprecated(::fidl::BytePart _request_buffer, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Query Query();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1478,6 +1508,7 @@ class VolumeManager final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<QueryResponse> Query_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, VolumeInfo** out_info);
 
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Activate Activate(::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1498,6 +1529,7 @@ class VolumeManager final {
     Call() = delete;
    public:
 
+    // Allocates 232 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::AllocatePartition AllocatePartition(zx::unowned_channel _client_end, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1509,6 +1541,7 @@ class VolumeManager final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<AllocatePartitionResponse> AllocatePartition_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Query Query(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1519,6 +1552,7 @@ class VolumeManager final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<QueryResponse> Query_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, VolumeInfo** out_info);
 
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Activate Activate(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.

@@ -5,7 +5,6 @@
 package ir
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -128,6 +127,7 @@ func TestCompileInterface(t *testing.T) {
 							LinearizeResponse:  false,
 							StackAllocRequest:  true,
 							StackAllocResponse: true,
+							StackUse:           18,
 							EncodeRequest:      false,
 							DecodeResponse:     false,
 						},
@@ -185,6 +185,7 @@ func TestCompileInterface(t *testing.T) {
 							LinearizeResponse:  false,
 							StackAllocRequest:  true,
 							StackAllocResponse: true,
+							StackUse:           52,
 							EncodeRequest:      false,
 							DecodeResponse:     false,
 						},
@@ -275,6 +276,7 @@ func TestCompileInterface(t *testing.T) {
 							LinearizeResponse:  false,
 							StackAllocRequest:  true,
 							StackAllocResponse: true,
+							StackUse:           18,
 							EncodeRequest:      false,
 							DecodeResponse:     false,
 						},
@@ -518,6 +520,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 							LinearizeResponse:  false,
 							StackAllocRequest:  true,
 							StackAllocResponse: true,
+							StackUse:           18,
 							EncodeRequest:      false,
 							DecodeResponse:     false,
 						},
@@ -575,6 +578,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 							LinearizeResponse:  false,
 							StackAllocRequest:  true,
 							StackAllocResponse: true,
+							StackUse:           52,
 							EncodeRequest:      false,
 							DecodeResponse:     false,
 						},
@@ -665,6 +669,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 							LinearizeResponse:  false,
 							StackAllocRequest:  true,
 							StackAllocResponse: true,
+							StackUse:           18,
 							EncodeRequest:      false,
 							DecodeResponse:     false,
 						},
@@ -787,8 +792,8 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 			if !ok || actual == nil {
 				t.Fatalf("decls[0] not an interface, was instead %T", result.Decls[0])
 			}
-			if !reflect.DeepEqual(ex.expected, *actual) {
-				t.Fatalf("expected %+v\nactual %+v", ex.expected, *actual)
+			if diff := cmp.Diff(ex.expected, *actual, cmp.AllowUnexported(types.Ordinals{})); diff != "" {
+				t.Errorf("expected != actual (-want +got)\n%s", diff)
 			}
 		})
 	}
@@ -869,8 +874,8 @@ func TestCompileTable(t *testing.T) {
 			if !ok || actual == nil {
 				t.Fatalf("decls[0] not an table, was instead %T", result.Decls[0])
 			}
-			if !reflect.DeepEqual(ex.expected, *actual) {
-				t.Fatalf("expected %+v\nactual %+v", ex.expected, *actual)
+			if diff := cmp.Diff(ex.expected, *actual, cmp.AllowUnexported(types.Ordinals{})); diff != "" {
+				t.Errorf("expected != actual (-want +got)\n%s", diff)
 			}
 		})
 	}
@@ -952,8 +957,8 @@ func TestCompileTableLlcppNamespaceShouldBeRenamed(t *testing.T) {
 			if !ok || actual == nil {
 				t.Fatalf("decls[0] not an table, was instead %T", result.Decls[0])
 			}
-			if !reflect.DeepEqual(ex.expected, *actual) {
-				t.Fatalf("expected %+v\nactual %+v", ex.expected, *actual)
+			if diff := cmp.Diff(ex.expected, *actual, cmp.AllowUnexported(types.Ordinals{})); diff != "" {
+				t.Errorf("expected != actual (-want +got)\n%s", diff)
 			}
 		})
 	}
@@ -1134,8 +1139,8 @@ func TestCompileXUnion(t *testing.T) {
 			if !ok || actual == nil {
 				t.Fatalf("decls[0] not a xunion, was instead %T", result.Decls[0])
 			}
-			if !reflect.DeepEqual(ex.expected, *actual) {
-				t.Fatalf("expected %+v\nactual %+v", ex.expected, *actual)
+			if diff := cmp.Diff(ex.expected, *actual, cmp.AllowUnexported(types.Ordinals{})); diff != "" {
+				t.Errorf("expected != actual (-want +got)\n%s", diff)
 			}
 		})
 	}

@@ -525,6 +525,7 @@ class Controller final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Attempt to bind the requested driver to this device
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Bind Bind(::fidl::StringView driver);
 
     // Attempt to bind the requested driver to this device
@@ -541,6 +542,7 @@ class Controller final {
 
     // Disconnect this device and allow its parent to be bound again.
     // This may not complete before it returns.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ScheduleUnbind ScheduleUnbind();
 
     // Disconnect this device and allow its parent to be bound again.
@@ -559,6 +561,7 @@ class Controller final {
     ::fidl::DecodeResult<ScheduleUnbindResponse> ScheduleUnbind_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Return the name of the driver managing this the device
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetDriverName GetDriverName();
 
     // Return the name of the driver managing this the device
@@ -572,6 +575,7 @@ class Controller final {
     ::fidl::DecodeResult<GetDriverNameResponse> GetDriverName_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name);
 
     // Return the name of the device
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetDeviceName GetDeviceName();
 
     // Return the name of the device
@@ -585,6 +589,7 @@ class Controller final {
     ::fidl::DecodeResult<GetDeviceNameResponse> GetDeviceName_Deprecated(::fidl::BytePart _response_buffer, ::fidl::StringView* out_name);
 
     // Return the topological path for this device
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetTopologicalPath GetTopologicalPath();
 
     // Return the topological path for this device
@@ -598,6 +603,7 @@ class Controller final {
     ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_path);
 
     // Get an event for monitoring device conditions (see DEVICE_SIGNAL_* constants)
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetEventHandle GetEventHandle();
 
     // Get an event for monitoring device conditions (see DEVICE_SIGNAL_* constants)
@@ -613,6 +619,7 @@ class Controller final {
     ::fidl::DecodeResult<GetEventHandleResponse> GetEventHandle_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::event* out_event);
 
     // Return the current logging flags for this device's driver
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetDriverLogFlags GetDriverLogFlags();
 
     // Return the current logging flags for this device's driver
@@ -630,6 +637,7 @@ class Controller final {
     // Set the logging flags for this device's driver.
     // Each set bit in `clear_flags` will be cleared in the log flags state.
     // Each set bit in `set_flags` will then be set in the log flags state.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetDriverLogFlags SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags);
 
     // Set the logging flags for this device's driver.
@@ -651,6 +659,7 @@ class Controller final {
     ::fidl::DecodeResult<SetDriverLogFlagsResponse> SetDriverLogFlags_Deprecated(::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Debug command: execute the device's suspend hook
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::DebugSuspend DebugSuspend();
 
     // Debug command: execute the device's suspend hook
@@ -666,6 +675,7 @@ class Controller final {
     ::fidl::DecodeResult<DebugSuspendResponse> DebugSuspend_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Debug command: execute the device's resume hook
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::DebugResume DebugResume();
 
     // Debug command: execute the device's resume hook
@@ -684,6 +694,7 @@ class Controller final {
     // The |hook_wait_time| is the time that the driver expects to take for each device hook in
     // nanoseconds.
     // Returns whether the driver passed the compatibility check.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::RunCompatibilityTests RunCompatibilityTests(int64_t hook_wait_time);
 
     // RunCompatibilityTests: Runs compatibility tests for the driver that binds to this device.
@@ -717,6 +728,7 @@ class Controller final {
    public:
 
     // Attempt to bind the requested driver to this device
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Bind Bind(zx::unowned_channel _client_end, ::fidl::StringView driver);
 
     // Attempt to bind the requested driver to this device
@@ -733,6 +745,7 @@ class Controller final {
 
     // Disconnect this device and allow its parent to be bound again.
     // This may not complete before it returns.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ScheduleUnbind ScheduleUnbind(zx::unowned_channel _client_end);
 
     // Disconnect this device and allow its parent to be bound again.
@@ -751,6 +764,7 @@ class Controller final {
     static ::fidl::DecodeResult<ScheduleUnbindResponse> ScheduleUnbind_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Return the name of the driver managing this the device
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetDriverName GetDriverName(zx::unowned_channel _client_end);
 
     // Return the name of the driver managing this the device
@@ -764,6 +778,7 @@ class Controller final {
     static ::fidl::DecodeResult<GetDriverNameResponse> GetDriverName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_name);
 
     // Return the name of the device
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetDeviceName GetDeviceName(zx::unowned_channel _client_end);
 
     // Return the name of the device
@@ -777,6 +792,7 @@ class Controller final {
     static ::fidl::DecodeResult<GetDeviceNameResponse> GetDeviceName_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::fidl::StringView* out_name);
 
     // Return the topological path for this device
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetTopologicalPath GetTopologicalPath(zx::unowned_channel _client_end);
 
     // Return the topological path for this device
@@ -790,6 +806,7 @@ class Controller final {
     static ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_path);
 
     // Get an event for monitoring device conditions (see DEVICE_SIGNAL_* constants)
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetEventHandle GetEventHandle(zx::unowned_channel _client_end);
 
     // Get an event for monitoring device conditions (see DEVICE_SIGNAL_* constants)
@@ -805,6 +822,7 @@ class Controller final {
     static ::fidl::DecodeResult<GetEventHandleResponse> GetEventHandle_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::event* out_event);
 
     // Return the current logging flags for this device's driver
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetDriverLogFlags GetDriverLogFlags(zx::unowned_channel _client_end);
 
     // Return the current logging flags for this device's driver
@@ -822,6 +840,7 @@ class Controller final {
     // Set the logging flags for this device's driver.
     // Each set bit in `clear_flags` will be cleared in the log flags state.
     // Each set bit in `set_flags` will then be set in the log flags state.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetDriverLogFlags SetDriverLogFlags(zx::unowned_channel _client_end, uint32_t clear_flags, uint32_t set_flags);
 
     // Set the logging flags for this device's driver.
@@ -843,6 +862,7 @@ class Controller final {
     static ::fidl::DecodeResult<SetDriverLogFlagsResponse> SetDriverLogFlags_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Debug command: execute the device's suspend hook
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::DebugSuspend DebugSuspend(zx::unowned_channel _client_end);
 
     // Debug command: execute the device's suspend hook
@@ -858,6 +878,7 @@ class Controller final {
     static ::fidl::DecodeResult<DebugSuspendResponse> DebugSuspend_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Debug command: execute the device's resume hook
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::DebugResume DebugResume(zx::unowned_channel _client_end);
 
     // Debug command: execute the device's resume hook
@@ -876,6 +897,7 @@ class Controller final {
     // The |hook_wait_time| is the time that the driver expects to take for each device hook in
     // nanoseconds.
     // Returns whether the driver passed the compatibility check.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::RunCompatibilityTests RunCompatibilityTests(zx::unowned_channel _client_end, int64_t hook_wait_time);
 
     // RunCompatibilityTests: Runs compatibility tests for the driver that binds to this device.
@@ -1303,6 +1325,7 @@ class NameProvider final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Return the name of this Fuchsia device.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetDeviceName GetDeviceName();
 
     // Return the name of this Fuchsia device.
@@ -1325,6 +1348,7 @@ class NameProvider final {
    public:
 
     // Return the name of this Fuchsia device.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetDeviceName GetDeviceName(zx::unowned_channel _client_end);
 
     // Return the name of this Fuchsia device.

@@ -333,6 +333,7 @@ class BufferCollectionToken final {
     // block waiting for a response message, the other option is to notice
     // arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
     // after turning in this token for a BufferCollection.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Duplicate Duplicate(uint32_t rights_attenuation_mask, ::zx::channel token_request);
 
     // The initiator or a participant can send Duplicate() as part of creating
@@ -529,6 +530,7 @@ class BufferCollectionToken final {
     // individually, or calling Sync() on BufferCollection after this token has
     // been turned in via BindSharedCollection(), or noticing arrival of
     // BufferCollectionEvents::OnDuplicatedTokensKnownByServer().
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Sync Sync();
 
 
@@ -549,6 +551,7 @@ class BufferCollectionToken final {
     // its end), which avoids causing LogicalBufferCollection failure.
     // Normally an unexpected token channel close will cause
     // LogicalBufferCollection failure.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Close Close();
 
 
@@ -628,6 +631,7 @@ class BufferCollectionToken final {
     // block waiting for a response message, the other option is to notice
     // arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
     // after turning in this token for a BufferCollection.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Duplicate Duplicate(zx::unowned_channel _client_end, uint32_t rights_attenuation_mask, ::zx::channel token_request);
 
     // The initiator or a participant can send Duplicate() as part of creating
@@ -824,6 +828,7 @@ class BufferCollectionToken final {
     // individually, or calling Sync() on BufferCollection after this token has
     // been turned in via BindSharedCollection(), or noticing arrival of
     // BufferCollectionEvents::OnDuplicatedTokensKnownByServer().
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Sync Sync(zx::unowned_channel _client_end);
 
 
@@ -844,6 +849,7 @@ class BufferCollectionToken final {
     // its end), which avoids causing LogicalBufferCollection failure.
     // Normally an unexpected token channel close will cause
     // LogicalBufferCollection failure.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Close Close(zx::unowned_channel _client_end);
 
 
@@ -1185,6 +1191,7 @@ class Heap final {
     //
     // The caller guarantees that CreateResource() will be called prior
     // to the returned VMO or any associated child VMO being used.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::AllocateVmo AllocateVmo(uint64_t size);
 
     // Request a new memory allocation of `size` on heap.
@@ -1258,6 +1265,7 @@ class Heap final {
     // VMO, or any VMAR mapping to VMO, as any of those would keep VMO
     // alive beyond all sysmem participant usages of the vmo; instead
     // the heap can get the vmo's koid for the heap's mapping.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CreateResource CreateResource(::zx::vmo vmo);
 
     // Create resources and associate heap-specific resources with the
@@ -1330,6 +1338,7 @@ class Heap final {
     ::fidl::DecodeResult<CreateResourceResponse> CreateResource_Deprecated(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_id);
 
     // Destroy previously created resources.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::DestroyResource DestroyResource(uint64_t id);
 
     // Destroy previously created resources.
@@ -1367,6 +1376,7 @@ class Heap final {
     //
     // The caller guarantees that CreateResource() will be called prior
     // to the returned VMO or any associated child VMO being used.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::AllocateVmo AllocateVmo(zx::unowned_channel _client_end, uint64_t size);
 
     // Request a new memory allocation of `size` on heap.
@@ -1440,6 +1450,7 @@ class Heap final {
     // VMO, or any VMAR mapping to VMO, as any of those would keep VMO
     // alive beyond all sysmem participant usages of the vmo; instead
     // the heap can get the vmo's koid for the heap's mapping.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CreateResource CreateResource(zx::unowned_channel _client_end, ::zx::vmo vmo);
 
     // Create resources and associate heap-specific resources with the
@@ -1512,6 +1523,7 @@ class Heap final {
     static ::fidl::DecodeResult<CreateResourceResponse> CreateResource_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_id);
 
     // Destroy previously created resources.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::DestroyResource DestroyResource(zx::unowned_channel _client_end, uint64_t id);
 
     // Destroy previously created resources.
@@ -1777,6 +1789,7 @@ class DriverConnector final {
     //
     // `allocator_request` will be served by the sysmem driver (or the channel
     // will close).
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Connect Connect(::zx::channel allocator_request);
 
     // This one-way message sends in the server end of an Allocator channel.
@@ -1800,6 +1813,7 @@ class DriverConnector final {
     zx_status_t Connect_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel allocator_request);
 
     // Get information about the physical layout of protected memory, for use by sysmem-assistant.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetProtectedMemoryInfo GetProtectedMemoryInfo();
 
     // Get information about the physical layout of protected memory, for use by sysmem-assistant.
@@ -1827,6 +1841,7 @@ class DriverConnector final {
     //
     // `allocator_request` will be served by the sysmem driver (or the channel
     // will close).
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Connect Connect(zx::unowned_channel _client_end, ::zx::channel allocator_request);
 
     // This one-way message sends in the server end of an Allocator channel.
@@ -1850,6 +1865,7 @@ class DriverConnector final {
     static zx_status_t Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel allocator_request);
 
     // Get information about the physical layout of protected memory, for use by sysmem-assistant.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetProtectedMemoryInfo GetProtectedMemoryInfo(zx::unowned_channel _client_end);
 
     // Get information about the physical layout of protected memory, for use by sysmem-assistant.
@@ -2092,6 +2108,7 @@ class Allocator final {
     // BufferCollection.  The client should also keep the client end of
     // this channel open while using the BufferCollection, and should notice
     // when this channel closes and stop using the BufferCollection ASAP.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::AllocateNonSharedCollection AllocateNonSharedCollection(::zx::channel collection);
 
     // Allocates a BufferCollection on behalf of a single client (aka initiator)
@@ -2171,6 +2188,7 @@ class Allocator final {
     //
     // Success/failure to populate the BufferCollection with buffers is
     // determined via the BufferCollection interface.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::AllocateSharedCollection AllocateSharedCollection(::zx::channel token_request);
 
     // Creates a logical BufferCollectionToken which can be shared among
@@ -2219,6 +2237,7 @@ class Allocator final {
     // is a single participant's connection to the logical BufferCollection.
     // There typically will be other participants with their own
     // BufferCollection channel to the logical BufferCollection.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::BindSharedCollection BindSharedCollection(::zx::channel token, ::zx::channel buffer_collection_request);
 
     // Convert a BufferCollectionToken into a connection to the logical
@@ -2319,6 +2338,7 @@ class Allocator final {
     // BufferCollection.  The client should also keep the client end of
     // this channel open while using the BufferCollection, and should notice
     // when this channel closes and stop using the BufferCollection ASAP.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::AllocateNonSharedCollection AllocateNonSharedCollection(zx::unowned_channel _client_end, ::zx::channel collection);
 
     // Allocates a BufferCollection on behalf of a single client (aka initiator)
@@ -2398,6 +2418,7 @@ class Allocator final {
     //
     // Success/failure to populate the BufferCollection with buffers is
     // determined via the BufferCollection interface.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::AllocateSharedCollection AllocateSharedCollection(zx::unowned_channel _client_end, ::zx::channel token_request);
 
     // Creates a logical BufferCollectionToken which can be shared among
@@ -2446,6 +2467,7 @@ class Allocator final {
     // is a single participant's connection to the logical BufferCollection.
     // There typically will be other participants with their own
     // BufferCollection channel to the logical BufferCollection.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::BindSharedCollection BindSharedCollection(zx::unowned_channel _client_end, ::zx::channel token, ::zx::channel buffer_collection_request);
 
     // Convert a BufferCollectionToken into a connection to the logical
@@ -3401,6 +3423,7 @@ class BufferCollectionEvents final {
     // This message only indicates that the server has reached the point where
     // it knows about previously created tokens Duplicate()ed from the token
     // used to create this BufferCollection.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::OnDuplicatedTokensKnownByServer OnDuplicatedTokensKnownByServer();
 
 
@@ -3430,6 +3453,7 @@ class BufferCollectionEvents final {
     // `buffer_collection_info` The buffer information, including VMO handles.
     // If `status` is not `ZX_OK`, `buffer_collection_info` is default
     // initialized and contains no meaningful information.
+    // Request is heap-allocated.
     ResultOf::OnBuffersAllocated OnBuffersAllocated(int32_t status, BufferCollectionInfo_2 buffer_collection_info);
 
     // This event inidicates that buffer allocation is over, whether succesful
@@ -3521,6 +3545,7 @@ class BufferCollectionEvents final {
     // `ZX_ERR_INVALID_ARGS` if the request is malformed.
     // `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
     // perhaps due to hardware limitations.
+    // Allocates 304 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::OnAllocateSingleBufferDone OnAllocateSingleBufferDone(int32_t status, SingleBufferInfo buffer_info);
 
     // A participant can learn when a new buffer is allocated via this event.
@@ -3617,6 +3642,7 @@ class BufferCollectionEvents final {
     // This message only indicates that the server has reached the point where
     // it knows about previously created tokens Duplicate()ed from the token
     // used to create this BufferCollection.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::OnDuplicatedTokensKnownByServer OnDuplicatedTokensKnownByServer(zx::unowned_channel _client_end);
 
 
@@ -3646,6 +3672,7 @@ class BufferCollectionEvents final {
     // `buffer_collection_info` The buffer information, including VMO handles.
     // If `status` is not `ZX_OK`, `buffer_collection_info` is default
     // initialized and contains no meaningful information.
+    // Request is heap-allocated.
     static ResultOf::OnBuffersAllocated OnBuffersAllocated(zx::unowned_channel _client_end, int32_t status, BufferCollectionInfo_2 buffer_collection_info);
 
     // This event inidicates that buffer allocation is over, whether succesful
@@ -3737,6 +3764,7 @@ class BufferCollectionEvents final {
     // `ZX_ERR_INVALID_ARGS` if the request is malformed.
     // `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
     // perhaps due to hardware limitations.
+    // Allocates 304 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::OnAllocateSingleBufferDone OnAllocateSingleBufferDone(zx::unowned_channel _client_end, int32_t status, SingleBufferInfo buffer_info);
 
     // A participant can learn when a new buffer is allocated via this event.
@@ -4478,6 +4506,7 @@ class BufferCollection final {
     // one-way messages indicating events relevant to this BufferCollection
     // channel (some may be specific to this BufferCollection channel and some
     // may be relevant to the overall logical BufferCollection).
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetEventSink SetEventSink(::zx::channel events);
 
     // At least for now, the only way to get events from a BufferCollection is
@@ -4522,6 +4551,7 @@ class BufferCollection final {
     zx_status_t SetEventSink_Deprecated(::fidl::BytePart _request_buffer, ::zx::channel events);
 
     // See comments on BufferCollectionToken::Sync().
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Sync Sync();
 
 
@@ -4563,6 +4593,7 @@ class BufferCollection final {
     // buffer_index.
     //
     // `constraints` are constraints on the buffer collection.
+    // Request is heap-allocated.
     ResultOf::SetConstraints SetConstraints(bool has_constraints, BufferCollectionConstraints constraints);
 
     // Provide BufferCollectionConstraints to the logical BufferCollection.
@@ -4711,6 +4742,7 @@ class BufferCollection final {
     // satisfied, perhaps due to hardware limitations.
     //
     // `buffer_collection_info` has the VMO handles and other related info.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::WaitForBuffersAllocated WaitForBuffersAllocated();
 
     // This request completes when buffers have been allocated, responds with
@@ -4824,6 +4856,7 @@ class BufferCollection final {
     // This returns the same result code as WaitForBuffersAllocated if the
     // buffer collection has been allocated or failed, or `ZX_ERR_UNAVAILABLE`
     // if WaitForBuffersAllocated would block.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CheckBuffersAllocated CheckBuffersAllocated();
 
     // This returns the same result code as WaitForBuffersAllocated if the
@@ -4854,6 +4887,7 @@ class BufferCollection final {
     //
     // `buffer_index` indicates which buffer to close.  If the buffer is already
     // closed this has no effect (idempotent).
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CloseSingleBuffer CloseSingleBuffer(uint64_t buffer_index);
 
     // The CloseBuffer() doesn't immediately force all VMO handles to that
@@ -4903,6 +4937,7 @@ class BufferCollection final {
     //
     // The participant is (intentionally) never informed of other participant's
     // constraints.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::AllocateSingleBuffer AllocateSingleBuffer(uint64_t buffer_index);
 
     // This allocates a new buffer that is consistent with the most recent call
@@ -4943,6 +4978,7 @@ class BufferCollection final {
     // Completes when AllocateBuffer is done.  Callers who wish to avoid
     // blocking a thread while waiting can use OnAllocateSingleBufferDone()
     // instead.
+    // Allocates 328 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::WaitForSingleBufferAllocated WaitForSingleBufferAllocated(uint64_t buffer_index);
 
     // Completes when AllocateBuffer is done.  Callers who wish to avoid
@@ -4974,6 +5010,7 @@ class BufferCollection final {
     // buffer_index that the participant doesn't yet know about, to ensure that
     // the participant won't be waiting forever for the
     // OnAllocateSingleBufferDone() message regarding this buffer_index.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CheckSingleBufferAllocated CheckSingleBufferAllocated(uint64_t buffer_index);
 
     // A participant can use this message to have sysmem verify that this
@@ -5024,6 +5061,7 @@ class BufferCollection final {
     // the participant can send Close() before closing the client end of the
     // BufferCollection channel.  If this is the last BufferCollection view, the
     // LogicalBufferCollection will still go away.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Close Close();
 
 
@@ -5056,6 +5094,7 @@ class BufferCollection final {
     // one-way messages indicating events relevant to this BufferCollection
     // channel (some may be specific to this BufferCollection channel and some
     // may be relevant to the overall logical BufferCollection).
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetEventSink SetEventSink(zx::unowned_channel _client_end, ::zx::channel events);
 
     // At least for now, the only way to get events from a BufferCollection is
@@ -5100,6 +5139,7 @@ class BufferCollection final {
     static zx_status_t SetEventSink_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel events);
 
     // See comments on BufferCollectionToken::Sync().
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Sync Sync(zx::unowned_channel _client_end);
 
 
@@ -5141,6 +5181,7 @@ class BufferCollection final {
     // buffer_index.
     //
     // `constraints` are constraints on the buffer collection.
+    // Request is heap-allocated.
     static ResultOf::SetConstraints SetConstraints(zx::unowned_channel _client_end, bool has_constraints, BufferCollectionConstraints constraints);
 
     // Provide BufferCollectionConstraints to the logical BufferCollection.
@@ -5289,6 +5330,7 @@ class BufferCollection final {
     // satisfied, perhaps due to hardware limitations.
     //
     // `buffer_collection_info` has the VMO handles and other related info.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::WaitForBuffersAllocated WaitForBuffersAllocated(zx::unowned_channel _client_end);
 
     // This request completes when buffers have been allocated, responds with
@@ -5402,6 +5444,7 @@ class BufferCollection final {
     // This returns the same result code as WaitForBuffersAllocated if the
     // buffer collection has been allocated or failed, or `ZX_ERR_UNAVAILABLE`
     // if WaitForBuffersAllocated would block.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CheckBuffersAllocated CheckBuffersAllocated(zx::unowned_channel _client_end);
 
     // This returns the same result code as WaitForBuffersAllocated if the
@@ -5432,6 +5475,7 @@ class BufferCollection final {
     //
     // `buffer_index` indicates which buffer to close.  If the buffer is already
     // closed this has no effect (idempotent).
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CloseSingleBuffer CloseSingleBuffer(zx::unowned_channel _client_end, uint64_t buffer_index);
 
     // The CloseBuffer() doesn't immediately force all VMO handles to that
@@ -5481,6 +5525,7 @@ class BufferCollection final {
     //
     // The participant is (intentionally) never informed of other participant's
     // constraints.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::AllocateSingleBuffer AllocateSingleBuffer(zx::unowned_channel _client_end, uint64_t buffer_index);
 
     // This allocates a new buffer that is consistent with the most recent call
@@ -5521,6 +5566,7 @@ class BufferCollection final {
     // Completes when AllocateBuffer is done.  Callers who wish to avoid
     // blocking a thread while waiting can use OnAllocateSingleBufferDone()
     // instead.
+    // Allocates 328 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::WaitForSingleBufferAllocated WaitForSingleBufferAllocated(zx::unowned_channel _client_end, uint64_t buffer_index);
 
     // Completes when AllocateBuffer is done.  Callers who wish to avoid
@@ -5552,6 +5598,7 @@ class BufferCollection final {
     // buffer_index that the participant doesn't yet know about, to ensure that
     // the participant won't be waiting forever for the
     // OnAllocateSingleBufferDone() message regarding this buffer_index.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CheckSingleBufferAllocated CheckSingleBufferAllocated(zx::unowned_channel _client_end, uint64_t buffer_index);
 
     // A participant can use this message to have sysmem verify that this
@@ -5602,6 +5649,7 @@ class BufferCollection final {
     // the participant can send Close() before closing the client end of the
     // BufferCollection channel.  If this is the last BufferCollection view, the
     // LogicalBufferCollection will still go away.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Close Close(zx::unowned_channel _client_end);
 
 

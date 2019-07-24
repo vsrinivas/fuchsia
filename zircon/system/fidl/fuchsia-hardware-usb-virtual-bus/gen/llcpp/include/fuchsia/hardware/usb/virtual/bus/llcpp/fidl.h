@@ -214,6 +214,7 @@ class Bus final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Enable Enable();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -225,6 +226,7 @@ class Bus final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<EnableResponse> Enable_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Disable Disable();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -236,6 +238,7 @@ class Bus final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<DisableResponse> Disable_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Connect Connect();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -247,6 +250,7 @@ class Bus final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Disconnect Disconnect();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -267,6 +271,7 @@ class Bus final {
     Call() = delete;
    public:
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Enable Enable(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -278,6 +283,7 @@ class Bus final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<EnableResponse> Enable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Disable Disable(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -289,6 +295,7 @@ class Bus final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<DisableResponse> Disable_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Connect Connect(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -300,6 +307,7 @@ class Bus final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ConnectResponse> Connect_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Disconnect Disconnect(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.

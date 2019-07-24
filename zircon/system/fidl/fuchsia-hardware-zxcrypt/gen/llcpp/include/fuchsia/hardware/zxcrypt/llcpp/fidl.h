@@ -161,6 +161,7 @@ class DeviceManager final {
     // Returns ZX_ERR_BAD_STATE and keeps the device open if the device is already unsealed.
     // Returns other errors if operations on the underlying block device return errors.
     // Returns ZX_OK on success.
+    // Allocates 320 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Unseal Unseal(::fidl::VectorView<uint8_t> key, uint8_t slot);
 
     // Attempts to unseal the device by using the provided master key to unwrap
@@ -204,6 +205,7 @@ class DeviceManager final {
     // the unsealed child device is removed, but that's not straightforward today.)
     // Returns ZX_ERR_BAD_STATE if the device is already sealed.
     // Returns ZX_OK on success.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Seal Seal();
 
     // Seals the device, causing any previously-created child zxcrypt Device to
@@ -248,6 +250,7 @@ class DeviceManager final {
     // Returns ZX_ERR_BAD_STATE and keeps the device open if the device is already unsealed.
     // Returns other errors if operations on the underlying block device return errors.
     // Returns ZX_OK on success.
+    // Allocates 320 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Unseal Unseal(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> key, uint8_t slot);
 
     // Attempts to unseal the device by using the provided master key to unwrap
@@ -291,6 +294,7 @@ class DeviceManager final {
     // the unsealed child device is removed, but that's not straightforward today.)
     // Returns ZX_ERR_BAD_STATE if the device is already sealed.
     // Returns ZX_OK on success.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Seal Seal(zx::unowned_channel _client_end);
 
     // Seals the device, causing any previously-created child zxcrypt Device to

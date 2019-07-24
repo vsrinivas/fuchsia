@@ -150,6 +150,7 @@ class DebugData final {
     // resized without the receiver's knowledge), but it might still have the VMO mapped in and
     // continue to write data to it.  Code instrumentation runtimes use this to deliver large
     // binary trace results.
+    // Request is heap-allocated.
     ResultOf::Publish Publish(::fidl::StringView data_sink, ::zx::vmo data);
 
     // The program runtime sends a string naming a `data_sink` and transfers the sole handle to
@@ -185,6 +186,7 @@ class DebugData final {
     // and gets back a VMO to read configuration data from.  The sanitizer runtimes use this to
     // allow large options text to be stored in a file rather than passed directly in environment
     // strings.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::LoadConfig LoadConfig(::fidl::StringView config_name);
 
     // The program runtime names a `config_name` referring to a debug configuration of some kind
@@ -224,6 +226,7 @@ class DebugData final {
     // resized without the receiver's knowledge), but it might still have the VMO mapped in and
     // continue to write data to it.  Code instrumentation runtimes use this to deliver large
     // binary trace results.
+    // Request is heap-allocated.
     static ResultOf::Publish Publish(zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data);
 
     // The program runtime sends a string naming a `data_sink` and transfers the sole handle to
@@ -259,6 +262,7 @@ class DebugData final {
     // and gets back a VMO to read configuration data from.  The sanitizer runtimes use this to
     // allow large options text to be stored in a file rather than passed directly in environment
     // strings.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::LoadConfig LoadConfig(zx::unowned_channel _client_end, ::fidl::StringView config_name);
 
     // The program runtime names a `config_name` referring to a debug configuration of some kind

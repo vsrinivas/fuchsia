@@ -147,6 +147,7 @@ class ControlFlow final {
 
     // Shutdown the server without a reply.
     // The server should unbind the channel from the dispatch loop, closing it.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Shutdown Shutdown();
 
 
@@ -157,6 +158,7 @@ class ControlFlow final {
     // Calling this method generates no reply and a epitaph with error set to
     // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     // This tests sending an epitaph from the one-way method call handler.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::NoReplyMustSendAccessDeniedEpitaph NoReplyMustSendAccessDeniedEpitaph();
 
 
@@ -169,6 +171,7 @@ class ControlFlow final {
     // Calling this method generates no reply and a epitaph with error set to
     // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     // This tests sending an epitaph from a normal (two-way) method call handler.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::MustSendAccessDeniedEpitaph MustSendAccessDeniedEpitaph();
 
     // Despite the fact that a reply was defined in the method signature,
@@ -203,6 +206,7 @@ class ControlFlow final {
 
     // Shutdown the server without a reply.
     // The server should unbind the channel from the dispatch loop, closing it.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Shutdown Shutdown(zx::unowned_channel _client_end);
 
 
@@ -213,6 +217,7 @@ class ControlFlow final {
     // Calling this method generates no reply and a epitaph with error set to
     // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     // This tests sending an epitaph from the one-way method call handler.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::NoReplyMustSendAccessDeniedEpitaph NoReplyMustSendAccessDeniedEpitaph(zx::unowned_channel _client_end);
 
 
@@ -225,6 +230,7 @@ class ControlFlow final {
     // Calling this method generates no reply and a epitaph with error set to
     // `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     // This tests sending an epitaph from a normal (two-way) method call handler.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::MustSendAccessDeniedEpitaph MustSendAccessDeniedEpitaph(zx::unowned_channel _client_end);
 
     // Despite the fact that a reply was defined in the method signature,

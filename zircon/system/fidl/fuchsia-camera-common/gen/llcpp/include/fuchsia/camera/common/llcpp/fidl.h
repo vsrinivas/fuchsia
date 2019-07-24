@@ -228,6 +228,7 @@ class Stream final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Starts the streaming of frames.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Start Start();
 
 
@@ -235,6 +236,7 @@ class Stream final {
     zx_status_t Start_Deprecated();
 
     // Stops the streaming of frames.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Stop Stop();
 
 
@@ -242,6 +244,7 @@ class Stream final {
     zx_status_t Stop_Deprecated();
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ReleaseFrame ReleaseFrame(uint32_t buffer_id);
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
@@ -270,6 +273,7 @@ class Stream final {
    public:
 
     // Starts the streaming of frames.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Start Start(zx::unowned_channel _client_end);
 
 
@@ -277,6 +281,7 @@ class Stream final {
     static zx_status_t Start_Deprecated(zx::unowned_channel _client_end);
 
     // Stops the streaming of frames.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Stop Stop(zx::unowned_channel _client_end);
 
 
@@ -284,6 +289,7 @@ class Stream final {
     static zx_status_t Stop_Deprecated(zx::unowned_channel _client_end);
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ReleaseFrame ReleaseFrame(zx::unowned_channel _client_end, uint32_t buffer_id);
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
@@ -608,6 +614,7 @@ class VirtualCameraFactory final {
 
     // Creates a new VirtualCameraDevice based on the configuration passed in.
     // `config`: a VirtualCameraConfig defining how the new device should behave.
+    // Request is heap-allocated.
     ResultOf::CreateDevice CreateDevice(VirtualCameraConfig config);
 
     // Creates a new VirtualCameraDevice based on the configuration passed in.
@@ -635,6 +642,7 @@ class VirtualCameraFactory final {
 
     // Creates a new VirtualCameraDevice based on the configuration passed in.
     // `config`: a VirtualCameraConfig defining how the new device should behave.
+    // Request is heap-allocated.
     static ResultOf::CreateDevice CreateDevice(zx::unowned_channel _client_end, VirtualCameraConfig config);
 
     // Creates a new VirtualCameraDevice based on the configuration passed in.

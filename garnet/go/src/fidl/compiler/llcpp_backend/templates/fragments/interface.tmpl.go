@@ -31,6 +31,18 @@ nullptr
   {{- end -}}
 {{- end }}
 
+{{- define "AllocationComment" -}}
+{{- if .LLProps.StackUse }} Allocates {{ .LLProps.StackUse }} bytes of {{ "" }}
+{{- if not .LLProps.StackAllocRequest -}} response {{- else -}}
+  {{- if not .LLProps.StackAllocResponse -}} request {{- else -}} message {{- end -}}
+{{- end }} buffer on the stack. {{- end }}
+{{- if and .LLProps.StackAllocRequest .LLProps.StackAllocResponse }} No heap allocation necessary.
+{{- else }}
+  {{- if not .LLProps.StackAllocRequest }} Request is heap-allocated. {{- end }}
+  {{- if not .LLProps.StackAllocResponse }} Response is heap-allocated. {{- end }}
+{{- end }}
+{{- end }}
+
 {{- define "InterfaceDeclaration" }}
 {{- $interface := . }}
 {{ "" }}
@@ -210,6 +222,7 @@ class {{ .Name }} final {
       {{- range .DocComments }}
     //{{ . }}
       {{- end }}
+    //{{ template "AllocationComment" . }}
     ResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestCFlavorMethodArgumentsNew" . }});
 {{ "" }}
       {{- if or .Request .Response }}
@@ -264,6 +277,7 @@ class {{ .Name }} final {
       {{- range .DocComments }}
     //{{ . }}
       {{- end }}
+    //{{ template "AllocationComment" . }}
     static ResultOf::{{ .Name }} {{ .Name }}({{ template "StaticCallSyncRequestCFlavorMethodArgumentsNew" . }});
 {{ "" }}
       {{- if or .Request .Response }}

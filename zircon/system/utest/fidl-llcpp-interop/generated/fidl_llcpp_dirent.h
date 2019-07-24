@@ -265,6 +265,7 @@ class DirEntTestInterface final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Iterate over the dirents and return the number of directories within them.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::CountNumDirectories CountNumDirectories(::fidl::VectorView<DirEnt> dirents);
 
     // Iterate over the dirents and return the number of directories within them.
@@ -280,6 +281,7 @@ class DirEntTestInterface final {
     ::fidl::DecodeResult<CountNumDirectoriesResponse> CountNumDirectories_Deprecated(::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer, int64_t* out_num_dir);
 
     // Return a vector of dirents. Empty request. Response may stack-allocate.
+    // Allocates 192 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ReadDir ReadDir();
 
     // Return a vector of dirents. Empty request. Response may stack-allocate.
@@ -293,6 +295,7 @@ class DirEntTestInterface final {
     ::fidl::DecodeResult<ReadDirResponse> ReadDir_Deprecated(::fidl::BytePart _response_buffer, ::fidl::VectorView<DirEnt>* out_dirents);
 
     // Consume dirents. Empty response. Request may stack-allocate.
+    // Allocates 192 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ConsumeDirectories ConsumeDirectories(::fidl::VectorView<DirEnt> dirents);
 
     // Consume dirents. Empty response. Request may stack-allocate.
@@ -309,6 +312,7 @@ class DirEntTestInterface final {
 
     // Binding will not wait for response.
     // But here we send an eventpair which the server will signal upon receipt of message.
+    // Request is heap-allocated.
     ResultOf::OneWayDirents OneWayDirents(::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep);
 
     // Binding will not wait for response.
@@ -340,6 +344,7 @@ class DirEntTestInterface final {
    public:
 
     // Iterate over the dirents and return the number of directories within them.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::CountNumDirectories CountNumDirectories(zx::unowned_channel _client_end, ::fidl::VectorView<DirEnt> dirents);
 
     // Iterate over the dirents and return the number of directories within them.
@@ -355,6 +360,7 @@ class DirEntTestInterface final {
     static ::fidl::DecodeResult<CountNumDirectoriesResponse> CountNumDirectories_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<DirEnt> dirents, ::fidl::BytePart _response_buffer, int64_t* out_num_dir);
 
     // Return a vector of dirents. Empty request. Response may stack-allocate.
+    // Allocates 192 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ReadDir ReadDir(zx::unowned_channel _client_end);
 
     // Return a vector of dirents. Empty request. Response may stack-allocate.
@@ -368,6 +374,7 @@ class DirEntTestInterface final {
     static ::fidl::DecodeResult<ReadDirResponse> ReadDir_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, ::fidl::VectorView<DirEnt>* out_dirents);
 
     // Consume dirents. Empty response. Request may stack-allocate.
+    // Allocates 192 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ConsumeDirectories ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::VectorView<DirEnt> dirents);
 
     // Consume dirents. Empty response. Request may stack-allocate.
@@ -384,6 +391,7 @@ class DirEntTestInterface final {
 
     // Binding will not wait for response.
     // But here we send an eventpair which the server will signal upon receipt of message.
+    // Request is heap-allocated.
     static ResultOf::OneWayDirents OneWayDirents(zx::unowned_channel _client_end, ::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep);
 
     // Binding will not wait for response.

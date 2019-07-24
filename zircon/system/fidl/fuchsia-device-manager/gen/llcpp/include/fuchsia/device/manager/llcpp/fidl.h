@@ -296,6 +296,7 @@ class DebugDumper final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Print device tree into `output`, returns bytes `written` and bytes `available` to write.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::DumpTree DumpTree(::zx::vmo output);
 
     // Print device tree into `output`, returns bytes `written` and bytes `available` to write.
@@ -311,6 +312,7 @@ class DebugDumper final {
     ::fidl::DecodeResult<DumpTreeResponse> DumpTree_Deprecated(::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_written, uint64_t* out_available);
 
     // Print information about all drivers into `output`, returns bytes `written` and bytes `available` to write.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::DumpDrivers DumpDrivers(::zx::vmo output);
 
     // Print information about all drivers into `output`, returns bytes `written` and bytes `available` to write.
@@ -327,6 +329,7 @@ class DebugDumper final {
 
     // Print all devices and their binding properties into `output`, returns bytes `written`
     // and bytes `available` to write.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::DumpBindingProperties DumpBindingProperties(::zx::vmo output);
 
     // Print all devices and their binding properties into `output`, returns bytes `written`
@@ -354,6 +357,7 @@ class DebugDumper final {
    public:
 
     // Print device tree into `output`, returns bytes `written` and bytes `available` to write.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::DumpTree DumpTree(zx::unowned_channel _client_end, ::zx::vmo output);
 
     // Print device tree into `output`, returns bytes `written` and bytes `available` to write.
@@ -369,6 +373,7 @@ class DebugDumper final {
     static ::fidl::DecodeResult<DumpTreeResponse> DumpTree_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo output, ::fidl::BytePart _response_buffer, int32_t* out_status, uint64_t* out_written, uint64_t* out_available);
 
     // Print information about all drivers into `output`, returns bytes `written` and bytes `available` to write.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::DumpDrivers DumpDrivers(zx::unowned_channel _client_end, ::zx::vmo output);
 
     // Print information about all drivers into `output`, returns bytes `written` and bytes `available` to write.
@@ -385,6 +390,7 @@ class DebugDumper final {
 
     // Print all devices and their binding properties into `output`, returns bytes `written`
     // and bytes `available` to write.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::DumpBindingProperties DumpBindingProperties(zx::unowned_channel _client_end, ::zx::vmo output);
 
     // Print all devices and their binding properties into `output`, returns bytes `written`
@@ -582,6 +588,7 @@ class Administrator final {
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
     // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Suspend Suspend(uint32_t flags);
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
@@ -610,6 +617,7 @@ class Administrator final {
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
     // combination of DEVICE_SUSPEND_FLAG_* from the DDK.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Suspend Suspend(zx::unowned_channel _client_end, uint32_t flags);
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
@@ -862,6 +870,7 @@ class DevhostController final {
     // Create a device in the devhost that only implements the device protocol
     // and claims to support the given `protocol_id`.  This device will communicate
     // with the devcoordinator via `rpc`.
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CreateDeviceStub CreateDeviceStub(::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id);
 
     // Create a device in the devhost that only implements the device protocol
@@ -895,6 +904,7 @@ class DevhostController final {
     // fuchsia.boot.Items protocol.
     //
     // `local_device_id` will be a unique value within the device's devhost
+    // Request is heap-allocated.
     ResultOf::CreateDevice CreateDevice(::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
 
     // Create a device in the devhost representing the shadowed half of device
@@ -955,6 +965,7 @@ class DevhostController final {
     //
     // `local_device_id` will be a unique value within the device's devhost, identifying
     // the resulting composite device.
+    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CreateCompositeDevice CreateCompositeDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id);
 
     // Introduce a composite device that has the given name and properties.
@@ -1002,6 +1013,7 @@ class DevhostController final {
     // Create a device in the devhost that only implements the device protocol
     // and claims to support the given `protocol_id`.  This device will communicate
     // with the devcoordinator via `rpc`.
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CreateDeviceStub CreateDeviceStub(zx::unowned_channel _client_end, ::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id);
 
     // Create a device in the devhost that only implements the device protocol
@@ -1035,6 +1047,7 @@ class DevhostController final {
     // fuchsia.boot.Items protocol.
     //
     // `local_device_id` will be a unique value within the device's devhost
+    // Request is heap-allocated.
     static ResultOf::CreateDevice CreateDevice(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
 
     // Create a device in the devhost representing the shadowed half of device
@@ -1095,6 +1108,7 @@ class DevhostController final {
     //
     // `local_device_id` will be a unique value within the device's devhost, identifying
     // the resulting composite device.
+    // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CreateCompositeDevice CreateCompositeDevice(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id);
 
     // Introduce a composite device that has the given name and properties.
@@ -1521,6 +1535,7 @@ class DeviceController final {
     // and optionally a channel to the driver's test output. `test_output` will be
     // not present unless the driver is configured to run its run_unit_tests hook, in
     // which case the other end of the channel will have been passed to the driver.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::BindDriver BindDriver(::fidl::StringView driver_path, ::zx::vmo driver);
 
     // Bind the requested driver to this device.  `driver_path` is informational,
@@ -1551,6 +1566,7 @@ class DeviceController final {
     ::fidl::DecodeResult<BindDriverResponse> BindDriver_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::channel* out_test_output);
 
     // Give this device a channel to its shadow in another process.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ConnectProxy ConnectProxy(::zx::channel shadow);
 
     // Give this device a channel to its shadow in another process.
@@ -1566,6 +1582,7 @@ class DeviceController final {
 
     // Ask devhost to unbind this device. On success, the remote end of this
     // interface channel will close instead of returning a result.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Unbind Unbind();
 
 
@@ -1576,6 +1593,7 @@ class DeviceController final {
     // Ask the devhost to complete the removal of this device, which previously had
     // invoked |ScheduleRemove|. This is a special case that can be removed
     // once |device_remove| invokes |unbind|.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CompleteRemoval CompleteRemoval();
 
 
@@ -1586,6 +1604,7 @@ class DeviceController final {
 
     // Ask the devhost to remove this device.  On success, the remote end of
     // this interface channel will close instead of returning a result.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::RemoveDevice RemoveDevice();
 
 
@@ -1594,6 +1613,7 @@ class DeviceController final {
     zx_status_t RemoveDevice_Deprecated();
 
     // Ask devhost to suspend this device, using the target state indicated by `flags`.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Suspend Suspend(uint32_t flags);
 
     // Ask devhost to suspend this device, using the target state indicated by `flags`.
@@ -1610,6 +1630,7 @@ class DeviceController final {
 
     // Inform devhost about the compatibility test status when compatibility tests
     // fail or complete successfully.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CompleteCompatibilityTests CompleteCompatibilityTests(CompatibilityTestStatus status);
 
     // Inform devhost about the compatibility test status when compatibility tests
@@ -1641,6 +1662,7 @@ class DeviceController final {
     // and optionally a channel to the driver's test output. `test_output` will be
     // not present unless the driver is configured to run its run_unit_tests hook, in
     // which case the other end of the channel will have been passed to the driver.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::BindDriver BindDriver(zx::unowned_channel _client_end, ::fidl::StringView driver_path, ::zx::vmo driver);
 
     // Bind the requested driver to this device.  `driver_path` is informational,
@@ -1671,6 +1693,7 @@ class DeviceController final {
     static ::fidl::DecodeResult<BindDriverResponse> BindDriver_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::zx::vmo driver, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::channel* out_test_output);
 
     // Give this device a channel to its shadow in another process.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ConnectProxy ConnectProxy(zx::unowned_channel _client_end, ::zx::channel shadow);
 
     // Give this device a channel to its shadow in another process.
@@ -1686,6 +1709,7 @@ class DeviceController final {
 
     // Ask devhost to unbind this device. On success, the remote end of this
     // interface channel will close instead of returning a result.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Unbind Unbind(zx::unowned_channel _client_end);
 
 
@@ -1696,6 +1720,7 @@ class DeviceController final {
     // Ask the devhost to complete the removal of this device, which previously had
     // invoked |ScheduleRemove|. This is a special case that can be removed
     // once |device_remove| invokes |unbind|.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CompleteRemoval CompleteRemoval(zx::unowned_channel _client_end);
 
 
@@ -1706,6 +1731,7 @@ class DeviceController final {
 
     // Ask the devhost to remove this device.  On success, the remote end of
     // this interface channel will close instead of returning a result.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::RemoveDevice RemoveDevice(zx::unowned_channel _client_end);
 
 
@@ -1714,6 +1740,7 @@ class DeviceController final {
     static zx_status_t RemoveDevice_Deprecated(zx::unowned_channel _client_end);
 
     // Ask devhost to suspend this device, using the target state indicated by `flags`.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Suspend Suspend(zx::unowned_channel _client_end, uint32_t flags);
 
     // Ask devhost to suspend this device, using the target state indicated by `flags`.
@@ -1730,6 +1757,7 @@ class DeviceController final {
 
     // Inform devhost about the compatibility test status when compatibility tests
     // fail or complete successfully.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CompleteCompatibilityTests CompleteCompatibilityTests(zx::unowned_channel _client_end, CompatibilityTestStatus status);
 
     // Inform devhost about the compatibility test status when compatibility tests
@@ -2732,6 +2760,7 @@ class Coordinator final {
     // and will be forwarded to the shadow device. `client_remote`, if present,
     // will be passed to the device as an open connection for the client.
     // On success, the returned `local_device_id` is the identifier assigned by devmgr.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::AddDevice AddDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote);
 
     // Record the addition of a new device that can be communicated with via `rpc`.
@@ -2767,6 +2796,7 @@ class Coordinator final {
     // Behaves as AddDevice, but marks the device as initially invisible.  This means
     // that it will not be visible to other devices or the devfs until it is later marked
     // visible (via MakeVisible).
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::AddDeviceInvisible AddDeviceInvisible(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote);
 
     // Behaves as AddDevice, but marks the device as initially invisible.  This means
@@ -2790,6 +2820,7 @@ class Coordinator final {
     // Requests the devcoordinator schedule the removal of this device,
     // and the unbinding of its children.
     // If |unbind_self| is true, the unbind hook for this device will also be called.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ScheduleRemove ScheduleRemove(bool unbind_self);
 
     // Requests the devcoordinator schedule the removal of this device,
@@ -2810,6 +2841,7 @@ class Coordinator final {
     zx_status_t ScheduleRemove_Deprecated(::fidl::BytePart _request_buffer, bool unbind_self);
 
     // Requests the devcoordinator schedule the unbinding of this device's children.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ScheduleUnbindChildren ScheduleUnbindChildren();
 
 
@@ -2817,6 +2849,7 @@ class Coordinator final {
     zx_status_t ScheduleUnbindChildren_Deprecated();
 
     // Sent as the response to |Unbind| or |CompleteRemoval|.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::UnbindDone UnbindDone();
 
 
@@ -2824,6 +2857,7 @@ class Coordinator final {
     zx_status_t UnbindDone_Deprecated();
 
     // Record the removal of this device.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::RemoveDevice RemoveDevice();
 
     // Record the removal of this device.
@@ -2839,6 +2873,7 @@ class Coordinator final {
     ::fidl::DecodeResult<RemoveDeviceResponse> RemoveDevice_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Mark this device as visible.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::MakeVisible MakeVisible();
 
     // Mark this device as visible.
@@ -2857,6 +2892,7 @@ class Coordinator final {
     // this will initiate the driver matching algorithm.
     // TODO(teisenbe): Specify the behavior of invoking this multiple times.  I believe
     // the current behavior is a bug.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::BindDevice BindDevice(::fidl::StringView driver_path);
 
     // Attempt to bind a driver against this device.  If `driver_path` is null,
@@ -2881,6 +2917,7 @@ class Coordinator final {
     ::fidl::DecodeResult<BindDeviceResponse> BindDevice_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Returns the topological path of this device.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetTopologicalPath GetTopologicalPath();
 
     // Returns the topological path of this device.
@@ -2894,6 +2931,7 @@ class Coordinator final {
     ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath_Deprecated(::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_path);
 
     // Requests that the firmware at the given path be loaded and returned.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::LoadFirmware LoadFirmware(::fidl::StringView fw_path);
 
     // Requests that the firmware at the given path be loaded and returned.
@@ -2909,6 +2947,7 @@ class Coordinator final {
     ::fidl::DecodeResult<LoadFirmwareResponse> LoadFirmware_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView fw_path, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::vmo* out_vmo, uint64_t* out_size);
 
     // Retrieve the metadata blob associated with this device and the given key.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetMetadata GetMetadata(uint32_t key);
 
     // Retrieve the metadata blob associated with this device and the given key.
@@ -2922,6 +2961,7 @@ class Coordinator final {
     ::fidl::DecodeResult<GetMetadataResponse> GetMetadata_Deprecated(::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_data);
 
     // Retrieve the metadata size associated with this device and the given key.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetMetadataSize GetMetadataSize(uint32_t key);
 
     // Retrieve the metadata size associated with this device and the given key.
@@ -2940,6 +2980,7 @@ class Coordinator final {
     // TODO(teisenbe): Document the behavior of calling this twice with the same
     // key.  I believe the current behavior results in inaccessible data that is
     // kept around for the lifetime of the device.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::AddMetadata AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data);
 
     // Add metadata blob associated with this device and the given key.
@@ -2968,6 +3009,7 @@ class Coordinator final {
     // the device at `device_path` is not a child of the requesting device AND
     // the requesting device is not running in the sys devhost, then this will
     // fail.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::PublishMetadata PublishMetadata(::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data);
 
     // Behaves like AddMetadata, but instead of associating it with the
@@ -2997,6 +3039,7 @@ class Coordinator final {
     // Adds the given composite device.  This causes the devcoordinator to try to match the
     // components against the existing device tree, and to monitor all new device additions
     // in order to find the components as they are created.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::AddCompositeDevice AddCompositeDevice(::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index);
 
     // Adds the given composite device.  This causes the devcoordinator to try to match the
@@ -3020,6 +3063,7 @@ class Coordinator final {
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     // See fuchsia.io.Directory for more information.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::DirectoryWatch DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watcher);
 
     // Watches a directory, receiving events of added messages on the
@@ -3045,6 +3089,7 @@ class Coordinator final {
     // each device hook in nanoseconds.
     // Returns whether the compatibility tests started, and does not convey
     // anything about the status of the test.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::RunCompatibilityTests RunCompatibilityTests(int64_t hook_wait_time);
 
     // Run Compatibility tests for the driver that binds to this device.
@@ -3087,6 +3132,7 @@ class Coordinator final {
     // and will be forwarded to the shadow device. `client_remote`, if present,
     // will be passed to the device as an open connection for the client.
     // On success, the returned `local_device_id` is the identifier assigned by devmgr.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::AddDevice AddDevice(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, AddDeviceConfig device_add_config, ::zx::channel client_remote);
 
     // Record the addition of a new device that can be communicated with via `rpc`.
@@ -3122,6 +3168,7 @@ class Coordinator final {
     // Behaves as AddDevice, but marks the device as initially invisible.  This means
     // that it will not be visible to other devices or the devfs until it is later marked
     // visible (via MakeVisible).
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::AddDeviceInvisible AddDeviceInvisible(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote);
 
     // Behaves as AddDevice, but marks the device as initially invisible.  This means
@@ -3145,6 +3192,7 @@ class Coordinator final {
     // Requests the devcoordinator schedule the removal of this device,
     // and the unbinding of its children.
     // If |unbind_self| is true, the unbind hook for this device will also be called.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ScheduleRemove ScheduleRemove(zx::unowned_channel _client_end, bool unbind_self);
 
     // Requests the devcoordinator schedule the removal of this device,
@@ -3165,6 +3213,7 @@ class Coordinator final {
     static zx_status_t ScheduleRemove_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool unbind_self);
 
     // Requests the devcoordinator schedule the unbinding of this device's children.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ScheduleUnbindChildren ScheduleUnbindChildren(zx::unowned_channel _client_end);
 
 
@@ -3172,6 +3221,7 @@ class Coordinator final {
     static zx_status_t ScheduleUnbindChildren_Deprecated(zx::unowned_channel _client_end);
 
     // Sent as the response to |Unbind| or |CompleteRemoval|.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::UnbindDone UnbindDone(zx::unowned_channel _client_end);
 
 
@@ -3179,6 +3229,7 @@ class Coordinator final {
     static zx_status_t UnbindDone_Deprecated(zx::unowned_channel _client_end);
 
     // Record the removal of this device.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::RemoveDevice RemoveDevice(zx::unowned_channel _client_end);
 
     // Record the removal of this device.
@@ -3194,6 +3245,7 @@ class Coordinator final {
     static ::fidl::DecodeResult<RemoveDeviceResponse> RemoveDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Mark this device as visible.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::MakeVisible MakeVisible(zx::unowned_channel _client_end);
 
     // Mark this device as visible.
@@ -3212,6 +3264,7 @@ class Coordinator final {
     // this will initiate the driver matching algorithm.
     // TODO(teisenbe): Specify the behavior of invoking this multiple times.  I believe
     // the current behavior is a bug.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::BindDevice BindDevice(zx::unowned_channel _client_end, ::fidl::StringView driver_path);
 
     // Attempt to bind a driver against this device.  If `driver_path` is null,
@@ -3236,6 +3289,7 @@ class Coordinator final {
     static ::fidl::DecodeResult<BindDeviceResponse> BindDevice_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver_path, ::fidl::BytePart _response_buffer, int32_t* out_status);
 
     // Returns the topological path of this device.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetTopologicalPath GetTopologicalPath(zx::unowned_channel _client_end);
 
     // Returns the topological path of this device.
@@ -3249,6 +3303,7 @@ class Coordinator final {
     static ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::StringView* out_path);
 
     // Requests that the firmware at the given path be loaded and returned.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::LoadFirmware LoadFirmware(zx::unowned_channel _client_end, ::fidl::StringView fw_path);
 
     // Requests that the firmware at the given path be loaded and returned.
@@ -3264,6 +3319,7 @@ class Coordinator final {
     static ::fidl::DecodeResult<LoadFirmwareResponse> LoadFirmware_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView fw_path, ::fidl::BytePart _response_buffer, int32_t* out_status, ::zx::vmo* out_vmo, uint64_t* out_size);
 
     // Retrieve the metadata blob associated with this device and the given key.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetMetadata GetMetadata(zx::unowned_channel _client_end, uint32_t key);
 
     // Retrieve the metadata blob associated with this device and the given key.
@@ -3277,6 +3333,7 @@ class Coordinator final {
     static ::fidl::DecodeResult<GetMetadataResponse> GetMetadata_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t key, ::fidl::BytePart _response_buffer, int32_t* out_status, ::fidl::VectorView<uint8_t>* out_data);
 
     // Retrieve the metadata size associated with this device and the given key.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetMetadataSize GetMetadataSize(zx::unowned_channel _client_end, uint32_t key);
 
     // Retrieve the metadata size associated with this device and the given key.
@@ -3295,6 +3352,7 @@ class Coordinator final {
     // TODO(teisenbe): Document the behavior of calling this twice with the same
     // key.  I believe the current behavior results in inaccessible data that is
     // kept around for the lifetime of the device.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::AddMetadata AddMetadata(zx::unowned_channel _client_end, uint32_t key, ::fidl::VectorView<uint8_t> data);
 
     // Add metadata blob associated with this device and the given key.
@@ -3323,6 +3381,7 @@ class Coordinator final {
     // the device at `device_path` is not a child of the requesting device AND
     // the requesting device is not running in the sys devhost, then this will
     // fail.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::PublishMetadata PublishMetadata(zx::unowned_channel _client_end, ::fidl::StringView device_path, uint32_t key, ::fidl::VectorView<uint8_t> data);
 
     // Behaves like AddMetadata, but instead of associating it with the
@@ -3352,6 +3411,7 @@ class Coordinator final {
     // Adds the given composite device.  This causes the devcoordinator to try to match the
     // components against the existing device tree, and to monitor all new device additions
     // in order to find the components as they are created.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::AddCompositeDevice AddCompositeDevice(zx::unowned_channel _client_end, ::fidl::StringView name, ::fidl::VectorView<uint64_t> props, ::fidl::VectorView<DeviceComponent> components, uint32_t coresident_device_index);
 
     // Adds the given composite device.  This causes the devcoordinator to try to match the
@@ -3375,6 +3435,7 @@ class Coordinator final {
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
     // See fuchsia.io.Directory for more information.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::DirectoryWatch DirectoryWatch(zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher);
 
     // Watches a directory, receiving events of added messages on the
@@ -3400,6 +3461,7 @@ class Coordinator final {
     // each device hook in nanoseconds.
     // Returns whether the compatibility tests started, and does not convey
     // anything about the status of the test.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::RunCompatibilityTests RunCompatibilityTests(zx::unowned_channel _client_end, int64_t hook_wait_time);
 
     // Run Compatibility tests for the driver that binds to this device.

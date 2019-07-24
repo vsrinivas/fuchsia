@@ -748,6 +748,7 @@ class NameLookup final {
     // Look up a list of IP addresses by hostname.
     //
     // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    // Allocates 296 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::LookupIp LookupIp(::fidl::StringView hostname, LookupIpOptions options);
 
     // Look up a list of IP addresses by hostname.
@@ -765,6 +766,7 @@ class NameLookup final {
     ::fidl::DecodeResult<LookupIpResponse> LookupIp_Deprecated(::fidl::BytePart _request_buffer, ::fidl::StringView hostname, LookupIpOptions options, ::fidl::BytePart _response_buffer, NameLookup_LookupIp_Result* out_result);
 
     // Look up a hostname by IP address.
+    // Allocates 336 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::LookupHostname LookupHostname(IpAddress addr);
 
     // Look up a hostname by IP address.
@@ -789,6 +791,7 @@ class NameLookup final {
     // Look up a list of IP addresses by hostname.
     //
     // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    // Allocates 296 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::LookupIp LookupIp(zx::unowned_channel _client_end, ::fidl::StringView hostname, LookupIpOptions options);
 
     // Look up a list of IP addresses by hostname.
@@ -806,6 +809,7 @@ class NameLookup final {
     static ::fidl::DecodeResult<LookupIpResponse> LookupIp_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, LookupIpOptions options, ::fidl::BytePart _response_buffer, NameLookup_LookupIp_Result* out_result);
 
     // Look up a hostname by IP address.
+    // Allocates 336 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::LookupHostname LookupHostname(zx::unowned_channel _client_end, IpAddress addr);
 
     // Look up a hostname by IP address.
@@ -1041,6 +1045,7 @@ class SocketProvider final {
 
     // Retrieves information about the address of a node and/or service. The number of valid
     // results in `res` is given by the `count` return value.
+    // Allocates 184 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::GetAddrInfo GetAddrInfo(::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints);
 
     // Retrieves information about the address of a node and/or service. The number of valid
@@ -1069,6 +1074,7 @@ class SocketProvider final {
 
     // Retrieves information about the address of a node and/or service. The number of valid
     // results in `res` is given by the `count` return value.
+    // Allocates 184 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::GetAddrInfo GetAddrInfo(zx::unowned_channel _client_end, ::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints);
 
     // Retrieves information about the address of a node and/or service. The number of valid

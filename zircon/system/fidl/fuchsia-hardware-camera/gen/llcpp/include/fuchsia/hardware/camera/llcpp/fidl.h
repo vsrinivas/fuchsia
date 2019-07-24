@@ -114,6 +114,7 @@ class Device final {
     // system has been updated to use FIDL as its serialization format instead
     // of the legacy custom format, this method can be updated to use an
     // interface request instead of returning a channel.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetChannel GetChannel(::zx::channel ch);
 
     // Note: this method obtains a channel to the codec device which
@@ -153,6 +154,7 @@ class Device final {
     // system has been updated to use FIDL as its serialization format instead
     // of the legacy custom format, this method can be updated to use an
     // interface request instead of returning a channel.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::zx::channel ch);
 
     // Note: this method obtains a channel to the codec device which
@@ -394,16 +396,19 @@ class Stream final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Start Start();
 
 
     zx_status_t Start_Deprecated();
 
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Stop Stop();
 
 
     zx_status_t Stop_Deprecated();
 
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ReleaseFrame ReleaseFrame(uint32_t buffer_id);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -428,16 +433,19 @@ class Stream final {
     Call() = delete;
    public:
 
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Start Start(zx::unowned_channel _client_end);
 
 
     static zx_status_t Start_Deprecated(zx::unowned_channel _client_end);
 
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Stop Stop(zx::unowned_channel _client_end);
 
 
     static zx_status_t Stop_Deprecated(zx::unowned_channel _client_end);
 
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ReleaseFrame ReleaseFrame(zx::unowned_channel _client_end, uint32_t buffer_id);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -736,6 +744,7 @@ class Control final {
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetFormats GetFormats(uint32_t index);
 
     // Get the available format types for this device
@@ -762,6 +771,7 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
+    // Allocates 384 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CreateStream CreateStream(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -772,6 +782,7 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t CreateStream_Deprecated(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetDeviceInfo GetDeviceInfo();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -797,6 +808,7 @@ class Control final {
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetFormats GetFormats(zx::unowned_channel _client_end, uint32_t index);
 
     // Get the available format types for this device
@@ -823,6 +835,7 @@ class Control final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
+    // Allocates 384 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CreateStream CreateStream(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -833,6 +846,7 @@ class Control final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t CreateStream_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetDeviceInfo GetDeviceInfo(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1109,6 +1123,7 @@ class ControlV2 final {
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetFormats GetFormats(uint32_t index);
 
     // Get the available format types for this device
@@ -1135,6 +1150,7 @@ class ControlV2 final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
+    // Allocates 384 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CreateStream CreateStream(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1145,6 +1161,7 @@ class ControlV2 final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t CreateStream_Deprecated(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetDeviceInfo GetDeviceInfo();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1170,6 +1187,7 @@ class ControlV2 final {
     // GetFormats need to be issued until total_format_count are received.
     // `actual_format_count` is the number of valid formats in this response.
     // `total_format_count` is the total number of formats supported by the camera.
+    // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetFormats GetFormats(zx::unowned_channel _client_end, uint32_t index);
 
     // Get the available format types for this device
@@ -1196,6 +1214,7 @@ class ControlV2 final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetFormatsResponse> GetFormats_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
+    // Allocates 384 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CreateStream CreateStream(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1206,6 +1225,7 @@ class ControlV2 final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t CreateStream_Deprecated(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
 
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetDeviceInfo GetDeviceInfo(zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
