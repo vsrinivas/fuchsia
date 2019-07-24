@@ -100,6 +100,13 @@ zx_status_t InterruptEventDispatcher::Create(KernelHandle<InterruptDispatcher>* 
 }
 
 zx_status_t InterruptEventDispatcher::BindVcpu(fbl::RefPtr<VcpuDispatcher> vcpu_dispatcher) {
+  // Construct our dispatcher node outside the spinlock as we cannot perform heap allocations
+  // whilst holding one.
+  fbl::AllocChecker ac;
+  auto node = ktl::make_unique<VcpuDispatcherNode>(&ac, vcpu_dispatcher);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
   Guard<SpinLock, IrqSave> guard{&spinlock_};
   if (state() == InterruptState::DESTROYED) {
     return ZX_ERR_CANCELED;
@@ -109,20 +116,17 @@ zx_status_t InterruptEventDispatcher::BindVcpu(fbl::RefPtr<VcpuDispatcher> vcpu_
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  for (const auto& vcpu : vcpus_) {
-    if (vcpu == vcpu_dispatcher) {
+  for (const auto& vcpu_node : vcpus_) {
+    if (vcpu_node.vcpu_ == vcpu_dispatcher) {
       return ZX_OK;
-    } else if (vcpu->guest() != vcpu_dispatcher->guest()) {
+    } else if (vcpu_node.vcpu_->guest() != vcpu_dispatcher->guest()) {
       return ZX_ERR_INVALID_ARGS;
     }
   }
 
-  fbl::AllocChecker ac;
-  vcpus_.push_back(ktl::move(vcpu_dispatcher), &ac);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  if (vcpus_.size() == 1) {
+  // Safe to register the handler before adding to vcpus_ as we prevent any races by holding the
+  // spinlock_.
+  if (vcpus_.is_empty()) {
     MaskInterrupt();
     UnregisterInterruptHandler();
     zx_status_t status = register_int_handler(vector_, VcpuIrqHandler, this);
@@ -131,6 +135,7 @@ zx_status_t InterruptEventDispatcher::BindVcpu(fbl::RefPtr<VcpuDispatcher> vcpu_
     }
     UnmaskInterrupt();
   }
+  vcpus_.push_front(ktl::move(node));
   return ZX_OK;
 }
 
@@ -154,8 +159,8 @@ interrupt_eoi InterruptEventDispatcher::VcpuIrqHandler(void* ctx) {
 void InterruptEventDispatcher::VcpuInterruptHandler() {
   Guard<SpinLock, IrqSave> guard{&spinlock_};
   cpu_mask_t mask = 0;
-  for (const auto& vcpu : vcpus_) {
-    mask |= vcpu->PhysicalInterrupt(vector_);
+  for (const auto& vcpu_node : vcpus_) {
+    mask |= vcpu_node.vcpu_->PhysicalInterrupt(vector_);
   }
   if (mask != 0) {
     mp_interrupt(MP_IPI_TARGET_MASK, mask);

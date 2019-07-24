@@ -11,8 +11,9 @@
 #include <zircon/types.h>
 
 #include <fbl/canary.h>
-#include <fbl/vector.h>
+#include <fbl/intrusive_single_list.h>
 #include <kernel/mp.h>
+#include <ktl/unique_ptr.h>
 #include <object/handle.h>
 #include <object/interrupt_dispatcher.h>
 
@@ -42,7 +43,13 @@ class InterruptEventDispatcher final : public InterruptDispatcher {
   void VcpuInterruptHandler();
 
   const uint32_t vector_;
-  fbl::Vector<fbl::RefPtr<VcpuDispatcher>> vcpus_;
+
+  struct VcpuDispatcherNode
+      : public fbl::SinglyLinkedListable<ktl::unique_ptr<VcpuDispatcherNode>> {
+    VcpuDispatcherNode(fbl::RefPtr<VcpuDispatcher> vcpu) : vcpu_(vcpu) {}
+    fbl::RefPtr<VcpuDispatcher> vcpu_;
+  };
+  fbl::SinglyLinkedList<ktl::unique_ptr<VcpuDispatcherNode>> vcpus_;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_INTERRUPT_EVENT_DISPATCHER_H_
