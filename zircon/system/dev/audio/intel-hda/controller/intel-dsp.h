@@ -5,6 +5,12 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_DSP_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_DSP_H_
 
+#include <lib/fzl/vmo-mapper.h>
+#include <limits.h>
+#include <stdint.h>
+#include <string.h>
+#include <threads.h>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/protocol/intelhda/codec.h>
@@ -15,11 +21,6 @@
 #include <intel-hda/utils/nhlt.h>
 #include <intel-hda/utils/status.h>
 #include <intel-hda/utils/utils.h>
-#include <lib/fzl/vmo-mapper.h>
-#include <limits.h>
-#include <stdint.h>
-#include <string.h>
-#include <threads.h>
 
 #include "debug-logging.h"
 #include "intel-dsp-ipc.h"

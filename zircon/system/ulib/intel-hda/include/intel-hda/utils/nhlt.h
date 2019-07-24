@@ -5,33 +5,26 @@
 #ifndef INTEL_HDA_UTILS_NHLT_H_
 #define INTEL_HDA_UTILS_NHLT_H_
 
-/**
- * Non-HD Audio Link Table (NHLT) definitions taken from
- *
- * Intel Smart Sound Technology Audio DSP Non-HD Audio ACPI High Level Design
- * Revision 0.7
- * November 2015
- */
+// Non-HD Audio Link Table (NHLT) definitions taken from
+//
+// Intel Smart Sound Technology Audio DSP Non-HD Audio ACPI High Level Design
+// Revision 0.7
+// November 2015
 
 #include <zircon/compiler.h>
 
 #include <cstdint>
 
-// Including ACPI table header definitions here to avoid including
-// ACPICA header file
-
-#if !__cplusplus
-#error "C++ only header"
-#else
-
-namespace audio {
-namespace intel_hda {
+namespace audio::intel_hda {
 
 constexpr const char* ACPI_NHLT_SIGNATURE = "NHLT";
 
 #define ACPI_NAME_SIZE 4
 #define ACPI_OEM_ID_SIZE 6
 #define ACPI_OEM_TABLE_ID_SIZE 8
+
+// Including ACPI table header definitions here to avoid including
+// ACPICA header file
 
 struct acpi_table_header_t {
   char signature[ACPI_NAME_SIZE];
@@ -47,7 +40,7 @@ struct acpi_table_header_t {
 
 struct specific_config_t {
   uint32_t capabilities_size;
-  uint8_t capabilities[];
+  // followed by |capabilities_size| bytes.
 } __PACKED;
 
 struct format_config_t {
@@ -61,12 +54,12 @@ struct format_config_t {
   uint16_t valid_bits_per_sample;
   uint32_t channel_mask;
   uint8_t subformat_guid[16];
-  specific_config_t config;
+  // followed by specific_config_t.
 } __PACKED;
 
 struct formats_config_t {
   uint8_t format_config_count;
-  format_config_t format_configs[];
+  // followed by |format_config_count| format_config_t structures.
 } __PACKED;
 
 struct nhlt_descriptor_t {
@@ -80,8 +73,8 @@ struct nhlt_descriptor_t {
   uint8_t device_type;
   uint8_t direction;
   uint8_t virtual_bus_id;
-  specific_config_t config;
-  // followed by formats_config_t format_configs
+  // followed by specific_config_t
+  // followed by formats_config_t
 } __PACKED;
 
 constexpr uint8_t NHLT_LINK_TYPE_HDA = 0;
@@ -95,13 +88,10 @@ constexpr uint8_t NHLT_DIRECTION_BIDIR = 2;
 struct nhlt_table_t {
   acpi_table_header_t header;
   uint8_t endpoint_desc_count;
-  nhlt_descriptor_t endpoints[];
-  // followed by specific_config_t oed_config;
+  // followed by |endpoint_desc_count| nhlt_descriptor_t structures (endpoints).
+  // followed by specific_config_t (oed_config);
 } __PACKED;
 
-}  // namespace intel_hda
-}  // namespace audio
-
-#endif
+}  // namespace audio::intel_hda
 
 #endif  // INTEL_HDA_UTILS_NHLT_H_

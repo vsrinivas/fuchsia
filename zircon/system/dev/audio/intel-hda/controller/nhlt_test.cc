@@ -4,8 +4,10 @@
 
 #include "nhlt.h"
 
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 
+#include <cstdint>
 #include <vector>
 
 #include <intel-hda/utils/nhlt.h>
@@ -21,22 +23,18 @@ void PushBytes(std::vector<uint8_t>* buffer, const T* object) {
   std::copy(object_bytes, object_bytes + sizeof(T), std::back_inserter(*buffer));
 }
 
-template <typename T>
-fbl::Array<T> ToArray(const std::vector<T>& vec) {
-  T* data = new (std::nothrow) T[vec.size()];
-  ZX_ASSERT(data != nullptr);
-  for (size_t i = 0; i < vec.size(); i++) {
-    data[i] = vec[i];
-  }
-  return fbl::Array<T>(data, vec.size());
-}
-
 std::vector<uint8_t> SampleEndpoint() {
   std::vector<uint8_t> data;
+  const specific_config_t no_capabilities = {
+      /*capabilities_size=*/0,
+  };
 
   // Write out an endpoint.
+  uint32_t length =
+      (sizeof(nhlt_descriptor_t) + sizeof(specific_config_t) + sizeof(formats_config_t) +
+       sizeof(format_config_t) + sizeof(specific_config_t));
   nhlt_descriptor_t endpoint = {
-      /*length=*/(sizeof(nhlt_descriptor_t) + sizeof(formats_config_t) + sizeof(format_config_t)),
+      /*length=*/length,
       /*link_type=*/NHLT_LINK_TYPE_SSP,
       /*instance_id=*/1,
       /*vendor_id=*/2,
@@ -46,9 +44,9 @@ std::vector<uint8_t> SampleEndpoint() {
       /*device_type=*/6,
       /*direction=*/NHLT_DIRECTION_RENDER,
       /*virtual_bus_id=*/7,
-      /*config=*/{/*capabilities_size=*/0},
   };
   PushBytes(&data, &endpoint);
+  PushBytes(&data, &no_capabilities);
 
   formats_config_t formats = {
       /*format_config_count=*/1,
@@ -56,19 +54,22 @@ std::vector<uint8_t> SampleEndpoint() {
   PushBytes(&data, &formats);
 
   format_config_t format = {
-      /*format_tag=*/0,
-      /*n_channels=*/0,
-      /*n_samples_per_sec=*/0,
-      /*n_avg_bytes_per_sec=*/0,
-      /*n_block_align=*/0,
-      /*bits_per_sample=*/0,
-      /*cb_size=*/0,
-      /*valid_bits_per_sample=*/0,
-      /*channel_mask=*/0,
+      /*format_tag=*/1,
+      /*n_channels=*/2,
+      /*n_samples_per_sec=*/3,
+      /*n_avg_bytes_per_sec=*/4,
+      /*n_block_align=*/5,
+      /*bits_per_sample=*/6,
+      /*cb_size=*/7,
+      /*valid_bits_per_sample=*/8,
+      /*channel_mask=*/9,
       /*subformat_guid=*/{},
-      /*config=*/{/*capabilities_size=*/0},
   };
   PushBytes(&data, &format);
+  PushBytes(&data, &no_capabilities);
+
+  // Ensure we got our length calculations correct.
+  ZX_ASSERT(data.size() == length);
 
   return data;
 }
@@ -108,15 +109,30 @@ TEST(Nhlt, DefaultInitializer) {
 }
 
 TEST(Nhlt, ParseEmpty) {
-  fbl::Array<uint8_t> empty{};
-  EXPECT_FALSE(Nhlt::FromBuffer(std::move(empty)).ok());
+  fbl::Span<uint8_t> empty{};
+  EXPECT_FALSE(Nhlt::FromBuffer(empty).ok());
 }
 
 TEST(Nhlt, ParseSimple) {
   std::vector<uint8_t> data = SampleNHLT();
-  StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(ToArray(data));
+  StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
   ASSERT_OK(nhlt.status().code());
+
+  // Ensure the data looks reasonable.
   ASSERT_EQ(nhlt.ValueOrDie()->i2s_configs().size(), 1);
+  ASSERT_EQ(nhlt.ValueOrDie()->i2s_configs()[0].formats.size(), 1);
+  ASSERT_EQ(nhlt.ValueOrDie()->i2s_configs()[0].formats[0].config.format_tag, 1);
+}
+
+TEST(Nhlt, ParseTruncated) {
+  std::vector<uint8_t> data = SampleNHLT();
+
+  // Remove a byte, and ensure we still successfully notice that the data size is all wrong.
+  do {
+    data.resize(data.size() - 1);
+    StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
+    ASSERT_FALSE(nhlt.ok());
+  } while (!data.empty());
 }
 
 }  // namespace

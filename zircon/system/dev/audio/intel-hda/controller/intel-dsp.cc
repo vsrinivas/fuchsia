@@ -10,6 +10,7 @@
 #include <utility>
 
 #include <fbl/alloc_checker.h>
+#include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
@@ -100,7 +101,8 @@ Status IntelDsp::ParseNhlt() {
   }
 
   // Parse NHLT.
-  StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(std::move(buffer));
+  StatusOr<std::unique_ptr<Nhlt>> nhlt =
+      Nhlt::FromBuffer(fbl::Span<const uint8_t>(buffer.begin(), buffer.end()));
   if (!nhlt.ok()) {
     return nhlt.status();
   }

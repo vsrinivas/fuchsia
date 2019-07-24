@@ -12,9 +12,10 @@
 #include <zircon/compiler.h>
 
 #include <cstdint>
+#include <ostream>
 
-#include <fbl/array.h>
 #include <fbl/macros.h>
+#include <fbl/span.h>
 #include <fbl/vector.h>
 #include <intel-hda/utils/nhlt.h>
 #include <intel-hda/utils/status.h>
@@ -24,15 +25,15 @@ namespace audio::intel_hda {
 
 // Details about an available I2S bus.
 struct I2SConfig {
-  I2SConfig(uint8_t bid, uint8_t dir, const formats_config_t* f)
-      : valid(true), bus_id(bid), direction(dir), formats(f) {}
-  I2SConfig() = default;
-
-  bool valid = false;
+  struct Format {
+    format_config_t config;
+    fbl::Vector<uint8_t> capabilities;
+  };
+  nhlt_descriptor_t header = {};
   uint8_t bus_id = 0;
   uint8_t direction = 0;
-
-  const formats_config_t* formats = nullptr;
+  fbl::Vector<Format> formats;
+  fbl::Vector<uint8_t> specific_config;
 };
 
 // Parsed Non-HD Audio Link Table.
@@ -42,10 +43,7 @@ class Nhlt {
   Nhlt() = default;
 
   // Parse the given raw NHLT data.
-  static StatusOr<std::unique_ptr<Nhlt>> FromBuffer(fbl::Array<uint8_t> buffer);
-
-  // Parse the given raw NHLT data. The underlying data must outlive this NHLT object.
-  static StatusOr<std::unique_ptr<Nhlt>> FromUnownedBuffer(uint8_t* buffer, size_t size);
+  static StatusOr<std::unique_ptr<Nhlt>> FromBuffer(fbl::Span<const uint8_t> buffer);
 
   // Get parsed I2S configs.
   const fbl::Vector<I2SConfig>& i2s_configs() const { return i2s_configs_; }
@@ -55,11 +53,7 @@ class Nhlt {
   void Dump() const;
 
  private:
-  // Objects in "i2s_configs_" point into buffer_: disallow copy and move.
-  DISALLOW_COPY_ASSIGN_AND_MOVE(Nhlt);
-
-  fbl::Array<uint8_t> buffer_;
-  fbl::Vector<I2SConfig> i2s_configs_;  // Entries may point into buffer.
+  fbl::Vector<I2SConfig> i2s_configs_;
 };
 
 }  // namespace audio::intel_hda

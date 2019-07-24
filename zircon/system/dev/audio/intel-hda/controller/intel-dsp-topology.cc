@@ -301,30 +301,21 @@ const BaseModuleCfg MIXER_CFG = {
 
 zx_status_t IntelDsp::GetI2SBlob(uint8_t bus_id, uint8_t direction, const AudioDataFormat& format,
                                  const void** out_blob, size_t* out_size) {
-  zx_status_t st = ZX_ERR_NOT_FOUND;
   for (const auto& cfg : nhlt_->i2s_configs()) {
-    if (!cfg.valid) {
-      break;
-    }
     if ((cfg.bus_id != bus_id) || (cfg.direction != direction)) {
       continue;
     }
     // TODO better matching here
-    const formats_config_t* formats = cfg.formats;
-    const format_config_t* f = &formats->format_configs[0];
-    for (size_t j = 0; j < formats->format_config_count; j++) {
-      if (format.valid_bit_depth != f->valid_bits_per_sample) {
-        f = reinterpret_cast<const format_config_t*>(reinterpret_cast<const uint8_t*>(f) +
-                                                     sizeof(*f) + f->config.capabilities_size);
+    for (const I2SConfig::Format& endpoint_format : cfg.formats) {
+      if (format.valid_bit_depth != endpoint_format.config.valid_bits_per_sample) {
         continue;
       }
-      *out_blob = reinterpret_cast<const void*>(f->config.capabilities);
-      *out_size = static_cast<size_t>(f->config.capabilities_size);
-      st = ZX_OK;
-      break;
+      *out_blob = endpoint_format.capabilities.get();
+      *out_size = endpoint_format.capabilities.size();
+      return ZX_OK;
     }
   }
-  return st;
+  return ZX_ERR_NOT_FOUND;
 }
 
 zx_status_t IntelDsp::CreateHostDmaModule(uint8_t instance_id, uint8_t pipeline_id,
