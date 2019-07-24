@@ -100,6 +100,7 @@ sdk://tools/dev_finder
 sdk://tools/far
 sdk://tools/fidl-format
 sdk://tools/fidlc
+sdk://tools/fidlcat
 sdk://tools/fidlgen
 sdk://tools/fvm
 sdk://tools/loglistener
