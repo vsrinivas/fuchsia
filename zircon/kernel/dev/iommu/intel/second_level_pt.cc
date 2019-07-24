@@ -15,9 +15,9 @@
 
 namespace {
 
-constexpr X86PageTableBase::PtFlags kSlptRead = 1u << 0;
-constexpr X86PageTableBase::PtFlags kSlptWrite = 1u << 1;
-constexpr X86PageTableBase::PtFlags kSlptExecute = 1u << 2;
+constexpr PtFlags kSlptRead = 1u << 0;
+constexpr PtFlags kSlptWrite = 1u << 1;
+constexpr PtFlags kSlptExecute = 1u << 2;
 
 vaddr_t compute_vaddr_mask(PageTableLevel top_level) {
   uint width;
@@ -105,12 +105,12 @@ bool SecondLevelPageTable::supports_page_size(PageTableLevel level) {
   }
 }
 
-X86PageTableBase::IntermediatePtFlags SecondLevelPageTable::intermediate_flags() {
+IntermediatePtFlags SecondLevelPageTable::intermediate_flags() {
   return kSlptRead | kSlptWrite | kSlptExecute;
 }
 
-X86PageTableBase::PtFlags SecondLevelPageTable::terminal_flags(PageTableLevel level, uint flags) {
-  X86PageTableBase::PtFlags terminal_flags = 0;
+PtFlags SecondLevelPageTable::terminal_flags(PageTableLevel level, uint flags) {
+  PtFlags terminal_flags = 0;
 
   if (flags & ARCH_MMU_FLAG_PERM_READ) {
     terminal_flags |= kSlptRead;
@@ -125,7 +125,7 @@ X86PageTableBase::PtFlags SecondLevelPageTable::terminal_flags(PageTableLevel le
   return terminal_flags;
 }
 
-X86PageTableBase::PtFlags SecondLevelPageTable::split_flags(PageTableLevel level, PtFlags flags) {
+PtFlags SecondLevelPageTable::split_flags(PageTableLevel level, PtFlags flags) {
   // We don't need to relocate any flags on split
   return flags;
 }

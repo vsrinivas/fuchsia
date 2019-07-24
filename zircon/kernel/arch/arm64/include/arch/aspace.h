@@ -15,7 +15,9 @@
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 #include <vm/arch_vm_aspace.h>
+#include <vm/pmm.h>
 
+template <page_alloc_fn_t paf>
 class ArmArchVmAspace final : public ArchVmAspaceInterface {
  public:
   ArmArchVmAspace();
@@ -118,6 +120,9 @@ static inline paddr_t arm64_vttbr(uint16_t vmid, paddr_t baddr) {
   return static_cast<paddr_t>(vmid) << 48 | baddr;
 }
 
-using ArchVmAspace = ArmArchVmAspace;
+using ArchVmAspace = ArmArchVmAspace<pmm_alloc_page>;
+
+template <page_alloc_fn_t paf>
+using TestArchVmAspace = ArmArchVmAspace<paf>;
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ASPACE_H_

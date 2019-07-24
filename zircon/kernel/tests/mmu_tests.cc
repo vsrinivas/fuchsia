@@ -11,6 +11,7 @@
 
 #include <arch/aspace.h>
 #include <arch/mmu.h>
+#include <fbl/auto_call.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/pmm.h>
 
@@ -176,9 +177,90 @@ static bool test_large_region_protect() {
   END_TEST;
 }
 
+static list_node node = LIST_INITIAL_VALUE(node);
+zx_status_t test_page_alloc_fn(uint unused, vm_page** p, paddr_t* pa) {
+  if (list_is_empty(&node)) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  vm_page_t* page = list_remove_head_type(&node, vm_page_t, queue_node);
+  if (p) {
+    *p = page;
+  }
+  if (pa) {
+    *pa = page->paddr();
+  }
+  return ZX_OK;
+}
+
+static bool test_mapping_oom() {
+  BEGIN_TEST;
+
+  constexpr uint64_t kMappingPageCount = 8;
+  constexpr uint64_t kMappingSize = kMappingPageCount * PAGE_SIZE;
+  constexpr vaddr_t kMappingStart = (1UL << PGTABLE_L1_SHIFT) - kMappingSize / 2;
+
+  // Allocate the pages which will be mapped into the test aspace.
+  vm_page_t* mapping_pages[kMappingPageCount] = {};
+  paddr_t mapping_paddrs[kMappingPageCount] = {};
+
+  auto undo = fbl::MakeAutoCall([&]() {
+    for (unsigned i = 0; i < kMappingPageCount; i++) {
+      if (mapping_pages[i]) {
+        pmm_free_page(mapping_pages[i]);
+      }
+    }
+  });
+
+  for (unsigned i = 0; i < kMappingPageCount; i++) {
+    ASSERT_EQ(pmm_alloc_page(0, mapping_pages + i, mapping_paddrs + i), ZX_OK, "");
+  }
+
+  // Try to create the mapping with a limited number of pages available to
+  // the aspace. Start with only 1 available and continue until the map operation
+  // succeeds without running out of memory.
+  bool map_success = false;
+  uint64_t avail_mmu_pages = 1;
+  while (!map_success) {
+    for (unsigned i = 0; i < avail_mmu_pages; i++) {
+      vm_page_t* page;
+      ASSERT_EQ(pmm_alloc_page(0, &page), ZX_OK, "alloc fail");
+      list_add_head(&node, &page->queue_node);
+    }
+
+    TestArchVmAspace<test_page_alloc_fn> aspace;
+    vaddr_t base = 1UL << 20;
+    size_t size = (1UL << 47) - base - (1UL << 20);
+    zx_status_t err = aspace.Init(base, size, 0);
+    ASSERT_EQ(err, ZX_OK, "init aspace");
+
+    const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+
+    size_t mapped;
+    err = aspace.Map(kMappingStart, mapping_paddrs, kMappingPageCount, arch_rw_flags, &mapped);
+    if (err == ZX_OK) {
+      map_success = true;
+      size_t unmapped;
+      EXPECT_EQ(aspace.Unmap(kMappingStart, kMappingPageCount, &unmapped), ZX_OK, "");
+      EXPECT_EQ(unmapped, kMappingPageCount, "");
+    } else {
+      // The arm aspace code isn't set up to return ZX_ERR_NO_MEMORY.
+      avail_mmu_pages++;
+    }
+
+    // Destroying the aspace verifies that everything was cleaned up
+    // when the mapping failed part way through.
+    err = aspace.Destroy();
+    ASSERT_EQ(err, ZX_OK, "destroy aspace");
+    ASSERT_TRUE(list_is_empty(&node), "");
+  }
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(mmu_tests)
 UNITTEST("create large unaligned region and ensure it can be unmapped", test_large_unaligned_region)
 UNITTEST("create large unaligned region without mapping and ensure it can be unmapped",
          test_large_unaligned_region_without_map)
 UNITTEST("creating large vm region, and change permissions", test_large_region_protect)
+UNITTEST("trigger oom failures when creating a mapping", test_mapping_oom)
 UNITTEST_END_TESTCASE(mmu_tests, "mmu", "mmu tests");

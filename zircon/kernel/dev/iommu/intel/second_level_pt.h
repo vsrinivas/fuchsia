@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_DEV_IOMMU_INTEL_SECOND_LEVEL_PT_H_
 
 #include <arch/x86/page_tables/page_tables.h>
+#include <vm/pmm.h>
 
 #include "hw.h"
 
@@ -17,7 +18,7 @@ class DeviceContext;
 class IommuImpl;
 
 // Implementation of second-level page tables used by VT-d
-class SecondLevelPageTable final : public X86PageTableBase {
+class SecondLevelPageTable final : public X86PageTableBase<pmm_alloc_page> {
  public:
   SecondLevelPageTable(IommuImpl* iommu, DeviceContext* parent);
   ~SecondLevelPageTable();

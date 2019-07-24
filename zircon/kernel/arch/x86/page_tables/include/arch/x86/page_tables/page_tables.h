@@ -58,19 +58,22 @@ struct PendingTlbInvalidation {
   ~PendingTlbInvalidation();
 };
 
+// Type for flags used in the hardware page tables, for terminal entries.
+// Note that some flags here may have meanings that depend on the level
+// at which they occur (e.g. page size and PAT).
+using PtFlags = uint64_t;
+
+// Type for flags used in the hardware page tables, for non-terminal
+// entries.
+using IntermediatePtFlags = uint64_t;
+
+struct MappingCursor;
+
+template <page_alloc_fn_t paf>
 class X86PageTableBase {
  public:
   X86PageTableBase();
   virtual ~X86PageTableBase();
-
-  // Type for flags used in the hardware page tables, for terminal entries.
-  // Note that some flags here may have meanings that depend on the level
-  // at which they occur (e.g. page size and PAT).
-  using PtFlags = uint64_t;
-
-  // Type for flags used in the hardware page tables, for non-terminal
-  // entries.
-  using IntermediatePtFlags = uint64_t;
 
   paddr_t phys() const { return phys_; }
   void* virt() const { return virt_; }
@@ -137,10 +140,7 @@ class X86PageTableBase {
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(X86PageTableBase);
-
-  class CacheLineFlusher;
   class ConsistencyManager;
-  struct MappingCursor;
 
   zx_status_t AddMapping(volatile pt_entry_t* table, uint mmu_flags, PageTableLevel level,
                          const MappingCursor& start_cursor, MappingCursor* new_cursor,

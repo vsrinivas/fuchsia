@@ -12,6 +12,7 @@
 
 #include <arch/mmu.h>
 #include <fbl/macros.h>
+#include <vm/page.h>
 
 // Flags
 const uint ARCH_MMU_FLAG_CACHED = (0u << 0);
@@ -32,6 +33,8 @@ const uint ARCH_MMU_FLAG_INVALID = (1u << 7);  // Indicates that flags are not s
 
 const uint ARCH_ASPACE_FLAG_KERNEL = (1u << 0);
 const uint ARCH_ASPACE_FLAG_GUEST = (1u << 1);
+
+typedef zx_status_t(page_alloc_fn_t)(uint alloc_flags, vm_page** p, paddr_t* pa);
 
 // per arch base class api to encapsulate the mmu routines on an aspace
 class ArchVmAspaceInterface {

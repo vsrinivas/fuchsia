@@ -18,12 +18,14 @@
 #include <fbl/canary.h>
 #include <ktl/atomic.h>
 #include <vm/arch_vm_aspace.h>
+#include <vm/pmm.h>
 
 // Implementation of page tables used by x86-64 CPUs.
-class X86PageTableMmu final : public X86PageTableBase {
+template <page_alloc_fn_t paf>
+class X86PageTableMmu final : public X86PageTableBase<paf> {
  public:
-  using X86PageTableBase::Destroy;
-  using X86PageTableBase::Init;
+  using X86PageTableBase<paf>::Destroy;
+  using X86PageTableBase<paf>::Init;
 
   // Initialize the kernel page table, assigning the given context to it.
   // This X86PageTable will be special in that its mappings will all have
@@ -35,6 +37,11 @@ class X86PageTableMmu final : public X86PageTableBase {
   zx_status_t AliasKernelMappings();
 
  private:
+  using X86PageTableBase<paf>::phys_;
+  using X86PageTableBase<paf>::virt_;
+  using X86PageTableBase<paf>::ctx_;
+  using X86PageTableBase<paf>::pages_;
+
   PageTableLevel top_level() final { return PML4_L; }
   bool allowed_flags(uint flags) final { return (flags & ARCH_MMU_FLAG_PERM_READ); }
   bool check_paddr(paddr_t paddr) final;
@@ -52,10 +59,11 @@ class X86PageTableMmu final : public X86PageTableBase {
 };
 
 // Implementation of Intel's Extended Page Tables, for use in virtualization.
-class X86PageTableEpt final : public X86PageTableBase {
+template <page_alloc_fn_t paf>
+class X86PageTableEpt final : public X86PageTableBase<paf> {
  public:
-  using X86PageTableBase::Destroy;
-  using X86PageTableBase::Init;
+  using X86PageTableBase<paf>::Destroy;
+  using X86PageTableBase<paf>::Init;
 
  private:
   PageTableLevel top_level() final { return PML4_L; }
@@ -71,6 +79,7 @@ class X86PageTableEpt final : public X86PageTableBase {
   bool needs_cache_flushes() final { return false; }
 };
 
+template <page_alloc_fn_t paf>
 class X86ArchVmAspace final : public ArchVmAspaceInterface {
  public:
   X86ArchVmAspace();
@@ -111,13 +120,13 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
 
   // Embedded storage for the object pointed to by |pt_|.
   union {
-    alignas(X86PageTableMmu) char mmu[sizeof(X86PageTableMmu)];
-    alignas(X86PageTableEpt) char ept[sizeof(X86PageTableEpt)];
+    alignas(X86PageTableMmu<paf>) char mmu[sizeof(X86PageTableMmu<paf>)];
+    alignas(X86PageTableEpt<paf>) char ept[sizeof(X86PageTableEpt<paf>)];
   } page_table_storage_;
 
   // This will be either a normal page table or an EPT, depending on whether
   // flags_ includes ARCH_ASPACE_FLAG_GUEST.
-  X86PageTableBase* pt_;
+  X86PageTableBase<paf>* pt_;
 
   uint flags_ = 0;
 
@@ -130,6 +139,9 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
   ktl::atomic<int> active_cpus_{0};
 };
 
-using ArchVmAspace = X86ArchVmAspace;
+using ArchVmAspace = X86ArchVmAspace<pmm_alloc_page>;
+
+template <page_alloc_fn_t paf>
+using TestArchVmAspace = X86ArchVmAspace<paf>;
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ASPACE_H_
