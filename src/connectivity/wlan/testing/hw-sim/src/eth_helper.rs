@@ -3,18 +3,22 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_zircon as zx,
-    std::fs::{self, File},
+    fdio, files_async::readdir, fuchsia_async, fuchsia_zircon as zx, std::path::Path,
+    wlan_dev::IsolatedDeviceEnv,
 };
 
 pub async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>, failure::Error> {
-    const ETH_PATH: &str = "/dev/class/ethernet";
-    let files = fs::read_dir(ETH_PATH)?;
+    const ETH_PATH: &str = "class/ethernet";
+    let eth_dir = IsolatedDeviceEnv::open_dir(ETH_PATH).expect("opening ethernet dir");
+    let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
+        fuchsia_async::Channel::from_channel(fdio::clone_channel(&eth_dir)?)?,
+    );
+    let files = await!(readdir(&directory_proxy))?;
     for file in files {
         let vmo = zx::Vmo::create(256 * ethernet::DEFAULT_BUFFER_SIZE as u64)?;
 
-        let path = file?.path();
-        let dev = File::open(path)?;
+        let path = Path::new(ETH_PATH).join(file.name);
+        let dev = IsolatedDeviceEnv::open_file(path)?;
         if let Ok(client) = await!(ethernet::Client::from_file(
             dev,
             vmo,
@@ -25,9 +29,8 @@ pub async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>
                 if &info.mac.octets == mac {
                     println!("ethernet client created: {:?}", client);
                     await!(client.start()).expect("error starting ethernet device");
-                    // must call get_status() after start() to clear
-                    // zx::Signals::USER_0 otherwise there will be a stream
-                    // of infinite StatusChanged events that blocks
+                    // must call get_status() after start() to clear zx::Signals::USER_0 otherwise
+                    // there will be a stream of infinite StatusChanged events that blocks
                     // fasync::Interval
                     println!(
                         "info: {:?} status: {:?}",

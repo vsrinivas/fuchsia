@@ -257,7 +257,8 @@ mod simulation_tests {
         crate::{ap, eth_helper::create_eth_client, minstrel},
         failure::ensure,
         fidl_fuchsia_wlan_device_service as wlanstack_dev_svc,
-        fidl_fuchsia_wlan_service as fidl_wlan_service, fuchsia_component as app,
+        fidl_fuchsia_wlan_service as fidl_wlan_service,
+        fuchsia_component::client::connect_to_service,
         fuchsia_zircon_sys,
         futures::channel::mpsc,
         pin_utils::pin_mut,
@@ -300,6 +301,7 @@ mod simulation_tests {
             .run_singlethreaded(create_eth_client(&HW_MAC_ADDR))
             .expect(&format!("creating ethernet client: {:?}", &HW_MAC_ADDR));
         assert!(client.is_none());
+
         // Create wlan_tap device which will in turn create ethernet device.
         let _helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
         loop_until_iface_is_found(&mut exec);
@@ -327,7 +329,7 @@ mod simulation_tests {
         loop_until_iface_is_found(&mut exec);
 
         let (mut sender, mut receiver) = mpsc::channel(1);
-        let svc = app::client::connect_to_service::<wlanstack_dev_svc::DeviceServiceMarker>()
+        let svc = connect_to_service::<wlanstack_dev_svc::DeviceServiceMarker>()
             .expect("Failed to connect to wlanstack_dev_svc");
 
         let resp = helper
@@ -377,7 +379,7 @@ mod simulation_tests {
 
     fn clear_ssid_and_ensure_iface_gone() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
-        let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
+        let wlan_service = connect_to_service::<fidl_wlan_service::WlanMarker>()
             .expect("Failed to connect to wlan service");
         exec.run_singlethreaded(wlan_service.clear_saved_networks()).expect("Clearing SSID");
 
@@ -398,7 +400,7 @@ mod simulation_tests {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
 
-        let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
+        let wlan_service = connect_to_service::<fidl_wlan_service::WlanMarker>()
             .expect("Failed to connect to wlan service");
 
         let proxy = helper.proxy();
@@ -431,7 +433,7 @@ mod simulation_tests {
         let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
         loop_until_iface_is_found(&mut exec);
 
-        let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
+        let wlan_service = connect_to_service::<fidl_wlan_service::WlanMarker>()
             .expect("Failed to connect to wlan service");
         let proxy = helper.proxy();
 
@@ -449,7 +451,7 @@ mod simulation_tests {
     }
 
     pub fn loop_until_iface_is_found(exec: &mut fasync::Executor) {
-        let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
+        let wlan_service = connect_to_service::<fidl_wlan_service::WlanMarker>()
             .expect("connecting to wlan service");
         let mut retry = test_utils::RetryWithBackoff::new(5.seconds());
         loop {
@@ -587,7 +589,7 @@ mod simulation_tests {
         let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
         loop_until_iface_is_found(&mut exec);
 
-        let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
+        let wlan_service = connect_to_service::<fidl_wlan_service::WlanMarker>()
             .expect("Failed to connect to wlan service");
 
         let proxy = helper.proxy();

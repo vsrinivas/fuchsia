@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    fidl_fuchsia_wlan_service::WlanMarker,
     fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+    fuchsia_component::client::connect_to_service,
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::oneshot, ready, task::Context, Future, FutureExt, Poll, StreamExt},
     std::{marker::Unpin, pin::Pin, sync::Arc},
@@ -62,7 +64,11 @@ where
 
 impl TestHelper {
     pub fn begin_test(exec: &mut fasync::Executor, config: wlantap::WlantapPhyConfig) -> Self {
-        let wlantap = Wlantap::open().expect("Failed to open wlantapctl.");
+        // If injected, wlancfg does not start automatically in a test component.
+        // Connecting to the service to start wlancfg so that it can create new interfaces.
+        let _wlan_proxy = connect_to_service::<WlanMarker>().expect("starting wlancfg");
+
+        let wlantap = Wlantap::open_from_isolated_devmgr().expect("Failed to open wlantapctl");
         let proxy = wlantap.create_phy(config).expect("Failed to create wlantap PHY");
         let event_stream = Some(proxy.take_event_stream());
         let mut helper = TestHelper { _wlantap: wlantap, proxy: Arc::new(proxy), event_stream };

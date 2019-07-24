@@ -5,7 +5,8 @@
 use {
     crate::{eth_helper::create_eth_client, simulation_tests::*, *},
     fidl_fuchsia_wlan_service as fidl_wlan_service, fidl_fuchsia_wlan_tap as wlantap,
-    fuchsia_async as fasync, fuchsia_component as app,
+    fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
     futures::{channel::mpsc, poll},
     pin_utils::pin_mut,
     std::collections::HashMap,
@@ -22,7 +23,7 @@ const SSID_MINSTREL: &[u8] = b"minstrel";
 
 pub fn test_rate_selection() {
     let mut exec = fasync::Executor::new().expect("error creating executor");
-    let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
+    let wlan_service = connect_to_service::<fidl_wlan_service::WlanMarker>()
         .expect("Error connecting to wlan service");
     let mut helper = test_utils::TestHelper::begin_test(
         &mut exec,
