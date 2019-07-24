@@ -9,12 +9,13 @@ use {
             scan, ConnectFailure, ConnectResult, ConnectionAttemptId, ScanTxnId, Standard,
         },
         sink::InfoSink,
+        Ssid,
     },
     failure::Fail,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon::{self as zx, prelude::DurationNum},
     log::warn,
-    std::collections::HashMap,
+    std::collections::{HashMap, VecDeque},
 };
 
 #[derive(Debug, PartialEq)]
@@ -101,6 +102,15 @@ pub struct ConnectStats {
 
     pub result: ConnectResult,
     pub selected_network: Option<fidl_mlme::BssDescription>,
+
+    /// Number of consecutive connection attempts that have been made to the same SSID
+    pub attempts: u32,
+    /// Failures seen trying to connect the same SSID. Only up to ten failures are tracked. If
+    /// the latest connection result is a failure, it's also included in this list.
+    ///
+    /// Note that this only tracks consecutive attempts to the same SSID. This means that
+    /// connection attempt to another SSID would clear out previous history.
+    pub last_ten_failures: VecDeque<ConnectFailure>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -244,7 +254,7 @@ pub struct InfoReporter {
 
 impl InfoReporter {
     pub fn new(info_sink: InfoSink) -> Self {
-        Self { info_sink, stats_collector: StatsCollector::new() }
+        Self { info_sink, stats_collector: StatsCollector::default() }
     }
 
     pub fn report_scan_started(
@@ -290,9 +300,9 @@ impl InfoReporter {
         }
     }
 
-    pub fn report_connect_started(&mut self) {
+    pub fn report_connect_started(&mut self, ssid: Ssid) {
         self.info_sink.send(InfoEvent::ConnectStarted);
-        if let Some(_prev) = self.stats_collector.report_connect_started() {
+        if let Some(_prev) = self.stats_collector.report_connect_started(ssid) {
             warn!("[stats] evicting unfinished connect attempt");
         }
     }
@@ -355,16 +365,15 @@ pub enum StatsError {
     NoPendingScan,
 }
 
+#[derive(Default)]
 pub struct StatsCollector {
     discovery_scan_stats: Option<PendingScanStats>,
-    connect_stats: Option<PendingConnectStats>,
+    /// Track successive connect attempts to the same SSID. This resets when attempt succeeds
+    /// or when attempting to connect to a different SSID from a previous attempt.
+    connect_attempts: Option<ConnectAttempts>,
 }
 
 impl StatsCollector {
-    pub fn new() -> Self {
-        Self { discovery_scan_stats: None, connect_stats: None }
-    }
-
     pub fn report_join_scan_started(
         &mut self,
         req: fidl_mlme::ScanRequest,
@@ -373,11 +382,12 @@ impl StatsCollector {
         let now = now();
         let pending_scan_stats =
             PendingScanStats { scan_start_at: now, req, scan_start_while_connected: is_connected };
-        let stats = self.connect_stats.as_mut().ok_or(StatsError::NoPendingConnect)?;
-        stats.pending_scan_stats.replace(pending_scan_stats);
+        self.connect_stats()?.pending_scan_stats.replace(pending_scan_stats);
         Ok(())
     }
 
+    /// Report the start of a new discovery scan so that StatsCollector will begin collecting
+    /// stats for it. If there's an existing pending scan stats, evict and return it.
     pub fn report_discovery_scan_started(
         &mut self,
         req: fidl_mlme::ScanRequest,
@@ -418,32 +428,37 @@ impl StatsCollector {
     }
 
     pub fn report_join_scan_ended(&mut self, result: ScanResult) -> Result<(), StatsError> {
-        let pending_stats = self.connect_stats.as_mut().ok_or(StatsError::NoPendingConnect)?;
-        pending_stats.scan_end_stats.replace(ScanEndStats { scan_end_at: now(), result });
+        self.connect_stats()?.scan_end_stats.replace(ScanEndStats { scan_end_at: now(), result });
         Ok(())
     }
 
-    pub fn report_connect_started(&mut self) -> Option<PendingConnectStats> {
-        self.connect_stats.replace(PendingConnectStats::new(now()))
+    /// Report the start of a new connect attempt so that StatsCollector will begin collecting
+    /// stats for it. If there's an existing pending connect stats, evict and return it.
+    pub fn report_connect_started(&mut self, ssid: Ssid) -> Option<PendingConnectStats> {
+        match self.connect_attempts.as_mut() {
+            Some(connect_attempts) => connect_attempts.update_with_new_attempt(ssid),
+            None => {
+                self.connect_attempts = Some(ConnectAttempts::new(ssid));
+                None
+            }
+        }
     }
 
     pub fn report_network_selected(
         &mut self,
         desc: fidl_mlme::BssDescription,
     ) -> Result<(), StatsError> {
-        let pending_stats = self.connect_stats.as_mut().ok_or(StatsError::NoPendingConnect)?;
-        pending_stats.selected_network.replace(desc);
+        self.connect_stats()?.selected_network.replace(desc);
         Ok(())
     }
 
     pub fn report_auth_started(&mut self) -> Result<(), StatsError> {
-        let pending_stats = self.connect_stats.as_mut().ok_or(StatsError::NoPendingConnect)?;
-        pending_stats.auth_start_at.replace(now());
+        self.connect_stats()?.auth_start_at.replace(now());
         Ok(())
     }
 
     pub fn report_assoc_started(&mut self) -> Result<(), StatsError> {
-        let pending_stats = self.connect_stats.as_mut().ok_or(StatsError::NoPendingConnect)?;
+        let pending_stats = self.connect_stats()?;
         let now = now();
         pending_stats.auth_end_at.replace(now);
         pending_stats.assoc_start_at.replace(now);
@@ -451,20 +466,17 @@ impl StatsCollector {
     }
 
     pub fn report_assoc_success(&mut self) -> Result<(), StatsError> {
-        let pending_stats = self.connect_stats.as_mut().ok_or(StatsError::NoPendingConnect)?;
-        pending_stats.assoc_end_at.replace(now());
+        self.connect_stats()?.assoc_end_at.replace(now());
         Ok(())
     }
 
     pub fn report_rsna_started(&mut self) -> Result<(), StatsError> {
-        let pending_stats = self.connect_stats.as_mut().ok_or(StatsError::NoPendingConnect)?;
-        pending_stats.rsna_start_at.replace(now());
+        self.connect_stats()?.rsna_start_at.replace(now());
         Ok(())
     }
 
     pub fn report_rsna_established(&mut self) -> Result<(), StatsError> {
-        let pending_stats = self.connect_stats.as_mut().ok_or(StatsError::NoPendingConnect)?;
-        pending_stats.rsna_end_at.replace(now());
+        self.connect_stats()?.rsna_end_at.replace(now());
         Ok(())
     }
 
@@ -472,19 +484,33 @@ impl StatsCollector {
         &mut self,
         result: ConnectResult,
     ) -> Result<ConnectStats, StatsError> {
-        let pending_stats = self.connect_stats.take().ok_or(StatsError::NoPendingConnect)?;
-        Ok(self.finalize_connect_stats(pending_stats, result))
+        let mut connect_attempts =
+            self.connect_attempts.take().ok_or(StatsError::NoPendingConnect)?;
+        let stats = self.finalize_connect_stats(&mut connect_attempts, result.clone())?;
+
+        if result != ConnectResult::Success {
+            // Successive connect attempts are still tracked unless connection is successful
+            self.connect_attempts.replace(connect_attempts);
+        }
+        Ok(stats)
+    }
+
+    fn connect_stats(&mut self) -> Result<&mut PendingConnectStats, StatsError> {
+        self.connect_attempts
+            .as_mut()
+            .and_then(|a| a.stats.as_mut())
+            .ok_or(StatsError::NoPendingConnect)
     }
 
     fn finalize_connect_stats(
         &mut self,
-        mut pending_stats: PendingConnectStats,
+        connect_attempts: &mut ConnectAttempts,
         result: ConnectResult,
-    ) -> ConnectStats {
+    ) -> Result<ConnectStats, StatsError> {
         let now = now();
-        self.fill_end_result(&mut pending_stats, &result, now);
+        let pending_stats = connect_attempts.handle_result(&result, now)?;
 
-        ConnectStats {
+        Ok(ConnectStats {
             connect_start_at: pending_stats.connect_start_at,
             connect_end_at: now,
             scan_start_stats: pending_stats.pending_scan_stats.map(|stats| ScanStartStats {
@@ -501,15 +527,65 @@ impl StatsCollector {
             rsna_end_at: pending_stats.rsna_end_at,
             result,
             selected_network: pending_stats.selected_network,
+            attempts: connect_attempts.attempts,
+            last_ten_failures: connect_attempts.last_ten_failures.clone(),
+        })
+    }
+}
+
+fn convert_scan_result(
+    result: &Result<Vec<fidl_mlme::BssDescription>, fidl_mlme::ScanResultCodes>,
+) -> (Option<&Vec<fidl_mlme::BssDescription>>, ScanResult) {
+    match result {
+        Ok(bss_list) => (Some(bss_list), ScanResult::Success),
+        Err(code) => (None, ScanResult::Failed(*code)),
+    }
+}
+
+fn now() -> zx::Time {
+    zx::Time::get(zx::ClockId::Monotonic)
+}
+
+struct ConnectAttempts {
+    ssid: Ssid,
+    attempts: u32,
+    last_ten_failures: VecDeque<ConnectFailure>,
+    stats: Option<PendingConnectStats>,
+}
+
+impl ConnectAttempts {
+    const MAX_FAILURES_TRACKED: usize = 10;
+
+    pub fn new(ssid: Ssid) -> Self {
+        Self {
+            ssid,
+            attempts: 1,
+            last_ten_failures: VecDeque::with_capacity(Self::MAX_FAILURES_TRACKED),
+            stats: Some(PendingConnectStats::new(now())),
         }
     }
 
-    fn fill_end_result(
+    /// Increment attempt counter if same SSID. Otherwise, reset and start tracking connect
+    /// attempts for the new SSID.
+    ///
+    /// Additionally, evict and return any existing PendingConnectStats.
+    pub fn update_with_new_attempt(&mut self, ssid: Ssid) -> Option<PendingConnectStats> {
+        if self.ssid == ssid {
+            self.attempts += 1;
+        } else {
+            self.ssid = ssid;
+            self.attempts = 1;
+            self.last_ten_failures.clear();
+        }
+        self.stats.replace(PendingConnectStats::new(now()))
+    }
+
+    pub fn handle_result(
         &mut self,
-        pending_stats: &mut PendingConnectStats,
         result: &ConnectResult,
         now: zx::Time,
-    ) {
+    ) -> Result<PendingConnectStats, StatsError> {
+        let mut pending_stats = self.stats.take().ok_or(StatsError::NoPendingConnect)?;
         match result {
             ConnectResult::Failed(failure) => match failure {
                 ConnectFailure::ScanFailure(code) => {
@@ -531,20 +607,16 @@ impl StatsCollector {
             },
             _ => (),
         }
-    }
-}
 
-fn convert_scan_result(
-    result: &Result<Vec<fidl_mlme::BssDescription>, fidl_mlme::ScanResultCodes>,
-) -> (Option<&Vec<fidl_mlme::BssDescription>>, ScanResult) {
-    match result {
-        Ok(bss_list) => (Some(bss_list), ScanResult::Success),
-        Err(code) => (None, ScanResult::Failed(*code)),
-    }
-}
+        if let ConnectResult::Failed(failure) = result {
+            if self.last_ten_failures.len() >= Self::MAX_FAILURES_TRACKED {
+                self.last_ten_failures.pop_front();
+            }
+            self.last_ten_failures.push_back(failure.clone());
+        }
 
-fn now() -> zx::Time {
-    zx::Time::get(zx::ClockId::Monotonic)
+        Ok(pending_stats)
+    }
 }
 
 pub struct PendingScanStats {
@@ -593,7 +665,7 @@ mod tests {
 
     #[test]
     fn test_discovery_scan_stats_lifecycle() {
-        let mut stats_collector = StatsCollector::new();
+        let mut stats_collector = StatsCollector::default();
         let req = fake_scan_request();
         let is_connected = true;
         assert!(stats_collector.report_discovery_scan_started(req, is_connected).is_none());
@@ -621,9 +693,9 @@ mod tests {
 
     #[test]
     fn test_connect_stats_lifecycle() {
-        let mut stats_collector = StatsCollector::new();
+        let mut stats_collector = StatsCollector::default();
 
-        assert!(stats_collector.report_connect_started().is_none());
+        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
         let scan_req = fake_scan_request();
         let is_connected = false;
         assert!(stats_collector.report_join_scan_started(scan_req, is_connected).is_ok());
@@ -656,9 +728,9 @@ mod tests {
 
     #[test]
     fn test_connect_stats_finalized_midway() {
-        let mut stats_collector = StatsCollector::new();
+        let mut stats_collector = StatsCollector::default();
 
-        assert!(stats_collector.report_connect_started().is_none());
+        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
         let scan_req = fake_scan_request();
         let is_connected = false;
         assert!(stats_collector.report_join_scan_started(scan_req, is_connected).is_ok());
@@ -683,8 +755,75 @@ mod tests {
     }
 
     #[test]
+    fn test_consecutive_connect_attempts_stats() {
+        let mut stats_collector = StatsCollector::default();
+
+        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        let stats = stats_collector
+            .report_connect_finished(ConnectResult::Failed(ConnectFailure::NoMatchingBssFound));
+        assert_variant!(stats, Ok(stats) => {
+            assert_eq!(stats.attempts, 1);
+            assert_eq!(stats.last_ten_failures, &[ConnectFailure::NoMatchingBssFound])
+        });
+
+        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        let stats = stats_collector
+            .report_connect_finished(ConnectResult::Failed(ConnectFailure::EstablishRsna));
+        assert_variant!(stats, Ok(stats) => {
+            assert_eq!(stats.attempts, 2);
+            assert_eq!(stats.last_ten_failures, &[ConnectFailure::NoMatchingBssFound, ConnectFailure::EstablishRsna]);
+        });
+
+        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        let stats = stats_collector.report_connect_finished(ConnectResult::Success);
+        assert_variant!(stats, Ok(stats) => {
+            assert_eq!(stats.attempts, 3);
+            assert_eq!(stats.last_ten_failures, &[ConnectFailure::NoMatchingBssFound, ConnectFailure::EstablishRsna]);
+        });
+
+        // After a successful connection, new connect attempts tracking is reset
+        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        let stats = stats_collector.report_connect_finished(ConnectResult::Success);
+        assert_variant!(stats, Ok(stats) => {
+            assert_eq!(stats.attempts, 1);
+            assert_eq!(stats.last_ten_failures, &[])
+        });
+    }
+
+    #[test]
+    fn test_consecutive_connect_attempts_different_ssid_resets_stats() {
+        let mut stats_collector = StatsCollector::default();
+
+        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        let _stats = stats_collector
+            .report_connect_finished(ConnectResult::Failed(ConnectFailure::NoMatchingBssFound));
+
+        assert!(stats_collector.report_connect_started(b"bar".to_vec()).is_none());
+        let stats = stats_collector
+            .report_connect_finished(ConnectResult::Failed(ConnectFailure::EstablishRsna));
+        assert_variant!(stats, Ok(stats) => {
+            assert_eq!(stats.attempts, 1);
+            assert_eq!(stats.last_ten_failures, &[ConnectFailure::EstablishRsna]);
+        });
+    }
+
+    #[test]
+    fn test_consecutive_connect_attempts_only_ten_failures_are_tracked() {
+        let mut stats_collector = StatsCollector::default();
+        for i in 1..=20 {
+            assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+            let stats = stats_collector
+                .report_connect_finished(ConnectResult::Failed(ConnectFailure::NoMatchingBssFound));
+            assert_variant!(stats, Ok(stats) => {
+                assert_eq!(stats.attempts, i);
+                assert_eq!(stats.last_ten_failures.len(), std::cmp::min(i as usize, 10));
+            });
+        }
+    }
+
+    #[test]
     fn test_no_pending_discovery_scan_stats() {
-        let mut stats_collector = StatsCollector::new();
+        let mut stats_collector = StatsCollector::default();
         let bss_desc = fake_protected_bss_description(b"foo".to_vec());
         let cfg = ClientConfig::default();
         let stats = stats_collector.report_discovery_scan_ended(
@@ -698,36 +837,36 @@ mod tests {
     #[test]
     fn test_no_pending_connect_stats() {
         assert_variant!(
-            StatsCollector::new().report_join_scan_ended(ScanResult::Success),
+            StatsCollector::default().report_join_scan_ended(ScanResult::Success),
             Err(StatsError::NoPendingConnect)
         );
         let bss_desc = fake_protected_bss_description(b"foo".to_vec());
         assert_variant!(
-            StatsCollector::new().report_network_selected(bss_desc),
+            StatsCollector::default().report_network_selected(bss_desc),
             Err(StatsError::NoPendingConnect)
         );
         assert_variant!(
-            StatsCollector::new().report_auth_started(),
+            StatsCollector::default().report_auth_started(),
             Err(StatsError::NoPendingConnect)
         );
         assert_variant!(
-            StatsCollector::new().report_assoc_started(),
+            StatsCollector::default().report_assoc_started(),
             Err(StatsError::NoPendingConnect)
         );
         assert_variant!(
-            StatsCollector::new().report_assoc_success(),
+            StatsCollector::default().report_assoc_success(),
             Err(StatsError::NoPendingConnect)
         );
         assert_variant!(
-            StatsCollector::new().report_rsna_started(),
+            StatsCollector::default().report_rsna_started(),
             Err(StatsError::NoPendingConnect)
         );
         assert_variant!(
-            StatsCollector::new().report_rsna_established(),
+            StatsCollector::default().report_rsna_established(),
             Err(StatsError::NoPendingConnect)
         );
         assert_variant!(
-            StatsCollector::new().report_connect_finished(ConnectResult::Success),
+            StatsCollector::default().report_connect_finished(ConnectResult::Success),
             Err(StatsError::NoPendingConnect)
         );
     }

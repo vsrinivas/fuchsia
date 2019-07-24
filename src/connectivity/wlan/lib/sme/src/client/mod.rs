@@ -164,8 +164,9 @@ impl ClientSme {
         // Cancel any ongoing connect attempt
         self.state = self.state.take().map(|state| state.cancel_ongoing_connect(&mut self.context));
 
+        let ssid = req.ssid;
         let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(JoinScan {
-            ssid: req.ssid,
+            ssid: ssid.clone(),
             token: ConnectConfig {
                 responder,
                 credential: req.credential,
@@ -182,7 +183,7 @@ impl ClientSme {
             );
         }
 
-        self.context.info.report_connect_started();
+        self.context.info.report_connect_started(ssid);
         self.send_scan_request(req);
         receiver
     }
