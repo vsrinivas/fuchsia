@@ -14,4 +14,6 @@ mod traversal_position;
 mod watchers;
 
 pub mod entry;
+
 pub mod simple;
+pub use simple::simple;
