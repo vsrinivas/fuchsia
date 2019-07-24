@@ -149,18 +149,18 @@ impl DeviceStateBuilder {
     }
 
     /// Build the [`DeviceLayerState`].
-    pub(crate) fn build(self) -> DeviceLayerState {
+    pub(crate) fn build<D: EventDispatcher>(self) -> DeviceLayerState<D> {
         DeviceLayerState { ethernet: IdMap::new(), default_ndp_configs: self.default_ndp_configs }
     }
 }
 
 /// The state associated with the device layer.
-pub(crate) struct DeviceLayerState {
-    ethernet: IdMap<DeviceState<EthernetDeviceState>>,
+pub(crate) struct DeviceLayerState<D: EventDispatcher> {
+    ethernet: IdMap<DeviceState<EthernetDeviceState<D>>>,
     default_ndp_configs: ndp::NdpConfigurations,
 }
 
-impl DeviceLayerState {
+impl<D: EventDispatcher> DeviceLayerState<D> {
     /// Add a new ethernet device to the device layer.
     ///
     /// `add` adds a new `EthernetDeviceState` with the given MAC address and

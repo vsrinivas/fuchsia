@@ -175,7 +175,7 @@ impl EthernetDeviceStateBuilder {
     }
 
     /// Build the `EthernetDeviceState` from this builder.
-    pub(crate) fn build(self) -> EthernetDeviceState {
+    pub(crate) fn build<D: EventDispatcher>(self) -> EthernetDeviceState<D> {
         let mut ipv6_multicast_groups = HashSet::new();
 
         ipv6_multicast_groups
@@ -203,7 +203,7 @@ impl EthernetDeviceStateBuilder {
 }
 
 /// The state associated with an Ethernet device.
-pub(crate) struct EthernetDeviceState {
+pub(crate) struct EthernetDeviceState<D: EventDispatcher> {
     /// Mac address of the device this state is for.
     mac: Mac,
 
@@ -238,7 +238,7 @@ pub(crate) struct EthernetDeviceState {
     ipv4_arp: ArpState<Ipv4Addr, Mac>,
 
     /// (IPv6) NDP state.
-    ndp: ndp::NdpState<EthernetNdpDevice>,
+    ndp: ndp::NdpState<EthernetNdpDevice, D>,
 
     /// A flag indicating whether routing of IPv4 packets not destined for this device is
     /// enabled.
@@ -268,7 +268,7 @@ pub(crate) struct EthernetDeviceState {
     pending_frames: HashMap<IpAddr, VecDeque<Buf<Vec<u8>>>>,
 }
 
-impl EthernetDeviceState {
+impl<D: EventDispatcher> EthernetDeviceState<D> {
     /// Adds a pending frame `frame` associated with `local_addr` to the list
     /// of pending frames in the current device state.
     ///
@@ -681,7 +681,7 @@ pub(crate) fn deinitialize<D: EventDispatcher>(ctx: &mut Context<D>, device_id: 
 fn get_device_state_mut<D: EventDispatcher>(
     state: &mut StackState<D>,
     device_id: usize,
-) -> &mut EthernetDeviceState {
+) -> &mut EthernetDeviceState<D> {
     // TODO(joshlf): Sometimes we want lookups to be infallible (if we know that
     // the device exists), but sometimes we want to report an error to the user.
     // Right now, this is a DoS vector.
@@ -696,7 +696,7 @@ fn get_device_state_mut<D: EventDispatcher>(
 fn get_device_state<D: EventDispatcher>(
     state: &StackState<D>,
     device_id: usize,
-) -> &EthernetDeviceState {
+) -> &EthernetDeviceState<D> {
     // TODO(joshlf): Sometimes we want lookups to be infallible (if we know that
     // the device exists), but sometimes we want to report an error to the user.
     // Right now, this is a DoS vector.
@@ -794,14 +794,14 @@ impl ndp::NdpDevice for EthernetNdpDevice {
     fn get_ndp_state_mut<D: EventDispatcher>(
         state: &mut StackState<D>,
         device_id: usize,
-    ) -> &mut ndp::NdpState<Self> {
+    ) -> &mut ndp::NdpState<Self, D> {
         &mut get_device_state_mut(state, device_id).ndp
     }
 
     fn get_ndp_state<D: EventDispatcher>(
         state: &StackState<D>,
         device_id: usize,
-    ) -> &ndp::NdpState<Self> {
+    ) -> &ndp::NdpState<Self, D> {
         &get_device_state(state, device_id).ndp
     }
 
@@ -1075,8 +1075,8 @@ mod tests {
 
     #[test]
     fn test_pending_frames() {
-        let mut state =
-            EthernetDeviceStateBuilder::new(DUMMY_CONFIG_V4.local_mac, IPV6_MIN_MTU).build();
+        let mut state = EthernetDeviceStateBuilder::new(DUMMY_CONFIG_V4.local_mac, IPV6_MIN_MTU)
+            .build::<DummyEventDispatcher>();
         let ip = IpAddr::V4(DUMMY_CONFIG_V4.local_ip.into_addr());
         state.add_pending_frame(ip, Buf::new(vec![1], ..));
         state.add_pending_frame(ip, Buf::new(vec![2], ..));

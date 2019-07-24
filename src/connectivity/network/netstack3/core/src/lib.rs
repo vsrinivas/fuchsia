@@ -60,6 +60,7 @@ use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither};
 use packet::{Buf, BufferMut, EmptyBuf};
 use rand::{CryptoRng, RngCore};
+use std::fmt::Debug;
 use std::time;
 
 use crate::device::{DeviceLayerState, DeviceLayerTimerId, DeviceStateBuilder};
@@ -162,7 +163,7 @@ pub struct StackState<D: EventDispatcher> {
     transport: TransportLayerState,
     ipv4: Ipv4State<D::Instant>,
     ipv6: Ipv6State<D::Instant>,
-    device: DeviceLayerState,
+    device: DeviceLayerState<D>,
     #[cfg(test)]
     test_counters: testutil::TestCounters,
 }
@@ -297,7 +298,7 @@ pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TimerId) {
 /// `Instant` can be implemented by any type which represents an instant in
 /// time. This can include any sort of real-world clock time (e.g.,
 /// [`std::time::Instant`]) or fake time such as in testing.
-pub trait Instant: Sized + Ord + Copy + Clone {
+pub trait Instant: Sized + Ord + Copy + Clone + Debug {
     /// Returns the amount of time elapsed from another instant to this one.
     ///
     /// # Panics
