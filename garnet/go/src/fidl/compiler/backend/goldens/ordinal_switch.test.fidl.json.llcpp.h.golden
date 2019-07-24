@@ -33,13 +33,13 @@ class SwitchingOrdinals final {
   using EventOnlyGeneratedOrdinalResponse = ::fidl::AnyZeroArgMessage;
 
   struct EventHandlers {
-    fit::function<zx_status_t()> event_ordinal_fifteen;
+    fit::callback<zx_status_t()> event_ordinal_fifteen;
 
-    fit::function<zx_status_t()> event_only_generated_ordinal;
+    fit::callback<zx_status_t()> event_only_generated_ordinal;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
-    fit::function<zx_status_t()> unknown;
+    fit::callback<zx_status_t()> unknown;
   };
 
   // Collection of return types of FIDL calls in this interface.

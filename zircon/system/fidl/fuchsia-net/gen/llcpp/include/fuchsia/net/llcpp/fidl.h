@@ -140,11 +140,11 @@ class Connectivity final {
     // This is triggered on a state change in network reachability. Clients
     // should expect that network requests will succeed when `reachable` is
     // true.
-    fit::function<zx_status_t(bool reachable)> on_network_reachable;
+    fit::callback<zx_status_t(bool reachable)> on_network_reachable;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
-    fit::function<zx_status_t()> unknown;
+    fit::callback<zx_status_t()> unknown;
   };
 
   // Collection of return types of FIDL calls in this interface.

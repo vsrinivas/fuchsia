@@ -942,11 +942,11 @@ class Node final {
     // Indicates the success or failure of the open operation, and optionally describes the
     // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
     // (the same as would be returned by `Describe`).
-    fit::function<zx_status_t(int32_t s, NodeInfo* info)> on_open;
+    fit::callback<zx_status_t(int32_t s, NodeInfo* info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
-    fit::function<zx_status_t()> unknown;
+    fit::callback<zx_status_t()> unknown;
   };
 
   // Collection of return types of FIDL calls in this interface.
@@ -2163,11 +2163,11 @@ class File final {
     // Indicates the success or failure of the open operation, and optionally describes the
     // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
     // (the same as would be returned by `Describe`).
-    fit::function<zx_status_t(int32_t s, NodeInfo* info)> on_open;
+    fit::callback<zx_status_t(int32_t s, NodeInfo* info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
-    fit::function<zx_status_t()> unknown;
+    fit::callback<zx_status_t()> unknown;
   };
 
   // Collection of return types of FIDL calls in this interface.
@@ -4248,11 +4248,11 @@ class Directory final {
     // Indicates the success or failure of the open operation, and optionally describes the
     // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
     // (the same as would be returned by `Describe`).
-    fit::function<zx_status_t(int32_t s, NodeInfo* info)> on_open;
+    fit::callback<zx_status_t(int32_t s, NodeInfo* info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
-    fit::function<zx_status_t()> unknown;
+    fit::callback<zx_status_t()> unknown;
   };
 
   // Collection of return types of FIDL calls in this interface.
@@ -7001,11 +7001,11 @@ class DirectoryAdmin final {
     // Indicates the success or failure of the open operation, and optionally describes the
     // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
     // (the same as would be returned by `Describe`).
-    fit::function<zx_status_t(int32_t s, NodeInfo* info)> on_open;
+    fit::callback<zx_status_t(int32_t s, NodeInfo* info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
-    fit::function<zx_status_t()> unknown;
+    fit::callback<zx_status_t()> unknown;
   };
 
   // Collection of return types of FIDL calls in this interface.

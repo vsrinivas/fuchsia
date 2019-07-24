@@ -135,11 +135,11 @@ class Interface final {
     // event comment #1
     //
     // event comment #3
-    fit::function<zx_status_t()> on_event;
+    fit::callback<zx_status_t()> on_event;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
-    fit::function<zx_status_t()> unknown;
+    fit::callback<zx_status_t()> unknown;
   };
 
   // Collection of return types of FIDL calls in this interface.

@@ -295,11 +295,11 @@ class Stream final {
   };
 
   struct EventHandlers {
-    fit::function<zx_status_t(FrameAvailableEvent frame)> on_frame_available;
+    fit::callback<zx_status_t(FrameAvailableEvent frame)> on_frame_available;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
-    fit::function<zx_status_t()> unknown;
+    fit::callback<zx_status_t()> unknown;
   };
 
   // Collection of return types of FIDL calls in this interface.

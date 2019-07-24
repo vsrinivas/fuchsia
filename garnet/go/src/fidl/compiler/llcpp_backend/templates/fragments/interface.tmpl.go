@@ -128,12 +128,12 @@ class {{ .Name }} final {
       {{- range .DocComments }}
     //{{ . }}
       {{- end }}
-    fit::function<zx_status_t {{- template "SyncEventHandlerIndividualMethodSignature" . }}> {{ .NameInLowerSnakeCase }};
+    fit::callback<zx_status_t {{- template "SyncEventHandlerIndividualMethodSignature" . }}> {{ .NameInLowerSnakeCase }};
 {{ "" }}
     {{- end }}
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
-    fit::function<zx_status_t()> unknown;
+    fit::callback<zx_status_t()> unknown;
   };
   {{- end }}
 
