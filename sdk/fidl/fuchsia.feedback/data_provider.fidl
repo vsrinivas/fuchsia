@@ -26,33 +26,32 @@ protocol DataProvider {
     GetScreenshot(ImageEncoding encoding) -> (Screenshot? screenshot);
 };
 
-
 /// Data to attach to feedback reports.
 ///
 /// Clients typically upload the data straight to servers without expecting some
 /// particular fields. So the data comes in the form of arbitrary key-value pairs
 /// that clients can directly forward to the servers.
 table Data {
-  /// A vector of key-value string pairs. Keys are guaranteed to be unique.
-  1: vector<Annotation>:32 annotations;
+    /// A vector of key-value string pairs. Keys are guaranteed to be unique.
+    1: vector<Annotation>:32 annotations;
 
-  /// A vector of key-value string-to-VMO pairs. Keys are guaranteed to be unique.
-  2: vector<Attachment>:16 attachments;
+    /// A vector of key-value string-to-VMO pairs. Keys are guaranteed to be unique.
+    2: vector<Attachment>:16 attachments;
 };
 
 /// An annotation and its plain ASCII string key.
 /// Annotations are short strings, e.g., the board name or the build version.
 struct Annotation {
-  string:128 key;
-  string:1024 value;
+    string:128 key;
+    string:1024 value;
 };
 
 /// An attachment and its plain ASCII string key.
 /// Attachments are larger objects, e.g., log files. They may be binary or text
 /// data.
 struct Attachment {
-  string:128 key;
-  fuchsia.mem.Buffer value;
+    string:128 key;
+    fuchsia.mem.Buffer value;
 };
 
 /// The encoding used for the image.
@@ -60,16 +59,15 @@ struct Attachment {
 /// Today, only PNG is supported, but in the future the screenshot could be
 /// returned in other encodings if need arises.
 enum ImageEncoding {
-  PNG = 0;
+    PNG = 0;
 };
 
 /// An encoded image of the screen.
 struct Screenshot {
-  fuchsia.mem.Buffer image;
+    fuchsia.mem.Buffer image;
 
-  // While all encoded images contain their dimensions in their headers, some
-  // clients still expect to receive the width and height separately, so we
-  // also provide it separately so clients don't need to decode `image`.
-  fuchsia.math.Size dimensions_in_px;
+    // While all encoded images contain their dimensions in their headers, some
+    // clients still expect to receive the width and height separately, so we
+    // also provide it separately so clients don't need to decode `image`.
+    fuchsia.math.Size dimensions_in_px;
 };
-
