@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iostream>
+#include <map>
+#include <set>
+
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 
@@ -9,11 +13,16 @@
 
 namespace {
 
+const char kHelp[] = "help";
 const char kInputFile[] = "input-file";
 const char kOutputFile[] = "output-file";
 const char kMagicCheck[] = "perform-magic-check";
 const char kCompressedInput[] = "compressed-input";
 const char kCompressedOutput[] = "compressed-output";
+
+std::set<std::string> kKnownOptions = {
+    kHelp, kInputFile, kOutputFile, kMagicCheck, kCompressedInput, kCompressedOutput,
+};
 
 bool ParseBooleanOption(const fxl::CommandLine& command_line, const char* arg_name,
                         bool* out_value) {
@@ -32,11 +41,68 @@ bool ParseBooleanOption(const fxl::CommandLine& command_line, const char* arg_na
   return true;
 }
 
+void PrintHelpMessage() {
+  std::map<std::string, std::string> options = {
+      {"help", "Print this help message."},
+      {"input-file=[]",
+       "Read trace from the specified file. If no file is specified, the input "
+       "is read from stdin."},
+      {"output-file=[]",
+       "Write the converted trace to the specified file. If no file is "
+       "specified, the output is written to stdout."},
+      {"perform-magic-check=[true]",
+       "Check that the first eight bytes of the trace are a valid Fuchsia "
+       "magic number record. Can be set to false to bypass the check."},
+      {"compressed-input=[false]", "If true, the input is first gzip-decompressed."},
+      {"compressed-output=[false]",
+       "If true, the output is gzip-compressed. Writing compressed output to "
+       "stdout is not supported, so output-file must be specified."},
+  };
+
+  std::cerr
+      << "trace2json [options]: Convert a trace from fxt (Fuchsia trace format) to json (Chrome "
+         "trace format)."
+      << std::endl
+      << "Fuchsia trace format: "
+         "https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/tracing/"
+         "trace-format/"
+      << std::endl
+      << "Chrome trace format: "
+         "https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/edit"
+      << std::endl;
+  for (const auto& option : options) {
+    std::cerr << "  --" << option.first << ": " << option.second << std::endl;
+  }
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
+    return 1;
+  }
+
+  if (command_line.HasOption(kHelp)) {
+    PrintHelpMessage();
+    return 0;
+  }
+
+  bool invalid_options = false;
+  for (const auto& option : command_line.options()) {
+    if (kKnownOptions.count(option.name) == 0) {
+      FXL_LOG(ERROR) << "Unknown option: " << option.name;
+      invalid_options = true;
+    }
+  }
+
+  if (command_line.positional_args().size() > 0) {
+    FXL_LOG(ERROR) << "Unexpected positional arg";
+    invalid_options = true;
+  }
+
+  if (invalid_options) {
+    PrintHelpMessage();
     return 1;
   }
 
@@ -48,12 +114,15 @@ int main(int argc, char** argv) {
     command_line.GetOptionValue(kOutputFile, &settings.output_file_name);
   }
   if (!ParseBooleanOption(command_line, kCompressedInput, &settings.compressed_input)) {
+    PrintHelpMessage();
     return 1;
   }
   if (!ParseBooleanOption(command_line, kCompressedOutput, &settings.compressed_output)) {
+    PrintHelpMessage();
     return 1;
   }
   if (!ParseBooleanOption(command_line, kMagicCheck, &settings.perform_magic_check)) {
+    PrintHelpMessage();
     return 1;
   }
 
