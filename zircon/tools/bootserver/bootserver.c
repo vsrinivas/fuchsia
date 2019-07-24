@@ -48,6 +48,8 @@
         fprintf(stderr, "%s [%s] %s\n", date_string(), appname, logline); \
     } while (false)
 
+#define RETRY_DELAY_SEC 20
+
 char* appname;
 int64_t us_between_packets = DEFAULT_US_BETWEEN_PACKETS;
 
@@ -119,7 +121,7 @@ void update_status(size_t bytes_so_far) {
             static int spin = 0;
 
             size_t divider = (total_file_size > 0) ? total_file_size : 1;
-            UPDATE_LOG("[%c] %4.01f%% of ", spinner[(spin++) % 4],
+            UPDATE_LOG("[%c] %5.01f%% of ", spinner[(spin++) % 4],
                        100.0 * (float)bytes_so_far / (float)divider);
             if (total_file_size < 1024) {
                 UPDATE_LOG(" %3zu.0  B", total_file_size);
@@ -534,7 +536,7 @@ int main(int argc, char** argv) {
     }
 
     if (board_name) {
-        log("Board name set to %s", board_name);
+        log("Board name set to [%s]", board_name);
         board_name_file = mktemp(board_name_template);
         int fd = open(board_name_file, O_WRONLY | O_CREAT);
         write(fd, board_name, strlen(board_name));
@@ -647,7 +649,8 @@ int main(int argc, char** argv) {
         if (status == 0 && board_name_file) {
             status = xfer(&ra, board_name_file, NB_BOARD_NAME_FILENAME);
             if (status != 0) {
-                log("Invalid board name. Check fx set parameter?");
+                log("Target seemed to have rejected the board name [%s]", board_name);
+                log("Confirm if your `fx set` matches the target's board.");
             }
         }
         if (status == 0 && cmdline[0]) {
@@ -696,6 +699,8 @@ int main(int argc, char** argv) {
             }
         } else {
             log("Transfer ends incompletely.");
+			log("Wait for %u secs before retyring...\n\n", RETRY_DELAY_SEC);
+			sleep(RETRY_DELAY_SEC);
         }
         if ((status == 0 && once) || (status != 0 && fail_fast)) {
             close(s);

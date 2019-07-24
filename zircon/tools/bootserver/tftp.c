@@ -270,7 +270,7 @@ int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
         if (status == TFTP_ERR_SHOULD_WAIT) {
             result = -EAGAIN;
         } else {
-            fprintf(stderr, "%s: %s (status = %d)\n", appname, opts.err_msg, (int)status);
+            fprintf(stderr, "\n%s: %s (status = %d)\n", appname, opts.err_msg, (int)status);
             result = -1;
         }
     } else {
