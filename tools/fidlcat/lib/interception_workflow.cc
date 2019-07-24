@@ -55,6 +55,7 @@ void InterceptingThreadObserver::OnThreadStopped(
     zxdb::BreakpointSettings settings = bp_ptr->GetSettings();
     if (settings.location.type == zxdb::InputLocation::Type::kSymbol &&
         settings.location.symbol.components().size() == 1u) {
+      threads_in_error_.erase(thread->GetKoid());
       for (auto& syscall : workflow_->syscall_decoder_dispatcher()->syscalls()) {
         if (settings.location.symbol.components()[0].name() == syscall->breakpoint_name()) {
           workflow_->syscall_decoder_dispatcher()->DecodeSyscall(this, thread, syscall.get());
@@ -67,7 +68,11 @@ void InterceptingThreadObserver::OnThreadStopped(
       return;
     }
   }
-  FXL_LOG(INFO) << "Internal error: Thread stopped on exception with no breakpoint set";
+  if (threads_in_error_.find(thread->GetKoid()) == threads_in_error_.end()) {
+    FXL_LOG(INFO) << "Internal error: Thread " << thread->GetKoid()
+                  << " stopped on exception with no breakpoint set";
+    threads_in_error_.emplace(thread->GetKoid());
+  }
   thread->Continue();
 }
 

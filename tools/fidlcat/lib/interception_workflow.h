@@ -54,6 +54,7 @@ class InterceptingThreadObserver : public zxdb::ThreadObserver {
  private:
   InterceptionWorkflow* workflow_;
   std::map<int64_t, SyscallDecoder*> breakpoint_map_;
+  std::unordered_set<int64_t> threads_in_error_;
 };
 
 class InterceptingProcessObserver : public zxdb::ProcessObserver {

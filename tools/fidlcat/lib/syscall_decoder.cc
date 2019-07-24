@@ -4,13 +4,13 @@
 
 #include "tools/fidlcat/lib/syscall_decoder.h"
 
+#include <zircon/system/public/zircon/types.h>
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <vector>
-
-#include <zircon/system/public/zircon/types.h>
 
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/frame.h"
@@ -238,8 +238,8 @@ void SyscallDecoder::StepToReturnAddress() {
   settings.scope_target = thread_->GetProcess()->GetTarget();
   settings.one_shot = true;
   thread_observer_->CreateNewBreakpoint(settings);
-  FXL_VLOG(2) << "Creating return value breakpoint for " << syscall_->name() << " at address "
-              << std::hex << return_address_ << std::dec;
+  FXL_VLOG(2) << "Thread " << thread_->GetKoid() << ": creating return value breakpoint for "
+              << syscall_->name() << " at address " << std::hex << return_address_ << std::dec;
   // Registers a one time breakpoint for this decoder.
   thread_observer_->Register(thread_->GetKoid(), this);
   // Restarts the stopped thread. When the breakpoint will be reached (at the
@@ -322,14 +322,22 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* syscall) {
 }
 
 void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* syscall) {
+  const Colors& colors = dispatcher_->colors();
+  // Displays the returned value.
   if (dispatcher_->last_displayed_syscall() != this) {
     // Add a blank line to tell the user that this display is not linked to the
     // previous displayed lines.
     os_ << "\n";
+    // Then always display the process info to be able able to know for which thread
+    // we are displaying the output.
+    std::string first_line_header = syscall->thread()->GetProcess()->GetName() + ' ' + colors.red +
+                                    std::to_string(syscall->thread()->GetProcess()->GetKoid()) +
+                                    colors.reset + ':' + colors.red +
+                                    std::to_string(syscall->thread_id()) + colors.reset + ' ';
+    os_ << first_line_header << "  -> ";
+  } else {
+    os_ << line_header_ << "  -> ";
   }
-  const Colors& colors = dispatcher_->colors();
-  // Displays the returned value.
-  os_ << line_header_ << "  -> ";
   if (static_cast<zx_status_t>(syscall->syscall_return_value()) == ZX_OK) {
     os_ << colors.green << "ZX_OK" << colors.reset;
   } else {
@@ -354,6 +362,9 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* syscall) {
       output->DisplayOutline(dispatcher_, syscall, line_header_, /*tabs=*/2, os_);
     }
   }
+
+  dispatcher_->set_last_displayed_syscall(this);
+
   // Now our job is done, we can destroy the object.
   syscall->Destroy();
 }

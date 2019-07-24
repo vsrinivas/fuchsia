@@ -27,6 +27,12 @@ namespace fidlcat {
 class ProcessController;
 class SyscallDecoderDispatcherTest;
 
+constexpr uint64_t kFirstPid = 3141;
+constexpr uint64_t kSecondPid = 2718;
+
+constexpr uint64_t kFirstThreadKoid = 8764;
+constexpr uint64_t kSecondThreadKoid = 8765;
+
 constexpr uint32_t kHandle = 0xcefa1db0;
 
 #define kChannelCreate 0
@@ -423,17 +429,19 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
   void PerformDisplayTest(int syscall_index, std::unique_ptr<SystemCallTest> syscall,
                           const char* expected);
 
+  void PerformInterleavedDisplayTest(int syscall_index, std::unique_ptr<SystemCallTest> syscall,
+                                     const char* expected);
+
   void PerformTest(int syscall_index, std::unique_ptr<SystemCallTest> syscall1,
                    std::unique_ptr<SystemCallTest> syscall2, ProcessController* controller,
-                   std::unique_ptr<SyscallDecoderDispatcher> dispatcher);
+                   std::unique_ptr<SyscallDecoderDispatcher> dispatcher, bool interleaved_test);
 
   void SimulateSyscall(int syscall_index, std::unique_ptr<SystemCallTest> syscall,
-                       ProcessController* controller);
+                       ProcessController* controller, bool interleaved_test);
+  void TriggerSyscallBreakpoint(int syscall_index, uint64_t process_koid, uint64_t thread_koid);
+  void TriggerCallerBreakpoint(uint64_t process_koid, uint64_t thread_koid);
 
  private:
-  static constexpr uint64_t kFirstPid = 3141;
-  static constexpr uint64_t kSecondPid = 2718;
-
   DataForSyscallTest data_;
   InterceptionRemoteAPI* mock_remote_api_;  // Owned by the session.
   DisplayOptions display_options_;
@@ -460,24 +468,24 @@ class InterceptionWorkflowTestArm : public InterceptionWorkflowTest {
 // modules with the appropriate symbols, attaches to the processes, etc.
 class ProcessController {
  public:
-  ProcessController(std::vector<uint64_t> process_koids, InterceptionWorkflowTest* remote_api,
-                    zxdb::Session& session, debug_ipc::PlatformMessageLoop& loop);
+  ProcessController(InterceptionWorkflowTest* remote_api, zxdb::Session& session,
+                    debug_ipc::PlatformMessageLoop& loop);
   ~ProcessController();
 
   InterceptionWorkflowTest* remote_api() const { return remote_api_; }
   InterceptionWorkflow& workflow() { return workflow_; }
   const std::vector<uint64_t>& process_koids() { return process_koids_; }
+  uint64_t thread_koid(uint64_t process_koid) { return thread_koids_[process_koid]; }
 
   void InjectProcesses(zxdb::Session& session);
 
   void Initialize(zxdb::Session& session, std::unique_ptr<SyscallDecoderDispatcher> dispatcher);
   void Detach();
 
-  static constexpr uint64_t kThreadKoid = 5678;
-
  private:
   InterceptionWorkflowTest* remote_api_;
   std::vector<uint64_t> process_koids_;
+  std::map<uint64_t, uint64_t> thread_koids_;
   InterceptionWorkflow workflow_;
 
   std::vector<zxdb::Process*> processes_;
@@ -632,10 +640,13 @@ class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
   ProcessController* controller_;
 };
 
-ProcessController::ProcessController(std::vector<uint64_t> process_koids,
-                                     InterceptionWorkflowTest* remote_api, zxdb::Session& session,
+ProcessController::ProcessController(InterceptionWorkflowTest* remote_api, zxdb::Session& session,
                                      debug_ipc::PlatformMessageLoop& loop)
-    : remote_api_(remote_api), process_koids_(process_koids), workflow_(&session, &loop) {}
+    : remote_api_(remote_api), workflow_(&session, &loop) {
+  process_koids_ = {kFirstPid, kSecondPid};
+  thread_koids_[kFirstPid] = kFirstThreadKoid;
+  thread_koids_[kSecondPid] = kSecondThreadKoid;
+}
 
 void ProcessController::Initialize(zxdb::Session& session,
                                    std::unique_ptr<SyscallDecoderDispatcher> dispatcher) {
@@ -646,7 +657,8 @@ void ProcessController::Initialize(zxdb::Session& session,
   InjectProcesses(session);
 
   for (zxdb::Process* process : processes_) {
-    zxdb::Thread* the_thread = remote_api_->InjectThread(process->GetKoid(), kThreadKoid);
+    zxdb::Thread* the_thread =
+        remote_api_->InjectThread(process->GetKoid(), thread_koids_[process->GetKoid()]);
 
     // Observe thread.  This is usually done in workflow_::Attach, but
     // RemoteAPITest has its own ideas about attaching, so that method only
@@ -708,20 +720,22 @@ void ProcessController::Detach() { workflow_.Detach(); }
 void InterceptionWorkflowTest::PerformCheckTest(int syscall_index,
                                                 std::unique_ptr<SystemCallTest> syscall1,
                                                 std::unique_ptr<SystemCallTest> syscall2) {
-  ProcessController controller({kFirstPid, kSecondPid}, this, session(), loop());
+  ProcessController controller(this, session(), loop());
 
   PerformTest(syscall_index, std::move(syscall1), std::move(syscall2), &controller,
-              std::make_unique<SyscallDecoderDispatcherTest>(&controller));
+              std::make_unique<SyscallDecoderDispatcherTest>(&controller),
+              /*interleaved_test=*/false);
 }
 
 void InterceptionWorkflowTest::PerformDisplayTest(int syscall_index,
                                                   std::unique_ptr<SystemCallTest> syscall,
                                                   const char* expected) {
-  ProcessController controller({kFirstPid, kSecondPid}, this, session(), loop());
+  ProcessController controller(this, session(), loop());
 
   PerformTest(syscall_index, std::move(syscall), nullptr, &controller,
               std::make_unique<SyscallDisplayDispatcherTest>(nullptr, display_options_, result_,
-                                                             &controller));
+                                                             &controller),
+              /*interleaved_test=*/false);
   std::string both_results = result_.str();
   // The second output starts with "test_2718"
   size_t split = both_results.find("test_2718");
@@ -750,68 +764,103 @@ void InterceptionWorkflowTest::PerformDisplayTest(int syscall_index,
     str_expected.replace(i, first_pid.length(), second_pid);
     i += second_pid.length();
   }
+  // Do it also for thread koids.
+  i = 0;
+  std::string first_thread_koid = std::to_string(kFirstThreadKoid);
+  std::string second_thread_koid = std::to_string(kSecondThreadKoid);
+  while ((i = str_expected.find(first_thread_koid, i)) != std::string::npos) {
+    str_expected.replace(i, first_thread_koid.length(), second_thread_koid);
+    i += second_thread_koid.length();
+  }
   ASSERT_EQ(str_expected, second);
+}
+
+void InterceptionWorkflowTest::PerformInterleavedDisplayTest(
+    int syscall_index, std::unique_ptr<SystemCallTest> syscall, const char* expected) {
+  ProcessController controller(this, session(), loop());
+
+  PerformTest(syscall_index, std::move(syscall), nullptr, &controller,
+              std::make_unique<SyscallDisplayDispatcherTest>(nullptr, display_options_, result_,
+                                                             &controller),
+              /*interleaved_test=*/true);
+  ASSERT_EQ(expected, result_.str());
 }
 
 void InterceptionWorkflowTest::PerformTest(int syscall_index,
                                            std::unique_ptr<SystemCallTest> syscall1,
                                            std::unique_ptr<SystemCallTest> syscall2,
                                            ProcessController* controller,
-                                           std::unique_ptr<SyscallDecoderDispatcher> dispatcher) {
+                                           std::unique_ptr<SyscallDecoderDispatcher> dispatcher,
+                                           bool interleaved_test) {
   controller->Initialize(session(), std::move(dispatcher));
 
-  SimulateSyscall(syscall_index, std::move(syscall1), controller);
+  SimulateSyscall(syscall_index, std::move(syscall1), controller, interleaved_test);
 
   debug_ipc::MessageLoop::Current()->Run();
 
   if (syscall2 != nullptr) {
     data_.set_use_alternate_data();
-    SimulateSyscall(syscall_index, std::move(syscall2), controller);
+    SimulateSyscall(syscall_index, std::move(syscall2), controller, interleaved_test);
   }
 }
 
 void InterceptionWorkflowTest::SimulateSyscall(int syscall_index,
                                                std::unique_ptr<SystemCallTest> syscall,
-                                               ProcessController* controller) {
+                                               ProcessController* controller,
+                                               bool interleaved_test) {
   data_.set_syscall(std::move(syscall));
-  for (uint64_t process_koid : controller->process_koids()) {
-    data_.load_syscall_data();
-    {
-      // Trigger breakpoint.
-      debug_ipc::NotifyException notification;
-      notification.type = debug_ipc::NotifyException::Type::kGeneral;
-      notification.thread.process_koid = process_koid;
-      notification.thread.thread_koid = ProcessController::kThreadKoid;
-      notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-      notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
-      debug_ipc::StackFrame frame(syscall_definitions[syscall_index].second,
-                                  reinterpret_cast<uint64_t>(data_.sp()));
-      data_.PopulateRegisters(process_koid, &frame.regs);
-      notification.thread.frames.push_back(frame);
-      mock_remote_api().PopulateBreakpointIds(syscall_definitions[syscall_index].second,
-                                              notification);
-      InjectException(notification);
+  if (interleaved_test) {
+    for (uint64_t process_koid : controller->process_koids()) {
+      data_.load_syscall_data();
+      TriggerSyscallBreakpoint(syscall_index, process_koid, controller->thread_koid(process_koid));
     }
-
-    debug_ipc::MessageLoop::Current()->Run();
-
-    {
-      // Trigger next breakpoint, when the syscall has completed.
-      debug_ipc::NotifyException notification;
-      notification.type = debug_ipc::NotifyException::Type::kGeneral;
-      notification.thread.process_koid = process_koid;
-      notification.thread.thread_koid = ProcessController::kThreadKoid;
-      notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-      notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
-      debug_ipc::StackFrame frame(DataForSyscallTest::kReturnAddress,
-                                  reinterpret_cast<uint64_t>(data_.sp()));
-      data_.PopulateRegisters(process_koid, &frame.regs);
-      notification.thread.frames.push_back(frame);
-      InjectException(notification);
+    for (uint64_t process_koid : controller->process_koids()) {
+      TriggerCallerBreakpoint(process_koid, controller->thread_koid(process_koid));
     }
-
-    debug_ipc::MessageLoop::Current()->Run();
+  } else {
+    for (uint64_t process_koid : controller->process_koids()) {
+      data_.load_syscall_data();
+      uint64_t thread_koid = controller->thread_koid(process_koid);
+      TriggerSyscallBreakpoint(syscall_index, process_koid, thread_koid);
+      TriggerCallerBreakpoint(process_koid, thread_koid);
+    }
   }
+}
+
+void InterceptionWorkflowTest::TriggerSyscallBreakpoint(int syscall_index, uint64_t process_koid,
+                                                        uint64_t thread_koid) {
+  // Trigger breakpoint.
+  debug_ipc::NotifyException notification;
+  notification.type = debug_ipc::NotifyException::Type::kGeneral;
+  notification.thread.process_koid = process_koid;
+  notification.thread.thread_koid = thread_koid;
+  notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
+  debug_ipc::StackFrame frame(syscall_definitions[syscall_index].second,
+                              reinterpret_cast<uint64_t>(data_.sp()));
+  data_.PopulateRegisters(process_koid, &frame.regs);
+  notification.thread.frames.push_back(frame);
+  mock_remote_api().PopulateBreakpointIds(syscall_definitions[syscall_index].second, notification);
+  InjectException(notification);
+  debug_ipc::MessageLoop::Current()->Run();
+}
+
+void InterceptionWorkflowTest::TriggerCallerBreakpoint(uint64_t process_koid,
+                                                       uint64_t thread_koid) {
+  // Trigger next breakpoint, when the syscall has completed.
+  debug_ipc::NotifyException notification;
+  notification.type = debug_ipc::NotifyException::Type::kGeneral;
+  notification.thread.process_koid = process_koid;
+  notification.thread.thread_koid = thread_koid;
+  notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
+  debug_ipc::StackFrame frame(DataForSyscallTest::kReturnAddress,
+                              reinterpret_cast<uint64_t>(data_.sp()));
+  data_.PopulateRegisters(process_koid, &frame.regs);
+  notification.thread.frames.push_back(frame);
+  InjectException(notification);
+
+  debug_ipc::MessageLoop::Current()->Run();
 }
 
 #define CREATE_DISPLAY_TEST_CONTENT(errno, expected) \
@@ -827,9 +876,40 @@ void InterceptionWorkflowTest::SimulateSyscall(int syscall_index,
 CREATE_DISPLAY_TEST(
     ZxChannelCreate, ZX_OK,
     "\n"
-    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_create("
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_create("
     "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (out0:\x1B[32mhandle\x1B[0m: \x1B[31m12345678\x1B[0m, "
+    "out1:\x1B[32mhandle\x1B[0m: \x1B[31m87654321\x1B[0m)\n");
+
+#define CREATE_INTERLEAVED_DISPLAY_TEST_CONTENT(errno, expected) \
+  zx_handle_t out0 = 0x12345678;                                 \
+  zx_handle_t out1 = 0x87654321;                                 \
+  PerformInterleavedDisplayTest(                                 \
+      kChannelCreate, SystemCallTest::ZxChannelCreate(errno, #errno, 0, &out0, &out1), expected);
+
+#define CREATE_INTERLEAVED_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                  \
+    CREATE_INTERLEAVED_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                            \
+  TEST_F(InterceptionWorkflowTestArm, name) {                  \
+    CREATE_INTERLEAVED_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+CREATE_INTERLEAVED_DISPLAY_TEST(
+    ZxChannelCreateInterleaved, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_create("
+    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+    "\n"
+    "test_2718 \x1B[31m2718\x1B[0m:\x1B[31m8765\x1B[0m zx_channel_create("
+    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m   -> \x1B[32mZX_OK\x1B[0m ("
+    "out0:\x1B[32mhandle\x1B[0m: \x1B[31m12345678\x1B[0m, "
+    "out1:\x1B[32mhandle\x1B[0m: \x1B[31m87654321\x1B[0m)\n"
+    "\n"
+    "test_2718 \x1B[31m2718\x1B[0m:\x1B[31m8765\x1B[0m   -> \x1B[32mZX_OK\x1B[0m ("
+    "out0:\x1B[32mhandle\x1B[0m: \x1B[31m12345678\x1B[0m, "
     "out1:\x1B[32mhandle\x1B[0m: \x1B[31m87654321\x1B[0m)\n");
 
 #define WRITE_CHECK_TEST_CONTENT(errno)                                                           \
@@ -862,7 +942,7 @@ WRITE_CHECK_TEST(ZxChannelWriteCheck, ZX_OK);
 
 WRITE_DISPLAY_TEST(ZxChannelWrite, ZX_OK,
                    "\n"
-                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_write("
+                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
                    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
                    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
                    ""
@@ -874,7 +954,7 @@ WRITE_DISPLAY_TEST(ZxChannelWrite, ZX_OK,
 
 WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
                    "\n"
-                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_write("
+                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
                    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
                    "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
                    ""
@@ -910,7 +990,7 @@ WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
 
 READ_DISPLAY_TEST(ZxChannelRead, ZX_OK, true, true,
                   "\n"
-                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -923,7 +1003,7 @@ READ_DISPLAY_TEST(ZxChannelRead, ZX_OK, true, true,
 
 READ_DISPLAY_TEST(ZxChannelReadShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
                   "\n"
-                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -932,7 +1012,7 @@ READ_DISPLAY_TEST(ZxChannelReadShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
 
 READ_DISPLAY_TEST(ZxChannelReadTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
                   "\n"
-                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -943,7 +1023,7 @@ READ_DISPLAY_TEST(ZxChannelReadTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
 
 READ_DISPLAY_TEST(ZxChannelReadNoBytes, ZX_OK, false, true,
                   "\n"
-                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -954,7 +1034,7 @@ READ_DISPLAY_TEST(ZxChannelReadNoBytes, ZX_OK, false, true,
 
 READ_DISPLAY_TEST(ZxChannelReadNoHandles, ZX_OK, true, false,
                   "\n"
-                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read("
+                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -991,7 +1071,7 @@ READ_DISPLAY_TEST(ZxChannelReadNoHandles, ZX_OK, true, false,
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtc, ZX_OK, true, true,
                       "\n"
-                      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read_etc("
+                      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read_etc("
                       "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
                       "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                       "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -1004,7 +1084,7 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtc, ZX_OK, true, true,
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtcShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
                       "\n"
-                      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read_etc("
+                      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read_etc("
                       "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
                       "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                       "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -1013,7 +1093,7 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtcShouldWait, ZX_ERR_SHOULD_WAIT, true, true
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtcTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true,
                       "\n"
-                      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read_etc("
+                      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read_etc("
                       "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
                       "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                       "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -1025,7 +1105,7 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtcTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, t
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtcNoBytes, ZX_OK, false, true,
                       "\n"
-                      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read_etc("
+                      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read_etc("
                       "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
                       "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                       "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -1036,7 +1116,7 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtcNoBytes, ZX_OK, false, true,
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtcNoHandles, ZX_OK, true, false,
                       "\n"
-                      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_read_etc("
+                      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_read_etc("
                       "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
                       "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                       "num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
@@ -1118,7 +1198,7 @@ CALL_CHECK_TEST(ZxChannelCallCheck, ZX_OK);
 
 CALL_DISPLAY_TEST(ZxChannelCall, ZX_OK, true, true,
                   "\n"
-                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_call("
+                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_call("
                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
                   "deadline:\x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m, "
@@ -1146,25 +1226,25 @@ CALL_DISPLAY_TEST(ZxChannelCall, ZX_OK, true, true,
 
 CALL_DISPLAY_TEST_WITH_PROCESS_INFO(
     ZxChannelCallWithProcessInfo, ZX_OK, true, true,
-    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m \n"
-    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m zx_channel_call("
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_call("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
     "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m, "
     "deadline:\x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m, "
     "rd_num_bytes:\x1B[32muint32\x1B[0m: \x1B[34m100\x1B[0m, "
     "rd_num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
-    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "  \x1B[31mCan't decode message num_bytes=16 num_handles=2 "
     "ordinal=77e4cceb00000000\n"
-    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "    data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 00\x1B[31m"
     ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
-    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
-    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "    \x1B[31mCan't decode message num_bytes=16 num_handles=2 "
     "ordinal=77e4cceb00000000\n"
-    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m5678\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "      data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 00\x1B[31m"
     ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n");
 
