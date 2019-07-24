@@ -98,7 +98,8 @@ void Client::ProcessCompletedReads(const std::unique_ptr<UsbHandler>& usb_handle
                 fprintf(stderr, "offset out of range\n");
                 exit(-1);
             }
-            assert(transfer->SetOffset(static_cast<int>(offset)));
+            __UNUSED bool set_offset_result = transfer->SetOffset(static_cast<int>(offset));
+            assert(set_offset_result);
         }
         usb_handler->RequeueRead(std::move(transfer));
         iter = completed_reads_.erase(iter);
@@ -452,7 +453,8 @@ void XdcServer::UsbReadComplete(std::unique_ptr<UsbHandler::Transfer> transfer) 
     }
     // If it is the start of a new packet, the client should begin reading after the header.
     int offset = is_new_packet ? sizeof(xdc_packet_header_t) : 0;
-    assert(transfer->SetOffset(offset));
+    __UNUSED bool set_offset_result = transfer->SetOffset(offset);
+    assert(set_offset_result);
     client->AddCompletedRead(std::move(transfer));
     requeue.cancel();
 }
@@ -510,8 +512,8 @@ bool XdcServer::SendCtrlMsg(xdc_msg_t& msg) {
     if (!transfer) {
         return false;
     }
-    zx_status_t res = transfer->FillData(DEBUG_STREAM_ID_RESERVED,
-                                         reinterpret_cast<unsigned char*>(&msg), sizeof(msg));
+    __UNUSED zx_status_t res = transfer->FillData(DEBUG_STREAM_ID_RESERVED,
+                                                  reinterpret_cast<unsigned char*>(&msg), sizeof(msg));
     assert(res == ZX_OK); // Should not fail.
     transfer = usb_handler_->QueueWriteTransfer(std::move(transfer));
     bool queued = !transfer;

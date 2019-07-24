@@ -243,7 +243,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         auto coded_member_type =
             CompileType(member.type_ctor->type, coded::CodingContext::kOutsideEnvelope);
         if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways) {
-          auto is_primitive = coded_member_type->kind == coded::Type::Kind::kPrimitive;
+          [[maybe_unused]] auto is_primitive = coded_member_type->kind == coded::Type::Kind::kPrimitive;
           assert(!is_primitive && "No primitive in struct coding table!");
           struct_fields.emplace_back(coded_member_type, member.fieldshape.Size(),
                                      member.fieldshape.Offset(), member.fieldshape.Padding());
@@ -265,7 +265,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         auto coded_member_type =
             CompileType(member.type_ctor->type, coded::CodingContext::kOutsideEnvelope);
         if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways) {
-          auto is_primitive = coded_member_type->kind == coded::Type::Kind::kPrimitive;
+          [[maybe_unused]] auto is_primitive = coded_member_type->kind == coded::Type::Kind::kPrimitive;
           assert(!is_primitive && "No primitive in union coding table!");
           union_members.emplace_back(coded_member_type, member.fieldshape.Padding());
         } else {
