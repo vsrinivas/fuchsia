@@ -22,7 +22,7 @@ const std::array<uint32_t, FrequencySet::kNumReferenceFreqs> FrequencySet::kRefe
     0,     18,    23,    27,    34,    41,    53,    67,    85,    109,   137,   169,
     221,   271,   341,   431,   541,   683,   859,   1091,  1363,  1703,  2183,  2729,
     3413,  4301,  5461,  6827,  8603,  10921, 13651, 16381, 21841, 26623, 27307, 27989,
-    28673, 30103, 31949, 32768, 34133, 43007, 54613, 60073, 60209, 64853, 65535};
+    28673, 30103, 31949, 32768, 34133, 43007, 54613, 60073, 60209, 64853, 65535, 131071};
 
 // Because of translation between our power-of-two-sized buffers and our nominal
 // sample rate, the above array contains __proxies__ of the desired frequencies,
@@ -33,7 +33,7 @@ const std::array<uint32_t, FrequencySet::kNumReferenceFreqs> FrequencySet::kRefF
     0,     13,    17,    20,    25,    30,    39,    49,    62,    80,    100,   124,
     162,   198,   250,   316,   396,   500,   630,   799,   998,   1247,  1599,  1999,
     2500,  3150,  4000,  5000,  6301,  7999,  9998,  11998, 15997, 19499, 20000, 20500,
-    21001, 22049, 23400, 24000, 25000, 31500, 40000, 44000, 44100, 47500, 47999};
+    21001, 22049, 23400, 24000, 25000, 31500, 40000, 44000, 44100, 47500, 47999, 95999};
 
 // Certain tests (such as noise floor and sinad) are evaluated with a sinusoidal
 // input at a single reference frequency (usually close to 1 kHz).

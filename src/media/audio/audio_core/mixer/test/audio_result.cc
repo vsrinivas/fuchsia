@@ -1,6 +1,5 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
 
@@ -14,11 +13,10 @@ namespace media::audio::test {
 // See audio_result.h for in-depth descriptions of these class members/consts.
 //
 // In summary, however:
-// * For all TOLERANCE measurements, smaller is better (tighter tolerance).
-//   Measured results must be WITHIN the tolerance.
-// * For ALL other measurements (frequency response, SINAD, level, noise floor),
-//   larger results are better (e.g. frequency response closer to 0, higher
-//   noise floor or SINAD).
+// * For all TOLERANCE measurements, smaller is better (tighter tolerance). Measured results must be
+//   WITHIN the tolerance.
+// * For ALL other measurements (frequency response, SINAD, level, noise floor), larger results are
+//   better (e.g. frequency response closer to 0, higher noise floor or SINAD).
 
 //
 //
@@ -69,26 +67,26 @@ constexpr double AudioResult::kPrevFloorStereoMono;
 double AudioResult::LevelToleranceInterpolation = 0.0;
 constexpr double AudioResult::kPrevLevelToleranceInterpolation;
 
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointUnity = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointDown0 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointDown1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointDown2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointUp1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointUp2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointUp3 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointMicro = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespPointUnity = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespPointDown0 = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespPointDown1 = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespPointDown2 = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespPointUp1 = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespPointUp2 = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespPointUp3 = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespPointMicro = {NAN};
 
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearUnity = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearDown0 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearDown1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearDown2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearUp1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearUp2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearUp3 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearMicro = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespLinearUnity = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespLinearDown0 = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespLinearDown1 = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespLinearDown2 = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespLinearUp1 = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespLinearUp2 = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespLinearUp3 = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespLinearMicro = {NAN};
 
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointNxN = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearNxN = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespPointNxN = {NAN};
+std::array<double, FrequencySet::kNumInBandReferenceFreqs> AudioResult::FreqRespLinearNxN = {NAN};
 
 // We test our interpolation fidelity across these six rate-conversion ratios:
 // - 1:1 (referred to in these variables and constants as Unity)
@@ -98,12 +96,12 @@ std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinear
 // - 1:2, which equates to 24k -> 48k, or 48k -> 96k (Up2)
 // - 47999:48000, representing small adjustment for multi-device sync (Micro)
 //
-// For Frequency Response, values closer to 0 (flatter response) are desired.
-// Below you see that for 1:1 and 2:1, our response is near-ideal. For all other
-// rates, our response drops off at higher frequencies.
+// For Frequency Response, values closer to 0 (flatter response) are desired. Below you see that for
+// 1:1 and 2:1, our response is near-ideal. For all other rates, our response drops off at higher
+// frequencies.
 //
 // clang-format off
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespPointUnity = {
          0.0000000e+00, -1.9772600e-09, -5.3325766e-10, -5.3325381e-10, -1.9772590e-09, -5.3325670e-10,
         -5.3325188e-10, -5.3325574e-10, -5.3324995e-10, -5.3324802e-10, -5.3326249e-10, -5.3325477e-10,
@@ -111,10 +109,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -5.3021232e-10, -5.2741866e-10, -5.3282082e-10, -5.2770507e-10, -5.2953150e-10, -5.2982369e-10,
         -5.2636369e-10, -5.3142834e-10, -5.2545818e-10, -5.2888540e-10, -5.2436078e-10, -5.2107724e-10,
         -5.0774735e-10, -5.2798954e-10, -4.9616384e-10, -5.1692003e-10, -5.2461536e-10, -5.1789786e-10,
-        -5.2736370e-10, -5.2348999e-10, -4.9876946e-10,  0.0000000e+00, -INFINITY,      -INFINITY,
-        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
+        -5.2736370e-10, -5.2348999e-10, -4.9876946e-10,  0.0000000e+00   };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespPointDown0 = {
          0.0000000e+00,  0.0000000e+00,  0.0000000e+00,  0.0000000e+00,  0.0000000e+00,  0.0000000e+00,
          0.0000000e+00,  0.0000000e+00,  0.0000000e+00,  0.0000000e+00,  0.0000000e+00,  0.0000000e+00,
@@ -122,10 +119,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -1.3686299e-04, -2.3093146e-04, -3.6972766e-04, -5.8649012e-04, -9.7435663e-04, -1.5320550e-03,
         -2.4056884e-03, -3.8302442e-03, -6.1854123e-03, -9.6769526e-03, -1.5378436e-02, -2.4797690e-02,
         -3.8767115e-02, -5.5853264e-02, -9.9409129e-02, -1.4789595e-01, -1.5562706e-01, -1.6353571e-01,
-        -1.7166962e-01, -1.8934088e-01, -2.1370372e-01, -9.1208314e-01, -2.4327856e-01, -3.8794217e-01,
-        -6.2915640e-01, -7.6365109e-01, -7.6717608e-01, -8.9271104e-01, -8.2427371e-01   };
+        -1.7166962e-01, -1.8934088e-01, -2.1370372e-01, -9.1208314e-01   };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespPointDown1 = {
          0.0000000e+00, -1.9772600e-09, -5.3325766e-10, -5.3325381e-10, -1.9772590e-09, -5.3325670e-10,
         -5.3325188e-10, -5.3325574e-10, -5.3324995e-10, -5.3324802e-10, -5.3326249e-10, -5.3325477e-10,
@@ -133,10 +129,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -5.3021232e-10, -5.2741866e-10, -5.3282082e-10, -5.2770507e-10, -5.2953150e-10, -5.2982369e-10,
         -5.2636369e-10, -5.3142834e-10, -5.2545818e-10, -5.2888540e-10, -5.2436078e-10, -5.2107724e-10,
         -5.0774735e-10, -5.2798954e-10, -4.9616384e-10, -5.1692003e-10, -5.2461536e-10, -5.1789786e-10,
-        -5.2736370e-10, -5.2348999e-10, -4.9876946e-10,  0.0000000e+00, -5.2786707e-10, -5.0713018e-10,
-        -5.0078008e-10, -4.8733832e-10, -5.3374176e-10, -4.9920340e-10, -4.8059960e-10   };
+        -5.2736370e-10, -5.2348999e-10, -4.9876946e-10,  0.0000000e+00   };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespPointDown2 = {
          0.0000000e+00, -6.2545361e-07, -5.5337752e-07, -5.9509624e-07, -1.7323314e-06, -1.6037873e-06,
         -3.0242621e-06, -5.1639610e-06, -7.5432833e-06, -1.0690382e-05, -1.8359708e-05, -2.7993350e-05,
@@ -144,10 +139,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -7.2568652e-04, -1.2862017e-03, -1.6838537e-03, -2.8753928e-03, -4.7381167e-03, -7.3740357e-03,
         -1.1445448e-02, -1.8281240e-02, -2.9394615e-02, -4.5931335e-02, -7.3039982e-02, -1.1760136e-01,
         -1.8453367e-01, -2.6597450e-01, -4.7499921e-01, -7.0966159e-01, -7.4733762e-01, -7.8600795e-01,
-        -8.2548394e-01, -9.1173457e-01, -1.0299529e+00, -4.7423029e+00, -1.1794782e+00, -1.9052524e+00,
-        -3.1731802e+00, -3.9023798e+00, -3.9231171e+00, -INFINITY,      -INFINITY        };
+        -8.2548394e-01, -9.1173457e-01, -1.0299529e+00, -4.7423029e+00   };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespPointUp1 = {
          0.0000000e+00, -1.5830899e-06, -2.1161810e-06, -2.7498435e-06, -5.1479358e-06, -6.5713715e-06,
         -1.1325548e-05, -1.8430984e-05, -2.8895663e-05, -4.5804027e-05, -7.3830086e-05, -1.1240271e-04,
@@ -155,10 +149,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -2.9066219e-03, -4.8039066e-03, -7.1766122e-03, -1.1449341e-02, -1.8828932e-02, -2.9401894e-02,
         -4.5919063e-02, -7.3063787e-02, -1.1783325e-01, -1.8441857e-01, -2.9363624e-01, -4.7507418e-01,
         -7.4719465e-01, -1.0844209e+00, -1.9687874e+00, -2.9991557e+00, -3.1678429e+00, -3.3408237e+00,
-        -3.5233291e+00, -3.9220669e+00, -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,
-        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
+        -3.5233291e+00, -3.9220669e+00, -INFINITY,      -INFINITY        };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespPointUp2 = {
          0.0000000e+00, -3.2376516e-06, -5.2813212e-06, -7.2772930e-06, -1.1540895e-05, -1.6778123e-05,
         -2.8035418e-05, -4.4801620e-05, -7.2106624e-05, -1.1857317e-04, -1.8731521e-04, -2.8503972e-04,
@@ -166,10 +159,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -7.3660288e-03, -1.1884252e-02, -1.8553473e-02, -2.8975872e-02, -4.7645944e-02, -7.4537346e-02,
         -1.1677339e-01, -1.8593632e-01, -3.0108726e-01, -4.7368842e-01, -7.6056343e-01, -1.2489868e+00,
         -2.0099216e+00, -3.0090511e+00, -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,
-        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,
-        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
+        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespPointUp3 = {
          0.0000000e+00, -2.8230396e-04, -2.8148971e-05, -3.8790435e-05, -3.2655760e-04, -8.9443851e-05,
         -1.4946193e-04, -2.3885084e-04, -3.8442592e-04, -6.3216648e-04, -9.9867160e-04, -1.5197071e-03,
@@ -177,10 +169,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -3.9296385e-02, -6.3424765e-02, -9.9074156e-02, -1.5486770e-01, -2.5506509e-01, -3.9996034e-01,
         -6.2893611e-01, -1.0077116e+00, -1.6494604e+00, -2.6398568e+00, -INFINITY,      -INFINITY,
         -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,
-        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,
-        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
+        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespPointMicro = {
          0.0000000e+00,  0.0000000e+00,  0.0000000e+00,  0.0000000e+00,  0.0000000e+00,  0.0000000e+00,
          0.0000000e+00,  0.0000000e+00,  0.0000000e+00,  0.0000000e+00,  0.0000000e+00, -2.8743631e-05,
@@ -188,10 +179,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -2.3885189e-03, -3.8937031e-03, -6.1146992e-03, -9.5837630e-03, -1.5792483e-02, -2.4722667e-02,
         -3.8718694e-02, -6.1558903e-02, -9.9369401e-02, -1.5553763e-01, -2.4755260e-01, -4.0038119e-01,
         -6.2894158e-01, -9.1168067e-01, -1.6491708e+00, -2.5007446e+00, -2.6397050e+00, -2.7827859e+00,
-        -2.9309201e+00, -3.2560185e+00, -3.7067765e+00, -INFINITY,      -INFINITY,      -INFINITY,
-        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
+        -2.9309201e+00, -3.2560185e+00, -3.7067765e+00, -INFINITY        };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespLinearUnity = {
          0.0000000e+00, -1.9772600e-09, -5.3325766e-10, -5.3325381e-10, -1.9772590e-09, -5.3325670e-10,
         -5.3325188e-10, -5.3325574e-10, -5.3324995e-10, -5.3324802e-10, -5.3326249e-10, -5.3325477e-10,
@@ -199,10 +189,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -5.3021232e-10, -5.2741866e-10, -5.3282082e-10, -5.2770507e-10, -5.2953150e-10, -5.2982369e-10,
         -5.2636369e-10, -5.3142834e-10, -5.2545818e-10, -5.2888540e-10, -5.2436078e-10, -5.2107724e-10,
         -5.0774735e-10, -5.2798954e-10, -4.9616384e-10, -5.1692003e-10, -5.2461536e-10, -5.1789786e-10,
-        -5.2736370e-10, -5.2348999e-10, -4.9876946e-10,  0.0000000e+00, -INFINITY,      -INFINITY,
-        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
+        -5.2736370e-10, -5.2348999e-10, -4.9876946e-10,  0.0000000e+00   };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespLinearDown0 = {
          0.0000000e+00, -1.3585336e-07, -2.1995828e-07, -3.0365808e-07, -4.8060721e-07, -6.9727951e-07,
         -1.1666417e-06, -1.8670239e-06, -3.0028625e-06, -4.9403449e-06, -7.8070357e-06, -1.1876400e-05,
@@ -210,10 +199,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -3.0683389e-04, -4.9495770e-04, -7.7252362e-04, -1.2060122e-03, -1.9816808e-03, -3.0969817e-03,
         -4.8440979e-03, -7.6929614e-03, -1.2402883e-02, -1.9385323e-02, -3.0787189e-02, -4.9623713e-02,
         -7.7559173e-02, -1.1172646e-01, -1.9881829e-01, -2.9574063e-01, -3.1118771e-01, -3.2698546e-01,
-        -3.4323268e-01, -3.7847005e-01, -4.2654783e-01, -4.4881246e-01, -4.8719935e-01, -7.7604845e-01,
-        -1.2584545e+00, -1.5274482e+00, -1.5344984e+00, -1.7855767e+00, -1.6486786e+00   };
+        -3.4323268e-01, -3.7847005e-01, -4.2654783e-01, -4.4881246e-01   };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespLinearDown1 = {
          0.0000000e+00, -1.9772600e-09, -5.3325766e-10, -5.3325381e-10, -1.9772590e-09, -5.3325670e-10,
         -5.3325188e-10, -5.3325574e-10, -5.3324995e-10, -5.3324802e-10, -5.3326249e-10, -5.3325477e-10,
@@ -221,10 +209,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -5.3021232e-10, -5.2741866e-10, -5.3282082e-10, -5.2770507e-10, -5.2953150e-10, -5.2982369e-10,
         -5.2636369e-10, -5.3142834e-10, -5.2545818e-10, -5.2888540e-10, -5.2436078e-10, -5.2107724e-10,
         -5.0774735e-10, -5.2798954e-10, -4.9616384e-10, -5.1692003e-10, -5.2461536e-10, -5.1789786e-10,
-        -5.2736370e-10, -5.2348999e-10, -4.9876946e-10,  0.0000000e+00, -5.2786707e-10, -5.0713018e-10,
-        -5.0078008e-10, -4.8733832e-10, -5.3374176e-10, -4.9920340e-10, -4.8059960e-10   };
+        -5.2736370e-10, -5.2348999e-10, -4.9876946e-10,  0.0000000e+00   };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespLinearDown2 = {
          0.0000000e+00, -6.3822570e-07, -1.0395043e-06, -1.4355155e-06, -2.2783814e-06, -3.3105243e-06,
         -5.5342438e-06, -8.8452921e-06, -1.4234833e-05, -2.3412091e-05, -3.6983731e-05, -5.6277393e-05,
@@ -232,10 +219,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -1.4540329e-03, -2.3455347e-03, -3.6609235e-03, -5.7152998e-03, -9.3915140e-03, -1.4677821e-02,
         -2.2959819e-02, -3.6467196e-02, -5.8805719e-02, -9.1939220e-02, -1.4608711e-01, -2.3565981e-01,
         -3.6877127e-01, -5.3202083e-01, -9.5038397e-01, -1.4198462e+00, -1.4950525e+00, -1.5720769e+00,
-        -1.6513831e+00, -1.8238856e+00, -2.0601325e+00, -2.1699023e+00, -2.3597079e+00, -3.8111231e+00,
-        -6.3355155e+00, -7.8050468e+00, -7.8442180e+00, -INFINITY,      -INFINITY        };
+        -1.6513831e+00, -1.8238856e+00, -2.0601325e+00, -2.1699023e+00   };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespLinearUp1 = {
          0.0000000e+00, -2.5516310e-06, -4.1678491e-06, -5.7439283e-06, -9.1112253e-06, -1.3248613e-05,
         -2.2139066e-05, -3.5381715e-05, -5.6948304e-05, -9.3646159e-05, -1.4793727e-04, -2.2511883e-04,
@@ -243,10 +229,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -5.8164285e-03, -9.3829067e-03, -1.4645559e-02, -2.2865714e-02, -3.7578247e-02, -5.8741085e-02,
         -9.1912259e-02, -1.4605310e-01, -2.3570309e-01, -3.6893407e-01, -5.8733496e-01, -9.5047204e-01,
         -1.4944954e+00, -2.1690869e+00, -3.9376310e+00, -5.9976308e+00, -6.3357708e+00, -6.6845975e+00,
-        -7.0464553e+00, -7.8433525e+00, -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,
-        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
+        -7.0464553e+00, -7.8433525e+00, -INFINITY,      -INFINITY        };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespLinearUp2 = {
          0.0000000e+00, -6.4749325e-06, -1.0563305e-05, -1.4552500e-05, -2.3077789e-05, -3.3551619e-05,
         -5.6066745e-05, -8.9601458e-05, -1.4421078e-04, -2.3714242e-04, -3.7462855e-04, -5.7008073e-04,
@@ -254,10 +239,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -1.4732055e-02, -2.3768503e-02, -3.7106945e-02, -5.7951740e-02, -9.5291884e-02, -1.4907470e-01,
         -2.3354677e-01, -3.7187263e-01, -6.0217451e-01, -9.4737683e-01, -1.5211269e+00, -2.4979735e+00,
         -4.0198431e+00, -6.0181021e+00, -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,
-        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,
-        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
+        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespLinearUp3 = {
          0.0000000e+00, -3.4481570e-05, -5.6307859e-05, -7.7595284e-05, -1.2303802e-04, -1.7892723e-04,
         -2.9899015e-04, -4.7780857e-04, -7.6902606e-04, -1.2646195e-03, -1.9977967e-03, -3.0401078e-03,
@@ -265,10 +249,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -7.8610299e-02, -1.2687738e-01, -1.9819079e-01, -3.0979930e-01, -5.1022835e-01, -8.0005931e-01,
         -1.2580550e+00, -2.0156336e+00, -3.2990811e+00, -5.2796564e+00, -INFINITY,      -INFINITY,
         -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,
-        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,
-        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
+        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
+const std::array<double, FrequencySet::kNumInBandReferenceFreqs>
     AudioResult::kPrevFreqRespLinearMicro = {
          0.0000000e+00, -2.1585212e-06, -3.5194082e-06, -4.8526388e-06, -7.6796668e-06, -1.1183720e-05,
         -1.8689826e-05, -2.9866062e-05, -4.8053723e-05, -7.9048246e-05, -1.2487796e-04, -1.9002901e-04,
@@ -276,8 +259,7 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -4.9097245e-03, -7.9201843e-03, -1.2362313e-02, -1.9300655e-02, -3.1718474e-02, -4.9579395e-02,
         -7.7572320e-02, -1.2325418e-01, -1.9887759e-01, -3.1121774e-01, -4.9525403e-01, -8.0092262e-01,
         -1.2580628e+00, -1.8235695e+00, -3.2986619e+00, -5.0020980e+00, -5.2801039e+00, -5.5663757e+00,
-        -5.8628714e+00, -6.5135504e+00, -7.4187285e+00, -INFINITY,      -INFINITY,      -INFINITY,
-        -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
+        -5.8628714e+00, -6.5135504e+00, -7.4187285e+00, -INFINITY        };
 // clang-format on
 
 std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointUnity = {NAN};
@@ -309,57 +291,52 @@ std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearNxN
 // - 1:2, which equates to 24k -> 48k, or 48k -> 96k (Up2)
 // - 47999:48000, representing small adjustment for multi-device sync (Micro)
 //
-// For SINAD, higher values (lower noise/artifacts vs. signal) are desired.
-// Below you see that for 1:1 and 2:1, our SINAD is near-ideal. For all other
-// rates, our performance drops off (lower values) at higher frequencies.
-//
+// For SINAD, higher values (lower noise/artifacts vs. signal) are desired. Below you see that for
+// 1:1 and 2:1, our SINAD is near-ideal. For all other rates, our performance drops off (lower
+// values) at higher frequencies.
+
 // clang-format off
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadPointUnity = {
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointUnity = {
          160.00000,  153.71437,  153.74509,  153.74509,  153.71437,  153.74509,
          153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
          153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
          153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
          153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
          153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
-         153.74509,  153.74509,  153.74509,  153.74509, -INFINITY,  -INFINITY,
-        -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY    };
+         153.74509,  153.74509,  153.74509,  153.74509,  -INFINITY,  -INFINITY,
+        -INFINITY,  -INFINITY,   -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadPointDown0 = {
-        160.00000,    78.100700,   75.968834,   74.574907,   72.571435,   70.944708,
-         68.714318,   66.678031,   64.610952,   62.450676,   60.464723,   58.641356,
-         56.311209,   54.539649,   52.543931,   50.509457,   48.535039,   46.510546,
-         44.519061,   42.442372,   40.508865,   38.574359,   36.417344,   34.478013,
-         32.534834,   30.525316,   28.449847,   26.508597,   24.496773,   22.418866,
-         20.472432,   18.878641,   16.353780,   14.604837,   14.379823,   14.160770,
-         13.946128,   13.512657,   12.980543,   17.190027,   -0.24356499, -0.38801045,
-         -0.62920867, -0.76370137, -0.76722634, -0.89276053, -0.62423188   };
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointDown0 = {
+        160.00000,    78.100700,   75.968834,   74.574907,  72.571435,  70.944708,
+         68.714318,   66.678031,   64.610952,   62.450676,  60.464723,  58.641356,
+         56.311209,   54.539649,   52.543931,   50.509457,  48.535039,  46.510546,
+         44.519061,   42.442372,   40.508865,   38.574359,  36.417344,  34.478013,
+         32.534834,   30.525316,   28.449847,   26.508597,  24.496773,  22.418866,
+         20.472432,   18.878641,   16.353780,   14.604837,  14.379823,  14.160770,
+         13.946128,   13.512657,   12.980543,   17.190027,  -2.8905112, -2.8206949,
+         -2.7071330,  -2.6452650,  -2.6436574,  -2.5868691, -2.5093481, -2.3565813 };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadPointDown1 = {
-         160.00000,  153.71437,  153.74509,  153.74509,  153.71437,  153.74509,
-         153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
-         153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
-         153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
-         153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
-         153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
-         153.74509,  153.74509,  153.74509,  160.00000,   -0.00001,   -0.00001,
-           0.00000,    0.00000,    0.00000,    0.00000,    0.00000     };
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointDown1 = {
+        160.00000,   153.71437,   153.74509,   153.74509,   153.71437,   153.74509,
+        153.74509,   153.74509,   153.74509,   153.74509,   153.74509,   153.74509,
+        153.74509,   153.74509,   153.74509,   153.74509,   153.74509,   153.74509,
+        153.74509,   153.74509,   153.74509,   153.74509,   153.74509,   153.74509,
+        153.74509,   153.74509,   153.74509,   153.74509,   153.74509,   153.74509,
+        153.74509,   153.74509,   153.74509,   153.74509,   153.74509,   153.74509,
+        153.74509,   153.74509,   153.74509,   160.00000,    -3.0103000,  -3.0103000,
+         -3.0103000,  -3.0103000,  -3.0103000,  -3.0103000,  -3.0103000,  -INFINITY };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadPointDown2 = {
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointDown2 = {
         160.00000,   71.336877,  69.207771,  67.815057,  65.812750,  64.186654,
          61.956811,  59.920832,  57.853947,  55.693796,  53.707909,  51.884581,
          49.554461,  47.782913,  45.787171,  43.752690,  41.778220,  39.753644,
          37.762035,  35.684914,  33.751618,  31.816288,  29.658355,  27.717787,
          25.772785,  23.759904,  21.679253,  19.730206,  17.705458,  15.606694,
          13.627759,  11.995243,   9.3697669,  7.5064406,  7.2628203,  7.0245187,
-          6.7906798,  6.3146193,  5.7241998,  1.3009572, -1.1796846, -1.9053601,
-         -3.1726329, -3.9023801, -3.9231171, -INFINITY,  -INFINITY    };
+          6.7906798,  6.3146193,  5.7241998,  1.3009572, -2.4605967, -2.1613915,
+         -1.7069258, -1.4834262, -1.4774358, -INFINITY,  -INFINITY,  -INFINITY };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadPointUp1 = {
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointUp1 = {
         160.00000,   65.316279,  63.187172,  61.794455,    59.792148,   58.166050,
          55.936206,  53.900223,  51.833335,  49.673175,    47.687276,   45.863930,
          43.533774,  41.762183,  39.766365,  37.731761,    35.757101,   33.732217,
@@ -367,10 +344,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
          19.731484,  17.706396,  15.605467,  13.626191,    11.551686,    9.3692819,
           7.2643203,  5.4720562,  2.4143111,  0.022407171, -0.30957862, -0.6378681,
          -0.9717976, -1.6649323, -INFINITY,  -INFINITY,    -INFINITY,   -INFINITY,
-         -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,    -INFINITY     };
+         -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,    -INFINITY,   -INFINITY };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadPointUp2 = {
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointUp2 = {
         160.00000,   61.281148,   59.152040, 57.759321,  55.757015,  54.130912,
          51.901065,  49.865075,   47.798174, 45.637992,  43.652064,  41.828677,
          39.498430,  37.726726,   35.730739, 33.695819,  31.720708,  29.695082,
@@ -378,10 +354,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
          15.645886,  13.590901,   11.439506,  9.3839187,  7.1806586,  4.7728152,
           2.3024022,  0.0024982, -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,
          -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,
-         -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY    };
+         -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadPointUp3 = {
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointUp3 = {
         160.00000,   54.018289,  51.882570,  50.489845,   48.488997,  46.861413,
          44.631536,  42.595504,  40.528534,  38.368234,   36.382133,  34.558498,
          32.227739,  30.455414,  28.458345,  26.421669,   24.443854,  22.413830,
@@ -389,10 +364,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
           8.0730151,  5.8305794,  3.3535175,  0.7754679, -INFINITY,  -INFINITY,
          -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,
          -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,
-         -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY    };
+         -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadPointMicro = {
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointMicro = {
         160.00000,    66.059499,  63.927625,  62.533706,  60.530232,   58.903508,
          56.673112,   54.636824,  52.569740,  50.409454,  48.423487,   46.600103,
          44.269918,   42.498312,  40.502514,  38.467909,  36.493292,   34.468473,
@@ -400,10 +374,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
          20.471802,   18.449412,  16.352608,  14.379604,  12.315608,   10.150625,
           8.0729832,   6.3152540,  3.3543294,  1.0867921,  0.77564379,  0.4674690,
           0.16010267, -0.4784014, -1.2966582, -INFINITY,  -INFINITY,   -INFINITY,
-         -INFINITY,   -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY     };
+         -INFINITY,   -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,   -INFINITY };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadLinearUnity = {
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadLinearUnity = {
          160.00000,  153.71437,  153.74509,  153.74509,  153.71437,  153.74509,
          153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
          153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
@@ -411,43 +384,39 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
          153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
          153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
          153.74509,  153.74509,  153.74509,  160.00000, -INFINITY,  -INFINITY,
-        -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY    };
+        -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY,  -INFINITY };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadLinearDown0 = {
-        160.00000,    150.09451,     149.18729,   148.35118,   146.70671,   144.98731,
-        141.99425,    138.82310,     135.26922,   131.31431,   127.56169,   124.03645,
-        119.47631,    115.97708,     112.01948,   107.97252,   104.03676,    99.996038,
-         96.018321,    91.868146,     88.003019,   84.134935,   79.821129,   75.942074,
-         72.054585,    68.033407,     63.878712,   59.990525,   55.957535,   51.786276,
-         47.870582,    44.655243,     39.535613,   35.961366,   35.499314,   35.048955,
-         34.607125,    33.713178,     32.613373,   29.374669,   -0.0031581,  -0.008696118,
-        -0.026062825,  -0.041175638,  -0.0416317,  -0.0600556,  -0.0632814    };
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadLinearDown0 = {
+        160.00000,   150.09451,   149.18729,   148.35118,   146.70671,   144.99044,
+        142.02044,   138.82596,   135.26922,   131.31431,   127.56382,   124.03645,
+        119.47721,   115.97714,   112.01948,   107.97295,   104.03684,    99.996249,
+         96.018517,   91.868368,   88.003137,   84.135081,   79.821268,   75.942206,
+         72.054711,   68.033531,   63.878842,   59.990656,   55.957665,   51.786410,
+         47.870716,   44.655379,   39.535750,   35.961505,   35.499453,   35.049095,
+         34.608562,   33.713319,   32.613549,   29.374808,   -2.5246799,  -2.2386017,
+         -1.7648961,  -1.5034877,  -1.4966666,  -1.2548539,  -1.3929845,   2.4070414 };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadLinearDown1 = {
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadLinearDown1 = {
         160.00000,  153.71437,  153.74509,  153.74509,  153.71437,  153.74509,
         153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
         153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
         153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
         153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
         153.74509,  153.74509,  153.74509,  153.74509,  153.74509,  153.74509,
-        153.74509,  153.74509,  153.74509,  160.00000,   -0.00001,   -0.00001,
-          0.00000,    0.00000,    0.00000,    0.00000,    0.00000     };
+        153.74509,  153.74509,  153.74509,  160.00000,   -3.0103000, -3.0103000,
+         -3.0103000, -3.0103000, -3.0103000, -3.0103000, -3.0103000, -INFINITY };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadLinearDown2 = {
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadLinearDown2 = {
         160.00000,   145.49338,   142.76626,   140.72251,  137.37211,   134.53647,
         130.42254,   126.53508,   122.51076,   118.26515,  114.33387,   110.71175,
         106.07058,   102.53716,    98.552405,   94.487585,  90.541183,   86.493364,
          82.510726,   78.356875,   74.488568,   70.617160,  66.298521,   62.413089,
          58.516039,   54.479521,   50.299693,   46.374454,  42.281300,   38.011435,
          33.951159,   30.561504,   25.008837,   20.969144,  20.434310,   19.909878,
-         19.392276,   18.335140,   17.015322,   14.389380,  -0.1204279,  -0.4278153,
-         -1.7444607,  -3.0339471,  -3.0730057, -INFINITY,   -INFINITY     };
+         19.392276,   18.335140,   17.015322,   14.389380,  -0.7112235,   0.5816496,
+          2.3659791,   3.0180552,   3.0311011, -INFINITY,   -INFINITY,   -INFINITY };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadLinearUp1 = {
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadLinearUp1 = {
         160.00000,   136.51568,   132.67958,   130.09359,   126.26617,   123.11086,
         118.73707,   114.71235,   110.60724,   106.30681,   102.34528,    98.704938,
          94.049636,   90.508733,   86.518686,   82.450120,   78.500792,   74.450330,
@@ -455,10 +424,9 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
          46.377035,   42.283366,   38.009784,   33.947118,   29.633297,   25.007929,
          20.438188,   16.448403,    9.4409550,   3.8414434,   3.0592776,   2.2816549,
           1.5032161,  -0.1228125,  -INFINITY,   -INFINITY,   -INFINITY,   -INFINITY,
-         -INFINITY,   -INFINITY,   -INFINITY,   -INFINITY,   -INFINITY     };
+         -INFINITY,   -INFINITY,   -INFINITY,   -INFINITY,   -INFINITY,   -INFINITY };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadLinearUp2 = {
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadLinearUp2 = {
         160.00000,  122.55222,      118.30004,  115.51772,  111.51357,  108.26232,
         103.80239,   99.730105,      95.596368,  91.276051,  87.304125,  83.657303,
          78.996866,  75.453467,      71.461492,  67.391637,  63.441417,  59.390164,
@@ -466,21 +434,19 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
          31.291773,  27.181802,      22.879012,  18.767836,  14.361317,   9.5456304,
           4.6048044,  0.0049964955, -INFINITY,  -INFINITY,  -INFINITY,   -INFINITY,
          -INFINITY,  -INFINITY,     -INFINITY,  -INFINITY,  -INFINITY,   -INFINITY,
-         -INFINITY,  -INFINITY,     -INFINITY,  -INFINITY,  -INFINITY     };
+         -INFINITY,  -INFINITY,     -INFINITY,  -INFINITY,  -INFINITY,   -INFINITY };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadLinearUp3 = {
-        160.00000,  114.92278,  110.70576,  107.93401,   103.9392709, 100.6968894,
-         96.243230,  92.174520,  88.042533,  83.722921,   79.7509149,  76.1032706,
-         71.440342,  67.893700,  63.895919,  59.816535,   55.8515653,  51.7763247,
-         47.752407,  43.530968,  39.564021,  35.540074,   30.9521117,  26.6864044,
-         22.207971,  17.253978,  11.617010,   5.6092858, -INFINITY,   -INFINITY,
-        -INFINITY,  -INFINITY,  -INFINITY,   -INFINITY,  -INFINITY,   -INFINITY,
-        -INFINITY,  -INFINITY,  -INFINITY,   -INFINITY,  -INFINITY,   -INFINITY,
-        -INFINITY,  -INFINITY,  -INFINITY,   -INFINITY,  -INFINITY     };
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadLinearUp3 = {
+        160.00000,  114.92278,  110.70576,  107.93401,   103.93920,  100.69688,
+         96.243230,  92.174520,  88.042533,  83.722921,   79.750914,  76.103270,
+         71.440342,  67.893700,  63.895919,  59.816535,   55.851565,  51.776324,
+         47.752407,  43.530968,  39.564021,  35.540074,   30.952111,  26.686404,
+         22.207971,  17.253978,  11.617010,   5.6092858, -INFINITY,  -INFINITY,
+        -INFINITY,  -INFINITY,  -INFINITY,   -INFINITY,  -INFINITY,  -INFINITY,
+        -INFINITY,  -INFINITY,  -INFINITY,   -INFINITY,  -INFINITY,  -INFINITY,
+        -INFINITY,  -INFINITY,  -INFINITY,   -INFINITY,  -INFINITY,  -INFINITY };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::kPrevSinadLinearMicro = {
+const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadLinearMicro = {
         160.00000,   137.77543,   134.01803,    131.46589,   127.68128,   124.54800,
         120.18252,   116.16993,   112.07004,    107.77290,   103.81385,   100.17442,
          95.520355,   91.979876,   87.990125,    83.921932,   79.972951,   75.922907,
@@ -488,7 +454,7 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
          47.869227,   43.787357,   39.533082,    35.498577,   31.229654,   26.675984,
          22.207908,   18.336999,   11.618540,     6.3382417,   5.6081329,   4.8842446,
           4.1617533,   2.6594494,   0.72947217,  -INFINITY,   -INFINITY,   -INFINITY,
-         -INFINITY,   -INFINITY,   -INFINITY,    -INFINITY,   -INFINITY,    };
+         -INFINITY,   -INFINITY,   -INFINITY,    -INFINITY,   -INFINITY,   -INFINITY };
 // clang-format on
 
 //
@@ -663,7 +629,7 @@ void AudioResult::DumpSinadValues() {
 // Display a single frequency response results array, for import and processing.
 void AudioResult::DumpFreqRespValueSet(double* freq_resp_vals, const std::string& arr_name) {
   printf("\n   %s", arr_name.c_str());
-  for (size_t freq = 0; freq < FrequencySet::kReferenceFreqs.size(); ++freq) {
+  for (size_t freq = 0; freq < FrequencySet::kNumInBandReferenceFreqs; ++freq) {
     if (freq % 6 == 0) {
       printf("\n      ");
     }
@@ -675,7 +641,7 @@ void AudioResult::DumpFreqRespValueSet(double* freq_resp_vals, const std::string
 // Display a single sinad results array, for import and processing.
 void AudioResult::DumpSinadValueSet(double* sinad_vals, const std::string& arr_name) {
   printf("\n   %s", arr_name.c_str());
-  for (size_t freq = 0; freq < FrequencySet::kReferenceFreqs.size(); ++freq) {
+  for (size_t freq = 0; freq < FrequencySet::kNumReferenceFreqs; ++freq) {
     if (freq % 6 == 0) {
       printf("\n     ");
     }

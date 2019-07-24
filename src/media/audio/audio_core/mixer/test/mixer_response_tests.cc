@@ -5,6 +5,7 @@
 
 #include "src/media/audio/audio_core/logging.h"
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
+#include "src/media/audio/audio_core/mixer/test/frequency_set.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
 
 namespace media::audio::test {
@@ -268,9 +269,13 @@ void MeasureFreqRespSinad(Mixer* mixer, uint32_t src_buf_size, double* level_db,
     }
     auto frequency_to_measure = FrequencySet::kReferenceFreqs[freq_idx];
 
-    // If frequency is too high to be characterized in this buffer, skip it. Per Nyquist, buffer
-    // length must be at least 2x the frequency we want to measure.
+    // If frequency is too high to be characterized in this buffer, skip it. Per Nyquist limit,
+    // buffer length must be at least 2x the frequency we want to measure.
     if (frequency_to_measure * 2 > src_buf_size) {
+      if (freq_idx < FrequencySet::kNumInBandReferenceFreqs) {
+        level_db[freq_idx] = -INFINITY;
+      }
+      sinad_db[freq_idx] = -INFINITY;
       continue;
     }
 
@@ -319,8 +324,15 @@ void MeasureFreqRespSinad(Mixer* mixer, uint32_t src_buf_size, double* level_db,
                      &magn_other);
 
     // Convert Frequency Response and Signal-to-Noise-And-Distortion (SINAD) to decibels.
-    level_db[freq_idx] = Gain::DoubleToDb(magn_signal);
-    sinad_db[freq_idx] = Gain::DoubleToDb(magn_signal / magn_other);
+    if (frequency_to_measure * 2 > kFreqTestBufSize) {
+      // This out-of-band frequency should have been entirely rejected -- capture total magnitude.
+      auto magn_total = std::sqrt(magn_signal * magn_signal + magn_other * magn_other);
+      sinad_db[freq_idx] = -Gain::DoubleToDb(magn_total);
+    } else {
+      // This frequency is in-band -- capture its level as well as the magnitude of all else.
+      level_db[freq_idx] = Gain::DoubleToDb(magn_signal);
+      sinad_db[freq_idx] = Gain::DoubleToDb(magn_signal / magn_other);
+    }
 
     // After running each frequency, clear the cached filter state. This is not strictly necessary
     // today, since each frequency test starts precisely at buffer-start (thus for Point and Linear
@@ -337,7 +349,7 @@ void EvaluateFreqRespResults(double* freq_resp_results, const double* freq_resp_
                              bool summary_only = false) {
   bool use_full_set = (!summary_only) && FrequencySet::UseFullFrequencySet;
   uint32_t num_freqs =
-      use_full_set ? FrequencySet::kReferenceFreqs.size() : FrequencySet::kSummaryIdxs.size();
+      use_full_set ? FrequencySet::kNumInBandReferenceFreqs : FrequencySet::kSummaryIdxs.size();
 
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
     uint32_t freq = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
@@ -359,13 +371,30 @@ void EvaluateSinadResults(double* sinad_results, const double* sinad_limits,
                           bool summary_only = false) {
   bool use_full_set = (!summary_only) && FrequencySet::UseFullFrequencySet;
   uint32_t num_freqs =
-      use_full_set ? FrequencySet::kReferenceFreqs.size() : FrequencySet::kSummaryIdxs.size();
+      use_full_set ? FrequencySet::kNumInBandReferenceFreqs : FrequencySet::kSummaryIdxs.size();
 
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
     uint32_t freq = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
 
     EXPECT_GE(sinad_results[freq], sinad_limits[freq])
         << " [" << freq << "]  " << std::scientific << std::setprecision(9) << sinad_results[freq];
+  }
+}
+
+// Given result and limit arrays, compare rejection results (similar to SINAD, but out-of-band).
+// There are no 'summary_only' frequencies for this scenario.
+void EvaluateRejectionResults(double* rejection_results, const double* rejection_limits,
+                              bool summary_only = false) {
+  bool use_full_set = (!summary_only) && FrequencySet::UseFullFrequencySet;
+  if (!use_full_set) {
+    return;
+  }
+
+  for (uint32_t freq_idx = FrequencySet::kNumInBandReferenceFreqs;
+       freq_idx < FrequencySet::kNumReferenceFreqs; ++freq_idx) {
+    EXPECT_GE(rejection_results[freq_idx], rejection_limits[freq_idx])
+        << " [" << freq_idx << "]  " << std::scientific << std::setprecision(9)
+        << rejection_results[freq_idx];
   }
 }
 
@@ -487,6 +516,15 @@ TEST(Sinad, Point_DownSamp0) {
                        AudioResult::kPrevSinadPointDown0.data());
 }
 
+// Measure Out-of-band Rejection for Point sampler for down-sampling ratio #0.
+TEST(Rejection, Point_DownSamp0) {
+  TestDownSampleRatio0(Resampler::SampleAndHold, AudioResult::FreqRespPointDown0.data(),
+                       AudioResult::SinadPointDown0.data());
+
+  EvaluateRejectionResults(AudioResult::SinadPointDown0.data(),
+                           AudioResult::kPrevSinadPointDown0.data());
+}
+
 // Measure Freq Response for Point sampler for down-sampling ratio #1.
 TEST(FrequencyResponse, Point_DownSamp1) {
   TestDownSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointDown1.data(),
@@ -505,6 +543,15 @@ TEST(Sinad, Point_DownSamp1) {
                        AudioResult::kPrevSinadPointDown1.data());
 }
 
+// Measure Out-of-band Rejection for Point sampler for down-sampling ratio #1.
+TEST(Rejection, Point_DownSamp1) {
+  TestDownSampleRatio1(Resampler::SampleAndHold, AudioResult::FreqRespPointDown1.data(),
+                       AudioResult::SinadPointDown1.data());
+
+  EvaluateRejectionResults(AudioResult::SinadPointDown1.data(),
+                           AudioResult::kPrevSinadPointDown1.data());
+}
+
 // Measure Freq Response for Point sampler for down-sampling ratio #2.
 TEST(FrequencyResponse, Point_DownSamp2) {
   TestDownSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointDown2.data(),
@@ -521,6 +568,15 @@ TEST(Sinad, Point_DownSamp2) {
 
   EvaluateSinadResults(AudioResult::SinadPointDown2.data(),
                        AudioResult::kPrevSinadPointDown2.data());
+}
+
+// Measure Out-of-band Rejection for Point sampler for down-sampling ratio #2.
+TEST(Rejection, Point_DownSamp2) {
+  TestDownSampleRatio2(Resampler::SampleAndHold, AudioResult::FreqRespPointDown2.data(),
+                       AudioResult::SinadPointDown2.data());
+
+  EvaluateRejectionResults(AudioResult::SinadPointDown2.data(),
+                           AudioResult::kPrevSinadPointDown2.data());
 }
 
 // Measure Freq Response for Point sampler for up-sampling ratio #1.
@@ -628,6 +684,15 @@ TEST(Sinad, Linear_DownSamp0) {
                        AudioResult::kPrevSinadLinearDown0.data());
 }
 
+// Measure Out-of-band Rejection for Linear sampler for down-sampling ratio #0.
+TEST(Rejection, Linear_DownSamp0) {
+  TestDownSampleRatio0(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown0.data(),
+                       AudioResult::SinadLinearDown0.data());
+
+  EvaluateRejectionResults(AudioResult::SinadLinearDown0.data(),
+                           AudioResult::kPrevSinadLinearDown0.data());
+}
+
 // Measure Freq Response for Linear sampler for down-sampling ratio #1.
 TEST(FrequencyResponse, Linear_DownSamp1) {
   TestDownSampleRatio1(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown1.data(),
@@ -646,6 +711,15 @@ TEST(Sinad, Linear_DownSamp1) {
                        AudioResult::kPrevSinadLinearDown1.data());
 }
 
+// Measure Out-of-band Rejection for Linear sampler for down-sampling ratio #1.
+TEST(Rejection, Linear_DownSamp1) {
+  TestDownSampleRatio0(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown1.data(),
+                       AudioResult::SinadLinearDown1.data());
+
+  EvaluateRejectionResults(AudioResult::SinadLinearDown1.data(),
+                           AudioResult::kPrevSinadLinearDown1.data());
+}
+
 // Measure Freq Response for Linear sampler for down-sampling ratio #2.
 TEST(FrequencyResponse, Linear_DownSamp2) {
   TestDownSampleRatio2(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown2.data(),
@@ -662,6 +736,15 @@ TEST(Sinad, Linear_DownSamp2) {
 
   EvaluateSinadResults(AudioResult::SinadLinearDown2.data(),
                        AudioResult::kPrevSinadLinearDown2.data());
+}
+
+// Measure Out-of-band Rejection for Linear sampler for down-sampling ratio #2.
+TEST(Rejection, Linear_DownSamp2) {
+  TestDownSampleRatio0(Resampler::LinearInterpolation, AudioResult::FreqRespLinearDown2.data(),
+                       AudioResult::SinadLinearDown2.data());
+
+  EvaluateRejectionResults(AudioResult::SinadLinearDown2.data(),
+                           AudioResult::kPrevSinadLinearDown2.data());
 }
 
 // Measure Freq Response for Linear sampler for up-sampling ratio #1.
