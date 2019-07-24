@@ -403,6 +403,10 @@ pub async fn profile_server_method_to_fidl(
             let result = await!(facade.init_profile_server_proxy())?;
             Ok(to_value(result)?)
         }
+        BluetoothMethod::ProfileServerAddSearch => {
+            let result = await!(facade.add_search(args))?;
+            Ok(to_value(result)?)
+        }
         BluetoothMethod::ProfileServerAddService => {
             let result = await!(facade.add_service(args))?;
             Ok(to_value(result)?)

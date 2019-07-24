@@ -202,52 +202,18 @@ impl ProfileServerFacade {
     ) -> Result<Vec<ProfileDescriptor>, Error> {
         let tag = "ProfileServerFacade::generate_profile_descriptors";
         let mut profile_descriptor_list = Vec::new();
-        for raw_profile_descriptor in profile_descriptors {
-            let profile_id = match raw_profile_descriptor["profile_id"].as_u64() {
-                // todo: Add search when each service class profile id is found...
-                Some(id) => match id as u64 {
-                    0x1101 => ServiceClassProfileIdentifier::SerialPort,
-                    0x1103 => ServiceClassProfileIdentifier::DialupNetworking,
-                    0x1105 => ServiceClassProfileIdentifier::ObexObjectPush,
-                    0x1106 => ServiceClassProfileIdentifier::ObexFileTransfer,
-                    0x1108 => ServiceClassProfileIdentifier::Headset,
-                    0x1112 => ServiceClassProfileIdentifier::HeadsetAudioGateway,
-                    0x1131 => ServiceClassProfileIdentifier::HeadsetHs,
-                    0x110A => ServiceClassProfileIdentifier::AudioSource,
-                    0x110B => ServiceClassProfileIdentifier::AudioSink,
-                    0x110D => ServiceClassProfileIdentifier::AdvancedAudioDistribution,
-                    0x110C => ServiceClassProfileIdentifier::AvRemoteControlTarget,
-                    0x110E => ServiceClassProfileIdentifier::AvRemoteControl,
-                    0x110F => ServiceClassProfileIdentifier::AvRemoteControlController,
-                    0x1115 => ServiceClassProfileIdentifier::Panu,
-                    0x1116 => ServiceClassProfileIdentifier::Nap,
-                    0x1117 => ServiceClassProfileIdentifier::Gn,
-                    0x111E => ServiceClassProfileIdentifier::Handsfree,
-                    0x111F => ServiceClassProfileIdentifier::HandsfreeAudioGateway,
-                    0x112D => ServiceClassProfileIdentifier::SimAccess,
-                    0x112E => ServiceClassProfileIdentifier::PhonebookPce,
-                    0x112F => ServiceClassProfileIdentifier::PhonebookPse,
-                    0x1130 => ServiceClassProfileIdentifier::Phonebook,
-                    0x1132 => ServiceClassProfileIdentifier::MessageAccessServer_,
-                    0x1133 => ServiceClassProfileIdentifier::MessageNotificationServer_,
-                    0x1134 => ServiceClassProfileIdentifier::MessageAccessProfile,
-                    0x113A => ServiceClassProfileIdentifier::MpsProfile,
-                    0x113B => ServiceClassProfileIdentifier::MpsClass,
-                    0x1303 => ServiceClassProfileIdentifier::VideoSource,
-                    0x1304 => ServiceClassProfileIdentifier::VideoSink,
-                    0x1305 => ServiceClassProfileIdentifier::VideoDistribution,
-                    0x1400 => ServiceClassProfileIdentifier::Hdp,
-                    0x1401 => ServiceClassProfileIdentifier::HdpSource,
-                    0x1402 => ServiceClassProfileIdentifier::HdpSink,
-                    _ => {
-                        let log_err = format!("UUID {} not supported by profile server.", id);
-                        fx_err_and_bail!(&with_line!(tag), log_err)
-                    }
-                },
+        for raw_profile_descriptor in profile_descriptors.into_iter() {
+            let raw_profile_id = match raw_profile_descriptor.get("profile_id") {
+                Some(r) => r,
                 None => {
-                    let log_err = format!("Missing 'profile_id' from input profile_descriptor");
+                    let log_err = "Invalid SDP search input. Missing 'profile_id'";
                     fx_err_and_bail!(&with_line!(tag), log_err)
                 }
+            };
+            let profile_id = match self.get_service_class_profile_identifier_from_id(raw_profile_id)
+            {
+                Ok(r) => r,
+                Err(e) => fx_err_and_bail!(&with_line!(tag), e),
             };
 
             let minor_version = match raw_profile_descriptor["minor_version"].as_u64() {
@@ -514,6 +480,102 @@ impl ProfileServerFacade {
             }
         };
         fasync::spawn(fut);
+
+        Ok(())
+    }
+
+    pub fn get_service_class_profile_identifier_from_id(
+        &self,
+        raw_profile_id: &Value,
+    ) -> Result<ServiceClassProfileIdentifier, Error> {
+        let tag = "ProfileServerFacade::get_service_class_profile_identifier_from_id";
+        let id = match raw_profile_id.as_u64() {
+            Some(id) => match id as u64 {
+                0x1101 => ServiceClassProfileIdentifier::SerialPort,
+                0x1103 => ServiceClassProfileIdentifier::DialupNetworking,
+                0x1105 => ServiceClassProfileIdentifier::ObexObjectPush,
+                0x1106 => ServiceClassProfileIdentifier::ObexFileTransfer,
+                0x1108 => ServiceClassProfileIdentifier::Headset,
+                0x1112 => ServiceClassProfileIdentifier::HeadsetAudioGateway,
+                0x1131 => ServiceClassProfileIdentifier::HeadsetHs,
+                0x110A => ServiceClassProfileIdentifier::AudioSource,
+                0x110B => ServiceClassProfileIdentifier::AudioSink,
+                0x110D => ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+                0x110C => ServiceClassProfileIdentifier::AvRemoteControlTarget,
+                0x110E => ServiceClassProfileIdentifier::AvRemoteControl,
+                0x110F => ServiceClassProfileIdentifier::AvRemoteControlController,
+                0x1115 => ServiceClassProfileIdentifier::Panu,
+                0x1116 => ServiceClassProfileIdentifier::Nap,
+                0x1117 => ServiceClassProfileIdentifier::Gn,
+                0x111E => ServiceClassProfileIdentifier::Handsfree,
+                0x111F => ServiceClassProfileIdentifier::HandsfreeAudioGateway,
+                0x112D => ServiceClassProfileIdentifier::SimAccess,
+                0x112E => ServiceClassProfileIdentifier::PhonebookPce,
+                0x112F => ServiceClassProfileIdentifier::PhonebookPse,
+                0x1130 => ServiceClassProfileIdentifier::Phonebook,
+                0x1132 => ServiceClassProfileIdentifier::MessageAccessServer_,
+                0x1133 => ServiceClassProfileIdentifier::MessageNotificationServer_,
+                0x1134 => ServiceClassProfileIdentifier::MessageAccessProfile,
+                0x113A => ServiceClassProfileIdentifier::MpsProfile,
+                0x113B => ServiceClassProfileIdentifier::MpsClass,
+                0x1303 => ServiceClassProfileIdentifier::VideoSource,
+                0x1304 => ServiceClassProfileIdentifier::VideoSink,
+                0x1305 => ServiceClassProfileIdentifier::VideoDistribution,
+                0x1400 => ServiceClassProfileIdentifier::Hdp,
+                0x1401 => ServiceClassProfileIdentifier::HdpSource,
+                0x1402 => ServiceClassProfileIdentifier::HdpSink,
+                _ => {
+                    let log_err = format!("UUID {} not supported by profile server.", id);
+                    fx_err_and_bail!(&with_line!(tag), log_err)
+                }
+            },
+            None => fx_err_and_bail!(&with_line!(tag), "Type of raw_profile_id incorrect."),
+        };
+
+        Ok(id)
+    }
+
+    pub async fn add_search(&self, args: Value) -> Result<(), Error> {
+        let tag = "ProfileServerFacade::add_search";
+        fx_log_info!(tag: &with_line!(tag), "Adding Search");
+
+        let raw_attribute_list = if let Some(v) = args.get("attribute_list") {
+            if let Some(r) = v.as_array() {
+                r
+            } else {
+                let log_err = "Expected 'attribute_list' as an array.";
+                    fx_err_and_bail!(&with_line!(tag), log_err)
+            }
+        } else {
+            let log_err = "Invalid SDP search input. Missing 'attribute_list'";
+                fx_err_and_bail!(&with_line!(tag), log_err)
+        };
+
+        let mut attribute_list = Vec::new();
+        for item in raw_attribute_list {
+            match item.as_u64() {
+                Some(v) => attribute_list.push(v as u16),
+                None => fx_err_and_bail!(
+                    &with_line!(tag),
+                    "Failed to convert value in attribute_list to u16."
+                ),
+            };
+        }
+
+        let profile_id = match args.get("profile_id") {
+            Some(r) => self.get_service_class_profile_identifier_from_id(r)?,
+            None => {
+                let log_err = "Invalid SDP search input. Missing 'profile_id'";
+                fx_err_and_bail!(&with_line!(tag), log_err)
+            }
+        };
+
+        match &self.inner.read().profile_server_proxy {
+            Some(server) => {
+                server.add_search(profile_id, &mut attribute_list.into_iter())?
+            }
+            None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
+        };
 
         Ok(())
     }
