@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/developer/debug/zxdb/expr/format_options.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
+#include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -66,6 +67,16 @@ void PrettyEvalContext::GetNamedValue(const ParsedIdentifier& name, ValueCallbac
   return impl_->GetNamedValue(name, std::move(cb));
 }
 
+// When doing multi-evaluation, we'll have a vector of values, any of which could have generated an
+// error. This checks for errors and returns the first one.
+Err UnionErrors(const std::vector<std::pair<Err, ExprValue>>& input) {
+  for (const auto& cur : input) {
+    if (cur.first.has_error())
+      return cur.first;
+  }
+  return Err();
+}
+
 }  // namespace
 
 void PrettyType::EvalExpressionOn(fxl::RefPtr<EvalContext> context, const ExprValue& object,
@@ -114,13 +125,8 @@ void PrettyArray::Format(FormatNode* node, const FormatOptions& options,
                     if (!weak_node)
                       return;
 
-                    if (results[0].first.has_error() || results[1].first.has_error()) {
-                      // Eval failure, just pick the first one (both could have) that failed to
-                      // report.
-                      Err err = results[0].first.has_error() ? results[0].first : results[1].first;
-                      weak_node->SetDescribedError(err);
-                      return;
-                    }
+                    if (Err e = UnionErrors(results); e.has_error())
+                      return weak_node->SetDescribedError(e);
 
                     uint64_t len = 0;
                     if (Err err = results[1].second.PromoteTo64(&len); err.has_error())
@@ -128,6 +134,42 @@ void PrettyArray::Format(FormatNode* node, const FormatOptions& options,
 
                     FormatArrayNode(weak_node.get(), results[0].second, len, options, context,
                                     std::move(cb));
+                  });
+}
+
+void PrettyHeapString::Format(FormatNode* node, const FormatOptions& options,
+                              fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+  // Evaluate the expressions with this context to make the members in the current scope.
+  auto pretty_context = fxl::MakeRefCounted<PrettyEvalContext>(context, node->value());
+
+  EvalExpressions({ptr_expr_, size_expr_}, pretty_context, true,
+                  [cb = std::move(cb), weak_node = node->GetWeakPtr(), options,
+                   context](std::vector<std::pair<Err, ExprValue>> results) mutable {
+                    FXL_DCHECK(results.size() == 2u);
+                    if (!weak_node)
+                      return;
+
+                    if (Err err = UnionErrors(results); err.has_error())
+                      return weak_node->SetDescribedError(err);
+
+                    // Pointed-to address.
+                    uint64_t addr = 0;
+                    if (Err err = results[0].second.PromoteTo64(&addr); err.has_error())
+                      return weak_node->SetDescribedError(err);
+
+                    // Pointed-to type.
+                    fxl::RefPtr<Type> char_type;
+                    if (Err err = GetPointedToType(context, results[0].second.type(), &char_type);
+                        err.has_error())
+                      return weak_node->SetDescribedError(err);
+
+                    // Length.
+                    uint64_t len = 0;
+                    if (Err err = results[1].second.PromoteTo64(&len); err.has_error())
+                      return weak_node->SetDescribedError(err);
+
+                    FormatCharPointerNode(weak_node.get(), addr, char_type.get(), len, options,
+                                          context, std::move(cb));
                   });
 }
 

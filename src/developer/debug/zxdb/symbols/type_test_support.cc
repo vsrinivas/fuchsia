@@ -40,6 +40,19 @@ fxl::RefPtr<BaseType> MakeSignedChar8Type() {
   return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 1, "char");
 }
 
+fxl::RefPtr<BaseType> MakeRustCharType() {
+  auto type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 4, "char");
+  type->set_parent(MakeRustUnit());
+  return type;
+}
+
+fxl::RefPtr<ModifiedType> MakeRustCharPointerType() {
+  auto char_type = MakeRustCharType();
+  auto mod = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, char_type);
+  mod->set_parent(char_type->parent());
+  return mod;
+}
+
 fxl::RefPtr<ModifiedType> MakeCharPointerType() {
   return fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, MakeSignedChar8Type());
 }

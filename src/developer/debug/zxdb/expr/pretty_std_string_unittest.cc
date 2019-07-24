@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/expr/pretty_string.h"
+#include "src/developer/debug/zxdb/expr/pretty_std_string.h"
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/message_loop.h"
@@ -86,39 +86,6 @@ TEST_F(PrettyStringTest, StdStringLong) {
   FormatNode node("value", value);
 
   PrettyStdString pretty;
-
-  bool completed = false;
-  pretty.Format(&node, FormatOptions(), context(),
-                fit::defer_callback([&completed, loop = &loop()]() {
-                  completed = true;
-                  loop->QuitNow();
-                }));
-  EXPECT_FALSE(completed);  // Should be async.
-  loop().Run();
-  EXPECT_TRUE(completed);
-
-  EXPECT_EQ("\"Now is the time for all good men to come to the aid of their country.\"",
-            node.description());
-}
-
-TEST_F(PrettyStringTest, RustStrings) {
-  // The str object representation is just a pointer and a length.
-  uint8_t kRustObject[16] = {
-      0x66,       0x77, 0x88, 0x99, 0x00, 0x00, 0x00, 0x00,  // Address = kStringAddress.
-      kStringLen, 0,    0,    0,    0,    0,    0,    0      // Length = kStringLen.
-  };
-
-  // The types here aren't quite right but are simpler and close enough for the current
-  // implementation.
-  auto str_type =
-      MakeCollectionType(DwarfTag::kStructureType, "&str",
-                         {{"data_ptr", MakeUint64Type()}, {"length", MakeUint64Type()}});
-  str_type->set_parent(MakeRustUnit());
-
-  ExprValue value(str_type, std::vector<uint8_t>(std::begin(kRustObject), std::end(kRustObject)));
-  FormatNode node("value", value);
-
-  PrettyRustStr pretty;
 
   bool completed = false;
   pretty.Format(&node, FormatOptions(), context(),

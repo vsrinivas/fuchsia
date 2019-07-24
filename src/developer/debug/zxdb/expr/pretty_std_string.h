@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_PRETTY_VECTOR_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_PRETTY_VECTOR_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_PRETTY_STD_STRING_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_PRETTY_STD_STRING_H_
 
 #include "src/developer/debug/zxdb/expr/pretty_type.h"
 
 namespace zxdb {
 
-// C++ std::vector.
-class PrettyStdVector : public PrettyType {
+// C++ std::string.
+class PrettyStdString : public PrettyType {
  public:
-  PrettyStdVector() = default;
+  PrettyStdString() = default;
 
   // PrettyType implementation.
   void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
@@ -21,4 +21,4 @@ class PrettyStdVector : public PrettyType {
 
 }  // namespace zxdb
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_PRETTY_VECTOR_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_PRETTY_STD_STRING_H_

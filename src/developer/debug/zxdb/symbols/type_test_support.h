@@ -33,6 +33,9 @@ fxl::RefPtr<BaseType> MakeUint64Type();
 
 fxl::RefPtr<BaseType> MakeSignedChar8Type();
 
+fxl::RefPtr<BaseType> MakeRustCharType();
+fxl::RefPtr<ModifiedType> MakeRustCharPointerType();
+
 // Makes a "char*" as for C strings using a signed 8-bit character.
 fxl::RefPtr<ModifiedType> MakeCharPointerType();
 

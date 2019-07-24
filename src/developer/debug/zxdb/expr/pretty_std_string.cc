@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/expr/pretty_string.h"
+#include "src/developer/debug/zxdb/expr/pretty_std_string.h"
 
 #include "src/developer/debug/zxdb/expr/format.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
@@ -110,8 +110,6 @@ void FormatStdStringMemory(const std::vector<uint8_t>& mem, FormatNode* node,
 
 }  // namespace
 
-// C++ std::string ---------------------------------------------------------------------------------
-
 void PrettyStdString::Format(FormatNode* node, const FormatOptions& options,
                              fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
   const ExprValue& value = node->value();
@@ -139,74 +137,6 @@ void PrettyStdString::Format(FormatNode* node, const FormatOptions& options,
       node->SetDescribedError(Err("<Missing definition>"));
     }
   }
-}
-
-// C++ std::string_view ----------------------------------------------------------------------------
-
-// TODO(brettw) we should add a way to write expressions so this implementation could be something
-// like:
-//   FormatCharArray(node, "(char*)data_ptr", "length");
-//
-// std::string_view is a structure with a "__data" pointer and a "__size" length.
-void PrettyStdStringView::Format(FormatNode* node, const FormatOptions& options,
-                                 fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
-  node->set_type("std::string_view");
-
-  // data
-  uint64_t data;
-  if (Err err = Extract64BitMember(context, node->value(), {"__data"}, &data); err.has_error())
-    return node->SetDescribedError(err);
-
-  // length
-  uint64_t size;
-  if (Err err = Extract64BitMember(context, node->value(), {"__size"}, &size); err.has_error())
-    return node->SetDescribedError(err);
-
-  auto char_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1, "char");
-  FormatCharPointerNode(node, data, char_type.get(), size, options, context, std::move(cb));
-}
-
-// Rust &str ---------------------------------------------------------------------------------------
-
-// "&str" is a struct with two members, a "data_ptr" pointer, and a "length" character count.
-void PrettyRustStr::Format(FormatNode* node, const FormatOptions& options,
-                           fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
-  // data_ptr
-  uint64_t data_ptr;
-  if (Err err = Extract64BitMember(context, node->value(), {"data_ptr"}, &data_ptr);
-      err.has_error())
-    return node->SetDescribedError(err);
-
-  // length
-  uint64_t length;
-  if (Err err = Extract64BitMember(context, node->value(), {"length"}, &length); err.has_error())
-    return node->SetDescribedError(err);
-
-  auto char_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 4, "char");
-  FormatCharPointerNode(node, data_ptr, char_type.get(), length, options, context, std::move(cb));
-}
-
-// Rust string::String -----------------------------------------------------------------------------
-
-// See TODO above about expressions. This implementation is extracting
-//   pointer = (char*)vec.buf.ptr.pointer
-//   length = vec.len
-void PrettyRustString::Format(FormatNode* node, const FormatOptions& options,
-                              fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
-  // pointer
-  uint64_t pointer;
-  if (Err err =
-          Extract64BitMember(context, node->value(), {"vec", "buf", "ptr", "pointer"}, &pointer);
-      err.has_error())
-    return node->SetDescribedError(err);
-
-  // len
-  uint64_t len;
-  if (Err err = Extract64BitMember(context, node->value(), {"vec", "len"}, &len); err.has_error())
-    return node->SetDescribedError(err);
-
-  auto char_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 4, "char");
-  FormatCharPointerNode(node, pointer, char_type.get(), len, options, context, std::move(cb));
 }
 
 }  // namespace zxdb

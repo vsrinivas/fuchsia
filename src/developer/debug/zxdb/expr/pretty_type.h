@@ -20,6 +20,7 @@ struct FormatOptions;
 class PrettyType {
  public:
   PrettyType() = default;
+  virtual ~PrettyType() = default;
 
   // Fills the given FormatNode. Upon completion, issues the given deferred_callback. If the format
   // node is filled asynchronously the implementation should take a weak pointer to it since the
@@ -55,6 +56,25 @@ class PrettyArray : public PrettyType {
  private:
   const std::string ptr_expr_;   // Expression to compute array start pointer.
   const std::string size_expr_;  // Expression to compute array size.
+};
+
+// For pretty-printing character strings that live on the heap.
+//
+// This gets a little more complicated for strings that live in an array inline in some type
+// because theoretically it could (but normally can't) be in a temporary we can't take the address
+// of. Even if we could do that, it would require a fetch of memory from the target that we already
+// have locally. So this class is limited to the fetching from the heap case.
+class PrettyHeapString : public PrettyType {
+ public:
+  PrettyHeapString(const std::string& ptr_expr, const std::string& size_expr)
+      : ptr_expr_(ptr_expr), size_expr_(size_expr) {}
+
+  void Format(FormatNode* node, const FormatOptions& options, fxl::RefPtr<EvalContext> context,
+              fit::deferred_callback cb) override;
+
+ private:
+  const std::string ptr_expr_;
+  const std::string size_expr_;
 };
 
 }  // namespace zxdb
