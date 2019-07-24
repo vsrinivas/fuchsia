@@ -16,8 +16,7 @@ const String outputEnv = 'FUCHSIA_TEST_OUTDIR';
 
 const int deviceReadyTimeoutSec = 30;
 
-// TODO(chok): Use in-tree ACTS.zip which will likely be the CWD instead
-const String actsZipAbsPath = '/etc/connectivity/acts.zip';
+const String defaultActsZipAbsPath = '/etc/connectivity/acts.zip';
 const String actsConfigAbsPath = '/etc/connectivity/acts_config.json';
 const String actsBinRelPath = 'tools/test/connectivity/acts/framework/acts/bin/act.py';
 const String actsFrameworkRelPath = 'tools/test/connectivity/acts/framework';
@@ -36,8 +35,22 @@ Future<void> waitDeviceReady(final String ip) async {
   throw Exception('Device [$ip] is not ping-able.');
 }
 
+String resolveActsPath() {
+  final List entities = Directory.current.listSync(recursive: true);
+  for (var entity in entities) {
+    if(entity.path.endsWith('acts.zip')) {
+      return entity.path;
+    }
+  }
+  // Use pre-provisioned 'acts.zip' if it's not found under cur directory
+  return defaultActsZipAbsPath;
+}
+
 void extractActsZip(final String tmpDirPath) {
-  final List<int> bytes = File(actsZipAbsPath).readAsBytesSync();
+  final actsPath = resolveActsPath();
+  print('Found "acts.zip" @ [$actsPath].');
+
+  final List<int> bytes = File(actsPath).readAsBytesSync();
   final Archive archive = ZipDecoder().decodeBytes(bytes);
 
   // Extract the contents of the Zip archive to disk.

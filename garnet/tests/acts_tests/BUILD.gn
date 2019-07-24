@@ -5,6 +5,21 @@
 import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
 
+copy("acts") {
+  _data_dir = "$target_gen_dir/acts"
+
+  sources = [
+    "//prebuilt/test_data/connectivity/acts/acts.zip",
+  ]
+  outputs = [
+    "$_data_dir/{{source_file_part}}",
+  ]
+
+  metadata = {
+    test_runtime_deps = [ "$_data_dir/acts.zip" ]
+  }
+}
+
 specs = [
   {
     name = "acts_bt1_test"
@@ -34,6 +49,8 @@ foreach(spec, specs) {
       "//third_party/dart-pkg/pub/archive",
       "//third_party/dart-pkg/pub/test",
     ]
+
+    non_dart_deps = [ ":acts" ]
 
     environments = [
       {
