@@ -68,7 +68,8 @@ typedef struct i2c_hid_device {
 // If |force| is false, do not issue a reset if there is one outstanding.
 static zx_status_t i2c_hid_reset(i2c_hid_device_t* dev, bool force) {
     uint16_t cmd_reg = letoh16(dev->hiddesc->wCommandRegister);
-    uint8_t buf[4] = { cmd_reg & 0xff, cmd_reg >> 8, 0x00, 0x01 };
+    uint8_t buf[4] = { static_cast<uint8_t>(cmd_reg & 0xff), static_cast<uint8_t>(cmd_reg >> 8),
+                       0x00, 0x01 };
 
     mtx_lock(&dev->i2c_lock);
 
@@ -108,7 +109,7 @@ static zx_status_t i2c_hid_query(void* ctx, uint32_t options, hid_info_t* info) 
 }
 
 static zx_status_t i2c_hid_start(void* ctx, const hidbus_ifc_protocol_t* ifc) {
-    i2c_hid_device_t* hid = ctx;
+    i2c_hid_device_t* hid = static_cast<i2c_hid_device_t*>(ctx);
     mtx_lock(&hid->ifc_lock);
     if (hid->ifc.ops) {
         mtx_unlock(&hid->ifc_lock);
@@ -120,7 +121,7 @@ static zx_status_t i2c_hid_start(void* ctx, const hidbus_ifc_protocol_t* ifc) {
 }
 
 static void i2c_hid_stop(void* ctx) {
-    i2c_hid_device_t* hid = ctx;
+    i2c_hid_device_t* hid = static_cast<i2c_hid_device_t*>(ctx);
     mtx_lock(&hid->ifc_lock);
     hid->ifc.ops = NULL;
     mtx_unlock(&hid->ifc_lock);
@@ -132,11 +133,11 @@ static zx_status_t i2c_hid_get_descriptor(void* ctx, uint8_t desc_type,
         return ZX_ERR_NOT_FOUND;
     }
 
-    i2c_hid_device_t* hid = ctx;
+    i2c_hid_device_t* hid = static_cast<i2c_hid_device_t*>(ctx);
     size_t desc_len = letoh16(hid->hiddesc->wReportDescLength);
     uint16_t desc_reg = letoh16(hid->hiddesc->wReportDescRegister);
     uint16_t buf = htole16(desc_reg);
-    uint8_t* out = malloc(desc_len);
+    uint8_t* out = static_cast<uint8_t*>(malloc(desc_len));
     if (out == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -193,31 +194,20 @@ static zx_status_t i2c_hid_set_protocol(void* ctx, uint8_t protocol) {
 }
 
 
-static hidbus_protocol_ops_t i2c_hidbus_ops = {
-    .query = i2c_hid_query,
-    .start = i2c_hid_start,
-    .stop = i2c_hid_stop,
-    .get_descriptor = i2c_hid_get_descriptor,
-    .get_report = i2c_hid_get_report,
-    .set_report = i2c_hid_set_report,
-    .get_idle = i2c_hid_get_idle,
-    .set_idle = i2c_hid_set_idle,
-    .get_protocol = i2c_hid_get_protocol,
-    .set_protocol = i2c_hid_set_protocol,
-};
-
-static inline size_t bcdtoa(uint16_t val, char str[static 6], bool pad) {
-    memset(str, 0, 6);
-    size_t idx = 0;
-    if (val >> 12) {
-        str[idx++] = (val >> 12) + '0';
-    }
-    str[idx++] = ((val >> 8) & 0xf) + '0';
-    str[idx++] = '.';
-    str[idx++] = ((val >> 4) & 0xf) + '0';
-    str[idx++] = (val & 0xf) + '0';
-    return idx;
-}
+static hidbus_protocol_ops_t i2c_hidbus_ops = []() {
+  hidbus_protocol_ops_t i2c_hidbus_ops = {};
+  i2c_hidbus_ops.query = i2c_hid_query;
+  i2c_hidbus_ops.start = i2c_hid_start;
+  i2c_hidbus_ops.stop = i2c_hid_stop;
+  i2c_hidbus_ops.get_descriptor = i2c_hid_get_descriptor;
+  i2c_hidbus_ops.get_report = i2c_hid_get_report;
+  i2c_hidbus_ops.set_report = i2c_hid_set_report;
+  i2c_hidbus_ops.get_idle = i2c_hid_get_idle;
+  i2c_hidbus_ops.set_idle = i2c_hid_set_idle;
+  i2c_hidbus_ops.get_protocol = i2c_hid_get_protocol;
+  i2c_hidbus_ops.set_protocol = i2c_hid_set_protocol;
+  return i2c_hidbus_ops;
+}();
 
 // TODO(teisenbe/tkilbourn): Remove this once we pipe IRQs from ACPI
 static int i2c_hid_noirq_thread(void* arg) {
@@ -232,12 +222,12 @@ static int i2c_hid_noirq_thread(void* arg) {
     }
 
     uint16_t len = letoh16(dev->hiddesc->wMaxInputLength);
-    uint8_t* buf = malloc(len);
+    uint8_t* buf = static_cast<uint8_t*>(malloc(len));
 
     // Last report received, so we can deduplicate.  This is only necessary since
     // we haven't wired through interrupts yet, and some devices always return
     // the last received report when you attempt to read from them.
-    uint8_t* last_report = malloc(len);
+    uint8_t* last_report = static_cast<uint8_t*>(malloc(len));
     size_t last_report_len = 0;
 
     zx_time_t last_timeout_warning = 0;
@@ -325,7 +315,7 @@ static int i2c_hid_irq_thread(void* arg) {
     }
 
     uint16_t len = letoh16(dev->hiddesc->wMaxInputLength);
-    uint8_t* buf = malloc(len);
+    uint8_t* buf = static_cast<uint8_t*>(malloc(len));
 
     zx_time_t last_timeout_warning = 0;
     const zx_duration_t kMinTimeBetweenWarnings = ZX_SEC(10);
@@ -397,10 +387,12 @@ static void i2c_hid_release(void* ctx) {
     ZX_PANIC("cannot release an i2c hid device yet!\n");
 }
 
-static zx_protocol_device_t i2c_hid_dev_ops = {
-    .version = DEVICE_OPS_VERSION,
-    .release = i2c_hid_release,
-};
+static zx_protocol_device_t i2c_hid_dev_ops = []() {
+    zx_protocol_device_t i2c_hid_dev_ops = {};
+    i2c_hid_dev_ops.version = DEVICE_OPS_VERSION;
+    i2c_hid_dev_ops.release = i2c_hid_release;
+    return i2c_hid_dev_ops;
+}();
 
 static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* dev) {
     zxlogf(TRACE, "i2c_hid_bind\n");
@@ -426,7 +418,7 @@ static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* dev) {
     i2c_hid_desc_t* i2c_hid_desc_hdr = (i2c_hid_desc_t*)out;
     uint16_t desc_len = letoh16(i2c_hid_desc_hdr->wHIDDescLength);
 
-    i2c_hid_device_t* i2chid = calloc(1, sizeof(i2c_hid_device_t));
+    i2c_hid_device_t* i2chid = static_cast<i2c_hid_device_t*>(calloc(1, sizeof(i2c_hid_device_t)));
     if (i2chid == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -435,7 +427,7 @@ static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* dev) {
     cnd_init(&i2chid->i2c_reset_cnd);
     i2chid->i2cdev = dev;
     i2chid->i2c_protocol = i2c;
-    i2chid->hiddesc = malloc(desc_len);
+    i2chid->hiddesc = static_cast<i2c_hid_desc_t*>(malloc(desc_len));
     // Mark as pending reset, so no external requests will complete until we
     // reset the device in the IRQ thread.
     i2chid->i2c_pending_reset = true;
@@ -460,14 +452,13 @@ static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* dev) {
     zxlogf(TRACE, "  product id:      %x\n", i2chid->hiddesc->wProductID);
     zxlogf(TRACE, "  version id:      %x\n", i2chid->hiddesc->wVersionID);
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "i2c-hid",
-        .ctx = i2chid,
-        .ops = &i2c_hid_dev_ops,
-        .proto_id = ZX_PROTOCOL_HIDBUS,
-        .proto_ops = &i2c_hidbus_ops,
-    };
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "i2c-hid";
+    args.ctx = i2chid;
+    args.ops = &i2c_hid_dev_ops;
+    args.proto_id = ZX_PROTOCOL_HIDBUS;
+    args.proto_ops = &i2c_hidbus_ops;
 
     status = device_add(i2chid->i2cdev, &args, NULL);
     if (status != ZX_OK) {
@@ -496,10 +487,12 @@ static zx_status_t i2c_hid_bind(void* ctx, zx_device_t* dev) {
     return ZX_OK;
 }
 
-static zx_driver_ops_t i2c_hid_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = i2c_hid_bind,
-};
+static zx_driver_ops_t i2c_hid_driver_ops = []() {
+  zx_driver_ops_t i2c_hid_driver_ops = {};
+  i2c_hid_driver_ops.version = DRIVER_OPS_VERSION;
+  i2c_hid_driver_ops.bind = i2c_hid_bind;
+  return i2c_hid_driver_ops;
+}();
 
 ZIRCON_DRIVER_BEGIN(i2c_hid, i2c_hid_driver_ops, "zircon", "0.1", 2)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),

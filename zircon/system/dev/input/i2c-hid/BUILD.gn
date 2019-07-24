@@ -4,7 +4,7 @@
 
 driver("i2c-hid") {
   sources = [
-    "i2c-hid.c",
+    "i2c-hid.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.hidbus",
