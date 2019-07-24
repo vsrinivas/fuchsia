@@ -271,6 +271,11 @@
             "package_name": "pretty_assertions"
         },
         {
+            "crate_name": "prettytable",
+            "crate_type": "lib",
+            "package_name": "prettytable-rs"
+        },
+        {
             "crate_name": "proc_macro_hack",
             "crate_type": "proc-macro",
             "package_name": "proc-macro-hack"
