@@ -35,14 +35,6 @@ group("openssh_keys") {
   ]
 }
 
-# TODO(DX-1775): move out of garnet, updating all call sites.
-group("crashpad_upload_to_prod_server") {
-  testonly = true
-  public_deps = [
-    "//src/developer/feedback/crashpad_agent:upload_to_prod_server_config",
-  ]
-}
-
 group("router") {
   testonly = true
   public_deps = [
