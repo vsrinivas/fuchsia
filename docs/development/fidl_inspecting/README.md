@@ -136,6 +136,11 @@ And, when you run fidlcat on the host, make sure you connect to that agent:
 tools/fidlcat --connect [$(fx netaddr --fuchsia)]:8080 <other args>
 ```
 
+## Read the user guide
+
+The [user guide](fidlcat_usage.md) describes all the flags which modify the
+output. It also gives some examples of display interpretation.
+
 ## Where is the code?
 
 The code is located in `//tools/fidlcat`.
