@@ -69,6 +69,7 @@ constexpr uint16_t VMOID_INVALID = 0u;
 extern "C" const fidl_type_t fuchsia_hardware_block_FtlFormatResponseTable;
 
 class Ftl final {
+  Ftl() = delete;
  public:
 
   struct FormatResponse final {
@@ -86,6 +87,7 @@ class Ftl final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class Format_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -107,6 +109,7 @@ class Ftl final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class Format_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -153,6 +156,7 @@ class Ftl final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     static ResultOf::Format Format(zx::unowned_channel _client_end);
@@ -171,6 +175,7 @@ class Ftl final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     static ::fidl::DecodeResult<FormatResponse> Format(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
@@ -231,6 +236,7 @@ extern "C" const fidl_type_t fuchsia_hardware_block_BlockCloseFifoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_BlockRebindDeviceResponseTable;
 
 class Block final {
+  Block() = delete;
  public:
 
   struct GetInfoResponse final {
@@ -332,6 +338,7 @@ class Block final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class GetInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -418,6 +425,7 @@ class Block final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class GetInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -581,6 +589,7 @@ class Block final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     static ResultOf::GetInfo GetInfo(zx::unowned_channel _client_end);
@@ -651,6 +660,7 @@ class Block final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     static ::fidl::DecodeResult<GetInfoResponse> GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);

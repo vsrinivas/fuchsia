@@ -112,6 +112,7 @@ extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpBindingProper
 // how much data they want. Use the returned `written` value to read the data, no string
 // termination is guaranteed.
 class DebugDumper final {
+  DebugDumper() = delete;
  public:
   static constexpr char Name[] = "fuchsia.device.manager.DebugDumper";
 
@@ -190,6 +191,7 @@ class DebugDumper final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class DumpTree_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -237,6 +239,7 @@ class DebugDumper final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class DumpTree_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -347,6 +350,7 @@ class DebugDumper final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Print device tree into `output`, returns bytes `written` and bytes `available` to write.
@@ -403,6 +407,7 @@ class DebugDumper final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Print device tree into `output`, returns bytes `written` and bytes `available` to write.
@@ -494,6 +499,7 @@ extern "C" const fidl_type_t fuchsia_device_manager_AdministratorSuspendResponse
 
 // Provides administration services for the device manager service and the device tree it controls.
 class Administrator final {
+  Administrator() = delete;
  public:
   static constexpr char Name[] = "fuchsia.device.manager.Administrator";
 
@@ -522,6 +528,7 @@ class Administrator final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class Suspend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -543,6 +550,7 @@ class Administrator final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class Suspend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -597,6 +605,7 @@ class Administrator final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
@@ -623,6 +632,7 @@ class Administrator final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
@@ -693,6 +703,7 @@ extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateCompo
 
 // Protocol for controlling a devhost process from the devcoordinator
 class DevhostController final {
+  DevhostController() = delete;
  public:
 
   struct CreateDeviceStubRequest final {
@@ -752,6 +763,7 @@ class DevhostController final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class CreateDeviceStub_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -795,6 +807,7 @@ class DevhostController final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class CreateDeviceStub_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -983,6 +996,7 @@ class DevhostController final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Create a device in the devhost that only implements the device protocol
@@ -1121,6 +1135,7 @@ class DevhostController final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Create a device in the devhost that only implements the device protocol
@@ -1232,6 +1247,7 @@ extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteComp
 
 // Protocol for controlling devices in a devhost process from the devcoordinator
 class DeviceController final {
+  DeviceController() = delete;
  public:
 
   struct BindDriverResponse final {
@@ -1311,6 +1327,7 @@ class DeviceController final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class BindDriver_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1400,6 +1417,7 @@ class DeviceController final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class BindDriver_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1614,6 +1632,7 @@ class DeviceController final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Bind the requested driver to this device.  `driver_path` is informational,
@@ -1732,6 +1751,7 @@ class DeviceController final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Bind the requested driver to this device.  `driver_path` is informational,
@@ -1922,6 +1942,7 @@ extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRunCompatibilityT
 
 // Interface for the devices in devhosts to coordinate with the devcoordinator.
 class Coordinator final {
+  Coordinator() = delete;
  public:
 
   struct AddDeviceResponse final {
@@ -2248,6 +2269,7 @@ class Coordinator final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class AddDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -2471,6 +2493,7 @@ class Coordinator final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class AddDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -3054,6 +3077,7 @@ class Coordinator final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Record the addition of a new device that can be communicated with via `rpc`.
@@ -3407,6 +3431,7 @@ class Coordinator final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Record the addition of a new device that can be communicated with via `rpc`.

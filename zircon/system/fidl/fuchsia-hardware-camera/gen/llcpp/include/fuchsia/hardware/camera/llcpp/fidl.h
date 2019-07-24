@@ -44,6 +44,7 @@ class ControlV2;
 extern "C" const fidl_type_t fuchsia_hardware_camera_DeviceGetChannelRequestTable;
 
 class Device final {
+  Device() = delete;
  public:
 
   struct GetChannelRequest final {
@@ -60,6 +61,7 @@ class Device final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class GetChannel_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -79,6 +81,7 @@ class Device final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class GetChannel_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -142,6 +145,7 @@ class Device final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Note: this method obtains a channel to the codec device which
@@ -179,6 +183,7 @@ class Device final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Note: this method obtains a channel to the codec device which
@@ -258,6 +263,7 @@ struct FrameAvailableEvent {
 extern "C" const fidl_type_t fuchsia_hardware_camera_StreamReleaseFrameRequestTable;
 
 class Stream final {
+  Stream() = delete;
  public:
 
   using StartRequest = ::fidl::AnyZeroArgMessage;
@@ -296,6 +302,7 @@ class Stream final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class Start_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -337,6 +344,7 @@ class Stream final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class Start_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -417,6 +425,7 @@ class Stream final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     static ResultOf::Start Start(zx::unowned_channel _client_end);
@@ -449,6 +458,7 @@ class Stream final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     static ::fidl::internal::StatusAndError Start(zx::unowned_channel _client_end);
@@ -564,6 +574,7 @@ extern "C" const fidl_type_t fuchsia_hardware_camera_ControlCreateStreamRequestT
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlGetDeviceInfoResponseTable;
 
 class Control final {
+  Control() = delete;
  public:
 
   struct GetFormatsResponse final {
@@ -620,6 +631,7 @@ class Control final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class GetFormats_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -665,6 +677,7 @@ class Control final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class GetFormats_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -776,6 +789,7 @@ class Control final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Get the available format types for this device
@@ -835,6 +849,7 @@ class Control final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Get the available format types for this device
@@ -932,6 +947,7 @@ extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2CreateStreamReques
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetDeviceInfoResponseTable;
 
 class ControlV2 final {
+  ControlV2() = delete;
  public:
 
   struct GetFormatsResponse final {
@@ -988,6 +1004,7 @@ class ControlV2 final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class GetFormats_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1033,6 +1050,7 @@ class ControlV2 final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class GetFormats_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1144,6 +1162,7 @@ class ControlV2 final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Get the available format types for this device
@@ -1203,6 +1222,7 @@ class ControlV2 final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Get the available format types for this device

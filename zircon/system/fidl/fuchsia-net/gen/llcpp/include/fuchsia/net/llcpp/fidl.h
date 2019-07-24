@@ -121,6 +121,7 @@ struct AddrInfoHints;
 extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableEventTable;
 
 class Connectivity final {
+  Connectivity() = delete;
  public:
   static constexpr char Name[] = "fuchsia.net.Connectivity";
 
@@ -148,6 +149,7 @@ class Connectivity final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
 
    public:
@@ -156,6 +158,7 @@ class Connectivity final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
 
    public:
@@ -183,6 +186,7 @@ class Connectivity final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Handle all possible events defined in this protocol.
@@ -195,6 +199,7 @@ class Connectivity final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
   };
@@ -610,6 +615,7 @@ extern "C" const fidl_type_t fuchsia_net_NameLookupLookupHostnameRequestTable;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupHostnameResponseTable;
 
 class NameLookup final {
+  NameLookup() = delete;
  public:
   static constexpr char Name[] = "fuchsia.net.NameLookup";
 
@@ -661,6 +667,7 @@ class NameLookup final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class LookupIp_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -695,6 +702,7 @@ class NameLookup final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class LookupIp_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -775,6 +783,7 @@ class NameLookup final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Look up a list of IP addresses by hostname.
@@ -814,6 +823,7 @@ class NameLookup final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Look up a list of IP addresses by hostname.
@@ -944,6 +954,7 @@ extern "C" const fidl_type_t fuchsia_net_SocketProviderGetAddrInfoResponseTable;
 
 // SocketProvider implements the POSIX sockets API.
 class SocketProvider final {
+  SocketProvider() = delete;
  public:
   static constexpr char Name[] = "fuchsia.net.SocketProvider";
 
@@ -976,6 +987,7 @@ class SocketProvider final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class GetAddrInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -997,6 +1009,7 @@ class SocketProvider final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class GetAddrInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1051,6 +1064,7 @@ class SocketProvider final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Retrieves information about the address of a node and/or service. The number of valid
@@ -1077,6 +1091,7 @@ class SocketProvider final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Retrieves information about the address of a node and/or service. The number of valid

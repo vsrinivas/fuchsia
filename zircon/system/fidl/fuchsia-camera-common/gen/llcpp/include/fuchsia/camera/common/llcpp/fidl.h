@@ -94,6 +94,7 @@ extern "C" const fidl_type_t fuchsia_camera_common_StreamReleaseFrameRequestTabl
 
 // Protocol shared between the driver and the consumer.
 class Stream final {
+  Stream() = delete;
  public:
 
   using StartRequest = ::fidl::AnyZeroArgMessage;
@@ -134,6 +135,7 @@ class Stream final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class Start_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -175,6 +177,7 @@ class Stream final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class Start_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -263,6 +266,7 @@ class Stream final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Starts the streaming of frames.
@@ -303,6 +307,7 @@ class Stream final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Starts the streaming of frames.
@@ -536,6 +541,7 @@ extern "C" const fidl_type_t fuchsia_camera_common_VirtualCameraFactoryCreateDev
 
 // Protocol for managing virtual cameras that need to be added for tests.
 class VirtualCameraFactory final {
+  VirtualCameraFactory() = delete;
  public:
 
   struct CreateDeviceRequest final {
@@ -552,6 +558,7 @@ class VirtualCameraFactory final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class CreateDevice_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -571,6 +578,7 @@ class VirtualCameraFactory final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class CreateDevice_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -622,6 +630,7 @@ class VirtualCameraFactory final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Creates a new VirtualCameraDevice based on the configuration passed in.
@@ -647,6 +656,7 @@ class VirtualCameraFactory final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Creates a new VirtualCameraDevice based on the configuration passed in.

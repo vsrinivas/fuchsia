@@ -129,6 +129,7 @@ extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimp
 
 // Test interface implemented by both C and LLCPP
 class TestInterface final {
+  TestInterface() = delete;
  public:
 
   struct ConsumeSimpleStructResponse final {
@@ -180,6 +181,7 @@ class TestInterface final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class ConsumeSimpleStruct_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -214,6 +216,7 @@ class TestInterface final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class ConsumeSimpleStruct_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -296,6 +299,7 @@ class TestInterface final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Verifies that all the handles are valid channels, then returns
@@ -337,6 +341,7 @@ class TestInterface final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Verifies that all the handles are valid channels, then returns

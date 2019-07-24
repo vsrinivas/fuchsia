@@ -124,6 +124,7 @@ struct Struct {
 //
 // interface comment #3
 class Interface final {
+  Interface() = delete;
  public:
 
   using MethodRequest = ::fidl::AnyZeroArgMessage;
@@ -143,6 +144,7 @@ class Interface final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class Method_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -162,6 +164,7 @@ class Interface final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class Method_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -211,6 +214,7 @@ class Interface final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // method comment #1
@@ -234,6 +238,7 @@ class Interface final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // method comment #1

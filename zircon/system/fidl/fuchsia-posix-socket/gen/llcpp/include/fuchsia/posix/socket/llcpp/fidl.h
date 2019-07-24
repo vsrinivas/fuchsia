@@ -31,6 +31,7 @@ extern "C" const fidl_type_t fuchsia_posix_socket_ProviderSocketResponseTable;
 
 // Provider implements the POSIX sockets API.
 class Provider final {
+  Provider() = delete;
  public:
   static constexpr char Name[] = "fuchsia.posix.socket.Provider";
 
@@ -62,6 +63,7 @@ class Provider final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class Socket_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -83,6 +85,7 @@ class Provider final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class Socket_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -137,6 +140,7 @@ class Provider final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Requests a socket with the specified parameters. Values for `code` are defined in
@@ -163,6 +167,7 @@ class Provider final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Requests a socket with the specified parameters. Values for `code` are defined in
@@ -247,6 +252,7 @@ extern "C" const fidl_type_t fuchsia_posix_socket_ControlIoctlPOSIXResponseTable
 // This interface is essentially POSIX. Its implementation must support Linux-specific arguments
 // to {Get,Set}SockOpt.
 class Control final {
+  Control() = delete;
  public:
 
   struct CloneRequest final {
@@ -574,6 +580,7 @@ class Control final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class Clone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -788,6 +795,7 @@ class Control final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class Clone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -1362,6 +1370,7 @@ class Control final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Create another connection to the same remote object.
@@ -1715,6 +1724,7 @@ class Control final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Create another connection to the same remote object.

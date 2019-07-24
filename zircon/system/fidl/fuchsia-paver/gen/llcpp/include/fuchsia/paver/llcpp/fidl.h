@@ -180,6 +180,7 @@ extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataResponseTable;
 
 // Protocol for streaming the FVM payload.
 class PayloadStream final {
+  PayloadStream() = delete;
  public:
 
   struct RegisterVmoResponse final {
@@ -219,6 +220,7 @@ class PayloadStream final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class RegisterVmo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -253,6 +255,7 @@ class PayloadStream final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class RegisterVmo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -331,6 +334,7 @@ class PayloadStream final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Registers a VMO to stream into.
@@ -368,6 +372,7 @@ class PayloadStream final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Registers a VMO to stream into.
@@ -547,6 +552,7 @@ extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumesResponseTable;
 
 // Protocol for managing boot partitions.
 class Paver final {
+  Paver() = delete;
  public:
   static constexpr char Name[] = "fuchsia.paver.Paver";
 
@@ -714,6 +720,7 @@ class Paver final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class QueryActiveConfiguration_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -839,6 +846,7 @@ class Paver final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class QueryActiveConfiguration_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1169,6 +1177,7 @@ class Paver final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Queries active configuration.
@@ -1367,6 +1376,7 @@ class Paver final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Queries active configuration.

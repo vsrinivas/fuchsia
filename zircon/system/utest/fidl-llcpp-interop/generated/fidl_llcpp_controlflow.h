@@ -27,6 +27,7 @@ extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowMustSendAcce
 
 // Interface for testing shutdown/epitaphs etc.
 class ControlFlow final {
+  ControlFlow() = delete;
  public:
 
   using ShutdownRequest = ::fidl::AnyZeroArgMessage;
@@ -48,6 +49,7 @@ class ControlFlow final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class Shutdown_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -91,6 +93,7 @@ class ControlFlow final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class Shutdown_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -195,6 +198,7 @@ class ControlFlow final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Shutdown the server without a reply.
@@ -249,6 +253,7 @@ class ControlFlow final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Shutdown the server without a reply.

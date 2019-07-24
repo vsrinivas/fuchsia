@@ -33,6 +33,7 @@ extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerSealResponseT
 // providing the appropriate key) and to seal the device (rendering its
 // contents inaccessible).
 class DeviceManager final {
+  DeviceManager() = delete;
  public:
 
   struct UnsealResponse final {
@@ -73,6 +74,7 @@ class DeviceManager final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class Unseal_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -107,6 +109,7 @@ class DeviceManager final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class Unseal_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -233,6 +236,7 @@ class DeviceManager final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Attempts to unseal the device by using the provided master key to unwrap
@@ -318,6 +322,7 @@ class DeviceManager final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Attempts to unseal the device by using the provided master key to unwrap

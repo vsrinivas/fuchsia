@@ -73,6 +73,7 @@ extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteRequestTab
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteResponseTable;
 
 class SkipBlock final {
+  SkipBlock() = delete;
  public:
 
   struct GetPartitionInfoResponse final {
@@ -136,6 +137,7 @@ class SkipBlock final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class GetPartitionInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -183,6 +185,7 @@ class SkipBlock final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class GetPartitionInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -325,6 +328,7 @@ class SkipBlock final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Returns information about the skip-block partition.
@@ -413,6 +417,7 @@ class SkipBlock final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Returns information about the skip-block partition.

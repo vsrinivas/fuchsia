@@ -28,6 +28,7 @@ extern "C" const fidl_type_t fuchsia_debugdata_DebugDataLoadConfigResponseTable;
 
 // DebugData defines the interface for instrumentation configuration and data publishing.
 class DebugData final {
+  DebugData() = delete;
  public:
   static constexpr char Name[] = "fuchsia.debugdata.DebugData";
 
@@ -68,6 +69,7 @@ class DebugData final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class Publish_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -100,6 +102,7 @@ class DebugData final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class Publish_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -211,6 +214,7 @@ class DebugData final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // The program runtime sends a string naming a `data_sink` and transfers the sole handle to
@@ -283,6 +287,7 @@ class DebugData final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // The program runtime sends a string naming a `data_sink` and transfers the sole handle to

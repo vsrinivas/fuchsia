@@ -147,6 +147,7 @@ extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 
 class KitchenSink final {
+  KitchenSink() = delete;
  public:
 
   struct MethodARequest final {
@@ -228,6 +229,7 @@ class KitchenSink final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class MethodA_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -273,6 +275,7 @@ class KitchenSink final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class MethodA_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -369,6 +372,7 @@ class KitchenSink final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     static ResultOf::MethodA MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b);
@@ -413,6 +417,7 @@ class KitchenSink final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     static ::fidl::internal::StatusAndError MethodA(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params);
@@ -497,6 +502,7 @@ extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 
 class ChannelProtocol final {
+  ChannelProtocol() = delete;
  public:
 
   struct MethodARequest final {
@@ -578,6 +584,7 @@ class ChannelProtocol final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class MethodA_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -623,6 +630,7 @@ class ChannelProtocol final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class MethodA_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -719,6 +727,7 @@ class ChannelProtocol final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     static ResultOf::MethodA MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b);
@@ -763,6 +772,7 @@ class ChannelProtocol final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     static ::fidl::internal::StatusAndError MethodA(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params);
@@ -847,6 +857,7 @@ extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketReques
 extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketResponseTable;
 
 class OvernetInternalProtocol final {
+  OvernetInternalProtocol() = delete;
  public:
 
   struct MethodARequest final {
@@ -928,6 +939,7 @@ class OvernetInternalProtocol final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class MethodA_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -973,6 +985,7 @@ class OvernetInternalProtocol final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class MethodA_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -1069,6 +1082,7 @@ class OvernetInternalProtocol final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     static ResultOf::MethodA MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b);
@@ -1113,6 +1127,7 @@ class OvernetInternalProtocol final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     static ::fidl::internal::StatusAndError MethodA(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params);
@@ -1201,6 +1216,7 @@ extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestW
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 class WithAndWithoutRequestResponse final {
+  WithAndWithoutRequestResponse() = delete;
  public:
 
   using NoRequestNoResponseRequest = ::fidl::AnyZeroArgMessage;
@@ -1289,6 +1305,7 @@ class WithAndWithoutRequestResponse final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class NoRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -1371,6 +1388,7 @@ class WithAndWithoutRequestResponse final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class NoRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -1523,6 +1541,7 @@ class WithAndWithoutRequestResponse final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     static ResultOf::NoRequestNoResponse NoRequestNoResponse(zx::unowned_channel _client_end);
@@ -1586,6 +1605,7 @@ class WithAndWithoutRequestResponse final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     static ::fidl::internal::StatusAndError NoRequestNoResponse(zx::unowned_channel _client_end);
@@ -1789,6 +1809,7 @@ extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTa
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
 class WithErrorSyntax final {
+  WithErrorSyntax() = delete;
  public:
 
   struct ErrorAsPrimitiveResponse final {
@@ -1818,6 +1839,7 @@ class WithErrorSyntax final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class ErrorAsPrimitive_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1852,6 +1874,7 @@ class WithErrorSyntax final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class ErrorAsPrimitive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1922,6 +1945,7 @@ class WithErrorSyntax final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     static ResultOf::ErrorAsPrimitive ErrorAsPrimitive(zx::unowned_channel _client_end);
@@ -1951,6 +1975,7 @@ class WithErrorSyntax final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     static ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);

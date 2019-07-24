@@ -53,6 +53,7 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 //{{ . }}
 {{- end }}
 class {{ .Name }} final {
+  {{ .Name }}() = delete;
  public:
 {{- if .ServiceName }}
   static constexpr char Name[] = {{ .ServiceName }};
@@ -126,6 +127,7 @@ class {{ .Name }} final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     {{- range FilterMethodsWithoutReqs .Methods -}}
     {{- if .HasResponse -}}
@@ -160,6 +162,7 @@ class {{ .Name }} final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     {{- range FilterMethodsWithoutReqs .Methods -}}
     {{- if .HasResponse -}}
@@ -253,6 +256,7 @@ class {{ .Name }} final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 {{ "" }}
     {{- /* Client-calling functions do not apply to events. */}}
@@ -305,6 +309,7 @@ class {{ .Name }} final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 {{ "" }}
     {{- range FilterMethodsWithoutReqs .Methods -}}

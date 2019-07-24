@@ -27,6 +27,7 @@ struct DeviceDescriptor;
 class Device;
 
 class Events final {
+  Events() = delete;
  public:
 
   using FunctionRegisteredResponse = ::fidl::AnyZeroArgMessage;
@@ -35,6 +36,7 @@ class Events final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class FunctionRegistered_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -56,6 +58,7 @@ class Events final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class FunctionRegistered_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -96,6 +99,7 @@ class Events final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     static ResultOf::FunctionRegistered FunctionRegistered(zx::unowned_channel _client_end);
@@ -108,6 +112,7 @@ class Events final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     static ::fidl::DecodeResult<FunctionRegisteredResponse> FunctionRegistered(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
@@ -220,6 +225,7 @@ extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetModeRespon
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
 
 class Device final {
+  Device() = delete;
  public:
 
   struct SetDeviceDescriptorResponse final {
@@ -362,6 +368,7 @@ class Device final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class SetDeviceDescriptor_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -472,6 +479,7 @@ class Device final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class SetDeviceDescriptor_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -683,6 +691,7 @@ class Device final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     static ResultOf::SetDeviceDescriptor SetDeviceDescriptor(zx::unowned_channel _client_end, DeviceDescriptor desc);
@@ -777,6 +786,7 @@ class Device final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     static ::fidl::DecodeResult<SetDeviceDescriptorResponse> SetDeviceDescriptor(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDeviceDescriptorRequest> params, ::fidl::BytePart response_buffer);

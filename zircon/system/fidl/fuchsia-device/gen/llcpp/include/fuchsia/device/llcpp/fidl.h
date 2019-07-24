@@ -39,6 +39,7 @@ extern "C" const fidl_type_t fuchsia_device_ControllerRunCompatibilityTestsRespo
 
 // Interface for manipulating a device in a devhost
 class Controller final {
+  Controller() = delete;
  public:
 
   struct BindResponse final {
@@ -211,6 +212,7 @@ class Controller final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class Bind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -362,6 +364,7 @@ class Controller final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class Bind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -710,6 +713,7 @@ class Controller final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Attempt to bind the requested driver to this device
@@ -900,6 +904,7 @@ class Controller final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Attempt to bind the requested driver to this device
@@ -1226,6 +1231,7 @@ extern "C" const fidl_type_t fuchsia_device_NameProviderGetDeviceNameResponseTab
 
 // Interface for getting device names.
 class NameProvider final {
+  NameProvider() = delete;
  public:
   static constexpr char Name[] = "fuchsia.device.NameProvider";
 
@@ -1244,6 +1250,7 @@ class NameProvider final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class GetDeviceName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1265,6 +1272,7 @@ class NameProvider final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class GetDeviceName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1313,6 +1321,7 @@ class NameProvider final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Return the name of this Fuchsia device.
@@ -1333,6 +1342,7 @@ class NameProvider final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Return the name of this Fuchsia device.

@@ -162,6 +162,7 @@ extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventRequestTable;
 // new watchers using the Directory "Watch" method, where they can
 // filter which events they want to receive notifications for.
 class DirectoryWatcher final {
+  DirectoryWatcher() = delete;
  public:
 
   struct OnEventRequest final {
@@ -178,6 +179,7 @@ class DirectoryWatcher final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class OnEvent_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -197,6 +199,7 @@ class DirectoryWatcher final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class OnEvent_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -240,6 +243,7 @@ class DirectoryWatcher final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     static ResultOf::OnEvent OnEvent(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> events);
@@ -257,6 +261,7 @@ class DirectoryWatcher final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     static ::fidl::internal::StatusAndError OnEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnEventRequest> params);
@@ -803,6 +808,7 @@ extern "C" const fidl_type_t fuchsia_io_NodeIoctlResponseTable;
 
 // Node defines the minimal interface for entities which can be accessed in a filesystem.
 class Node final {
+  Node() = delete;
  public:
 
   struct CloneRequest final {
@@ -943,6 +949,7 @@ class Node final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class Clone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -1040,6 +1047,7 @@ class Node final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class Clone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -1366,6 +1374,7 @@ class Node final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Create another connection to the same remote object.
@@ -1588,6 +1597,7 @@ class Node final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Create another connection to the same remote object.
@@ -1807,6 +1817,7 @@ extern "C" const fidl_type_t fuchsia_io_FileGetBufferResponseTable;
 
 // File defines the interface of a node which contains a flat layout of data.
 class File final {
+  File() = delete;
  public:
 
   struct CloneRequest final {
@@ -2145,6 +2156,7 @@ class File final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class Clone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2359,6 +2371,7 @@ class File final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class Clone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -3038,6 +3051,7 @@ class File final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Create another connection to the same remote object.
@@ -3496,6 +3510,7 @@ class File final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Create another connection to the same remote object.
@@ -3897,6 +3912,7 @@ extern "C" const fidl_type_t fuchsia_io_DirectoryWatchResponseTable;
 
 // Directory defines a node which is capable of containing other Objects.
 class Directory final {
+  Directory() = delete;
  public:
 
   struct CloneRequest final {
@@ -4193,6 +4209,7 @@ class Directory final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class Clone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4392,6 +4409,7 @@ class Directory final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class Clone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -5330,6 +5348,7 @@ class Directory final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Create another connection to the same remote object.
@@ -6062,6 +6081,7 @@ class Directory final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Create another connection to the same remote object.
@@ -6518,6 +6538,7 @@ extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetDevicePathResponseTable
 // DirectoryAdmin defines a directory which is capable of handling
 // administrator tasks within the filesystem.
 class DirectoryAdmin final {
+  DirectoryAdmin() = delete;
  public:
 
   struct CloneRequest final {
@@ -6911,6 +6932,7 @@ class DirectoryAdmin final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class Clone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -7188,6 +7210,7 @@ class DirectoryAdmin final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class Clone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -8314,6 +8337,7 @@ class DirectoryAdmin final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Create another connection to the same remote object.
@@ -9156,6 +9180,7 @@ class DirectoryAdmin final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Create another connection to the same remote object.

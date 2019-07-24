@@ -30,6 +30,7 @@ extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusConnectResponse
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisconnectResponseTable;
 
 class Bus final {
+  Bus() = delete;
  public:
 
   struct EnableResponse final {
@@ -83,6 +84,7 @@ class Bus final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class Enable_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -143,6 +145,7 @@ class Bus final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class Enable_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -261,6 +264,7 @@ class Bus final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     static ResultOf::Enable Enable(zx::unowned_channel _client_end);
@@ -312,6 +316,7 @@ class Bus final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     static ::fidl::DecodeResult<EnableResponse> Enable(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);

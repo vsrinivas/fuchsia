@@ -22,6 +22,7 @@ namespace name {
 class SwitchingOrdinals;
 
 class SwitchingOrdinals final {
+  SwitchingOrdinals() = delete;
  public:
 
   using OrdinalFiveRequest = ::fidl::AnyZeroArgMessage;
@@ -43,6 +44,7 @@ class SwitchingOrdinals final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class OrdinalFive_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -73,6 +75,7 @@ class SwitchingOrdinals final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class OrdinalFive_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -132,6 +135,7 @@ class SwitchingOrdinals final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     static ResultOf::OrdinalFive OrdinalFive(zx::unowned_channel _client_end);
@@ -154,6 +158,7 @@ class SwitchingOrdinals final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     static ::fidl::internal::StatusAndError OrdinalFive(zx::unowned_channel _client_end);

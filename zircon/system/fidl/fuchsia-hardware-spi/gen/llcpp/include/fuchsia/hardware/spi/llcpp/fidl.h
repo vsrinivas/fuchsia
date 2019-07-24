@@ -30,6 +30,7 @@ extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceExchangeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceExchangeResponseTable;
 
 class Device final {
+  Device() = delete;
  public:
 
   struct TransmitResponse final {
@@ -103,6 +104,7 @@ class Device final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class Transmit_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -150,6 +152,7 @@ class Device final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class Transmit_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -255,6 +258,7 @@ class Device final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
@@ -306,6 +310,7 @@ class Device final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.

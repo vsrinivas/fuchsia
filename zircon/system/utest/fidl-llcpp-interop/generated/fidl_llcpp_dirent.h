@@ -55,6 +55,7 @@ extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDir
 // Test interface implemented by LLCPP, with a manually written server,
 // since types with more than one level of indirections are not handled by the C binding.
 class DirEntTestInterface final {
+  DirEntTestInterface() = delete;
  public:
 
   struct CountNumDirectoriesResponse final {
@@ -137,6 +138,7 @@ class DirEntTestInterface final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class CountNumDirectories_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -195,6 +197,7 @@ class DirEntTestInterface final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class CountNumDirectories_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -333,6 +336,7 @@ class DirEntTestInterface final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Iterate over the dirents and return the number of directories within them.
@@ -406,6 +410,7 @@ class DirEntTestInterface final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Iterate over the dirents and return the number of directories within them.

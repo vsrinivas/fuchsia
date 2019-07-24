@@ -154,6 +154,7 @@ extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionTokenDuplicateReques
 // (pair) because this way we can detect error conditions like a participant
 // dying mid-create.
 class BufferCollectionToken final {
+  BufferCollectionToken() = delete;
  public:
   static constexpr char Name[] = "fuchsia.sysmem.BufferCollectionToken";
 
@@ -177,6 +178,7 @@ class BufferCollectionToken final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class Duplicate_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -220,6 +222,7 @@ class BufferCollectionToken final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class Duplicate_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -563,6 +566,7 @@ class BufferCollectionToken final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // The initiator or a participant can send Duplicate() as part of creating
@@ -856,6 +860,7 @@ class BufferCollectionToken final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // The initiator or a participant can send Duplicate() as part of creating
@@ -998,6 +1003,7 @@ extern "C" const fidl_type_t fuchsia_sysmem_HeapCreateResourceResponseTable;
 //
 // Needs Layout = "Simple" because used with "FIDL Simple C Bindings".
 class Heap final {
+  Heap() = delete;
  public:
 
   struct AllocateVmoResponse final {
@@ -1061,6 +1067,7 @@ class Heap final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     template <typename ResponseType>
     class AllocateVmo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -1108,6 +1115,7 @@ class Heap final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     template <typename ResponseType>
     class AllocateVmo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -1342,6 +1350,7 @@ class Heap final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Request a new memory allocation of `size` on heap.
@@ -1522,6 +1531,7 @@ class Heap final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Request a new memory allocation of `size` on heap.
@@ -1657,6 +1667,7 @@ extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorGetProtectedMemoryInf
 // that interface has requests that don't complete until the devhost has
 // constraints from other participants.
 class DriverConnector final {
+  DriverConnector() = delete;
  public:
   static constexpr char Name[] = "fuchsia.sysmem.DriverConnector";
 
@@ -1688,6 +1699,7 @@ class DriverConnector final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class Connect_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -1720,6 +1732,7 @@ class DriverConnector final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class Connect_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -1807,6 +1820,7 @@ class DriverConnector final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // This one-way message sends in the server end of an Allocator channel.
@@ -1855,6 +1869,7 @@ class DriverConnector final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // This one-way message sends in the server end of an Allocator channel.
@@ -1923,6 +1938,7 @@ extern "C" const fidl_type_t fuchsia_sysmem_AllocatorBindSharedCollectionRequest
 // Allocates system memory buffers.
 //
 class Allocator final {
+  Allocator() = delete;
  public:
   static constexpr char Name[] = "fuchsia.sysmem.Allocator";
 
@@ -1963,6 +1979,7 @@ class Allocator final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class AllocateNonSharedCollection_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2004,6 +2021,7 @@ class Allocator final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class AllocateNonSharedCollection_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -2277,6 +2295,7 @@ class Allocator final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // Allocates a BufferCollection on behalf of a single client (aka initiator)
@@ -2502,6 +2521,7 @@ class Allocator final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // Allocates a BufferCollection on behalf of a single client (aka initiator)
@@ -3251,6 +3271,7 @@ extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnAllocateSing
 // soon to be useful.  Instead, such an indication should be made in-band within
 // FIDL interfaces that deliver packets to downstream participants.
 class BufferCollectionEvents final {
+  BufferCollectionEvents() = delete;
  public:
   static constexpr char Name[] = "fuchsia.sysmem.BufferCollectionEvents";
 
@@ -3283,6 +3304,7 @@ class BufferCollectionEvents final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class OnDuplicatedTokensKnownByServer_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -3324,6 +3346,7 @@ class BufferCollectionEvents final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class OnDuplicatedTokensKnownByServer_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -3586,6 +3609,7 @@ class BufferCollectionEvents final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // See comments on BufferCollectionToken::Sync().
@@ -3800,6 +3824,7 @@ class BufferCollectionEvents final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // See comments on BufferCollectionToken::Sync().
@@ -4064,6 +4089,7 @@ extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForSingleBufferA
 // the old and new collections. Collections can be large enough that it's worth
 // avoiding allocation overlap (in time).
 class BufferCollection final {
+  BufferCollection() = delete;
  public:
   static constexpr char Name[] = "fuchsia.sysmem.BufferCollection";
 
@@ -4179,6 +4205,7 @@ class BufferCollection final {
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
+    ResultOf() = delete;
    private:
     class SetEventSink_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -4305,6 +4332,7 @@ class BufferCollection final {
   // Collection of return types of FIDL calls in this interface,
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
+    UnownedResultOf() = delete;
    private:
     class SetEventSink_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
@@ -5014,6 +5042,7 @@ class BufferCollection final {
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
   class Call final {
+    Call() = delete;
    public:
 
     // At least for now, the only way to get events from a BufferCollection is
@@ -5590,6 +5619,7 @@ class BufferCollection final {
   // Messages are encoded and decoded in-place when these methods are used.
   // Additionally, requests must be already laid-out according to the FIDL wire-format.
   class InPlace final {
+    InPlace() = delete;
    public:
 
     // At least for now, the only way to get events from a BufferCollection is
