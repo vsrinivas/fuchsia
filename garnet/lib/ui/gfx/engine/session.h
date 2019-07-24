@@ -135,7 +135,6 @@ class Session {
   std::vector<zx::event> fences_to_release_on_next_update_;
 
   uint64_t last_applied_update_presentation_time_ = 0;
-  uint64_t last_presentation_time_ = 0;
 
   const SessionId id_;
   std::string debug_name_;

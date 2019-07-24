@@ -141,8 +141,6 @@ bool Session::ScheduleUpdate(uint64_t requested_presentation_time,
 
 Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* command_context,
                                                           uint64_t target_presentation_time) {
-  FXL_DCHECK(target_presentation_time >= last_presentation_time_);
-
   ApplyUpdateResult update_results{
       .success = false, .needs_render = false, .all_fences_ready = true};
 
