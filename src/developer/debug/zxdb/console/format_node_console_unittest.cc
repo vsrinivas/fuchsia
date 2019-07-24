@@ -75,6 +75,12 @@ TEST(FormatNodeConsole, SimpleValue) {
   // Named value with types forced on.
   out = FormatNodeForConsole(node, type_options);
   EXPECT_EQ(R"(kComment "(int) ", kVariable "foo", kNormal " = 54")", out.GetDebugString());
+
+  // Force types on when there is no type shouldn't show anything.
+  FormatNode err_node("foo");
+  err_node.SetDescribedError(Err("Error."));
+  out = FormatNodeForConsole(err_node, type_options);
+  EXPECT_EQ(R"(kVariable "foo", kNormal " = ", kComment "<Error.>")", out.GetDebugString());
 }
 
 TEST(FormatNodeConsole, Collection) {

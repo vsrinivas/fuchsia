@@ -232,6 +232,9 @@ bool ShouldPrependTypeNameBeforeName(const FormatNode* node, const RecursiveStat
   if (!state.TypeForcedOn())
     return false;  // Never show types unless requested.
 
+  if (node->type().empty())
+    return false;  // Don't show empty types.
+
   if (!IsRust(node))
     return true;  // Non-Rust code always gets the type.
 
@@ -588,8 +591,15 @@ fxl::RefPtr<AsyncOutputBuffer> FormatVariableForConsole(const Variable* var,
   context->GetVariableValue(
       RefPtrTo(var), [name = var->GetAssignedName(), context, options, out](
                          const Err& err, fxl::RefPtr<Symbol>, ExprValue value) {
-        // Variable value resolved. Print it.
-        out->Complete(FormatValueForConsole(std::move(value), options, context, name));
+        if (err.has_error()) {
+          // In the error case, construct a node with the error set so the formatting with other
+          // types of errors is consistent.
+          FormatNode err_node(name);
+          err_node.SetDescribedError(err);
+          out->Complete(FormatNodeForConsole(err_node, options));
+        } else {
+          out->Complete(FormatValueForConsole(std::move(value), options, context, name));
+        }
       });
   return out;
 }
