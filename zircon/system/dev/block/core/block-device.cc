@@ -3,16 +3,6 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/block.h>
-#include <ddktl/protocol/block/partition.h>
-#include <ddktl/protocol/block/volume.h>
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
@@ -25,7 +15,6 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <storage-metrics/block-metrics.h>
 #include <string.h>
 #include <sys/param.h>
 #include <threads.h>
@@ -36,6 +25,18 @@
 #include <algorithm>
 #include <limits>
 #include <new>
+
+#include <ddk/binding.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/metadata.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/block.h>
+#include <ddktl/protocol/block/partition.h>
+#include <ddktl/protocol/block/volume.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
+#include <storage-metrics/block-metrics.h>
 
 #include "server-manager.h"
 #include "server.h"
