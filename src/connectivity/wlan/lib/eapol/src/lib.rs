@@ -265,6 +265,9 @@ impl KeyDescriptor {
     pub const RESERVED: Self = Self(0);
     pub const RC4: Self = Self(1);
     pub const IEEE802DOT11: Self = Self(2);
+
+    // This descriptor is specified by the WiFi Alliance WPA standard rather than IEEE.
+    pub const LEGACY_WPA1: Self = Self(254);
 }
 
 // IEEE Std 802.11-2016, 12.7.2 b.2)

@@ -7,12 +7,12 @@ use fuchsia_inspect_contrib::{inspect_log, log::InspectBytes};
 use fuchsia_zircon as zx;
 use log::{error, warn};
 use wep_deprecated;
-use wlan_common::{format::MacFmt, ie::rsn::cipher, RadioConfig};
+use wlan_common::{format::MacFmt, ie::rsn::cipher, ie::write_wpa1_ie, RadioConfig};
 use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, SecAssocStatus, SecAssocUpdate};
 use wlan_rsn::ProtectionInfo;
 
-use super::bss::ClientConfig;
+use super::bss::{expects_eapol, ClientConfig};
 use super::rsn::Rsna;
 use super::{ConnectFailure, ConnectResult, Status};
 
@@ -61,6 +61,10 @@ pub enum LinkState {
 pub enum Protection {
     Open,
     Wep(wep_deprecated::Key),
+    // WPA1 is based off of a modified pre-release version of IEEE 802.11i. It is similar enough
+    // that we can reuse the existing RSNA implementation rather than duplicating large pieces of
+    // logic.
+    LegacyWpa(Rsna),
     Rsna(Rsna),
 }
 
@@ -245,7 +249,7 @@ impl State {
                 MlmeEvent::SignalReport { ind } => {
                     State::Associated { cfg, bss, last_rssi: ind.rssi_dbm, link_state, radio_cfg }
                 }
-                MlmeEvent::EapolInd { ref ind } if bss.rsn.is_some() => {
+                MlmeEvent::EapolInd { ref ind } if expects_eapol(bss.as_ref()) => {
                     // Reject EAPOL frames from other BSS.
                     if ind.src_addr != bss.bssid {
                         let eapol_pdu = &ind.data[..];
@@ -598,7 +602,10 @@ fn handle_mlme_assoc_conf(
         fidl_mlme::AssociateResultCodes::Success => {
             context.info.report_assoc_success(context.att_id);
             match cmd.protection {
-                Protection::Rsna(mut rsna) => match rsna.supplicant.start() {
+                Protection::Rsna(mut rsna) | Protection::LegacyWpa(mut rsna) => match rsna
+                    .supplicant
+                    .start()
+                {
                     Err(e) => {
                         handle_supplicant_start_failure(cmd.responder, cmd.bss, context, e);
                         state_change_msg.replace("supplicant failed to start".to_string());
@@ -854,14 +861,37 @@ fn send_deauthenticate_request(current_bss: Box<BssDescription>, mlme_sink: &Mlm
 }
 
 fn to_associating_state(cfg: ClientConfig, cmd: ConnectCommand, mlme_sink: &MlmeSink) -> State {
-    let s_rsne_data = match &cmd.protection {
-        Protection::Open | Protection::Wep(_) => None,
+    match &cmd.protection {
+        Protection::Open | Protection::Wep(_) => {
+            mlme_sink.send(MlmeRequest::Associate(fidl_mlme::AssociateRequest {
+                peer_sta_address: cmd.bss.bssid.clone(),
+                rsn: None,
+                vendor_ies: None,
+            }));
+        }
+        Protection::LegacyWpa(rsna) => {
+            let s_protection = rsna.negotiated_protection.to_full_protection();
+            let s_wpa = match s_protection {
+                ProtectionInfo::Rsne(_) => {
+                    error!("found RSNE protection inside a WPA1 association...");
+                    return State::Idle { cfg };
+                }
+                ProtectionInfo::LegacyWpa(wpa) => wpa,
+            };
+            let mut buf = vec![];
+            write_wpa1_ie(&mut buf, &s_wpa).expect("writing WPA IE into Vec can never fail");
+            mlme_sink.send(MlmeRequest::Associate(fidl_mlme::AssociateRequest {
+                peer_sta_address: cmd.bss.bssid.clone(),
+                rsn: None,
+                vendor_ies: Some(buf),
+            }));
+        }
         Protection::Rsna(rsna) => {
             let s_protection = rsna.negotiated_protection.to_full_protection();
             let s_rsne = match s_protection {
                 ProtectionInfo::Rsne(rsne) => rsne,
-                ProtectionInfo::LegacyWpa(_wpa) => {
-                    error!("Cannot associate with wpa!");
+                ProtectionInfo::LegacyWpa(_) => {
+                    error!("found WPA protection inside an RSNA...");
                     return State::Idle { cfg };
                 }
             };
@@ -870,15 +900,13 @@ fn to_associating_state(cfg: ClientConfig, cmd: ConnectCommand, mlme_sink: &Mlme
             // space is required. If this panic ever triggers, something is clearly broken
             // somewhere else.
             let () = s_rsne.write_into(&mut buf).expect("writing RSNE into Vec can never fail");
-            Some(buf)
+            mlme_sink.send(MlmeRequest::Associate(fidl_mlme::AssociateRequest {
+                peer_sta_address: cmd.bss.bssid.clone(),
+                rsn: Some(buf),
+                vendor_ies: None,
+            }));
         }
     };
-
-    mlme_sink.send(MlmeRequest::Associate(fidl_mlme::AssociateRequest {
-        peer_sta_address: cmd.bss.bssid.clone(),
-        rsn: s_rsne_data,
-        vendor_ies: None,
-    }));
     State::Associating { cfg, cmd }
 }
 
@@ -923,9 +951,12 @@ mod tests {
     use crate::client::test_utils::{
         create_assoc_conf, create_auth_conf, create_join_conf, expect_info_event,
         expect_stream_empty, fake_protected_bss_description, fake_unprotected_bss_description,
-        fake_wep_bss_description, mock_supplicant, MockSupplicant, MockSupplicantController,
+        fake_wep_bss_description, fake_wpa1_bss_description, mock_supplicant, MockSupplicant,
+        MockSupplicantController,
     };
     use crate::client::{info::InfoReporter, inspect, InfoEvent, InfoSink, TimeStream};
+    use crate::test_utils::make_wpa1_ie;
+
     use crate::{test_utils, timer, DeviceInfo, InfoStream, MlmeStream, Ssid};
 
     #[test]
@@ -1014,6 +1045,70 @@ mod tests {
         expect_result(receiver, ConnectResult::Success);
 
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
+        expect_info_event(
+            &mut h.info_stream,
+            InfoEvent::ConnectFinished { result: ConnectResult::Success },
+        );
+    }
+
+    #[test]
+    fn connect_to_wpa1_network() {
+        let mut h = TestHelper::new();
+        let (supplicant, suppl_mock) = mock_supplicant();
+
+        let state = idle_state();
+        let (command, receiver) = connect_command_wpa1(supplicant);
+        let bss_ssid = command.bss.ssid.clone();
+        let bssid = command.bss.bssid.clone();
+
+        // Issue a "connect" command
+        let state = state.connect(command, &mut h.context);
+
+        expect_info_event(&mut h.info_stream, InfoEvent::JoinStarted { att_id: 1 });
+        expect_join_request(&mut h.mlme_stream, &bss_ssid);
+
+        // (mlme->sme) Send a JoinConf as a response
+        let join_conf = create_join_conf(fidl_mlme::JoinResultCodes::Success);
+        let state = state.on_mlme_event(join_conf, &mut h.context);
+
+        expect_auth_req(&mut h.mlme_stream, bssid);
+
+        // (mlme->sme) Send an AuthenticateConf as a response
+        let auth_conf =
+            create_auth_conf(bssid.clone(), fidl_mlme::AuthenticateResultCodes::Success);
+        let state = state.on_mlme_event(auth_conf, &mut h.context);
+
+        expect_assoc_req(&mut h.mlme_stream, bssid);
+
+        // (mlme->sme) Send an AssociateConf
+        let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCodes::Success);
+        let state = state.on_mlme_event(assoc_conf, &mut h.context);
+
+        assert!(suppl_mock.is_supplicant_started());
+        expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
+        expect_info_event(&mut h.info_stream, InfoEvent::RsnaStarted { att_id: 1 });
+
+        // (mlme->sme) Send an EapolInd, mock supplicant with key frame
+        let update = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
+        let state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
+
+        expect_eapol_req(&mut h.mlme_stream, bssid);
+
+        // (mlme->sme) Send an EapolInd, mock supplicant with keys
+        let ptk = SecAssocUpdate::Key(Key::Ptk(test_utils::wpa1_ptk()));
+        let gtk = SecAssocUpdate::Key(Key::Gtk(test_utils::wpa1_gtk()));
+        let state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![ptk, gtk]);
+
+        expect_set_wpa1_ptk(&mut h.mlme_stream, bssid);
+        expect_set_wpa1_gtk(&mut h.mlme_stream);
+
+        // (mlme->sme) Send an EapolInd, mock supplicant with completion status
+        let update = SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished);
+        let _state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
+
+        expect_set_ctrl_port(&mut h.mlme_stream, bssid, fidl_mlme::ControlledPortState::Open);
+        expect_result(receiver, ConnectResult::Success);
+        expect_info_event(&mut h.info_stream, InfoEvent::RsnaEstablished { att_id: 1 });
         expect_info_event(
             &mut h.info_stream,
             InfoEvent::ConnectFinished { result: ConnectResult::Success },
@@ -1681,6 +1776,34 @@ mod tests {
         });
     }
 
+    fn expect_set_wpa1_ptk(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::SetKeys(set_keys_req))) => {
+            assert_eq!(set_keys_req.keylist.len(), 1);
+            let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
+            assert_eq!(k.key, vec![0xCCu8; test_utils::wpa1_cipher().tk_bytes().unwrap()]);
+            assert_eq!(k.key_id, 0);
+            assert_eq!(k.key_type, fidl_mlme::KeyType::Pairwise);
+            assert_eq!(k.address, bssid);
+            assert_eq!(k.rsc, 0);
+            assert_eq!(k.cipher_suite_oui, [0x00, 0x50, 0xF2]);
+            assert_eq!(k.cipher_suite_type, 2);
+        });
+    }
+
+    fn expect_set_wpa1_gtk(mlme_stream: &mut MlmeStream) {
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::SetKeys(set_keys_req))) => {
+            assert_eq!(set_keys_req.keylist.len(), 1);
+            let k = set_keys_req.keylist.get(0).expect("expect key descriptor");
+            assert_eq!(k.key, test_utils::wpa1_gtk_bytes());
+            assert_eq!(k.key_id, 2);
+            assert_eq!(k.key_type, fidl_mlme::KeyType::Group);
+            assert_eq!(k.address, [0xFFu8; 6]);
+            assert_eq!(k.rsc, 0);
+            assert_eq!(k.cipher_suite_oui, [0x00, 0x50, 0xF2]);
+            assert_eq!(k.cipher_suite_type, 2);
+        });
+    }
+
     fn expect_set_wep_key(mlme_stream: &mut MlmeStream, bssid: [u8; 6], key_bytes: Vec<u8>) {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::SetKeys(set_keys_req))) => {
             assert_eq!(set_keys_req.keylist.len(), 1);
@@ -1730,6 +1853,24 @@ mod tests {
             bss: Box::new(fake_wep_bss_description(b"wep".to_vec())),
             responder: Some(responder),
             protection: Protection::Wep(wep_deprecated::Key::Bits40([3; 5])),
+            radio_cfg: RadioConfig::default(),
+        };
+        (cmd, receiver)
+    }
+
+    fn connect_command_wpa1(
+        supplicant: MockSupplicant,
+    ) -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
+        let (responder, receiver) = Responder::new();
+        let wpa_ie = make_wpa1_ie();
+        let cmd = ConnectCommand {
+            bss: Box::new(fake_wpa1_bss_description(b"wpa1".to_vec())),
+            responder: Some(responder),
+            protection: Protection::LegacyWpa(Rsna {
+                negotiated_protection: NegotiatedProtection::from_legacy_wpa(&wpa_ie)
+                    .expect("invalid NegotiatedProtection"),
+                supplicant: Box::new(supplicant),
+            }),
             radio_cfg: RadioConfig::default(),
         };
         (cmd, receiver)

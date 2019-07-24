@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use failure::format_err;
 use fidl_fuchsia_wlan_mlme::BssDescription;
 use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::Hash;
-use wlan_common::ie::{self, rsn::rsne, Id, Reader, VendorIe};
+use wlan_common::ie::{self, rsn::rsne, wpa::WpaIe, Id, Reader, VendorIe};
 
 use super::rsn::is_rsn_compatible;
 use crate::client::Standard;
@@ -132,12 +133,23 @@ fn find_wpa_ie(bss: &BssDescription) -> Option<&[u8]> {
         .next()
 }
 
+pub fn get_wpa_ie(bss: &BssDescription) -> Result<WpaIe, failure::Error> {
+    ie::parse_wpa_ie(find_wpa_ie(bss).ok_or(format_err!("no wpa ie found"))?).map_err(|e| e.into())
+}
+
 pub fn get_protection(bss: &BssDescription) -> Protection {
     match bss.rsn.as_ref() {
         Some(_) => Protection::Rsna,
         None if !bss.cap.privacy => Protection::Open,
         None if find_wpa_ie(bss).is_some() => Protection::Wpa1,
         None => Protection::Wep,
+    }
+}
+
+pub fn expects_eapol(bss: &BssDescription) -> bool {
+    match get_protection(bss) {
+        Protection::Rsna | Protection::Wpa1 => true,
+        _ => false,
     }
 }
 
@@ -303,6 +315,15 @@ mod tests {
     }
 
     #[test]
+    fn test_expects_eapol() {
+        assert!(expects_eapol(&bss(-30, -10, ProtectionCfg::Wpa1)));
+        assert!(expects_eapol(&bss(-30, -10, ProtectionCfg::Wpa2)));
+
+        assert!(!expects_eapol(&bss(-30, -10, ProtectionCfg::Open)));
+        assert!(!expects_eapol(&bss(-30, -10, ProtectionCfg::Wep)));
+    }
+
+    #[test]
     fn verify_compatibility() {
         // Compatible:
         let cfg = ClientConfig::default();
@@ -320,6 +341,17 @@ mod tests {
         // WEP support is configurable to be on or off:
         let cfg = ClientConfig::from_config(Config::default().with_wep());
         assert!(cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep)));
+    }
+
+    #[test]
+    fn test_get_wpa_ie() {
+        let mut buf = vec![];
+        get_wpa_ie(&bss(-30, -10, ProtectionCfg::Wpa1))
+            .expect("failed to find WPA1 IE")
+            .write_into(&mut buf)
+            .expect("failed to serialize WPA1 IE");
+        assert_eq!(fake_wpa1_ie_body(), buf);
+        get_wpa_ie(&bss(-30, -10, ProtectionCfg::Wpa2)).expect_err("found unexpected WPA1 IE");
     }
 
     #[test]
@@ -448,14 +480,22 @@ mod tests {
         ret
     }
 
-    fn fake_wpa1_ie() -> Vec<u8> {
+    fn fake_wpa1_ie_body() -> Vec<u8> {
         vec![
-            0xdd, 0x16, 0x00, 0x50, 0xf2, // IE header
-            0x01, 0x01, 0x00, // WPA IE header
+            0x01, 0x00, // WPA version
             0x00, 0x50, 0xf2, 0x02, // multicast cipher: AKM
             0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 unicast cipher: TKIP
             0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 AKM: PSK
         ]
+    }
+
+    fn fake_wpa1_ie() -> Vec<u8> {
+        let mut ie = vec![
+            0xdd, 0x16, 0x00, 0x50, 0xf2, // IE header
+            0x01, // MSFT specific IE type (WPA)
+        ];
+        ie.append(&mut fake_wpa1_ie_body());
+        ie
     }
 
     fn fake_wpa2_legacy_rsne() -> Vec<u8> {

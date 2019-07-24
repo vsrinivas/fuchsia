@@ -48,7 +48,8 @@ impl Akm {
     /// Only AKMs specified in IEEE 802.11-2016, 9.4.2.25.4, Table 9-133 have known algorithms.
     pub fn has_known_algorithm(&self) -> bool {
         if self.is_reserved() || self.is_vendor_specific() {
-            false
+            // Support MSFT PSK for WPA1
+            self.oui == Oui::MSFT && self.suite_type == PSK
         } else {
             self.suite_type != 7 && self.suite_type != 10
         }

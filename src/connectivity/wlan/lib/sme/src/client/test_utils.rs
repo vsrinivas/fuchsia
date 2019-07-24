@@ -10,6 +10,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
+use wlan_common::ie::write_wpa1_ie;
 use wlan_common::{assert_variant, ie::rsn::rsne::RsnCapabilities};
 use wlan_rsn::rsna::UpdateSink;
 
@@ -72,6 +73,15 @@ pub fn fake_unprotected_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription
 pub fn fake_wep_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
     let mut bss = fake_bss_description(ssid, None);
     bss.cap.privacy = true;
+    bss
+}
+
+pub fn fake_wpa1_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
+    let mut bss = fake_bss_description(ssid, None);
+    bss.cap.privacy = true;
+    let mut vendor_ies = vec![];
+    write_wpa1_ie(&mut vendor_ies, &make_wpa1_ie()).expect("failed to create wpa1 bss description");
+    bss.vendor_ies = Some(vendor_ies);
     bss
 }
 

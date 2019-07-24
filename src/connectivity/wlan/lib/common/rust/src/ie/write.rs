@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    super::{constants::*, fields::*, id::Id},
+    super::{constants::*, fields::*, id::Id, wpa},
     crate::{
-        appendable::Appendable,
+        appendable::{Appendable, BufferTooSmall},
         error::FrameWriteError,
         mac::{MacAddr, ReasonCode},
+        organization::Oui,
     },
     std::mem::size_of,
     zerocopy::AsBytes,
@@ -236,13 +237,34 @@ pub fn write_perr<B: Appendable>(
     write_ie!(buf, Id::PERR, header, destinations)
 }
 
+/// Writes the entire WPA1 IE into the given buffer, including the vendor IE header.
+pub fn write_wpa1_ie<B: Appendable>(
+    buf: &mut B,
+    wpa_ie: &wpa::WpaIe,
+) -> Result<(), BufferTooSmall> {
+    let len = std::mem::size_of::<Oui>() + 1 + wpa_ie.len();
+    if !buf.can_append(len + 2) {
+        return Err(BufferTooSmall);
+    }
+    buf.append_value(&Id::VENDOR_SPECIFIC)?;
+    buf.append_byte(len as u8)?;
+    buf.append_value(&Oui::MSFT)?;
+    buf.append_byte(wpa::VENDOR_SPECIFIC_TYPE)?;
+    wpa_ie.write_into(buf)
+}
+
 fn option_as_bytes<T: AsBytes>(opt: Option<&T>) -> &[u8] {
     opt.map_or(&[], T::as_bytes)
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::buffer_writer::BufferWriter};
+    use {
+        super::*,
+        crate::buffer_writer::BufferWriter,
+        crate::ie::rsn::{akm, cipher},
+        crate::organization::Oui,
+    };
 
     #[test]
     pub fn write_ie_body_too_long() {
@@ -814,5 +836,40 @@ mod tests {
         write_perr(&mut buf, &header, &[1, 2, 3]).expect("expected Ok");
         let expected = [132, 5, 11, 7, 1, 2, 3];
         assert_eq!(&expected[..], &buf[..]);
+    }
+
+    #[test]
+    pub fn test_write_wpa1_ie() {
+        let wpa_ie = wpa::WpaIe {
+            multicast_cipher: cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP },
+            unicast_cipher_list: vec![cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP }],
+            akm_list: vec![akm::Akm { oui: Oui::MSFT, suite_type: akm::PSK }],
+        };
+        let expected: Vec<u8> = vec![
+            0xdd, 0x16, // Vendor IE header
+            0x00, 0x50, 0xf2, // MSFT OUI
+            0x01, 0x01, 0x00, // WPA IE header
+            0x00, 0x50, 0xf2, 0x02, // multicast cipher: AKM
+            0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 unicast cipher: TKIP
+            0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 AKM: PSK
+        ];
+        let mut buf = vec![];
+        write_wpa1_ie(&mut buf, &wpa_ie).expect("WPA1 write to a Vec should never fail");
+        assert_eq!(&expected[..], &buf[..]);
+    }
+
+    #[test]
+    pub fn test_write_wpa1_ie_buffer_too_small() {
+        let wpa_ie = wpa::WpaIe {
+            multicast_cipher: cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP },
+            unicast_cipher_list: vec![cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP }],
+            akm_list: vec![akm::Akm { oui: Oui::MSFT, suite_type: akm::PSK }],
+        };
+
+        let mut buf = [0u8; 10];
+        let mut writer = BufferWriter::new(&mut buf[..]);
+        write_wpa1_ie(&mut writer, &wpa_ie).expect_err("WPA1 write to short buf should fail");
+        // The buffer is not long enough, so no bytes should be written.
+        assert_eq!(writer.into_written().len(), 0);
     }
 }

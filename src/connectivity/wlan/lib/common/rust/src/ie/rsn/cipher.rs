@@ -48,7 +48,12 @@ impl Cipher {
     /// Reserved and vendor specific cipher suites have no known usage and require special
     /// treatments.
     pub fn has_known_usage(&self) -> bool {
-        !self.is_reserved() && !self.is_vendor_specific()
+        if self.is_vendor_specific() {
+            // Support MSFT TKIP/CCMP for WPA1
+            self.oui == Oui::MSFT && (self.suite_type == TKIP || self.suite_type == CCMP_128)
+        } else {
+            !self.is_reserved()
+        }
     }
 
     pub fn is_vendor_specific(&self) -> bool {

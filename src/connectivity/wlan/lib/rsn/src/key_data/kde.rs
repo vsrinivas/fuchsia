@@ -8,8 +8,11 @@ use bitfield::bitfield;
 use nom::IResult::{Done, Incomplete};
 use nom::{call, do_parse, eof, error_position, map, named, named_args, take, try_parse};
 use nom::{le_u8, IResult, Needed};
-use wlan_common::appendable::{Appendable, BufferTooSmall};
-use wlan_common::organization::Oui;
+use wlan_common::{
+    appendable::{Appendable, BufferTooSmall},
+    ie::write_wpa1_ie,
+    organization::Oui,
+};
 
 pub const TYPE: u8 = 0xDD;
 const PADDING_DATA_LEN: u8 = 0;
@@ -176,7 +179,7 @@ impl<A: Appendable> Writer<A> {
     pub fn write_protection(&mut self, protection: &ProtectionInfo) -> Result<(), BufferTooSmall> {
         match protection {
             ProtectionInfo::Rsne(rsne) => rsne.write_into(&mut self.buf),
-            ProtectionInfo::LegacyWpa(_wpa) => unimplemented!(),
+            ProtectionInfo::LegacyWpa(wpa) => write_wpa1_ie(&mut self.buf, wpa),
         }
     }
 

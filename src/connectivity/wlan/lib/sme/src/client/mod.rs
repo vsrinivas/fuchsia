@@ -9,6 +9,7 @@ mod inspect;
 mod rsn;
 mod scan;
 mod state;
+mod wpa;
 
 #[cfg(test)]
 pub mod test_utils;
@@ -33,6 +34,7 @@ use self::info::InfoReporter;
 use self::rsn::get_rsna;
 use self::scan::{DiscoveryScan, JoinScan, ScanScheduler};
 use self::state::{ConnectCommand, Protection, State};
+use self::wpa::get_legacy_wpa_association;
 
 use crate::clone_utils::clone_bss_desc;
 use crate::responder::Responder;
@@ -392,7 +394,7 @@ pub fn get_protection(
                 .map_err(|e| format_err!("error deriving WEP key from input: {}", e)),
             _ => bail!("unsupported credential type"),
         },
-        bss::Protection::Wpa1 => bail!("WPA1 not supported"),
+        bss::Protection::Wpa1 => get_legacy_wpa_association(device_info, credential, bss),
         bss::Protection::Rsna => get_rsna(device_info, credential, bss),
     }
 }

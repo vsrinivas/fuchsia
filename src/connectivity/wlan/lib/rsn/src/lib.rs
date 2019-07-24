@@ -51,8 +51,8 @@ pub enum ProtectionInfo {
 }
 
 impl Supplicant {
-    /// WPA2-PSK CCMP-128 Supplicant which supports 4-Way- and Group-Key Handshakes.
-    pub fn new_wpa2psk_ccmp128(
+    /// WPA personal supplicant which supports 4-Way- and Group-Key Handshakes.
+    pub fn new_wpa_personal(
         nonce_rdr: Arc<nonce::NonceReader>,
         psk: psk::Psk,
         s_addr: [u8; 6],

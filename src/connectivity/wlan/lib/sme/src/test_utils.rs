@@ -11,8 +11,10 @@ use wlan_common::ie::rsn::{
     rsne::{RsnCapabilities, Rsne},
     OUI,
 };
+use wlan_common::ie::wpa::WpaIe;
 use wlan_common::{
     channel::{Cbw, Phy},
+    organization::Oui,
     RadioConfig,
 };
 use wlan_rsn::key::{gtk::Gtk, ptk::Ptk};
@@ -38,6 +40,14 @@ pub fn wpa2_psk_ccmp_rsne_with_caps(caps: RsnCapabilities) -> Rsne {
         ..Default::default()
     };
     a_rsne
+}
+
+pub fn make_wpa1_ie() -> WpaIe {
+    WpaIe {
+        multicast_cipher: make_cipher(cipher::TKIP),
+        unicast_cipher_list: vec![make_cipher(cipher::TKIP)],
+        akm_list: vec![make_akm(akm::PSK)],
+    }
 }
 
 pub fn rsne_as_bytes(s_rsne: Rsne) -> Vec<u8> {
@@ -91,6 +101,18 @@ pub fn ptk() -> Ptk {
     Ptk::from_ptk(ptk_bytes, &akm(), cipher()).expect("expect valid ptk")
 }
 
+pub fn wpa1_ptk() -> Ptk {
+    let mut ptk_bytes = vec![];
+    // Using different values for KCK, KEK,, and TK to detect potential mistakes. This ensures
+    // that if our code, for example, mistakenly uses KCK instead of TK, test would fail.
+    let akm = wpa1_akm();
+    let cipher = wpa1_cipher();
+    ptk_bytes.extend(vec![0xAAu8; akm.kck_bytes().unwrap() as usize]);
+    ptk_bytes.extend(vec![0xBBu8; akm.kek_bytes().unwrap() as usize]);
+    ptk_bytes.extend(vec![0xCCu8; cipher.tk_bytes().unwrap()]);
+    Ptk::from_ptk(ptk_bytes, &akm, cipher).expect("expect valid ptk")
+}
+
 pub fn gtk_bytes() -> Vec<u8> {
     vec![0xDD; 16]
 }
@@ -99,12 +121,28 @@ pub fn gtk() -> Gtk {
     Gtk::from_gtk(gtk_bytes(), 2, cipher(), 0).expect("failed creating GTK")
 }
 
+pub fn wpa1_gtk_bytes() -> Vec<u8> {
+    vec![0xDD; 32]
+}
+
+pub fn wpa1_gtk() -> Gtk {
+    Gtk::from_gtk(wpa1_gtk_bytes(), 2, wpa1_cipher(), 0).expect("failed creating GTK")
+}
+
 pub fn akm() -> Akm {
-    Akm { oui: OUI, suite_type: akm::PSK }
+    make_akm(akm::PSK)
+}
+
+pub fn wpa1_akm() -> Akm {
+    akm::Akm { oui: Oui::MSFT, suite_type: akm::PSK }
 }
 
 pub fn cipher() -> Cipher {
-    Cipher { oui: OUI, suite_type: cipher::CCMP_128 }
+    make_cipher(cipher::CCMP_128)
+}
+
+pub fn wpa1_cipher() -> Cipher {
+    cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP }
 }
 
 pub fn fake_ht_cap_chanwidth(chanwidth: fidl_mlme::ChanWidthSet) -> fidl_mlme::HtCapabilities {

@@ -56,7 +56,7 @@ pub fn get_supplicant() -> Supplicant {
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
     let psk = psk::compute("ThisIsAPassword".as_bytes(), "ThisIsASSID".as_bytes())
         .expect("error computing PSK");
-    Supplicant::new_wpa2psk_ccmp128(
+    Supplicant::new_wpa_personal(
         nonce_rdr,
         psk,
         test_util::S_ADDR,

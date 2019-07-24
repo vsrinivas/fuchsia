@@ -101,7 +101,7 @@ pub fn get_rsna(
     let s_rsne = derive_s_rsne(&a_rsne)?;
     let negotiated_protection = NegotiatedProtection::from_rsne(&s_rsne)?;
     let psk = compute_psk(credential, &bss.ssid[..])?;
-    let supplicant = wlan_rsn::Supplicant::new_wpa2psk_ccmp128(
+    let supplicant = wlan_rsn::Supplicant::new_wpa_personal(
         // Note: There should be one Reader per device, not per SME.
         // Follow-up with improving on this.
         NonceReader::new(&device_info.addr[..])?,
@@ -115,7 +115,10 @@ pub fn get_rsna(
     Ok(Protection::Rsna(Rsna { negotiated_protection, supplicant: Box::new(supplicant) }))
 }
 
-fn compute_psk(credential: &fidl_sme::Credential, ssid: &[u8]) -> Result<psk::Psk, failure::Error> {
+pub fn compute_psk(
+    credential: &fidl_sme::Credential,
+    ssid: &[u8],
+) -> Result<psk::Psk, failure::Error> {
     match credential {
         fidl_sme::Credential::Password(password) => psk::compute(&password[..], ssid),
         fidl_sme::Credential::Psk(psk) => {

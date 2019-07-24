@@ -195,6 +195,11 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
         // IEEE Std 802.1X-2010, 11.9
         let key_descriptor = match frame.key_frame_fields.descriptor_type {
             eapol::KeyDescriptor::IEEE802DOT11 => eapol::KeyDescriptor::IEEE802DOT11,
+            eapol::KeyDescriptor::LEGACY_WPA1
+                if protection.protection_type == ProtectionType::LegacyWpa1 =>
+            {
+                eapol::KeyDescriptor::LEGACY_WPA1
+            }
             eapol::KeyDescriptor::RC4 => bail!(Error::InvalidKeyDescriptor(
                 frame.key_frame_fields.descriptor_type,
                 eapol::KeyDescriptor::IEEE802DOT11,
@@ -386,10 +391,12 @@ pub fn derive_key_descriptor_version(
 
     match akm.suite_type {
         1 | 2 => match key_descriptor_type {
-            eapol::KeyDescriptor::RC4 => match pairwise.suite_type {
-                TKIP | GROUP_CIPHER_SUITE => 1,
-                _ => 0,
-            },
+            eapol::KeyDescriptor::RC4 | eapol::KeyDescriptor::LEGACY_WPA1 => {
+                match pairwise.suite_type {
+                    TKIP | GROUP_CIPHER_SUITE => 1,
+                    _ => 0,
+                }
+            }
             eapol::KeyDescriptor::IEEE802DOT11
                 if pairwise.is_enhanced() || protection.group_data.is_enhanced() =>
             {

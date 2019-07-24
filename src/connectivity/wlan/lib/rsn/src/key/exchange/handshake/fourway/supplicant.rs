@@ -66,7 +66,7 @@ fn create_message_2<B: ByteSlice>(
     let msg2 = eapol::KeyFrameTx::new(
         msg1.eapol_fields.version,
         eapol::KeyFrameFields::new(
-            eapol::KeyDescriptor::IEEE802DOT11,
+            msg1.key_frame_fields.descriptor_type,
             key_info,
             0,
             msg1.key_frame_fields.key_replay_counter.to_native(),
@@ -152,7 +152,7 @@ fn create_message_4<B: ByteSlice>(
     let msg4 = eapol::KeyFrameTx::new(
         msg3.eapol_fields.version,
         eapol::KeyFrameFields::new(
-            eapol::KeyDescriptor::IEEE802DOT11,
+            msg3.key_frame_fields.descriptor_type,
             key_info,
             0,
             msg3.key_frame_fields.key_replay_counter.to_native(),
