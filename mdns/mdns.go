@@ -430,10 +430,114 @@ type MDNS interface {
 	Close()
 }
 
+type mDNSConn interface {
+	Close() error
+	SetIp(ip net.IP) error
+	getIp() net.IP
+	SendTo(buf bytes.Buffer, dst *net.UDPAddr) error
+	Send(buf bytes.Buffer) error
+	Listen(port int) error
+	JoinGroup(iface net.Interface) error
+	ConnectTo(port int, ip net.IP) error
+	ReadFrom(buf []byte) (size int, iface *net.Interface, src net.Addr, err error)
+}
+
+type mDNSConnBase struct {
+	dst     net.UDPAddr
+	senders []net.PacketConn
+}
+
+func (c *mDNSConnBase) SetIp(ip net.IP) error {
+	if ip4 := ip.To4(); ip4 == nil {
+		panic(fmt.Errorf("Not an IPv-4 address: %v", ip))
+	}
+	c.dst.IP = ip
+	return nil
+}
+
+func (c *mDNSConnBase) getIp() net.IP {
+	return c.dst.IP
+}
+
+func (c *mDNSConnBase) SendTo(buf bytes.Buffer, dst *net.UDPAddr) error {
+	for _, sender := range c.senders {
+		if _, err := sender.WriteTo(buf.Bytes(), dst); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *mDNSConnBase) Send(buf bytes.Buffer) error {
+	return c.SendTo(buf, &c.dst)
+}
+
+type mDNSConn4 struct {
+	mDNSConnBase
+	conn *ipv4.PacketConn
+}
+
+var defaultMDNSMulticastIPv4 = net.ParseIP("224.0.0.251")
+
+func newMDNSConn4() mDNSConn {
+	c := mDNSConn4{}
+	c.SetIp(defaultMDNSMulticastIPv4)
+	return &c
+}
+
+func (c *mDNSConn4) Close() error {
+	if c.conn != nil {
+		err := c.conn.Close()
+		c.conn = nil
+		return err
+	}
+	return nil
+}
+
+func (c *mDNSConn4) Listen(port int) error {
+	c.dst.Port = port
+	conn, err := net.ListenUDP("udp4", &c.dst)
+	if err != nil {
+		return err
+	}
+	// Now we need a low level ipv4 packet connection.
+	c.conn = ipv4.NewPacketConn(conn)
+	c.conn.SetControlMessage(ipv4.FlagDst|ipv4.FlagInterface, true)
+	return nil
+}
+
+// This allows us to listen on this specific interface.
+func (c *mDNSConn4) JoinGroup(iface net.Interface) error {
+	if err := c.conn.JoinGroup(&iface, &c.dst); err != nil {
+		c.Close()
+		return fmt.Errorf("joining %v%%%v: %v", iface, c.dst, err)
+	}
+	return nil
+}
+
+func (c *mDNSConn4) ConnectTo(port int, ip net.IP) error {
+	if len(ip) != 4 {
+		return fmt.Errorf("Not a valid IPv4 address: %v", ip)
+	}
+	conn, err := makeUnixIpv4Socket(port, ip.To4())
+	if err != nil {
+		return err
+	}
+	c.senders = append(c.senders, conn)
+	return nil
+}
+
+func (c *mDNSConn4) ReadFrom(buf []byte) (size int, iface *net.Interface, src net.Addr, err error) {
+	var cm *ipv4.ControlMessage
+	size, cm, src, err = c.conn.ReadFrom(buf)
+	if err == nil {
+		iface, err = net.InterfaceByIndex(cm.IfIndex)
+	}
+	return
+}
+
 type mDNS struct {
-	conn      *ipv4.PacketConn
-	senders   []net.PacketConn
-	address   string
+	conn4     mDNSConn
 	port      int
 	pHandlers []func(net.Interface, net.Addr, Packet)
 	wHandlers []func(net.Addr, error)
@@ -442,28 +546,24 @@ type mDNS struct {
 
 func NewMDNS() MDNS {
 	m := mDNS{}
+	m.conn4 = newMDNSConn4()
 	return &m
 }
 
-var defaultMDNSMulticastIPv4 = net.ParseIP("224.0.0.251")
-
 func (m *mDNS) Close() {
-	if m.conn != nil {
-		m.conn.Close()
-		m.conn = nil
-	}
+	m.conn4.Close()
 }
 
 func (m *mDNS) SetAddress(address string) error {
-	m.address = address
-	return nil
+	ip := net.ParseIP(address)
+	if ip == nil {
+		return fmt.Errorf("Not a valid IP address: %v", address)
+	}
+	return m.conn4.SetIp(ip)
 }
 
 func (m *mDNS) ipToSend() net.IP {
-	if m.address == "" {
-		return defaultMDNSMulticastIPv4
-	}
-	return net.ParseIP(m.address)
+	return m.conn4.getIp()
 }
 
 // AddHandler calls f on every Packet received.
@@ -493,20 +593,19 @@ func (m *mDNS) SendTo(packet Packet, dst *net.UDPAddr) error {
 	if err := packet.serialize(&buf); err != nil {
 		return err
 	}
-	for _, sender := range m.senders {
-		if _, err := sender.WriteTo(buf.Bytes(), dst); err != nil {
-			return err
-		}
-	}
-	return nil
+	return m.conn4.SendTo(buf, dst)
 }
 
 // Send serializes and sends packet out as a multicast to all interfaces
 // using the port that m is listening on. Note that Start must be
 // called prior to making this call.
 func (m *mDNS) Send(packet Packet) error {
-	dst := net.UDPAddr{IP: m.ipToSend(), Port: m.port}
-	return m.SendTo(packet, &dst)
+	var buf bytes.Buffer
+	// TODO(jakehehrlich): Add checking that the packet is well formed.
+	if err := packet.serialize(&buf); err != nil {
+		return err
+	}
+	return m.conn4.Send(buf)
 }
 
 func makeUnixIpv4Socket(port int, ip net.IP) (net.PacketConn, error) {
@@ -544,20 +643,14 @@ func makeUnixIpv4Socket(port int, ip net.IP) (net.PacketConn, error) {
 // Start causes m to start listening for MDNS packets on all interfaces on
 // the specified port. Listening will stop if ctx is done.
 func (m *mDNS) Start(ctx context.Context, port int) error {
-	dst := &net.UDPAddr{IP: m.ipToSend(), Port: port}
-	conn, err := net.ListenUDP("udp4", dst)
-	if err != nil {
+	if err := m.conn4.Listen(port); err != nil {
 		return err
 	}
-	// Now we need a low level ipv4 packet connection.
-	m.conn = ipv4.NewPacketConn(conn)
-	m.conn.SetControlMessage(ipv4.FlagDst|ipv4.FlagInterface, true)
-	m.port = port
 	// Now we need to join this connection to every interface that supports
 	// Multicast.
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		conn.Close()
+		m.Close()
 		return fmt.Errorf("listing interfaces: %v", err)
 	}
 	// We need to make sure to handle each interface.
@@ -565,10 +658,9 @@ func (m *mDNS) Start(ctx context.Context, port int) error {
 		if iface.Flags&net.FlagMulticast == 0 || iface.Flags&net.FlagUp == 0 {
 			continue
 		}
-		// This allows us to listen on this specific interface.
-		if err := m.conn.JoinGroup(&iface, dst); err != nil {
-			conn.Close()
-			return fmt.Errorf("joining %v%%%v: %v", iface, dst, err)
+		if err := m.conn4.JoinGroup(iface); err != nil {
+			m.Close()
+			return fmt.Errorf("joining %v: %v", iface, err)
 		}
 		addrs, err := iface.Addrs()
 		if err != nil {
@@ -585,16 +677,15 @@ func (m *mDNS) Start(ctx context.Context, port int) error {
 			if ip == nil || ip.To4() == nil {
 				continue
 			}
-			conn, err := makeUnixIpv4Socket(port, ip.To4())
+			err := m.conn4.ConnectTo(port, ip.To4())
 			if err != nil {
 				return fmt.Errorf("creating socket for %v via %v: %v", iface, ip, err)
 			}
-			m.senders = append(m.senders, conn)
 			break
 		}
 	}
 	go func() {
-		defer conn.Close()
+		defer m.Close()
 		// Now that we've joined every possible interface we can handle the main loop.
 		payloadBuf := make([]byte, 1<<16)
 		for {
@@ -603,14 +694,7 @@ func (m *mDNS) Start(ctx context.Context, port int) error {
 				return
 			default:
 			}
-			size, cm, src, err := m.conn.ReadFrom(payloadBuf)
-			if err != nil {
-				for _, e := range m.eHandlers {
-					go e(err)
-				}
-				return
-			}
-			iface, err := net.InterfaceByIndex(cm.IfIndex)
+			size, iface, src, err := m.conn4.ReadFrom(payloadBuf)
 			if err != nil {
 				for _, e := range m.eHandlers {
 					go e(err)
