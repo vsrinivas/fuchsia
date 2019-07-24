@@ -28,6 +28,8 @@ fit::promise<fuchsia::feedback::Data> GetFeedbackData(
 
 // Wraps around fuchsia::feedback::DataProviderPtr to handle establishing the connection, losing the
 // connection, waiting for the callback, enforcing a timeout, etc.
+//
+// GetData() is expected to be called only once.
 class FeedbackDataProvider {
  public:
   FeedbackDataProvider(async_dispatcher_t* dispatcher,
@@ -38,6 +40,8 @@ class FeedbackDataProvider {
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
+  // Enforces the one-shot nature of GetData().
+  bool has_called_get_data_ = false;
 
   fuchsia::feedback::DataProviderPtr data_provider_;
   fit::bridge<fuchsia::feedback::Data> done_;

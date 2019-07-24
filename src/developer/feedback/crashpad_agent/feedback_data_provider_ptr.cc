@@ -8,26 +8,37 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include "src/lib/fxl/logging.h"
+
 namespace fuchsia {
 namespace crash {
+namespace {
 
-fit::promise<fuchsia::feedback::Data> GetFeedbackData(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
-    zx::duration timeout) {
+using fuchsia::feedback::Data;
+
+}  // namespace
+
+fit::promise<Data> GetFeedbackData(async_dispatcher_t* dispatcher,
+                                   std::shared_ptr<::sys::ServiceDirectory> services,
+                                   zx::duration timeout) {
   std::unique_ptr<FeedbackDataProvider> feedback_data_provider =
       std::make_unique<FeedbackDataProvider>(dispatcher, services);
 
   // We move |feedback_data_provider| in a subsequent chained promise to guarantee its lifetime.
   return feedback_data_provider->GetData(timeout).then(
-      [feedback_data_provider = std::move(feedback_data_provider)](
-          fit::result<fuchsia::feedback::Data>& result) { return std::move(result); });
+      [feedback_data_provider = std::move(feedback_data_provider)](fit::result<Data>& result) {
+        return std::move(result);
+      });
 }
 
 FeedbackDataProvider::FeedbackDataProvider(async_dispatcher_t* dispatcher,
                                            std::shared_ptr<::sys::ServiceDirectory> services)
     : dispatcher_(dispatcher), services_(services) {}
 
-fit::promise<fuchsia::feedback::Data> FeedbackDataProvider::GetData(zx::duration timeout) {
+fit::promise<Data> FeedbackDataProvider::GetData(zx::duration timeout) {
+  FXL_CHECK(!has_called_get_data_) << "GetData() is not intended to be called twice";
+  has_called_get_data_ = true;
+
   data_provider_ = services_->Connect<fuchsia::feedback::DataProvider>();
 
   // fit::promise does not have the notion of a timeout. So we post a delayed task that will call
@@ -51,7 +62,7 @@ fit::promise<fuchsia::feedback::Data> FeedbackDataProvider::GetData(zx::duration
   if (post_status != ZX_OK) {
     FX_PLOGS(ERROR, post_status) << "Failed to post delayed task";
     FX_LOGS(ERROR) << "Skipping Feedback data collection as it is not safe without a timeout";
-    return fit::make_result_promise<fuchsia::feedback::Data>(fit::error());
+    return fit::make_result_promise<Data>(fit::error());
   }
 
   data_provider_.set_error_handler([this](zx_status_t status) {
@@ -76,11 +87,10 @@ fit::promise<fuchsia::feedback::Data> FeedbackDataProvider::GetData(zx::duration
     }
   });
 
-  return done_.consumer.promise_or(fit::error())
-      .then([this](fit::result<fuchsia::feedback::Data>& result) {
-        done_after_timeout_.Cancel();
-        return std::move(result);
-      });
+  return done_.consumer.promise_or(fit::error()).then([this](fit::result<Data>& result) {
+    done_after_timeout_.Cancel();
+    return std::move(result);
+  });
 }
 
 }  // namespace crash

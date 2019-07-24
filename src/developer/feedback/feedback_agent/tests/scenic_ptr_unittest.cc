@@ -18,6 +18,7 @@
 #include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace fuchsia {
@@ -50,10 +51,10 @@ class TakeScreenshotTest : public gtest::TestLoopFixture {
     return result;
   }
 
- private:
   async::Executor executor_;
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
 
+ private:
   std::unique_ptr<StubScenic> stub_scenic_;
 };
 
@@ -106,6 +107,20 @@ TEST_F(TakeScreenshotTest, Fail_ScenicNeverReturns) {
   fit::result<ScreenshotData> result = TakeScreenshot();
 
   ASSERT_TRUE(result.is_error());
+}
+
+TEST_F(TakeScreenshotTest, Fail_CallTakeScreenshotTwice) {
+  std::vector<TakeScreenshotResponse> scenic_responses;
+  scenic_responses.emplace_back(CreateEmptyScreenshot(), kSuccess);
+  std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
+  stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
+  ResetScenic(std::move(stub_scenic));
+
+  const zx::duration unused_timeout = zx::sec(1);
+  Scenic scenic(dispatcher(), service_directory_provider_.service_directory());
+  executor_.schedule_task(scenic.TakeScreenshot(unused_timeout));
+  ASSERT_DEATH(scenic.TakeScreenshot(unused_timeout),
+               testing::HasSubstr("TakeScreenshot() is not intended to be called twice"));
 }
 
 }  // namespace

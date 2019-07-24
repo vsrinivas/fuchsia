@@ -30,6 +30,8 @@ fit::promise<std::string> RetrieveCurrentChannel(async_dispatcher_t* dispatcher,
 
 // Wraps around fuchsia::update::InfoPtr to handle establishing the connection, losing the
 // connection, waiting for the callback, enforcing a timeout, etc.
+//
+// GetChannel() is expected to be called only once.
 class UpdateInfo {
  public:
   UpdateInfo(async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services);
@@ -39,6 +41,8 @@ class UpdateInfo {
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
+  // Enforces the one-shot nature of GetChannel().
+  bool has_called_get_channel_ = false;
 
   fuchsia::update::InfoPtr update_info_;
   fit::bridge<std::string> done_;

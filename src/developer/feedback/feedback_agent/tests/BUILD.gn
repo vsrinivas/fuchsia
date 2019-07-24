@@ -126,6 +126,7 @@ executable("channel_provider_ptr_unittest") {
     "//src/developer/feedback/feedback_agent:src",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
@@ -268,6 +269,7 @@ executable("scenic_ptr_unittest") {
     "//src/developer/feedback/feedback_agent:src",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]

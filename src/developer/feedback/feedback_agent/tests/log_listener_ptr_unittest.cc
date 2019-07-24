@@ -227,11 +227,9 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   // set it arbitrary long.
   const zx::duration timeout = zx::sec(1);
   fit::result<void> result;
-  std::unique_ptr<LogListener> log_listener =
-      std::make_unique<LogListener>(dispatcher(), service_directory_provider_.service_directory());
-  executor_.schedule_task(
-      log_listener->CollectLogs(/*timeout=*/zx::sec(1))
-          .then([&result](const fit::result<void>& res) { result = std::move(res); }));
+  LogListener log_listener(dispatcher(), service_directory_provider_.service_directory());
+  executor_.schedule_task(log_listener.CollectLogs(timeout).then(
+      [&result](const fit::result<void>& res) { result = std::move(res); }));
   RunLoopFor(timeout);
 
   // First, we check we have had a successful flow.
@@ -240,6 +238,20 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   // Then, we check that if the logger closes the connection (and triggers the error handler on the
   // LogListener side), we don't crash (cf. DX-1602).
   stub_logger->CloseAllConnections();
+}
+
+TEST_F(LogListenerTest, Fail_CallCollectLogsTwice) {
+  std::unique_ptr<StubLogger> stub_logger = std::make_unique<StubLogger>();
+  stub_logger->set_messages({
+      BuildLogMessage(FX_LOG_INFO, "msg"),
+  });
+  FXL_CHECK(service_directory_provider_.AddService(stub_logger->GetHandler()) == ZX_OK);
+
+  const zx::duration unused_timeout = zx::sec(1);
+  LogListener log_listener(dispatcher(), service_directory_provider_.service_directory());
+  executor_.schedule_task(log_listener.CollectLogs(unused_timeout));
+  ASSERT_DEATH(log_listener.CollectLogs(unused_timeout),
+               testing::HasSubstr("CollectLogs() is not intended to be called twice"));
 }
 
 }  // namespace

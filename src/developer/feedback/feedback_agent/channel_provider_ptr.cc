@@ -8,6 +8,8 @@
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 
+#include "src/lib/fxl/logging.h"
+
 namespace fuchsia {
 namespace feedback {
 
@@ -28,6 +30,9 @@ UpdateInfo::UpdateInfo(async_dispatcher_t* dispatcher,
     : dispatcher_(dispatcher), services_(services) {}
 
 fit::promise<std::string> UpdateInfo::GetChannel(zx::duration timeout) {
+  FXL_CHECK(!has_called_get_channel_) << "GetChannel() is not intended to be called twice";
+  has_called_get_channel_ = true;
+
   update_info_ = services_->Connect<fuchsia::update::Info>();
 
   // fit::promise does not have the notion of a timeout. So we post a delayed task that will call

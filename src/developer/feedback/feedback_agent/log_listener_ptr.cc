@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -56,6 +57,9 @@ LogListener::LogListener(async_dispatcher_t* dispatcher,
     : dispatcher_(dispatcher), services_(services), binding_(this) {}
 
 fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
+  FXL_CHECK(!has_called_collect_logs_) << "CollectLogs() is not intended to be called twice";
+  has_called_collect_logs_ = true;
+
   fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener_h;
   binding_.Bind(log_listener_h.NewRequest());
   binding_.set_error_handler([this](zx_status_t status) {

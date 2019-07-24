@@ -28,6 +28,8 @@ fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(
 
 // Wraps around fuchsia::ui::scenic::ScenicPtr to handle establishing the connection, losing the
 // connection, waiting for the callback, enforcing a timeout, etc.
+//
+// TakeScreenshot() is expected to be called only once.
 class Scenic {
  public:
   Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services);
@@ -37,6 +39,8 @@ class Scenic {
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
+  // Enforces the one-shot nature of TakeScreenshot().
+  bool has_called_take_screenshot_ = false;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
   fit::bridge<fuchsia::ui::scenic::ScreenshotData> done_;

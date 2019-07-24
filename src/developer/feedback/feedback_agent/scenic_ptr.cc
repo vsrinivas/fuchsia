@@ -8,17 +8,24 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include "src/lib/fxl/logging.h"
+
 namespace fuchsia {
 namespace feedback {
+namespace {
 
-fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
-    zx::duration timeout) {
+using fuchsia::ui::scenic::ScreenshotData;
+
+}  // namespace
+
+fit::promise<ScreenshotData> TakeScreenshot(async_dispatcher_t* dispatcher,
+                                            std::shared_ptr<::sys::ServiceDirectory> services,
+                                            zx::duration timeout) {
   std::unique_ptr<Scenic> scenic = std::make_unique<Scenic>(dispatcher, services);
 
   // We move |scenic| in a subsequent chained promise to guarantee its lifetime.
   return scenic->TakeScreenshot(timeout).then(
-      [scenic = std::move(scenic)](fit::result<fuchsia::ui::scenic::ScreenshotData>& result) {
+      [scenic = std::move(scenic)](fit::result<ScreenshotData>& result) {
         return std::move(result);
       });
 }
@@ -26,8 +33,10 @@ fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(
 Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services)
     : dispatcher_(dispatcher), services_(services) {}
 
-fit::promise<fuchsia::ui::scenic::ScreenshotData> Scenic::TakeScreenshot(
-    const zx::duration timeout) {
+fit::promise<ScreenshotData> Scenic::TakeScreenshot(const zx::duration timeout) {
+  FXL_CHECK(!has_called_take_screenshot_) << "TakeScreenshot() is not intended to be called twice";
+  has_called_take_screenshot_ = true;
+
   scenic_ = services_->Connect<fuchsia::ui::scenic::Scenic>();
 
   // fit::promise does not have the notion of a timeout. So we post a delayed task that will call
@@ -51,7 +60,7 @@ fit::promise<fuchsia::ui::scenic::ScreenshotData> Scenic::TakeScreenshot(
   if (post_status != ZX_OK) {
     FX_PLOGS(ERROR, post_status) << "Failed to post delayed task";
     FX_LOGS(ERROR) << "Skipping screenshot take as it is not safe without a timeout";
-    return fit::make_result_promise<fuchsia::ui::scenic::ScreenshotData>(fit::error());
+    return fit::make_result_promise<ScreenshotData>(fit::error());
   }
 
   scenic_.set_error_handler([this](zx_status_t status) {
@@ -63,7 +72,7 @@ fit::promise<fuchsia::ui::scenic::ScreenshotData> Scenic::TakeScreenshot(
     done_.completer.complete_error();
   });
 
-  scenic_->TakeScreenshot([this](fuchsia::ui::scenic::ScreenshotData raw_screenshot, bool success) {
+  scenic_->TakeScreenshot([this](ScreenshotData raw_screenshot, bool success) {
     if (!done_.completer) {
       return;
     }
@@ -76,11 +85,10 @@ fit::promise<fuchsia::ui::scenic::ScreenshotData> Scenic::TakeScreenshot(
     }
   });
 
-  return done_.consumer.promise_or(fit::error())
-      .then([this](fit::result<fuchsia::ui::scenic::ScreenshotData>& result) {
-        done_after_timeout_.Cancel();
-        return std::move(result);
-      });
+  return done_.consumer.promise_or(fit::error()).then([this](fit::result<ScreenshotData>& result) {
+    done_after_timeout_.Cancel();
+    return std::move(result);
+  });
 }
 
 }  // namespace feedback

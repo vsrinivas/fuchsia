@@ -17,6 +17,7 @@
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace fuchsia {
@@ -47,10 +48,10 @@ class RetrieveCurrentChannelTest : public gtest::TestLoopFixture {
     return result;
   }
 
- private:
   async::Executor executor_;
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
 
+ private:
   std::unique_ptr<StubUpdateInfo> stub_channel_provider_;
 };
 
@@ -96,6 +97,16 @@ TEST_F(RetrieveCurrentChannelTest, Fail_ChannelProviderNeverReturns) {
   fit::result<std::string> result = RetrieveCurrentChannel();
 
   ASSERT_TRUE(result.is_error());
+}
+
+TEST_F(RetrieveCurrentChannelTest, Fail_CallGetChannelTwice) {
+  ResetChannelProvider(std::make_unique<StubUpdateInfo>());
+
+  const zx::duration unused_timeout = zx::sec(1);
+  UpdateInfo channel_provider(dispatcher(), service_directory_provider_.service_directory());
+  executor_.schedule_task(channel_provider.GetChannel(unused_timeout));
+  ASSERT_DEATH(channel_provider.GetChannel(unused_timeout),
+               testing::HasSubstr("GetChannel() is not intended to be called twice"));
 }
 
 }  // namespace

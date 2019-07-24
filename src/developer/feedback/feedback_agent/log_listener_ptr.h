@@ -28,6 +28,10 @@ fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
     async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
     zx::duration timeout);
 
+// Wraps around fuchsia::logger::LogListenerPtr to handle establishing the connection, losing the
+// connection, waiting for the callback, enforcing a timeout, etc.
+//
+// CollectLogs() is expected to be called only once.
 class LogListener : public fuchsia::logger::LogListener {
  public:
   explicit LogListener(async_dispatcher_t* dispatcher,
@@ -48,6 +52,8 @@ class LogListener : public fuchsia::logger::LogListener {
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<::sys::ServiceDirectory> services_;
   fidl::Binding<fuchsia::logger::LogListener> binding_;
+  // Enforces the one-shot nature of CollectLogs().
+  bool has_called_collect_logs_ = false;
 
   fuchsia::logger::LogPtr logger_;
 
