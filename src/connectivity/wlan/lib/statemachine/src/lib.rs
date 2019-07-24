@@ -10,14 +10,16 @@ use std::{
 };
 
 ///! Generic state machine implementation with compile time checked state transitions.
+///
+pub use wlan_statemachine_macro::statemachine;
 
 /// Wrapper to safely replace states of state machine which don't consume their states.
 /// Use this wrapper if state transitions are performed on mutable references rather than consumed
 /// states.
 /// Example:
 /// ```
-/// fn on_event(event: Event, state_machine: &mut StateMachine<Foo>) {
-///     state_machine.replace_state(|state| match state {
+/// fn on_event(event: Event, statemachine: &mut StateMachine<Foo>) {
+///     statemachine.replace_state(|state| match state {
 ///         State::A(_) => match event {
 ///             Event::A => State::B,
 ///             _ => state,
@@ -99,53 +101,10 @@ impl<S> DerefMut for StateMachine<S> {
 /// A `StateTransition` defines valid transitions from one state into another.
 /// Implement `StateTransition` on the given `State` struct to define a new
 /// state transition. Alternatively, use the convenience macro
-/// `state_machine!`.
+/// `statemachine!`.
 pub trait StateTransition<S> {
     #[doc(hidden)]
-    fn __internal_into_state(new_state: S) -> State<S>;
-}
-
-/// Defines a state machine's initial state and its allowed transitions.
-/// Example:
-/// ```
-/// state_machine!(
-///     () => A,
-///     A => B,
-///     B => [C, A],
-///     C => A
-/// );
-/// ```
-#[macro_export]
-macro_rules! state_machine {
-    (@internal () => $initial:ty) => {
-        impl InitialState for $initial {}
-    };
-    // Initial state followed by multiple lines of 1:N mappings.
-    (() => $initial:ty, $($rest:tt)*) => {
-        state_machine!(@internal () => $initial);
-        state_machine!(@internal $($rest)*);
-    };
-    // 1:N mapping
-    (@internal $from:ty => [$($to:ty),+]) => {
-        $( state_machine!(@internal $from => $to); )*
-    };
-    (@internal $from:ty => [$($to:ty),+], $($rest:tt)*) => {
-        $( state_machine!(@internal $from => $to); )*
-        state_machine!(@internal $($rest)*);
-    };
-    // 1:1 mapping
-    (@internal $from:ty => $to:ty) => {
-        impl StateTransition<$to> for State<$from> {
-            fn __internal_into_state(new_state: $to) -> State<$to> {
-                State::<$to>::__internal_new(new_state)
-            }
-        }
-    };
-    (@internal $from:ty => $to:ty, $($rest:tt)*) => {
-        state_machine!(@internal $from => $to);
-        state_machine!(@internal $($rest)*);
-    };
-    (@internal) => {};
+    fn __internal_transition_to(new_state: S) -> State<S>;
 }
 
 /// Marker for creating a new initial state.
@@ -169,7 +128,7 @@ impl<S> State<S> {
         Self::__internal_new(data)
     }
 
-    // Note: must be public to be accessible through `state_machine!` macro.
+    // Note: must be public to be accessible through `statemachine!` macro.
     #[doc(hidden)]
     pub fn __internal_new(data: S) -> State<S> {
         Self { data, __internal_phantom: PhantomData }
@@ -183,11 +142,11 @@ impl<S> State<S> {
         (Transition { _phantom: PhantomData }, self.data)
     }
 
-    pub fn into_state<T>(self, new_state: T) -> State<T>
+    pub fn transition_to<T>(self, new_state: T) -> State<T>
     where
         State<S>: StateTransition<T>,
     {
-        Self::__internal_into_state(new_state)
+        Self::__internal_transition_to(new_state)
     }
 }
 impl<S> Deref for State<S> {
@@ -220,11 +179,11 @@ pub struct Transition<S> {
 }
 
 impl<S> Transition<S> {
-    pub fn into_state<T>(self, new_state: T) -> State<T>
+    pub fn to<T>(self, new_state: T) -> State<T>
     where
         State<S>: StateTransition<T>,
     {
-        State::<S>::__internal_into_state(new_state)
+        State::<S>::__internal_transition_to(new_state)
     }
 }
 
@@ -240,41 +199,67 @@ mod tests {
     pub struct A;
     pub struct B(SharedStateData);
     pub struct C(SharedStateData);
-    state_machine!(
+    statemachine!(
+        enum States,
+
         () => A,
         A => B,
         B => [C, A],
-        C => [A]
+        C => [A],
+        // Test duplicate transitions
+        B => C,
+        B => [A, C],
     );
 
-    enum States {
-        A(State<A>),
-        B(State<B>),
-    }
+    #[derive(Debug)]
+    pub struct A2;
+    #[derive(Debug)]
+    pub struct B2;
+    statemachine!(
+        // Test derive attribute.
+        #[derive(Debug)]
+        enum States2,
+        () => A2,
+        A2 => B2,
+        A2 => B2, // Test duplicate transitions
+    );
 
     #[test]
     fn state_transitions() {
         let state = State::new(A);
         // Regular state transition:
-        let state = state.into_state(B(SharedStateData::default()));
+        let state = state.transition_to(B(SharedStateData::default()));
 
         // Modify and share state data with new state.
         let (transition, mut data) = state.release_data();
         data.0.foo = 5;
-        let state = transition.into_state(C(data.0));
+        let state = transition.to(C(data.0));
         assert_eq!(state.0.foo, 5);
     }
 
     #[test]
-    fn state_machine() {
-        let mut state_machine = StateMachine::new(States::A(State::new(A)));
-        state_machine.replace_state(|state| match state {
-            States::A(state) => States::B(state.into_state(B(SharedStateData::default()))),
+    fn statemachine() {
+        let mut statemachine = StateMachine::new(States::A(State::new(A)));
+        statemachine.replace_state(|state| match state {
+            States::A(state) => state.transition_to(B(SharedStateData::default())).into(),
             _ => state,
         });
-        match state_machine.into_state() {
-            States::B(State{ data: B(SharedStateData { foo: 0 }), ..}) => (),
+
+        match statemachine.into_state() {
+            States::B(State { data: B(SharedStateData { foo: 0 }), .. }) => (),
             _ => panic!("unexpected state"),
         }
+    }
+
+    #[test]
+    fn generated_enum() {
+        let _state_machine: States2 = match States2::A2(State::new(A2)) {
+            // Test generated From impls:
+            States2::A2(state) => state.transition_to(B2).into(),
+            other => panic!("expected state A to be active: {:?}", other),
+        };
+
+        // No assertion needed. This test verifies that the enum struct "States2" was generated
+        // properly.
     }
 }

@@ -1,0 +1,31 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_library("wlan-statemachine") {
+  name = "wlan_statemachine"
+  version = "0.1.0"
+  edition = "2018"
+
+  with_unit_tests = true
+
+  deps = [
+    "//src/connectivity/wlan/lib/statemachine/macro:wlan-statemachine-macro",
+  ]
+}
+
+test_package("wlan-statemachine-tests") {
+  deps = [
+    ":wlan-statemachine_test",
+  ]
+
+  tests = [
+    {
+      name = "wlan_statemachine_lib_test"
+      environments = basic_envs
+    },
+  ]
+}

@@ -13,7 +13,7 @@ use crate::ProtectionInfo;
 use eapol;
 use failure::{self, bail, ensure};
 use std::sync::{Arc, Mutex};
-use wlan_common::state_machine::StateMachine;
+use wlan_statemachine::StateMachine;
 use zerocopy::ByteSlice;
 
 #[derive(Debug, PartialEq)]

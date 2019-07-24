@@ -17,7 +17,7 @@ use eapol;
 use failure::{self, bail};
 use log::{error, info};
 use std::collections::HashSet;
-use wlan_common::state_machine::StateMachine;
+use wlan_statemachine::StateMachine;
 use zerocopy::ByteSlice;
 
 #[derive(Debug, PartialEq)]
