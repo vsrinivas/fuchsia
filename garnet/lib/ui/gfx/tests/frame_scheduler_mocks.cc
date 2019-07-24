@@ -95,11 +95,13 @@ bool MockFrameRenderer::RenderFrame(const FrameTimingsPtr& frame_timings,
   size_t swapchain_index = frame_timings->RegisterSwapchain();
   frames_[frame_number] = {.frame_timings = std::move(frame_timings),
                            .swapchain_index = swapchain_index};
+
   return render_frame_return_value_;
 }
 
 void MockFrameRenderer::EndFrame(uint64_t frame_number, zx_time_t time_done) {
   SignalFrameRendered(frame_number, time_done);
+  SignalFrameCpuRendered(frame_number, time_done);
   SignalFramePresented(frame_number, time_done);
 }
 
@@ -112,6 +114,17 @@ void MockFrameRenderer::SignalFrameRendered(uint64_t frame_number, zx_time_t tim
   FXL_CHECK(!frame.frame_rendered);
   frame.frame_rendered = true;
   frame.frame_timings->OnFrameRendered(frame.swapchain_index, time_done);
+
+  CleanUpFrame(frame_number);
+}
+
+void MockFrameRenderer::SignalFrameCpuRendered(uint64_t frame_number, zx_time_t time_done) {
+  auto find_it = frames_.find(frame_number);
+  FXL_CHECK(find_it != frames_.end());
+
+  auto& frame = find_it->second;
+  frame.frame_cpu_rendered = true;
+  frame.frame_timings->OnFrameCpuRendered(time_done);
 
   CleanUpFrame(frame_number);
 }
@@ -147,7 +160,7 @@ void MockFrameRenderer::CleanUpFrame(uint64_t frame_number) {
   FXL_CHECK(find_it != frames_.end());
 
   auto& frame = find_it->second;
-  if (!frame.frame_rendered || !frame.frame_presented) {
+  if (!frame.frame_rendered || !frame.frame_presented || !frame.frame_cpu_rendered) {
     return;
   }
   frames_.erase(frame_number);

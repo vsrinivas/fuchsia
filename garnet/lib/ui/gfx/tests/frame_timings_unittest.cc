@@ -165,6 +165,30 @@ TEST_F(FrameTimingsTest, FrameDroppedBeforeRender_ShouldStillTriggerFrameRendere
   EXPECT_EQ(timestamps.actual_presentation_time, FrameTimings::kTimeDropped);
 }
 
+TEST_F(FrameTimingsTest, LargerRenderingCpuDuration_ShouldBeReturned) {
+  frame_timings_->OnFrameRendered(0, 100);
+  frame_timings_->OnFrameCpuRendered(400);
+
+  FrameTimings::Timestamps timestamps = frame_timings_->GetTimestamps();
+  EXPECT_EQ(timestamps.render_done_time, 400);
+}
+
+TEST_F(FrameTimingsTest, LargerRenderingGpuDuration_ShouldBeReturned) {
+  frame_timings_->OnFrameCpuRendered(100);
+  frame_timings_->OnFrameRendered(0, 400);
+
+  FrameTimings::Timestamps timestamps = frame_timings_->GetTimestamps();
+  EXPECT_EQ(timestamps.render_done_time, 400);
+}
+
+TEST_F(FrameTimingsTest, RenderingCpu_Duration_ShouldBeMaxed) {
+  frame_timings_->OnFrameCpuRendered(400);
+  frame_timings_->OnFrameCpuRendered(100);
+
+  FrameTimings::Timestamps timestamps = frame_timings_->GetTimestamps();
+  EXPECT_EQ(timestamps.render_done_time, 400);
+}
+
 TEST(FrameTimings, DroppedAndUnitializedTimesAreUnique) {
   EXPECT_LT(FrameTimings::kTimeUninitialized, FrameTimings::kTimeDropped);
 }

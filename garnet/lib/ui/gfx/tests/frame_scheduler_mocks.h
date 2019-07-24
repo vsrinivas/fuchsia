@@ -159,6 +159,9 @@ class MockFrameRenderer : public FrameRenderer {
   // Signal frame |frame_index| that it has been rendered.
   void SignalFrameRendered(uint64_t frame_number, zx_time_t time_done);
 
+  // Signal frame |frame_index| that the CPU portion of rendering is done.
+  void SignalFrameCpuRendered(uint64_t frame_number, zx_time_t time_done);
+
   // Signal frame |frame_index| that it has been presented.
   void SignalFramePresented(uint64_t frame_number, zx_time_t time_done);
 
@@ -182,6 +185,7 @@ class MockFrameRenderer : public FrameRenderer {
     FrameTimingsPtr frame_timings;
     size_t swapchain_index = -1;
     uint32_t frame_rendered = false;
+    uint32_t frame_cpu_rendered = false;
     uint32_t frame_presented = false;
   };
   std::unordered_map<uint64_t, Timings> frames_;

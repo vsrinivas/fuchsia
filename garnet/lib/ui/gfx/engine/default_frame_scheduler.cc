@@ -164,14 +164,15 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
     FXL_LOG(INFO) << "Calling RenderFrame presentation_time=" << presentation_time
                   << " frame_number=" << frame_number_;
   }
+
   TRACE_INSTANT("gfx", "Render start", TRACE_SCOPE_PROCESS, "Expected presentation time",
                 presentation_time, "frame_number", frame_number_);
+  const zx_time_t frame_render_start_time = async_now(dispatcher_);
 
   // Ratchet the Present callbacks to signal that all outstanding Present() calls until this point
   // are applied to the next Scenic frame.
   update_manager_.RatchetPresentCallbacks(presentation_time, frame_number_);
 
-  const zx_time_t frame_render_start_time = async_now(dispatcher_);
   auto frame_timings = fxl::MakeRefCounted<FrameTimings>(this, frame_number_, presentation_time,
                                                          wakeup_time_, frame_render_start_time);
   // TODO(SCN-1482) Revisit how we do this.
@@ -181,6 +182,11 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
 
   // Render the frame.
   currently_rendering_ = frame_renderer_->RenderFrame(frame_timings, presentation_time);
+
+  // See SCN-1505 for details of measuring render time.
+  const zx_time_t frame_render_end_cpu_time = async_now(dispatcher_);
+  frame_timings->OnFrameCpuRendered(frame_render_end_cpu_time);
+
   if (currently_rendering_) {
     outstanding_frames_.push_back(frame_timings);
     render_pending_ = false;

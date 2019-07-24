@@ -93,6 +93,11 @@ class FrameTimings : public escher::Reffable {
   // |target_presentation_time|
   void OnFrameDropped(size_t swapchain_index);
 
+  // It is possible for the GPU portion of the rendering of a frame to be
+  // completed before the CPU portion. Therefore to ensure our frame scheduler
+  // makes correct decisions, we need to account for such a possibility.
+  void OnFrameCpuRendered(zx_time_t time);
+
   // Provide direct access to FrameTimings constant values.
   uint64_t frame_number() const { return frame_number_; }
   zx_time_t target_presentation_time() const { return target_presentation_time_; }
@@ -152,6 +157,7 @@ class FrameTimings : public escher::Reffable {
   zx_time_t actual_presentation_time_ = kTimeUninitialized;
   zx_time_t updates_finished_time_ = kTimeUninitialized;
   zx_time_t rendering_finished_time_ = kTimeUninitialized;
+  zx_time_t rendering_cpu_finished_time_ = kTimeUninitialized;
 
   bool frame_was_dropped_ = false;
   bool finalized_ = false;

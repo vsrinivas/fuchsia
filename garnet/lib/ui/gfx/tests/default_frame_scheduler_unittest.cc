@@ -329,6 +329,7 @@ TEST_F(FrameSchedulerTest, RenderCalls_ShouldNotExceed_MaxOutstandingFrames) {
     }
 
     // Signal frame rendered.
+    mock_renderer_->SignalFrameCpuRendered(i, now + schedule_frame_wait.get());
     mock_renderer_->SignalFrameRendered(i, now + schedule_frame_wait.get());
   }
 
@@ -367,6 +368,7 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresentCallbackOnlyWhenFramePresented
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
 
   // Frame #0 should still have rendered on the GPU; simulate this.
+  mock_renderer_->SignalFrameCpuRendered(/* frame number */ 0, Now().get());
   mock_renderer_->SignalFrameRendered(/* frame number */ 0, Now().get());
   EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
@@ -374,6 +376,7 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresentCallbackOnlyWhenFramePresented
   RunLoopFor(zx::duration(fake_display_->GetVsyncInterval()));
   // Presenting frame #1 should trigger frame presented signal.
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
+  mock_renderer_->SignalFrameCpuRendered(/* frame number */ 1, Now().get());
   mock_renderer_->SignalFrameRendered(/* frame number */ 1, Now().get());
   mock_renderer_->SignalFramePresented(/* frame number */ 1, Now().get());
   // Both callbacks are signaled (the failed frame #0, and the successful
@@ -421,6 +424,77 @@ TEST_F(FrameSchedulerTest, NoOpUpdateWithSecondPendingUpdate_ShouldBeRescheduled
   RunLoopFor(zx::duration(fake_display_->GetVsyncInterval()));
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
+}
+
+TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSessionId = 1;
+
+  // Guarantee the vsync interval here is what we expect.
+  zx::duration interval = zx::msec(100);
+  fake_display_->SetVsyncInterval(interval.get());
+  EXPECT_EQ(0, Now().get());
+
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
+  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
+  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
+
+  // Schedule a frame where the GPU render work finished before the CPU work.
+  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, Now().get());
+
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
+
+  // Latch an early time here for the GPU rendering to finish at.
+  RunLoopFor(zx::msec(91));
+  auto gpu_render_time_finish = Now().get();
+
+  // Go to vsync.
+  RunLoopUntil(zx::time(fake_display_->GetLastVsyncTime() + fake_display_->GetVsyncInterval()));
+  fake_display_->SetLastVsyncTime(Now().get());
+
+  // Present should have been scheduled and handled.
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
+  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
+  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
+
+  EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
+
+  // End the frame, at different render times.
+  mock_renderer_->SignalFrameCpuRendered(/* frame number */ 0, Now().get());
+  mock_renderer_->SignalFrameRendered(/* frame number */ 0, gpu_render_time_finish);
+  mock_renderer_->SignalFramePresented(/* frame number */ 0, Now().get());
+
+  EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
+  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 1u);
+
+  // Now we assert that we predict reasonably, given that we had 0 GPU rendering time.
+  // Specifically, we should assume we will miss the upcoming frame and aim for the next
+  // one, because the large render duration pushes our prediction up.
+  RunLoopFor(zx::msec(91));
+
+  // Schedule the frame just a tad too late, given the CPU render duration.
+  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, 0);
+
+  // Go to vsync.
+  RunLoopUntil(zx::time(fake_display_->GetLastVsyncTime() + fake_display_->GetVsyncInterval()));
+  fake_display_->SetLastVsyncTime(Now().get());
+
+  // Nothing should have been scheduled yet.
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
+
+  // Wait for one more vsync period.
+  RunLoopFor(zx::duration(fake_display_->GetVsyncInterval()));
+  EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
+  mock_renderer_->EndFrame(/* frame number */ 1, Now().get());
+
+  // Should have been scheduled and handled now.
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 2u);
 }
 
 // Without calling UpdateManager::RatchetPresentCallbacks(), updates can be applied but the present

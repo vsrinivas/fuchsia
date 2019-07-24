@@ -117,6 +117,10 @@ void FrameTimings::OnFrameDropped(size_t swapchain_index) {
   }
 }
 
+void FrameTimings::OnFrameCpuRendered(zx_time_t time) {
+  rendering_cpu_finished_time_ = std::max(rendering_cpu_finished_time_, time);
+}
+
 FrameTimings::Timestamps FrameTimings::GetTimestamps() const {
   // Copy the current time values to a Timestamps struct. Some callers may call
   // this before all times are finalized - it is the caller's responsibility to
@@ -128,7 +132,7 @@ FrameTimings::Timestamps FrameTimings::GetTimestamps() const {
       .latch_point_time = latch_point_time_,
       .update_done_time = updates_finished_time_,
       .render_start_time = rendering_started_time_,
-      .render_done_time = rendering_finished_time_,
+      .render_done_time = std::max(rendering_finished_time_, rendering_cpu_finished_time_),
       .target_presentation_time = target_presentation_time_,
       .actual_presentation_time = actual_presentation_time_,
   };
