@@ -16,13 +16,19 @@
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
+#include <fs/synchronous-vfs.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/debugdata/debugdata.h>
 #include <lib/fdio/io.h>
+#include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
+#include <lib/fidl-async/cpp/bind.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <loader-service/loader-service.h>
+#include <runtests-utils/service-proxy-dir.h>
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -99,14 +105,9 @@ void TestFileComponentInfo(const fbl::String& path,
 
 namespace {
 
-struct DataSinkDump {
-    fbl::String sink_name;
-    zx::vmo file_data;
-};
-
 struct LoaderServiceState {
     fbl::unique_fd root_dir_fd;
-    fbl::Vector<DataSinkDump> data;
+    std::vector<debugdata::DataSinkDump> data;
 };
 
 // This is a default set of library paths.
@@ -184,9 +185,102 @@ const loader_service_ops_t fd_ops = {
     .finalizer = Finalizer,
 };
 
+void ProcessDataSinkDump(debugdata::DataSinkDump& data,
+                         fbl::unique_fd& data_sink_dir_fd,
+                         const char* path,
+                         Result* result) {
+    if (mkdirat(data_sink_dir_fd.get(), data.sink_name.c_str(), 0777) != 0 && errno != EEXIST) {
+        fprintf(stderr, "FAILURE: cannot mkdir \"%s\" for data-sink: %s\n",
+                data.sink_name.c_str(), strerror(errno));
+        if (result->return_code == 0) {
+            result->launch_status = FAILED_COLLECTING_SINK_DATA;
+        }
+        return;
+    }
+    fbl::unique_fd sink_dir_fd{openat(data_sink_dir_fd.get(), data.sink_name.c_str(),
+                                      O_RDONLY | O_DIRECTORY)};
+    if (!sink_dir_fd) {
+        fprintf(stderr, "FAILURE: cannot open data-sink directory \"%s\": %s\n",
+                data.sink_name.c_str(), strerror(errno));
+        if (result->return_code == 0) {
+            result->launch_status = FAILED_COLLECTING_SINK_DATA;
+        }
+        return;
+    }
+
+    fzl::VmoMapper mapper;
+    zx_status_t status = mapper.Map(data.file_data, 0, 0, ZX_VM_PERM_READ);
+    if (status != ZX_OK) {
+        fprintf(stderr, "FAILURE: Cannot map VMO for data-sink \"%s\": %s\n",
+                data.sink_name.c_str(), zx_status_get_string(status));
+        if (result->return_code == 0) {
+            result->launch_status = FAILED_COLLECTING_SINK_DATA;
+        }
+        return;
+    }
+
+    zx_info_handle_basic_t info;
+    status = data.file_data.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+                                     nullptr, nullptr);
+    if (status != ZX_OK) {
+        if (result->return_code == 0) {
+            result->launch_status = FAILED_COLLECTING_SINK_DATA;
+        }
+        return;
+    }
+    char filename[ZX_MAX_NAME_LEN];
+    snprintf(filename, sizeof(filename), "%s.%" PRIu64, data.sink_name.c_str(), info.koid);
+
+    fbl::unique_fd fd{openat(sink_dir_fd.get(), filename, O_WRONLY | O_CREAT | O_EXCL, 0666)};
+    if (!fd) {
+        fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n",
+                data.sink_name.c_str(), strerror(errno));
+        if (result->return_code == 0) {
+            result->launch_status = FAILED_COLLECTING_SINK_DATA;
+        }
+        return;
+    }
+    // Strip any leading slashes (including a sequence of slashes) so the dump
+    // file path is a relative to directory that contains the summary file.
+    size_t i = strspn(path, "/");
+    auto dump_file = JoinPath(&path[i], JoinPath(data.sink_name, filename));
+
+    auto* buf = reinterpret_cast<uint8_t*>(mapper.start());
+    ssize_t count = mapper.size();
+    while (count > 0) {
+        ssize_t len = write(fd.get(), buf, count);
+        if (len == -1) {
+            fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n",
+                    dump_file.c_str(), strerror(errno));
+            if (result->return_code == 0) {
+                result->launch_status = FAILED_COLLECTING_SINK_DATA;
+            }
+            return;
+        }
+        count -= len;
+        buf += len;
+    }
+
+    char name[ZX_MAX_NAME_LEN];
+    status = data.file_data.get_property(ZX_PROP_NAME, name, sizeof(name));
+    if (status != ZX_OK) {
+        if (result->return_code == 0) {
+            result->launch_status = FAILED_COLLECTING_SINK_DATA;
+        }
+        return;
+    }
+    if (name[0] == '\0') {
+        snprintf(name, sizeof(name), "unnamed.%" PRIu64, info.koid);
+    }
+
+    Result::HashTable::iterator it;
+    result->data_sinks.insert_or_find(std::make_unique<DataSink>(data.sink_name), &it);
+    it->files.push_back(DumpFile{name, dump_file});
+}
+
 // To avoid creating a separate service thread for each test, we have a global
 // instance of the async loop which is shared by all tests and their loader services.
-std::unique_ptr<async::Loop> loop;
+std::unique_ptr<async::Loop> ldsvc_loop;
 
 } // namespace
 
@@ -245,26 +339,51 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
         }
     });
 
+    zx_status_t status;
+    zx::channel svc_proxy_req;
+    fbl::RefPtr<ServiceProxyDir> proxy_dir;
+    async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
+    std::unique_ptr<fs::SynchronousVfs> vfs;
+    std::unique_ptr<debugdata::DebugData> debug_data;
+
+    // Export the root namespace.
+    fdio_flat_namespace_t* flat;
+    if ((status = fdio_ns_export_root(&flat)) != ZX_OK) {
+        fprintf(stderr, "FAILURE: Cannot export root namespace: %s\n",
+                zx_status_get_string(status));
+        return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);
+    }
+
+    auto action_ns_entry = [](const char* prefix, zx_handle_t handle) {
+        return fdio_spawn_action{
+            .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+            .ns = {
+                .prefix = prefix,
+                .handle = handle,
+            }
+        };
+    };
+
+    // If |output_dir| is provided, set up the loader and debugdata services that will be
+    // used to capture any data published.
     if (output_dir != nullptr) {
         state = new LoaderServiceState();
-        // If |output_dir| is provided, set up the loader service that will be
-        // used to capture any data published.
         state->root_dir_fd.reset(open("/", O_RDONLY | O_DIRECTORY));
         if (!state->root_dir_fd) {
             printf("FAILURE: Could not open root directory /\n");
             return std::make_unique<Result>(test_name, FAILED_UNKNOWN, 0, 0);
         }
 
-        if (!loop) {
-            loop.reset(new async::Loop(&kAsyncLoopConfigNoAttachToThread));
-            if (loop->StartThread("loader-service") != ZX_OK) {
+        if (!ldsvc_loop) {
+            ldsvc_loop.reset(new async::Loop(&kAsyncLoopConfigNoAttachToThread));
+            if (ldsvc_loop->StartThread("loader-service") != ZX_OK) {
                 printf("FAILURE: cannot start message loop\n");
-                loop.reset();
+                ldsvc_loop.reset();
                 return std::make_unique<Result>(test_name, FAILED_UNKNOWN, 0, 0);
             }
         }
 
-        if (loader_service_create(loop->dispatcher(), &fd_ops, state, &loader_service) != ZX_OK) {
+        if (loader_service_create(ldsvc_loop->dispatcher(), &fd_ops, state, &loader_service) != ZX_OK) {
             printf("FAILURE: cannot create loader service\n");
             delete state;
             return std::make_unique<Result>(test_name, FAILED_UNKNOWN, 0, 0);
@@ -278,6 +397,54 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
         fdio_actions.push_back(
             fdio_spawn_action{.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
              .h = {.id = PA_LDSVC_LOADER, .handle = svc_handle}});
+
+        fbl::unique_fd root_dir_fd{open("/", O_RDONLY | O_DIRECTORY)};
+        if (!root_dir_fd) {
+            fprintf(stderr, "FAILURE: Could not open root directory /\n");
+            return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);
+        }
+
+        zx::channel svc_proxy;
+        status = zx::channel::create(0, &svc_proxy, &svc_proxy_req);
+        if (status != ZX_OK) {
+            fprintf(stderr, "FAILURE: Cannot create channel: %s\n",
+                    zx_status_get_string(status));
+            return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);
+        }
+
+        zx::channel svc_handle;
+        for (size_t i = 0; i < flat->count; ++i) {
+            if (!strcmp(flat->path[i], "/svc")) {
+                // Save the current /svc handle...
+                svc_handle.reset(flat->handle[i]);
+                // ...and replace it with the proxy /svc.
+                fdio_actions.push_back(action_ns_entry("/svc", svc_proxy_req.get()));
+            } else {
+                fdio_actions.push_back(action_ns_entry(flat->path[i], flat->handle[i]));
+            }
+        }
+
+        // Setup DebugData service implementation.
+        debug_data = std::make_unique<debugdata::DebugData>(std::move(root_dir_fd));
+
+        // Setup proxy dir.
+        proxy_dir = fbl::MakeRefCounted<ServiceProxyDir>(std::move(svc_handle));
+        auto node = fbl::MakeRefCounted<fs::Service>([dispatcher = loop.dispatcher(), debug_data = debug_data.get()](zx::channel channel) {
+            return fidl::Bind(dispatcher, std::move(channel), debug_data);
+        });
+        proxy_dir->AddEntry(::llcpp::fuchsia::debugdata::DebugData::Name, node);
+
+        // Setup VFS.
+        vfs = std::make_unique<fs::SynchronousVfs>(loop.dispatcher());
+        vfs->ServeDirectory(std::move(proxy_dir), std::move(svc_proxy),
+                            ZX_FS_FLAG_DIRECTORY |
+                            ZX_FS_RIGHT_READABLE |
+                            ZX_FS_RIGHT_WRITABLE);
+        loop.StartThread();
+    } else {
+        for (size_t i = 0; i < flat->count; ++i) {
+            fdio_actions.push_back(action_ns_entry(flat->path[i], flat->handle[i]));
+        }
     }
 
     // If |output_filename| is provided, prepare the file descriptors that will
@@ -300,7 +467,6 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
             fdio_spawn_action{.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
              .fd = {.local_fd = fds[1].get(), .target_fd = STDERR_FILENO}});
     }
-    zx_status_t status = ZX_OK;
     zx::job test_job;
     status = zx::job::create(*zx::job::default_job(), 0, &test_job);
     if (status != ZX_OK) {
@@ -345,7 +511,7 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
     zx::process process;
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
     const zx::time start_time = zx::clock::get_monotonic();
-    status = fdio_spawn_etc(test_job.get(), FDIO_SPAWN_CLONE_ALL,
+    status = fdio_spawn_etc(test_job.get(), FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE,
                             args[0], args, env_vars_p,
                             fdio_actions.size(), fdio_actions.get(),
                             process.reset_and_get_address(), err_msg);
@@ -418,6 +584,10 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
     // Make sure that all job processes are dead before touching any data.
     auto_call_kill_job.call();
 
+    // Tear down the the VFS.
+    loop.Shutdown();
+    vfs.reset();
+
     fbl::unique_fd data_sink_dir_fd{open(output_dir, O_RDONLY | O_DIRECTORY)};
     if (!data_sink_dir_fd) {
         printf("FAILURE: Could not open output directory %s: %s\n", output_dir,
@@ -425,108 +595,16 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
         return result;
     }
 
+    // Combine data from the DebugData service and the loader service.
+    //
+    // TODO(phosek): remove the loader service part after we switch libc over to
+    // use the DebugData service for publishing data.
+    for (auto& data : debug_data->GetData()) {
+        ProcessDataSinkDump(data, data_sink_dir_fd, path, result.get());
+    }
+
     for (auto& data : state->data) {
-        if (mkdirat(data_sink_dir_fd.get(), data.sink_name.c_str(), 0777) != 0 && errno != EEXIST) {
-            fprintf(stderr, "FAILURE: cannot mkdir \"%s\" for data-sink: %s\n",
-                    data.sink_name.c_str(), strerror(errno));
-            if (result->return_code == 0) {
-                result->launch_status = FAILED_COLLECTING_SINK_DATA;
-            }
-            continue;
-        }
-        fbl::unique_fd sink_dir_fd{openat(data_sink_dir_fd.get(), data.sink_name.c_str(),
-                                          O_RDONLY | O_DIRECTORY)};
-        if (!sink_dir_fd) {
-            fprintf(stderr, "FAILURE: cannot open data-sink directory \"%s\": %s\n",
-                    data.sink_name.c_str(), strerror(errno));
-            if (result->return_code == 0) {
-                result->launch_status = FAILED_COLLECTING_SINK_DATA;
-            }
-            continue;
-        }
-
-        uint64_t size;
-        zx_status_t status = data.file_data.get_size(&size);
-        if (status != ZX_OK) {
-            fprintf(stderr, "FAILURE: Cannot get VMO size for data-sink \"%s\": %s\n",
-                    data.sink_name.c_str(), zx_status_get_string(status));
-            result->launch_status = FAILED_COLLECTING_SINK_DATA;
-            continue;
-        }
-
-        uintptr_t mapping;
-        status = zx::vmar::root_self()->map(0, data.file_data, 0, size,
-                                            ZX_VM_PERM_READ, &mapping);
-        if (status != ZX_OK) {
-            fprintf(stderr, "FAILURE: Cannot map VMO of %" PRIu64 " for data-sink \"%s\": %s\n",
-                    size, data.sink_name.c_str(), zx_status_get_string(status));
-            if (result->return_code == 0) {
-                result->launch_status = FAILED_COLLECTING_SINK_DATA;
-            }
-            continue;
-        }
-        auto unmap_vmar = fbl::MakeAutoCall([&]() { zx::vmar::root_self()->unmap(mapping, size); });
-
-        zx_info_handle_basic_t info;
-        status = data.file_data.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
-                                         nullptr, nullptr);
-        if (status != ZX_OK) {
-            if (result->return_code == 0) {
-                result->launch_status = FAILED_COLLECTING_SINK_DATA;
-            }
-            continue;
-        }
-        char filename[ZX_MAX_NAME_LEN];
-        snprintf(filename, sizeof(filename), "%s.%" PRIu64, data.sink_name.c_str(), info.koid);
-
-        fbl::unique_fd fd{openat(sink_dir_fd.get(), filename, O_WRONLY | O_CREAT | O_EXCL, 0666)};
-        if (!fd) {
-            fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n",
-                    data.sink_name.c_str(), strerror(errno));
-            if (result->return_code == 0) {
-                result->launch_status = FAILED_COLLECTING_SINK_DATA;
-            }
-            continue;
-        }
-        // Strip any leading slashes (including a sequence of slashes) so the dump
-        // file path is a relative to directory that contains the summary file.
-        size_t i = strspn(path, "/");
-        auto dump_file = JoinPath(&path[i], JoinPath(data.sink_name, filename));
-
-        uint8_t *buf = reinterpret_cast<uint8_t *>(mapping);
-        ssize_t count = size;
-        ssize_t len = 0;
-        while (count > 0 && (len = write(fd.get(), buf, count)) != count) {
-            if (len == -1) {
-                fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n",
-                        dump_file.c_str(), strerror(errno));
-                if (result->return_code == 0) {
-                    result->launch_status = FAILED_COLLECTING_SINK_DATA;
-                }
-                break;
-            }
-            count -= len;
-            buf += len;
-        }
-        if (len == -1) {
-            continue;
-        }
-
-        char name[ZX_MAX_NAME_LEN];
-        status = data.file_data.get_property(ZX_PROP_NAME, name, sizeof(name));
-        if (status != ZX_OK) {
-            if (result->return_code == 0) {
-                result->launch_status = FAILED_COLLECTING_SINK_DATA;
-            }
-            continue;
-        }
-        if (name[0] == '\0') {
-            snprintf(name, sizeof(name), "unnamed.%" PRIu64, info.koid);
-        }
-
-        Result::HashTable::iterator it;
-        result->data_sinks.insert_or_find(std::make_unique<DataSink>(data.sink_name), &it);
-        it->files.push_back(DumpFile{name, dump_file});
+        ProcessDataSinkDump(data, data_sink_dir_fd, path, result.get());
     }
 
     return result;
