@@ -130,6 +130,14 @@ bool HermeticAudioEnvironment::EnsureStart(TestFixture* fixture) {
     return false;
   }
   devfs_dir.Unbind();
+
+  // For test runs with many iterations where many virtual devices are created, device settings
+  // files may accumulate and cause the DUT to run out of disk space. We disable write-back of
+  // device settings to prevent this from happening.
+  fuchsia::media::AudioCorePtr audio_core;
+  ConnectToService(audio_core.NewRequest());
+  audio_core->EnableDeviceSettings(false);
+
   started_ = true;
   return true;
 }
