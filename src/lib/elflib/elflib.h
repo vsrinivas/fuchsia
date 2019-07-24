@@ -40,10 +40,6 @@ class ElfLib {
   // method.
   enum class Ownership { kTakeOwnership, kDontTakeOwnership };
 
-  // Do not use. See Create.
-  explicit ElfLib(std::unique_ptr<MemoryAccessor>&& memory,
-                  AddressMode address_mode);
-
   virtual ~ElfLib();
 
   // Attach a second ElfLib to this one which contains debug info. This second
@@ -137,6 +133,9 @@ class ElfLib {
   }
 
  private:
+  explicit ElfLib(std::unique_ptr<MemoryAccessor>&& memory,
+                  AddressMode address_mode);
+
   // Add a warning to this instance. See GetAndClearWarnings.
   void Warn(const std::string&& m) { warnings_.push_back(m); }
 

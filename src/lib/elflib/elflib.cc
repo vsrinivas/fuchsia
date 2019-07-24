@@ -96,8 +96,7 @@ ElfLib::~ElfLib() = default;
 
 std::unique_ptr<ElfLib> ElfLib::Create(std::unique_ptr<MemoryAccessor>&& memory,
                                        ElfLib::AddressMode address_mode) {
-  std::unique_ptr<ElfLib> out =
-      std::make_unique<ElfLib>(std::move(memory), address_mode);
+  std::unique_ptr<ElfLib> out{new ElfLib(std::move(memory), address_mode)};
 
   auto header = reinterpret_cast<const Elf64_Ehdr*>(
       out->memory_->GetMemory(0, sizeof(Elf64_Ehdr)));
