@@ -129,15 +129,83 @@
       "alignment": 8,
       "max_handles": 0,
       "strict": false
+    },
+    {
+      "name": "test.name/StrictSimpleXUnion",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
+        "line": 19,
+        "column": 15
+      },
+      "members": [
+        {
+          "ordinal": 1851697276,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "name": "i",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
+            "line": 20,
+            "column": 9
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        },
+        {
+          "ordinal": 855207063,
+          "type": {
+            "kind": "primitive",
+            "subtype": "float32"
+          },
+          "name": "f",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
+            "line": 21,
+            "column": 11
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        },
+        {
+          "ordinal": 850602487,
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "name": "s",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
+            "line": 22,
+            "column": 10
+          },
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 0
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 4294967295,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": true
     }
   ],
   "type_alias_declarations": [],
   "declaration_order": [
+    "test.name/StrictSimpleXUnion",
     "test.name/OlderSimpleUnion",
     "test.name/NewerSimpleUnion"
   ],
   "declarations": {
     "test.name/OlderSimpleUnion": "xunion",
-    "test.name/NewerSimpleUnion": "xunion"
+    "test.name/NewerSimpleUnion": "xunion",
+    "test.name/StrictSimpleXUnion": "xunion"
   }
 }

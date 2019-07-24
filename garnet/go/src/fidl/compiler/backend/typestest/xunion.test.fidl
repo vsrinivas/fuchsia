@@ -13,3 +13,11 @@ xunion NewerSimpleUnion {
   string s;  // added
   vector<string> v;  // added
 };
+
+// 1. This xunion is currently unused by code, and for tracking changes in the goldens only.
+// 2. There's no FlexibleSimpleXUnion, since that's covered by OlderSimpleUnion above.
+strict xunion StrictSimpleXUnion {
+  int32 i;
+  float32 f;
+  string s;
+};

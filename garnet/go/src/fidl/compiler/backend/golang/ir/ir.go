@@ -299,6 +299,7 @@ type XUnion struct {
 	Members   []XUnionMember
 	Size      int
 	Alignment int
+	types.Strictness
 }
 
 type XUnionMember struct {
@@ -898,6 +899,7 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 		Size:       val.Size,
 		Alignment:  val.Alignment,
 		Members:    members,
+		Strictness: val.Strictness,
 	}
 }
 

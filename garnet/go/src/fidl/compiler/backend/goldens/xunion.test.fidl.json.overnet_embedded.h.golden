@@ -10,8 +10,103 @@ namespace test {
 namespace name {
 namespace embedded {
 
+class StrictSimpleXUnion;
 class OlderSimpleUnion;
 class NewerSimpleUnion;
+
+class StrictSimpleXUnion {
+ public:
+ static const fidl_type_t* FidlType;
+
+  StrictSimpleXUnion();
+  ~StrictSimpleXUnion();
+
+  StrictSimpleXUnion(StrictSimpleXUnion&&);
+  StrictSimpleXUnion& operator=(StrictSimpleXUnion&&);
+
+  enum : fidl_xunion_tag_t {
+      kEmpty = kFidlXUnionEmptyTag,
+    };
+
+    enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    
+    kI = 1851697276,  // 0x6e5ea87c
+    kF = 855207063,  // 0x32f96c97
+    kS = 850602487,  // 0x32b329f7
+  };
+
+  static inline ::std::unique_ptr<StrictSimpleXUnion> New() { return ::std::make_unique<StrictSimpleXUnion>(); }
+
+  void Encode(::overnet::internal::Encoder* encoder, size_t offset);
+  static void Decode(::overnet::internal::Decoder* decoder, StrictSimpleXUnion* value, size_t offset);
+  zx_status_t Clone(StrictSimpleXUnion* result) const;
+
+  bool is_i() const { return tag_ == Tag::kI; }
+  
+  int32_t& i() {
+    EnsureStorageInitialized(Tag::kI);
+    return i_;
+  }
+  
+  const int32_t& i() const { return i_; }
+  StrictSimpleXUnion& set_i(int32_t value);
+
+  bool is_f() const { return tag_ == Tag::kF; }
+  
+  float& f() {
+    EnsureStorageInitialized(Tag::kF);
+    return f_;
+  }
+  
+  const float& f() const { return f_; }
+  StrictSimpleXUnion& set_f(float value);
+
+  bool is_s() const { return tag_ == Tag::kS; }
+  
+  ::std::string& s() {
+    EnsureStorageInitialized(Tag::kS);
+    return s_;
+  }
+  
+  const ::std::string& s() const { return s_; }
+  StrictSimpleXUnion& set_s(::std::string value);
+
+  Tag Which() const {
+    
+    return Tag(tag_);
+    
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  const std::vector<uint8_t>* UnknownData() const {
+    return nullptr;
+  }
+
+  friend ::fidl::Equality<::test::name::embedded::StrictSimpleXUnion>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = kEmpty;
+  union {
+    int32_t i_;
+    float f_;
+    ::std::string s_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::name::embedded::StrictSimpleXUnion& value,
+                         ::test::name::embedded::StrictSimpleXUnion* result) {
+  return value.Clone(result);
+}
+
+using StrictSimpleXUnionPtr = ::std::unique_ptr<StrictSimpleXUnion>;
 
 class OlderSimpleUnion {
  public:
@@ -221,6 +316,81 @@ using NewerSimpleUnionPtr = ::std::unique_ptr<NewerSimpleUnion>;
 }  // namespace test
 namespace fidl {
 
+template <>
+struct CodingTraits<::test::name::embedded::StrictSimpleXUnion>
+    : public EncodableCodingTraits<::test::name::embedded::StrictSimpleXUnion, 24> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::name::embedded::StrictSimpleXUnion>> {
+  static constexpr size_t encoded_size = 24;
+
+  static void Encode(::overnet::internal::Encoder* encoder, std::unique_ptr<::test::name::embedded::StrictSimpleXUnion>* value, size_t offset) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(::overnet::internal::Decoder* decoder, std::unique_ptr<::test::name::embedded::StrictSimpleXUnion>* value, size_t offset) {
+    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::name::embedded::StrictSimpleXUnion);
+
+    ::test::name::embedded::StrictSimpleXUnion::Decode(decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::name::embedded::StrictSimpleXUnion& value,
+                         ::test::name::embedded::StrictSimpleXUnion* result) {
+  return ::test::name::embedded::Clone(value, result);
+}
+
+template <>
+struct ToEmbeddedTraits<::test::name::StrictSimpleXUnion> {
+  static ::test::name::embedded::StrictSimpleXUnion Lift(const ::test::name::StrictSimpleXUnion& _value) {
+    ::test::name::embedded::StrictSimpleXUnion _out;
+    switch (_value.Which()) {
+      case ::test::name::StrictSimpleXUnion::Tag::kI:
+        _out.set_i(ToEmbedded(_value.i()));
+        break;
+      case ::test::name::StrictSimpleXUnion::Tag::kF:
+        _out.set_f(ToEmbedded(_value.f()));
+        break;
+      case ::test::name::StrictSimpleXUnion::Tag::kS:
+        _out.set_s(ToEmbedded(_value.s()));
+        break;
+      
+    }
+    return _out;
+  }
+};
+
+template<>
+struct Equality<::test::name::embedded::StrictSimpleXUnion> {
+  static inline bool Equals(const ::test::name::embedded::StrictSimpleXUnion& _lhs, const ::test::name::embedded::StrictSimpleXUnion& _rhs) {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case ::test::name::StrictSimpleXUnion::kEmpty:
+        return true;
+      case ::test::name::embedded::StrictSimpleXUnion::Tag::kI:
+        return ::fidl::Equals(_lhs.i_, _rhs.i_);
+      case ::test::name::embedded::StrictSimpleXUnion::Tag::kF:
+        return ::fidl::Equals(_lhs.f_, _rhs.f_);
+      case ::test::name::embedded::StrictSimpleXUnion::Tag::kS:
+        return ::fidl::Equals(_lhs.s_, _rhs.s_);
+      
+      default:
+        return false;
+      }
+    }
+};
 template <>
 struct CodingTraits<::test::name::embedded::OlderSimpleUnion>
     : public EncodableCodingTraits<::test::name::embedded::OlderSimpleUnion, 24> {};

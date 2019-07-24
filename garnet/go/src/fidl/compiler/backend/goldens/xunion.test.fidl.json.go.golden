@@ -8,6 +8,7 @@ package name
 
 type OlderSimpleUnionTag uint32
 const (
+	OlderSimpleUnion_unknownData = 0  // 0x00000000
 	OlderSimpleUnionI = 1026732503 // 0x3d32b1d7
 	OlderSimpleUnionF = 1362546558 // 0x5136cf7e
 )
@@ -15,12 +16,24 @@ const (
 
 type OlderSimpleUnion struct {
 	OlderSimpleUnionTag `fidl2:"x,24,8"`
+	I_unknownData []byte
 	I int64 `fidl:"1026732503" fidl2:"1026732503"`
 	F float32 `fidl:"1362546558" fidl2:"1362546558"`
 }
 
 func (_m *OlderSimpleUnion) Which() OlderSimpleUnionTag {
-	return _m.OlderSimpleUnionTag
+	switch _m.OlderSimpleUnionTag {
+	case 1026732503:
+		return OlderSimpleUnionI
+	case 1362546558:
+		return OlderSimpleUnionF
+	default:
+		return OlderSimpleUnion_unknownData
+	}
+}
+
+func (_m *OlderSimpleUnion) Ordinal() uint32 {
+	return uint32(_m.OlderSimpleUnionTag)
 }
 
 func (_m *OlderSimpleUnion) SetI(i int64) {
@@ -32,8 +45,11 @@ func (_m *OlderSimpleUnion) SetF(f float32) {
 	_m.OlderSimpleUnionTag = OlderSimpleUnionF
 	_m.F = f
 }
+
+
 type NewerSimpleUnionTag uint32
 const (
+	NewerSimpleUnion_unknownData = 0  // 0x00000000
 	NewerSimpleUnionI = 693944286 // 0x295cbfde
 	NewerSimpleUnionS = 473666119 // 0x1c3b9247
 	NewerSimpleUnionV = 1815655055 // 0x6c38b28f
@@ -42,13 +58,27 @@ const (
 
 type NewerSimpleUnion struct {
 	NewerSimpleUnionTag `fidl2:"x,24,8"`
+	I_unknownData []byte
 	I int64 `fidl:"693944286" fidl2:"693944286"`
 	S string `fidl:",473666119" fidl2:"473666119,"`
 	V []string `fidl:",,1815655055" fidl2:"1815655055,,"`
 }
 
 func (_m *NewerSimpleUnion) Which() NewerSimpleUnionTag {
-	return _m.NewerSimpleUnionTag
+	switch _m.NewerSimpleUnionTag {
+	case 693944286:
+		return NewerSimpleUnionI
+	case 473666119:
+		return NewerSimpleUnionS
+	case 1815655055:
+		return NewerSimpleUnionV
+	default:
+		return NewerSimpleUnion_unknownData
+	}
+}
+
+func (_m *NewerSimpleUnion) Ordinal() uint32 {
+	return uint32(_m.NewerSimpleUnionTag)
 }
 
 func (_m *NewerSimpleUnion) SetI(i int64) {
@@ -65,3 +95,45 @@ func (_m *NewerSimpleUnion) SetV(v []string) {
 	_m.NewerSimpleUnionTag = NewerSimpleUnionV
 	_m.V = v
 }
+
+
+type StrictSimpleXUnionTag uint32
+const (
+	StrictSimpleXUnionI = 1851697276 // 0x6e5ea87c
+	StrictSimpleXUnionF = 855207063 // 0x32f96c97
+	StrictSimpleXUnionS = 850602487 // 0x32b329f7
+)
+
+
+type StrictSimpleXUnion struct {
+	StrictSimpleXUnionTag `fidl2:"x!,24,8"`
+	I_unknownData []byte
+	I int32 `fidl:"1851697276" fidl2:"1851697276"`
+	F float32 `fidl:"855207063" fidl2:"855207063"`
+	S string `fidl:",850602487" fidl2:"850602487,"`
+}
+
+func (_m *StrictSimpleXUnion) Which() StrictSimpleXUnionTag {
+	return _m.StrictSimpleXUnionTag
+}
+
+func (_m *StrictSimpleXUnion) Ordinal() uint32 {
+	return uint32(_m.StrictSimpleXUnionTag)
+}
+
+func (_m *StrictSimpleXUnion) SetI(i int32) {
+	_m.StrictSimpleXUnionTag = StrictSimpleXUnionI
+	_m.I = i
+}
+
+func (_m *StrictSimpleXUnion) SetF(f float32) {
+	_m.StrictSimpleXUnionTag = StrictSimpleXUnionF
+	_m.F = f
+}
+
+func (_m *StrictSimpleXUnion) SetS(s string) {
+	_m.StrictSimpleXUnionTag = StrictSimpleXUnionS
+	_m.S = s
+}
+
+

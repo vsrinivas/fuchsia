@@ -213,7 +213,7 @@ As with normal Go tests, you can pass [various flags][go-test-flags] to control
 execution, filter test cases, run benchmarks, etc. For instance:
 
 ```sh
-Tab 3> fx run-test go_fidl_tests-- -test.v -test.run 'TestAllSuccessCases/.*xunion.*'
+Tab 3> fx run-test go_fidl_tests -- -test.v -test.run 'TestAllSuccessCases/.*xunion.*'
 ```
 
 ### Rust runtime

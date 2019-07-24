@@ -8,6 +8,23 @@ namespace llcpp {
 namespace test {
 namespace name {
 
+auto ::llcpp::test::name::StrictSimpleXUnion::which() const -> Tag {
+  switch (ordinal_) {
+  case Tag::kI:
+  case Tag::kF:
+  case Tag::kS:
+    return ordinal_;
+  default:
+    return Tag::kUnknown;
+  }
+}
+
+void ::llcpp::test::name::StrictSimpleXUnion::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(StrictSimpleXUnion) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(StrictSimpleXUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(StrictSimpleXUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
+}
+
 auto ::llcpp::test::name::OlderSimpleUnion::which() const -> Tag {
   switch (ordinal_) {
   case Tag::kI:

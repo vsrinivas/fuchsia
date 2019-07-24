@@ -55,3 +55,22 @@ fidl_xunion! {
 		},
 	],
 }
+
+fidl_xunion! {
+	#[derive(Debug, PartialEq)]
+	name: StrictSimpleXUnion,
+	members: [
+		I {
+			ty: i32,
+			ordinal: 1851697276,
+		},
+		F {
+			ty: f32,
+			ordinal: 855207063,
+		},
+		S {
+			ty: String,
+			ordinal: 850602487,
+		},
+	],
+}
