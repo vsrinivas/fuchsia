@@ -786,11 +786,18 @@ impl ndp::NdpDevice for EthernetNdpDevice {
     type LinkAddress = Mac;
     const BROADCAST: Mac = Mac::BROADCAST;
 
-    fn get_ndp_state<D: EventDispatcher>(
+    fn get_ndp_state_mut<D: EventDispatcher>(
         state: &mut StackState<D>,
         device_id: usize,
     ) -> &mut ndp::NdpState<Self> {
         &mut get_device_state_mut(state, device_id).ndp
+    }
+
+    fn get_ndp_state<D: EventDispatcher>(
+        state: &StackState<D>,
+        device_id: usize,
+    ) -> &ndp::NdpState<Self> {
+        &get_device_state(state, device_id).ndp
     }
 
     fn get_link_layer_addr<D: EventDispatcher>(

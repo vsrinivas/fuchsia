@@ -683,6 +683,42 @@ pub(crate) fn can_forward<D: EventDispatcher, I: Ip>(ctx: &Context<D>, device: D
         && crate::device::is_forwarding_enabled::<_, I>(ctx, device))
 }
 
+/// Updates the NDP Configurations for a `device`.
+///
+/// Note, some values may not take effect immediately, and may only take effect the next time they
+/// are used. These scenarios documented below:
+///
+///  - Updates to [`NdpConfiguration::dup_addr_detect_transmits`] will only take effect the next
+///    time Duplicate Address Detection (DAD) is done. Any DAD processes that have already started
+///    will continue using the old value.
+///
+///  - Updates to [`NdpConfiguration::max_router_solicitations`] will only take effect the next
+///    time routers are explicitly solicited. Current router solicitation will continue using the
+///    old value.
+pub fn set_ndp_configurations<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    configs: ndp::NdpConfigurations,
+) {
+    match device.protocol {
+        DeviceProtocol::Ethernet => {
+            ndp::set_ndp_configurations::<_, ethernet::EthernetNdpDevice>(ctx, device.id, configs)
+        }
+    }
+}
+
+/// Gets the NDP Configurations for a `device`.
+pub fn get_ndp_configurations<D: EventDispatcher>(
+    ctx: &Context<D>,
+    device: DeviceId,
+) -> &ndp::NdpConfigurations {
+    match device.protocol {
+        DeviceProtocol::Ethernet => {
+            ndp::get_ndp_configurations::<_, ethernet::EthernetNdpDevice>(ctx, device.id)
+        }
+    }
+}
+
 /// An address that may be "tentative" in that it has not yet passed
 /// duplicate address detection (DAD).
 ///
