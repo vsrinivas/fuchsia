@@ -157,7 +157,7 @@ where
         initiator: Initiator,
     ) {
         if let Err(e) = await!(self.do_system_update_check(monitor.clone(), initiator)) {
-            fx_log_err!("update attempt failed: {}", e);
+            fx_log_err!("update attempt failed: {:?}", e);
             monitor.lock().advance_manager_state(ManagerState::EncounteredError);
         }
         let mut monitor = monitor.lock();
@@ -290,7 +290,7 @@ pub trait TargetChannelUpdater: Send + Sync + 'static {
 impl<S: ServiceConnect + 'static> TargetChannelUpdater for TargetChannelManager<S> {
     fn update(&mut self) -> BoxFuture<()> {
         TargetChannelManager::update(self)
-            .unwrap_or_else(|e| fx_log_err!("while updating target channel: {}", e))
+            .unwrap_or_else(|e| fx_log_err!("while updating target channel: {:?}", e))
             .boxed()
     }
 }

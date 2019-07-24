@@ -283,6 +283,30 @@ mod test_check_for_system_update_impl {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_resolve_update_package_directory_closed() {
+        struct PackageResolverProxyDirectoryCloser;
+        impl PackageResolverProxyInterface for PackageResolverProxyDirectoryCloser {
+            type ResolveResponseFut = future::Ready<Result<i32, fidl::Error>>;
+            fn resolve(
+                &self,
+                _package_url: &str,
+                _selectors: &mut dyn ExactSizeIterator<Item = &str>,
+                _update_policy: &mut UpdatePolicy,
+                _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
+            ) -> Self::ResolveResponseFut {
+                future::ok(zx::sys::ZX_OK)
+            }
+        }
+
+        let mut file_system = FakeFileSystem::new_with_valid_system_meta();
+        let package_resolver = PackageResolverProxyDirectoryCloser;
+
+        let result = await!(check_for_system_update_impl(&mut file_system, &package_resolver,));
+
+        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::OpenUpdatePackagePackages));
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_update_package_missing_packages_file() {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyTempDir::new_with_empty_dir();
