@@ -685,6 +685,11 @@ func (ns *Netstack) addEndpoint(
 		eth:      controller,
 		features: features,
 	}
+	createFn := ns.mu.stack.CreateNamedNIC
+	if features&ethernet.InfoFeatureLoopback != 0 {
+		createFn = ns.mu.stack.CreateNamedLoopbackNIC
+	}
+
 	ifs.mu.state = link.StateUnknown
 	ifs.mu.metric = metric
 	ifs.mu.dhcp.running = func() bool { return false }
@@ -717,7 +722,7 @@ func (ns *Netstack) addEndpoint(
 
 	syslog.Infof("NIC %s added [sniff = %t]", name, ns.sniff)
 
-	if err := ns.mu.stack.CreateNamedNIC(ifs.nicid, name, linkID); err != nil {
+	if err := createFn(ifs.nicid, name, linkID); err != nil {
 		return nil, fmt.Errorf("NIC %s: could not create NIC: %s", name, err)
 	}
 	if ep.Capabilities()&stack.CapabilityResolutionRequired > 0 {
