@@ -98,10 +98,8 @@ func (u *Table) ClearField() {
 	u.FieldPresent = false
 }
 const (
-	InterfaceMethodOrdinal uint64 = 1061382220 << 32
-	InterfaceMethodGenOrdinal uint64 = 1061382220 << 32
-	InterfaceOnEventOrdinal uint64 = 325918733 << 32
-	InterfaceOnEventGenOrdinal uint64 = 325918733 << 32
+	InterfaceMethodOrdinal uint64 = 0x3f43684c00000000
+	InterfaceOnEventOrdinal uint64 = 0x136d200d00000000
 )
 
 type InterfaceInterface _bindings.ChannelProxy

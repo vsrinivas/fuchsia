@@ -12,14 +12,10 @@ import (
 
 
 const (
-	SwitchingOrdinalsOrdinalFiveOrdinal uint64 = 2005164903 << 32
-	SwitchingOrdinalsOrdinalFiveGenOrdinal uint64 = 2005164903 << 32
-	SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal uint64 = 667506719 << 32
-	SwitchingOrdinalsOnlyGeneratedOrdinalGenOrdinal uint64 = 667506719 << 32
-	SwitchingOrdinalsEventOrdinalFifteenOrdinal uint64 = 1467258273 << 32
-	SwitchingOrdinalsEventOrdinalFifteenGenOrdinal uint64 = 1467258273 << 32
-	SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal uint64 = 2146190926 << 32
-	SwitchingOrdinalsEventOnlyGeneratedOrdinalGenOrdinal uint64 = 2146190926 << 32
+	SwitchingOrdinalsOrdinalFiveOrdinal uint64 = 0x7784636700000000
+	SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal uint64 = 0x27c9581f00000000
+	SwitchingOrdinalsEventOrdinalFifteenOrdinal uint64 = 0x577495a100000000
+	SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal uint64 = 0x7fec464e00000000
 )
 
 type SwitchingOrdinalsInterface _bindings.ChannelProxy

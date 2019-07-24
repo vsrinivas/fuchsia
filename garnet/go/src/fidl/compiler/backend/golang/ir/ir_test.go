@@ -6,8 +6,9 @@ package ir
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 
 	"fidl/compiler/backend/types"
 	. "fidl/compiler/backend/typestest"
@@ -50,8 +51,8 @@ func compileExpect(t *testing.T, testName string, kind expectKind, input types.R
 		default:
 			panic(fmt.Sprintf("unknown expect kind %d", kind))
 		}
-		if !reflect.DeepEqual(actual, expect) {
-			t.Fatalf("expected: %+v,\ngot     :%+v", expect, actual)
+		if diff := cmp.Diff(expect, actual, cmp.AllowUnexported(types.Ordinals{})); diff != "" {
+			t.Errorf("expected != actual (-want +got)\n%s", diff)
 		}
 	})
 }
@@ -628,11 +629,15 @@ func TestCompileInterface(t *testing.T) {
 		ServiceNameConstant:  "TestName",
 		Methods: []Method{
 			{
-				Ordinal:        1,
-				OrdinalName:    "TestFirstOrdinal",
-				GenOrdinal:     1789789,
-				GenOrdinalName: "TestFirstGenOrdinal",
-				Name:           "First",
+				Ordinals: types.NewOrdinals(
+					types.Method{
+						Ordinal:    1,
+						GenOrdinal: 1789789,
+					},
+					"TestFirstOrdinal",
+					"TestFirstGenOrdinal",
+				),
+				Name: "First",
 				Request: &Struct{
 					Name: "testFirstRequest",
 					Members: []StructMember{
@@ -648,11 +653,15 @@ func TestCompileInterface(t *testing.T) {
 				IsEvent:         false,
 			},
 			{
-				Ordinal:        2,
-				OrdinalName:    "TestSecondOrdinal",
-				GenOrdinal:     2789789,
-				GenOrdinalName: "TestSecondGenOrdinal",
-				Name:           "Second",
+				Ordinals: types.NewOrdinals(
+					types.Method{
+						Ordinal:    2,
+						GenOrdinal: 2789789,
+					},
+					"TestSecondOrdinal",
+					"TestSecondGenOrdinal",
+				),
+				Name: "Second",
 				Request: &Struct{
 					Name: "testSecondRequest",
 					Members: []StructMember{
@@ -721,11 +730,15 @@ func TestCompileInterface(t *testing.T) {
 		ServiceNameConstant:  "TestName",
 		Methods: []Method{
 			{
-				Ordinal:        1,
-				OrdinalName:    "TestFirstOrdinal",
-				GenOrdinal:     9,
-				GenOrdinalName: "TestFirstGenOrdinal",
-				Name:           "First",
+				Ordinals: types.NewOrdinals(
+					types.Method{
+						Ordinal:    1,
+						GenOrdinal: 9,
+					},
+					"TestFirstOrdinal",
+					"TestFirstGenOrdinal",
+				),
+				Name: "First",
 				Response: &Struct{
 					Name: "testFirstResponse",
 					Members: []StructMember{

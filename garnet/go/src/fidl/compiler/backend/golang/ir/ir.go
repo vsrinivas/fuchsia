@@ -403,19 +403,7 @@ type Interface struct {
 // Method represents a method of a FIDL interface in terms of golang structures.
 type Method struct {
 	types.Attributes
-
-	// Ordinal is the ordinal for this method.
-	Ordinal uint64
-
-	// OrdinalName is the name of the ordinal for this method, including the interface
-	// name as a prefix.
-	OrdinalName string
-
-	// TODO(FIDL-524): Remove.
-	GenOrdinal uint64
-
-	// TODO(FIDL-524): Remove.
-	GenOrdinalName string
+	types.Ordinals
 
 	// Name is the name of the Method, including the interface name as a prefix.
 	Name string
@@ -952,12 +940,13 @@ func (c *compiler) compileParameter(p types.Parameter) StructMember {
 func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val types.Method) Method {
 	methodName := c.compileIdentifier(val.Name, true, "")
 	r := Method{
-		Attributes:      val.Attributes,
-		Name:            methodName,
-		Ordinal:         val.Ordinal,
-		OrdinalName:     c.compileCompoundIdentifier(ifaceName, true, methodName+"Ordinal"),
-		GenOrdinal:      val.GenOrdinal,
-		GenOrdinalName:  c.compileCompoundIdentifier(ifaceName, true, methodName+"GenOrdinal"),
+		Attributes: val.Attributes,
+		Name:       methodName,
+		Ordinals: types.NewOrdinals(
+			val,
+			c.compileCompoundIdentifier(ifaceName, true, methodName+"Ordinal"),
+			c.compileCompoundIdentifier(ifaceName, true, methodName+"GenOrdinal"),
+		),
 		EventExpectName: "Expect" + methodName,
 		IsEvent:         !val.HasRequest && val.HasResponse,
 		IsTransitional:  val.IsTransitional(),

@@ -101,22 +101,14 @@ func (u *WithErrorSyntaxErrorAsEnumResult) SetErr(err ErrorEnun) {
 	u.Err = err
 }
 const (
-	WithAndWithoutRequestResponseNoRequestNoResponseOrdinal uint64 = 503576693 << 32
-	WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal uint64 = 503576693 << 32
-	WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal uint64 = 1308023765 << 32
-	WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal uint64 = 1308023765 << 32
-	WithAndWithoutRequestResponseNoRequestWithResponseOrdinal uint64 = 107534328 << 32
-	WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal uint64 = 107534328 << 32
-	WithAndWithoutRequestResponseWithRequestNoResponseOrdinal uint64 = 432149361 << 32
-	WithAndWithoutRequestResponseWithRequestNoResponseGenOrdinal uint64 = 432149361 << 32
-	WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal uint64 = 1995585907 << 32
-	WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal uint64 = 1995585907 << 32
-	WithAndWithoutRequestResponseWithRequestWithResponseOrdinal uint64 = 426977568 << 32
-	WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal uint64 = 426977568 << 32
-	WithAndWithoutRequestResponseOnEmptyResponseOrdinal uint64 = 1769985842 << 32
-	WithAndWithoutRequestResponseOnEmptyResponseGenOrdinal uint64 = 1769985842 << 32
-	WithAndWithoutRequestResponseOnWithResponseOrdinal uint64 = 2051478023 << 32
-	WithAndWithoutRequestResponseOnWithResponseGenOrdinal uint64 = 2051478023 << 32
+	WithAndWithoutRequestResponseNoRequestNoResponseOrdinal uint64 = 0x1e03f87500000000
+	WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal uint64 = 0x4df6dbd500000000
+	WithAndWithoutRequestResponseNoRequestWithResponseOrdinal uint64 = 0x668d7f800000000
+	WithAndWithoutRequestResponseWithRequestNoResponseOrdinal uint64 = 0x19c2137100000000
+	WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal uint64 = 0x76f2397300000000
+	WithAndWithoutRequestResponseWithRequestWithResponseOrdinal uint64 = 0x1973292000000000
+	WithAndWithoutRequestResponseOnEmptyResponseOrdinal uint64 = 0x697fd73200000000
+	WithAndWithoutRequestResponseOnWithResponseOrdinal uint64 = 0x7a47120700000000
 )
 
 type withAndWithoutRequestResponseNoRequestWithResponseResponse struct {
@@ -337,10 +329,8 @@ func (p *WithAndWithoutRequestResponseEventProxy) OnWithResponse(ret string) err
 
 
 const (
-	WithErrorSyntaxErrorAsPrimitiveOrdinal uint64 = 2069369145 << 32
-	WithErrorSyntaxErrorAsPrimitiveGenOrdinal uint64 = 2069369145 << 32
-	WithErrorSyntaxErrorAsEnumOrdinal uint64 = 1284890143 << 32
-	WithErrorSyntaxErrorAsEnumGenOrdinal uint64 = 1284890143 << 32
+	WithErrorSyntaxErrorAsPrimitiveOrdinal uint64 = 0x7b58113900000000
+	WithErrorSyntaxErrorAsEnumOrdinal uint64 = 0x4c95de1f00000000
 )
 
 type withErrorSyntaxErrorAsPrimitiveResponse struct {
@@ -435,14 +425,10 @@ type WithErrorSyntaxEventProxy _bindings.ChannelProxy
 
 
 const (
-	OvernetInternalProtocolMethodAOrdinal uint64 = 1993818253 << 32
-	OvernetInternalProtocolMethodAGenOrdinal uint64 = 1993818253 << 32
-	OvernetInternalProtocolEventAOrdinal uint64 = 1746007436 << 32
-	OvernetInternalProtocolEventAGenOrdinal uint64 = 1746007436 << 32
-	OvernetInternalProtocolMethodBOrdinal uint64 = 952134976 << 32
-	OvernetInternalProtocolMethodBGenOrdinal uint64 = 952134976 << 32
-	OvernetInternalProtocolMutateSocketOrdinal uint64 = 1691201382 << 32
-	OvernetInternalProtocolMutateSocketGenOrdinal uint64 = 1691201382 << 32
+	OvernetInternalProtocolMethodAOrdinal uint64 = 0x76d7408d00000000
+	OvernetInternalProtocolEventAOrdinal uint64 = 0x6811f58c00000000
+	OvernetInternalProtocolMethodBOrdinal uint64 = 0x38c06d4000000000
+	OvernetInternalProtocolMutateSocketOrdinal uint64 = 0x64cdaf6600000000
 )
 
 type overnetInternalProtocolMethodARequest struct {
@@ -609,14 +595,10 @@ func (p *OvernetInternalProtocolEventProxy) EventA(a int64,b int64) error {
 
 
 const (
-	ChannelProtocolMethodAOrdinal uint64 = 1432785874 << 32
-	ChannelProtocolMethodAGenOrdinal uint64 = 1432785874 << 32
-	ChannelProtocolEventAOrdinal uint64 = 477676034 << 32
-	ChannelProtocolEventAGenOrdinal uint64 = 477676034 << 32
-	ChannelProtocolMethodBOrdinal uint64 = 180770075 << 32
-	ChannelProtocolMethodBGenOrdinal uint64 = 180770075 << 32
-	ChannelProtocolMutateSocketOrdinal uint64 = 1258480262 << 32
-	ChannelProtocolMutateSocketGenOrdinal uint64 = 1258480262 << 32
+	ChannelProtocolMethodAOrdinal uint64 = 0x556693d200000000
+	ChannelProtocolEventAOrdinal uint64 = 0x1c78c20200000000
+	ChannelProtocolMethodBOrdinal uint64 = 0xac6551b00000000
+	ChannelProtocolMutateSocketOrdinal uint64 = 0x4b02e28600000000
 )
 
 type channelProtocolMethodARequest struct {
@@ -801,14 +783,10 @@ func (p *ChannelProtocolEventProxy) EventA(a int64,b int64) error {
 
 
 const (
-	KitchenSinkMethodAOrdinal uint64 = 450577456 << 32
-	KitchenSinkMethodAGenOrdinal uint64 = 450577456 << 32
-	KitchenSinkEventAOrdinal uint64 = 1795426833 << 32
-	KitchenSinkEventAGenOrdinal uint64 = 1795426833 << 32
-	KitchenSinkMethodBOrdinal uint64 = 1999489700 << 32
-	KitchenSinkMethodBGenOrdinal uint64 = 1999489700 << 32
-	KitchenSinkMutateSocketOrdinal uint64 = 115851270 << 32
-	KitchenSinkMutateSocketGenOrdinal uint64 = 115851270 << 32
+	KitchenSinkMethodAOrdinal uint64 = 0x1adb443000000000
+	KitchenSinkEventAOrdinal uint64 = 0x6b040a1100000000
+	KitchenSinkMethodBOrdinal uint64 = 0x772dcaa400000000
+	KitchenSinkMutateSocketOrdinal uint64 = 0x6e7c00600000000
 )
 
 type kitchenSinkMethodARequest struct {

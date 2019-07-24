@@ -58,14 +58,10 @@ type ChildEventProxy _bindings.ChannelProxy
 
 
 const (
-	ParentGetChildOrdinal uint64 = 915586153 << 32
-	ParentGetChildGenOrdinal uint64 = 915586153 << 32
-	ParentGetChildRequestOrdinal uint64 = 1068158078 << 32
-	ParentGetChildRequestGenOrdinal uint64 = 1068158078 << 32
-	ParentTakeChildOrdinal uint64 = 1275478777 << 32
-	ParentTakeChildGenOrdinal uint64 = 1275478777 << 32
-	ParentTakeChildRequestOrdinal uint64 = 1589872250 << 32
-	ParentTakeChildRequestGenOrdinal uint64 = 1589872250 << 32
+	ParentGetChildOrdinal uint64 = 0x3692bc6900000000
+	ParentGetChildRequestOrdinal uint64 = 0x3faacc7e00000000
+	ParentTakeChildOrdinal uint64 = 0x4c0642f900000000
+	ParentTakeChildRequestOrdinal uint64 = 0x5ec3867a00000000
 )
 
 type parentGetChildResponse struct {

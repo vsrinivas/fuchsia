@@ -9,8 +9,9 @@ const Interface = `
 
 const (
 {{- range .Methods }}
-	{{ .OrdinalName }} uint64 = {{ .Ordinal }} << 32
-	{{ .GenOrdinalName }} uint64 = {{ .GenOrdinal }} << 32
+	{{- range .Ordinals.Reads }}
+	{{ .Name }} uint64 = {{ .Ordinal }}
+	{{- end }}
 {{- end }}
 )
 
@@ -72,13 +73,21 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 	{{- end }}
 	{{- if .Request }}
 		{{- if .Response }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .OrdinalName }}, req_, resp_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .Ordinals.Write.Name }}, req_, resp_)
 		{{- else }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName }}, req_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .Ordinals.Write.Name }}, req_)
 		{{- end }}
 	{{- else }}
 		{{- if .Response }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Recv({{ .OrdinalName }}, resp_{{ if ne .Ordinal .GenOrdinal }}, {{ .GenOrdinalName }}{{ end }})
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Recv(
+		{{- with $first_ordinal := index .Ordinals.Reads 0 -}}
+			{{- $first_ordinal.Name -}}
+		{{- end -}}
+		, resp_
+		{{- range $index, $ordinal := .Ordinals.Reads -}}
+			{{- if $index -}}, {{ $ordinal.Name }}{{- end -}}
+		{{- end -}}
+		)
 		{{- else }}
 	err := nil
 		{{- end }}
@@ -175,11 +184,12 @@ func (s_ *{{ .StubName }}) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_z
 	switch ordinal_ {
 	{{- range .Methods }}
 	{{- if not .IsEvent }}
-	{{- if ne .Ordinal .GenOrdinal }}
-	case {{ .GenOrdinalName }}:
+	{{- range $index, $ordinal := .Ordinals.Reads }}
+		{{- if $index }}
 		fallthrough
-	{{ end }}
-	case {{ .OrdinalName }}:
+		{{- end }}
+	case {{ $ordinal.Name }}:
+	{{- end }}
 		{{- if .Request }}
 		{{- if len .Request.Members }}
 		in_ := {{ .Request.Name }}{}
@@ -254,7 +264,7 @@ func (p *{{ $.EventProxyName }}) {{ .Name }}(
 	var event_ _bindings.Message
 	{{- end }}
 	{{- end }}
-	return ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName }}, event_)
+	return ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .Ordinals.Write.Name }}, event_)
 }
 {{- end }}
 {{- end }}
