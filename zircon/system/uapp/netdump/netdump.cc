@@ -4,10 +4,6 @@
 
 #include <fuchsia/hardware/ethernet/c/fidl.h>
 
-extern "C" {
-#include <inet6/inet6.h>
-}
-
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <lib/fdio/directory.h>
@@ -19,6 +15,7 @@ extern "C" {
 #include <limits.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <pretty/hexdump.h>
@@ -213,13 +210,13 @@ void parse_packet(void* packet, size_t length, const NetdumpOptions& options) {
     transport_packet = reinterpret_cast<void*>(transport + (ip->ihl > 5 ? ip->ihl * 4 : 0));
     transport_protocol = ip->protocol;
   } else if (ip->version == 6) {
-    auto ipv6 = reinterpret_cast<ip6_hdr_t*>(ip);
-    std::cout << "IP6 " << inet_ntop(AF_INET6, &ipv6->src.u8, buf, sizeof(buf)) << " > "
-              << inet_ntop(AF_INET6, &ipv6->dst.u8, buf, sizeof(buf)) << ": "
-              << protocol_to_string(ipv6->next_header) << ", "
-              << "length " << ntohs(ipv6->length) << ", ";
+    auto ipv6 = reinterpret_cast<struct ip6_hdr*>(ip);
+    std::cout << "IP6 " << inet_ntop(AF_INET6, &ipv6->ip6_src.s6_addr, buf, sizeof(buf)) << " > "
+              << inet_ntop(AF_INET6, &ipv6->ip6_dst.s6_addr, buf, sizeof(buf)) << ": "
+              << protocol_to_string(ipv6->ip6_nxt) << ", "
+              << "length " << ntohs(ipv6->ip6_plen) << ", ";
     transport_packet = reinterpret_cast<void*>(ipv6 + 1);
-    transport_protocol = ipv6->next_header;
+    transport_protocol = ipv6->ip6_nxt;
   } else {
     std::cout << "IP Version Unknown (or unhandled)";
   }

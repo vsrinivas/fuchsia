@@ -7,13 +7,14 @@
 #ifndef ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_CONSTANTS_H_
 #define ZIRCON_SYSTEM_UAPP_NETDUMP_FILTER_CONSTANTS_H_
 
-extern "C" {
-#include <inet6/inet6.h>
-}
 #include <netinet/if_ether.h>
+#include <netinet/in.h>
 #include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+
+#include <tuple>
 
 namespace netdump {
 
@@ -44,6 +45,8 @@ using PortRange = std::pair<uint16_t, uint16_t>;
 
 // The minimum length of an Ethernet frame assuming check sequence and payload padding are removed.
 constexpr size_t MIN_ETHERNET_FRAME_LENGTH = ETH_ZLEN - ETH_HLEN;  // 46 octets.
+
+constexpr size_t IP6_ADDR_LEN = sizeof(struct in6_addr);
 
 }  // namespace netdump
 

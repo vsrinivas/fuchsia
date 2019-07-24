@@ -33,12 +33,12 @@ void Packet::populate(const void* buffer, uint16_t length) {
       transport_protocol = ip->protocol;
       break;
     case ETH_P_IPV6:
-      if (next + sizeof(ip6_hdr_t) > end) {
+      if (next + sizeof(struct ip6_hdr) > end) {
         return;
       }
-      ipv6 = reinterpret_cast<const ip6_hdr_t*>(next);
-      next += sizeof(ip6_hdr_t);
-      transport_protocol = ipv6->next_header;
+      ipv6 = reinterpret_cast<const struct ip6_hdr*>(next);
+      next += sizeof(struct ip6_hdr);
+      transport_protocol = ipv6->ip6_nxt;
       break;
     default:
       return;
@@ -48,15 +48,6 @@ void Packet::populate(const void* buffer, uint16_t length) {
       (transport_protocol == IPPROTO_UDP && next + sizeof(struct udphdr) <= end)) {
     transport = next;
   }
-}
-
-static inline bool match_port(PortFieldType type, uint16_t src, uint16_t dst, uint16_t spec) {
-  if (type & SRC_PORT) {
-    if (src == spec) {
-      return true;
-    }
-  }
-  return (type & DST_PORT) && (dst == spec);
 }
 
 static inline bool match_address(AddressFieldType type, uint32_t src, uint32_t dst, uint32_t spec) {
@@ -146,12 +137,12 @@ IpFilter::IpFilter(uint8_t version, uint16_t ip_pkt_len, LengthComparator comp)
       switch (comp) {
         case LengthComparator::LEQ:
           match_fn_ = [ip_pkt_len](const Packet& packet) {
-            return ntohs(packet.ipv6->length) <= ip_pkt_len;
+            return ntohs(packet.ipv6->ip6_plen) <= ip_pkt_len;
           };
           break;
         case LengthComparator::GEQ:
           match_fn_ = [ip_pkt_len](const Packet& packet) {
-            return ntohs(packet.ipv6->length) >= ip_pkt_len;
+            return ntohs(packet.ipv6->ip6_plen) >= ip_pkt_len;
           };
           break;
         default:
@@ -171,7 +162,7 @@ IpFilter::IpFilter(uint8_t version, uint8_t protocol) : version_(version) {
       match_fn_ = [protocol](const Packet& packet) { return packet.ip->protocol == protocol; };
       break;
     case 6:
-      match_fn_ = [protocol](const Packet& packet) { return packet.ipv6->next_header == protocol; };
+      match_fn_ = [protocol](const Packet& packet) { return packet.ipv6->ip6_nxt == protocol; };
       break;
     default:
       ZX_DEBUG_ASSERT_MSG(version == 4 || version == 6, "Unsupported IP version: %u", version);
@@ -187,7 +178,8 @@ IpFilter::IpFilter(uint32_t ipv4_addr, AddressFieldType type) : version_(4) {
 IpFilter::IpFilter(const IPv6Address& ipv6_addr, AddressFieldType type) : version_(6) {
   // Capture of `ipv6_addr` of type `std::array` is by-copy.
   match_fn_ = [ipv6_addr, type](const Packet& packet) {
-    return match_address<IP6_ADDR_LEN>(type, packet.ipv6->src.u8, packet.ipv6->dst.u8, ipv6_addr);
+    return match_address<IP6_ADDR_LEN>(type, packet.ipv6->ip6_src.s6_addr,
+                                       packet.ipv6->ip6_dst.s6_addr, ipv6_addr);
   };
 }
 
@@ -249,7 +241,7 @@ bool PortFilter::match(const Packet& packet) {
   if (packet.frame->h_proto == ETH_P_IP_NETWORK_BYTE_ORDER && packet.ip->version == 4) {
     transport_protocol = packet.ip->protocol;
   } else if (packet.frame->h_proto == ETH_P_IPV6_NETWORK_BYTE_ORDER && packet.ip->version == 6) {
-    transport_protocol = packet.ipv6->next_header;
+    transport_protocol = packet.ipv6->ip6_nxt;
   } else {
     return false;  // Unhandled IP version
   }

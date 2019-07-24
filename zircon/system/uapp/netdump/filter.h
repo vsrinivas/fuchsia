@@ -50,7 +50,7 @@ class Packet {
   const struct ethhdr* frame;
   union {
     const struct iphdr* ip;  // For both IPv4 and IPv6.
-    const ip6_hdr_t* ipv6;
+    const struct ip6_hdr* ipv6;
   };
   union {
     const struct tcphdr* tcp;

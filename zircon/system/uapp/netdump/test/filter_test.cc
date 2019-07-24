@@ -26,7 +26,7 @@ static uint16_t dst_port = htons(1234);
 // Test packet storage.
 static struct ethhdr test_frame;
 static struct iphdr test_ipv4;
-static ip6_hdr_t test_ipv6;
+static struct ip6_hdr test_ipv6;
 static struct tcphdr test_tcp;
 static struct udphdr test_udp;
 
@@ -52,10 +52,10 @@ static void SetupIPv4(Packet* packet) {
 
 static void SetupIPv6(Packet* packet) {
   reinterpret_cast<struct iphdr*>(&test_ipv6)->version = 6;  // Version is set with iphdr pointer.
-  test_ipv6.length = ip_pkt_length;
-  test_ipv6.next_header = protocol;
-  std::copy(ip6addr_src.begin(), ip6addr_src.end(), test_ipv6.src.u8);
-  std::copy(ip6addr_dst.begin(), ip6addr_dst.end(), test_ipv6.dst.u8);
+  test_ipv6.ip6_plen = ip_pkt_length;
+  test_ipv6.ip6_nxt = protocol;
+  std::copy(ip6addr_src.begin(), ip6addr_src.end(), test_ipv6.ip6_src.s6_addr);
+  std::copy(ip6addr_dst.begin(), ip6addr_dst.end(), test_ipv6.ip6_dst.s6_addr);
   packet->ipv6 = &test_ipv6;
 }
 
@@ -63,15 +63,15 @@ static void SetupTCP(Packet* packet) {
   test_tcp.source = src_port;
   test_tcp.dest = dst_port;
   test_ipv4.protocol = IPPROTO_TCP;
-  test_ipv6.next_header = IPPROTO_TCP;
+  test_ipv6.ip6_nxt = IPPROTO_TCP;
   packet->tcp = &test_tcp;
 }
 
 static void SetupUDP(Packet* packet) {
-  test_udp.source = src_port;
-  test_udp.dest = dst_port;
+  test_udp.uh_sport = src_port;
+  test_udp.uh_dport = dst_port;
   test_ipv4.protocol = IPPROTO_UDP;
-  test_ipv6.next_header = IPPROTO_UDP;
+  test_ipv6.ip6_nxt = IPPROTO_UDP;
   packet->tcp = &test_tcp;
 }
 
@@ -442,8 +442,8 @@ void PopulatePacketIPTest(size_t iphdr_len, uint8_t* transport_protocol, uint8_t
 
   // UDP headers.
   *transport_protocol = IPPROTO_UDP;
-  packet.populate(buffer, static_cast<uint16_t>(ETH_HLEN + iphdr_len + sizeof(udp_hdr_t)));
-  EXPECT_EQ(ETH_HLEN + iphdr_len + sizeof(udp_hdr_t), packet.frame_length);
+  packet.populate(buffer, static_cast<uint16_t>(ETH_HLEN + iphdr_len + sizeof(struct udphdr)));
+  EXPECT_EQ(ETH_HLEN + iphdr_len + sizeof(struct udphdr), packet.frame_length);
   EXPECT_EQ(frame, packet.frame);
   EXPECT_EQ(ip, packet.ip);
   EXPECT_EQ(transport, packet.transport);
@@ -464,8 +464,8 @@ void PopulatePacketIPTest(size_t iphdr_len, uint8_t* transport_protocol, uint8_t
   EXPECT_EQ(transport, packet.transport);
 
   // Incomplete TCP headers, length sufficient for UDP but not TCP.
-  packet.populate(buffer, static_cast<uint16_t>(ETH_HLEN + iphdr_len + sizeof(udp_hdr_t)));
-  EXPECT_EQ(ETH_HLEN + iphdr_len + sizeof(udp_hdr_t), packet.frame_length);
+  packet.populate(buffer, static_cast<uint16_t>(ETH_HLEN + iphdr_len + sizeof(struct udphdr)));
+  EXPECT_EQ(ETH_HLEN + iphdr_len + sizeof(struct udphdr), packet.frame_length);
   EXPECT_EQ(frame, packet.frame);
   EXPECT_EQ(ip, packet.ip);
   EXPECT_NULL(packet.transport);
@@ -483,8 +483,8 @@ TEST(NetdumpFilterTest, PopulatePacketIPv4Test) {
 TEST(NetdumpFilterTest, PopulatePacketIPv6Test) {
   uint8_t buffer[BUFFER_LENGTH];
   SetupPopulateBuffer(ntohs(ETH_P_IPV6), buffer);
-  auto ipv6 = reinterpret_cast<ip6_hdr_t*>(buffer + ETH_HLEN);
-  PopulatePacketIPTest(sizeof(ip6_hdr_t), &ipv6->next_header, buffer);
+  auto ipv6 = reinterpret_cast<struct ip6_hdr*>(buffer + ETH_HLEN);
+  PopulatePacketIPTest(sizeof(struct ip6_hdr), &ipv6->ip6_nxt, buffer);
 }
 
 }  // namespace netdump::test

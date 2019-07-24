@@ -12,7 +12,6 @@ executable("netdump") {
   deps = [
     ":common",
     "$zx/system/fidl/fuchsia-hardware-ethernet:c",
-    "$zx/system/ulib/fdio",
     "$zx/system/ulib/pretty",
   ]
 }
@@ -21,7 +20,7 @@ source_set("common") {
   visibility = [ ":*" ]
   public_deps = [
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/inet6",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
