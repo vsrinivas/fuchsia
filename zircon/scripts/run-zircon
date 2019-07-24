@@ -261,7 +261,7 @@ if [[ $NET == 2 ]]; then
           echo "To use qemu with networking on Linux, configure tun/tap:"
           echo
           echo "sudo ip tuntap add dev $IFNAME mode tap user $USER && \\"
-          echo "sudo ifconfig $IFNAME up"
+          echo "sudo ip link set $IFNAME up"
           exit 1
         fi
         ARGS+=" -netdev type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0"
