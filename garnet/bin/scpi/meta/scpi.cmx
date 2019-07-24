@@ -3,7 +3,7 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "services": [ "fuchsia.sys.Launcher" ],
-        "dev": [ "class/thermal", "misc/sysinfo" ]
+        "services": [ "fuchsia.boot.RootResource", "fuchsia.sys.Launcher" ],
+        "dev": [ "class/thermal" ]
     }
 }

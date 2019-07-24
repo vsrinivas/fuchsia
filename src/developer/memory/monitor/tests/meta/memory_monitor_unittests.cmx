@@ -1,10 +1,18 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.RootResource"
+            ]
+        }
+    },
     "program": {
         "binary": "test/memory_monitor_unittests"
     },
     "sandbox": {
         "dev": [
             "misc/sysinfo"
-        ]
+        ],
+        "services": [ "fuchsia.boot.RootResource" ]
     }
 }

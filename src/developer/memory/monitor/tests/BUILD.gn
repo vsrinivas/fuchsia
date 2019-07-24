@@ -33,6 +33,8 @@ executable("memory_monitor_unittests") {
 }
 
 test_package("memory_monitor_tests") {
+  rootresource_svc = "//build"
+
   deps = [
     ":memory_monitor_unittests",
   ]
@@ -80,6 +82,7 @@ executable("test-inspect") {
 
 test_package("memory_monitor_inspect_integration_tests") {
   deprecated_shell = "//build"
+  rootresource_svc = "//build"
 
   deps = [
     ":bin-monitor",

@@ -20,7 +20,7 @@ source_set("metrics") {
   deps = [
     "//garnet/public/lib/fsl",
     "//src/lib/fxl",
-    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/public/fidl/fuchsia-boot:fuchsia-boot_c",
     "//zircon/public/lib/task-utils",
   ]
 }

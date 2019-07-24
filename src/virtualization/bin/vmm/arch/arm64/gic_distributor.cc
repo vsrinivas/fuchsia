@@ -192,7 +192,7 @@ zx_status_t GicDistributor::Init(uint8_t num_cpus, const std::vector<InterruptSp
   // Create physical interrupts, so that we can bind them to VCPUs.
   if (!interrupts.empty()) {
     zx::resource resource;
-    zx_status_t status = get_root_resource(sysinfo, &resource);
+    zx_status_t status = get_root_resource(&resource);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to get root resource " << status;
       return status;

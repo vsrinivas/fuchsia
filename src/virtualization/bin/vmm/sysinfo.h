@@ -5,9 +5,11 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_SYSINFO_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_SYSINFO_H_
 
+#include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 
 static constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
+static constexpr char kRootResourceSvc[] = "/svc/fuchsia.boot.RootResource";
 
 static inline fuchsia::sysinfo::DeviceSyncPtr get_sysinfo() {
   fuchsia::sysinfo::DeviceSyncPtr device;
@@ -15,14 +17,10 @@ static inline fuchsia::sysinfo::DeviceSyncPtr get_sysinfo() {
   return device;
 }
 
-static inline zx_status_t get_root_resource(const fuchsia::sysinfo::DeviceSyncPtr& sysinfo,
-                                            zx::resource* resource) {
-  zx_status_t fidl_status;
-  zx_status_t status = sysinfo->GetRootResource(&fidl_status, resource);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return fidl_status;
+static inline zx_status_t get_root_resource(zx::resource* resource) {
+  fuchsia::boot::RootResourceSyncPtr svc;
+  fdio_service_connect(kRootResourceSvc, svc.NewRequest().TakeChannel().release());
+  return svc->Get(resource);
 }
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_SYSINFO_H_

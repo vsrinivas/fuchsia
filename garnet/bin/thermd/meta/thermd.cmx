@@ -4,9 +4,10 @@
     },
     "sandbox": {
         "services": [
-	    "fuchsia.sys.Launcher",
-	    "fuchsia.tracing.provider.Registry"
-	],
+            "fuchsia.boot.RootResource",
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracing.provider.Registry"
+        ],
         "dev": [ "misc", "class/thermal", "class/gpu-thermal" ]
     }
 }

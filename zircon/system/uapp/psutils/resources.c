@@ -4,7 +4,7 @@
 
 #include "resources.h"
 
-#include <fuchsia/sysinfo/c/fidl.h>
+#include <fuchsia/boot/c/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
@@ -18,32 +18,25 @@
 #include <unistd.h>
 
 zx_status_t get_root_resource(zx_handle_t* root_resource) {
-    int fd = open("/dev/misc/sysinfo", O_RDWR);
-    if (fd < 0) {
-        fprintf(stderr, "ERROR: Cannot open sysinfo: %s (%d)\n",
-                strerror(errno), errno);
+    zx_handle_t local, remote;
+    zx_status_t status = zx_channel_create(0, &local, &remote);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = fdio_service_connect("/svc/fuchsia.boot.RootResource", remote);
+    if (status != ZX_OK) {
+        fprintf(stderr, "ERROR: Cannot open fuchsia.boot.RootResource: %s (%d)\n",
+                zx_status_get_string(status), status);
         return ZX_ERR_NOT_FOUND;
     }
 
-    zx_handle_t channel;
-    zx_status_t status = fdio_get_service_handle(fd, &channel);
-    if (status != ZX_OK) {
-        fprintf(stderr, "ERROR: Cannot obtain sysinfo channel: %s (%d)\n",
-                zx_status_get_string(status), status);
-        return status;
-    }
-
-    zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(channel, &status, root_resource);
-    zx_handle_close(channel);
+    zx_status_t fidl_status = fuchsia_boot_RootResourceGet(local, root_resource);
+    zx_handle_close(local);
 
     if (fidl_status != ZX_OK) {
         fprintf(stderr, "ERROR: Cannot obtain root resource: %s (%d)\n",
                 zx_status_get_string(fidl_status), fidl_status);
         return fidl_status;
-    } else if (status != ZX_OK) {
-        fprintf(stderr, "ERROR: Cannot obtain root resource: %s (%d)\n",
-                zx_status_get_string(status), status);
-        return status;
     }
 
     return ZX_OK;

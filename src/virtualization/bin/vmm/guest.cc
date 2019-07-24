@@ -84,7 +84,7 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
       case MemoryPolicy::HOST_CACHED:
       case MemoryPolicy::HOST_DEVICE:
         if (!root_resource) {
-          status = get_root_resource(sysinfo, &root_resource);
+          status = get_root_resource(&root_resource);
           if (status != ZX_OK) {
             FXL_LOG(ERROR) << "Failed to get root resource " << status;
             return status;

@@ -42,6 +42,7 @@ source_set("lib") {
     "//garnet/public/lib/inspect_deprecated/query",
     "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/public/fidl/fuchsia-boot:fuchsia-boot_c",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/task-utils",
@@ -67,6 +68,7 @@ executable("bin") {
 
 package("system_monitor_harvester") {
   deprecated_shell = "//build"
+  rootresource_svc = "//build"
 
   deps = [
     ":bin",
@@ -112,6 +114,7 @@ executable("system_monitor_harvester_test") {
 
 test_package("system_monitor_harvester_tests") {
   deprecated_shell = "//build"
+  rootresource_svc = "//build"
 
   deps = [
     ":system_monitor_harvester_test",

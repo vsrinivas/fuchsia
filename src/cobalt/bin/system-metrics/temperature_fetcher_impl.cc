@@ -10,7 +10,6 @@
 
 #include <fbl/unique_fd.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <trace/event.h>
 #include <zircon/status.h>

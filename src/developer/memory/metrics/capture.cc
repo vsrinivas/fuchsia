@@ -5,7 +5,8 @@
 #include "src/developer/memory/metrics/capture.h"
 
 #include <fcntl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
+#include <fuchsia/boot/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <src/lib/fxl/logging.h>
@@ -20,24 +21,18 @@ namespace memory {
 class OSImpl : public OS, public TaskEnumerator {
  private:
   zx_status_t GetRootResource(zx_handle_t* root_resource) override {
-    const char* sysinfo = "/dev/misc/sysinfo";
-    int fd = open(sysinfo, O_RDWR);
-    if (fd < 0) {
-      return ZX_ERR_NOT_FOUND;
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+      return status;
     }
-
-    zx::channel channel;
-    zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
+    const char* root_resource_svc = "/svc/fuchsia.boot.RootResource";
+    status = fdio_service_connect(root_resource_svc, remote.release());
     if (status != ZX_OK) {
       return status;
     }
 
-    zx_status_t fidl_status =
-        fuchsia_sysinfo_DeviceGetRootResource(channel.get(), &status, root_resource);
-    if (fidl_status != ZX_OK) {
-      return fidl_status;
-    }
-    return status;
+    return fuchsia_boot_RootResourceGet(local.get(), root_resource);
   }
 
   zx_handle_t ProcessSelf() override { return zx_process_self(); }

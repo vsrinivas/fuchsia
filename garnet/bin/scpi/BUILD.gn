@@ -18,7 +18,7 @@ source_set("lib") {
     "//src/lib/fxl",
     "//zircon/public/banjo/ddk.protocol.scpi",
     "//zircon/public/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
-    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/public/fidl/fuchsia-boot:fuchsia-boot_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
   ]
@@ -54,6 +54,7 @@ executable("scpi_unittests") {
 }
 
 package("scpi") {
+  rootresource_svc = "//build"
   deps = [
     ":bin",
   ]

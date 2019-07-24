@@ -456,6 +456,7 @@ template("package") {
                                "meta",
                                "package_name",
                                "resources",
+                               "rootresource_svc",
                                "system_deprecated_data",
                                "visibility",
                                "tests",
@@ -584,6 +585,15 @@ template("package") {
               {
                 schema = "//build/cmx/block_system_deprecated_data.json"
                 error_msg = "Use of 'deprecated-data' in 'system' to access /system/data is protected by an allowlist."
+              },
+            ]
+          }
+
+          if (!defined(pkg.rootresource_svc)) {
+            extra_schemas += [
+              {
+                schema = "//build/cmx/block_rootresource_svc.json"
+                error_msg = "The 'fuchsia.boot.RootResource' service is guarded by an allowlist."
               },
             ]
           }
@@ -957,6 +967,9 @@ template("package") {
           deps += [
             "${pkg.system_deprecated_data}:system_deprecated_data_allowlist",
           ]
+        }
+        if (defined(pkg.rootresource_svc)) {
+          deps += [ "${pkg.rootresource_svc}:rootresource_svc_allowlist" ]
         }
       }
     }

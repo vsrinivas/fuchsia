@@ -10,6 +10,7 @@
             "isolated-cache-storage"
         ],
         "services": [
+            "fuchsia.boot.RootResource",
             "fuchsia.tracing.provider.Registry"
         ]
     }

@@ -13,7 +13,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <fuchsia/sysinfo/c/fidl.h>
+#include <fuchsia/boot/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -25,20 +25,18 @@ namespace bt_le_heart_rate {
 namespace {
 
 zx::handle GetRootResource() {
-  const int fd = open("/dev/misc/sysinfo", O_RDWR);
-  if (fd == 0)
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK)
     return {};
 
-  zx::channel channel;
-  zx_status_t status =
-      fdio_get_service_handle(fd, channel.reset_and_get_address());
+  status = fdio_service_connect("/svc/fuchsia.boot.RootResource", remote.release());
   if (status != ZX_OK)
     return {};
 
   zx_handle_t root_resource;
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(
-      channel.get(), &status, &root_resource);
-  if (fidl_status != ZX_OK || status != ZX_OK)
+  zx_status_t fidl_status = fuchsia_boot_RootResourceGet(local.get(), &root_resource);
+  if (fidl_status != ZX_OK)
     return {};
 
   return zx::handle(root_resource);

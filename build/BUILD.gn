@@ -125,3 +125,29 @@ group("system_deprecated_data_allowlist") {
     "//src/experiences/bin/simple_browser:simple_browser_pkg",
   ]
 }
+
+group("rootresource_svc_allowlist") {
+  #  ________  _________  ________  ________
+  # |\   ____\|\___   ___\\   __  \|\   __  \
+  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+  #     ____\_\  \   \ \__\ \ \_______\ \__\
+  #    |\_________\   \|__|  \|_______|\|__|
+  #    \|_________|
+  # This is an allowlist of packages that have components manifests that include
+  # the "fuchsia.boot.RootResource" service. This is a highly privileged service that vends
+  # out a very powerful capability. Do not add yourself to this unless this is the only
+  # way to accomplish your goal and you have talked to the security team about this.
+  visibility = [
+    "//garnet/bin/scpi:scpi",
+    "//garnet/bin/system_monitor/harvester:system_monitor_harvester",
+    "//garnet/bin/system_monitor/harvester:system_monitor_harvester_tests",
+    "//garnet/bin/thermd:thermd",
+    "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
+    "//src/developer/memory/monitor/tests:memory_monitor_tests",
+    "//src/developer/memory/monitor:monitor",
+    "//src/developer/memory/monitor/tests:memory_monitor_inspect_integration_tests",
+    "//src/virtualization/bin/vmm:vmm",
+  ]
+}

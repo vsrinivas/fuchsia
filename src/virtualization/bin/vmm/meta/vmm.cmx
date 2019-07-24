@@ -11,6 +11,7 @@
             "deprecated-ambient-replace-as-executable"
         ],
         "services": [
+            "fuchsia.boot.RootResource",
             "fuchsia.virtualization.vmm.LaunchInfoProvider",
             "fuchsia.sys.Environment",
             "fuchsia.tracing.provider.Registry"

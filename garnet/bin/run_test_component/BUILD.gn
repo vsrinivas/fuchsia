@@ -30,6 +30,7 @@ source_set("lib") {
     "//src/lib/pkg_url",
     "//src/sys/component_index/fidl:index",
     "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-boot",
     "//zircon/public/fidl/fuchsia-device",
     "//zircon/public/fidl/fuchsia-net",
     "//zircon/public/fidl/fuchsia-net-stack",

@@ -142,6 +142,7 @@ template("test_package") {
                              "package_name",
                              "public_deps",
                              "resources",
+                             "rootresource_svc",
                              "system_deprecated_data",
                            ])
   }

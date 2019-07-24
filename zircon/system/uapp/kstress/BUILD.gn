@@ -10,7 +10,7 @@ executable("kstress") {
     "stress_test.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

@@ -103,7 +103,7 @@ executable("memgraph") {
   include_dirs = [ target_gen_dir ]
   deps = [
     ":gen-memgraph-schema",
-    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/task-utils",
     "$zx/system/ulib/zircon",
@@ -129,7 +129,7 @@ executable("kstats") {
     "resources.c",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zircon",

@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.RootResource"
+            ]
+        }
+    },
     "program": {
         "binary": "bin/memory_monitor_test_app"
     },
@@ -10,6 +17,7 @@
             "isolated-cache-storage"
         ],
         "services": [
+            "fuchsia.boot.RootResource",
             "fuchsia.tracing.provider.Registry"
         ]
     }

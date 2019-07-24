@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/thermal/c/fidl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
+#include <fuchsia/boot/c/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/system.h>
 
@@ -38,24 +38,17 @@ static constexpr uint32_t COOL_TEMP_THRESHOLD =
          // we adjust PL value
 
 static zx_status_t get_root_resource(zx_handle_t* root_resource) {
-  int fd = open("/dev/misc/sysinfo", O_RDWR);
-  if (fd < 0) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  zx::channel channel;
-  zx_status_t status =
-      fdio_get_service_handle(fd, channel.reset_and_get_address());
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
     return status;
   }
-
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(
-      channel.get(), &status, root_resource);
-  if (fidl_status != ZX_OK) {
-    return fidl_status;
+  status = fdio_service_connect("/svc/fuchsia.boot.RootResource", remote.release());
+  if (status != ZX_OK) {
+    return ZX_ERR_NOT_FOUND;
   }
-  return status;
+
+  return fuchsia_boot_RootResourceGet(local.get(), root_resource);
 }
 
 static zx_status_t set_pl1(uint32_t target) {

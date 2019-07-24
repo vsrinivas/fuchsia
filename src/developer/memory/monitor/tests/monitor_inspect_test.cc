@@ -32,7 +32,12 @@ constexpr char kTestProcessName[] = "memory_monitor_test_app.cmx";
 class InspectTest : public sys::testing::TestWithEnvironment {
  protected:
   InspectTest() : test_case_(::testing::UnitTest::GetInstance()->current_test_info()->name()) {
-    environment_ = CreateNewEnclosingEnvironment(test_case_, CreateServices());
+    auto env_services = sys::ServiceDirectory::CreateFromNamespace();
+    fuchsia::sys::EnvironmentPtr parent_env;
+    env_services->Connect(parent_env.NewRequest());
+    auto services = sys::testing::EnvironmentServices::Create(parent_env);
+    services->AllowParentService("fuchsia.boot.RootResource");
+    environment_ = CreateNewEnclosingEnvironment(test_case_, std::move(services));
     Connect();
   }
 

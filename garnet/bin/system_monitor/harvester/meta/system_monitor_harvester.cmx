@@ -10,6 +10,7 @@
             "deprecated-shell"
         ],
         "services": [
+            "fuchsia.boot.RootResource",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.net.SocketProvider"

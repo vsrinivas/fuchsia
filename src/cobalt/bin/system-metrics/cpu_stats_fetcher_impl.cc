@@ -6,7 +6,8 @@
 
 #include <fcntl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
+#include <fuchsia/boot/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/resource.h>
 #include <trace/event.h>
@@ -87,34 +88,24 @@ bool CpuStatsFetcherImpl::CalculateCpuPercentage(double *cpu_percentage) {
 // switch to Component Stats / iquery, by creating a new class with the
 // interface CpuStatsFetcher.
 void CpuStatsFetcherImpl::InitializeRootResourceHandle() {
-  static const char kSysInfo[] = "/dev/misc/sysinfo";
-  int fd = open(kSysInfo, O_RDWR);
-  if (fd < 0) {
-    FX_LOGS(ERROR)
-        << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
-        << "Cannot open sysinfo: " << strerror(errno);
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
     return;
   }
-  zx::channel channel;
-  zx_status_t status =
-      fdio_get_service_handle(fd, channel.reset_and_get_address());
+  static const char kRootResourceSvc[] = "/svc/fuchsia.boot.RootResource";
+  status = fdio_service_connect(kRootResourceSvc, remote.release());
   if (status != ZX_OK) {
     FX_LOGS(ERROR)
         << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
-        << "Cannot obtain sysinfo channel: " << zx_status_get_string(status);
+        << "Cannot open fuchsia.boot.RootResource: " << zx_status_get_string(status);
     return;
   }
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(
-      channel.get(), &status, &root_resource_handle_);
+  zx_status_t fidl_status = fuchsia_boot_RootResourceGet(local.get(), &root_resource_handle_);
   if (fidl_status != ZX_OK) {
     FX_LOGS(ERROR)
         << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
         << zx_status_get_string(fidl_status);
-    return;
-  } else if (status != ZX_OK) {
-    FX_LOGS(ERROR)
-        << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
-        << zx_status_get_string(status);
     return;
   } else if (root_resource_handle_ == ZX_HANDLE_INVALID) {
     FX_LOGS(ERROR)
