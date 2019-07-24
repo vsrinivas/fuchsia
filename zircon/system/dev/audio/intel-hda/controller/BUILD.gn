@@ -10,7 +10,8 @@ group("controller") {
   ]
 }
 
-driver("intel-hda") {
+source_set("src") {
+  visibility = [ ":*" ]
   sources = [
     "codec-cmd-job.cc",
     "codec-cmd-job.h",
@@ -36,6 +37,7 @@ driver("intel-hda") {
     "intel-hda-stream.cc",
     "intel-hda-stream.h",
     "nhlt.cc",
+    "nhlt.h",
     "utils.cc",
     "utils.h",
   ]
@@ -45,19 +47,44 @@ driver("intel-hda") {
     "$zx/system/fidl/fuchsia-hardware-intel-hda:c",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/audio-proto-utils",
-    "$zx/system/ulib/ddk",
     "$zx/system/ulib/dispatcher-pool",
-    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/driver",
     "$zx/system/ulib/fzl",
-    "$zx/system/ulib/intel-hda",
     "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
+  public_deps = [
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/intel-hda",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+driver("intel-hda") {
+  deps = [
+    ":src",
+  ]
   data_deps = [
     ":firmware",
+  ]
+}
+
+test("controller_test") {
+  output_name = "intel-hda-controller-test"
+  testonly = true
+  sources = [
+    "nhlt_test.cc",
+  ]
+  deps = [
+    ":src",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/intel-hda",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }
 

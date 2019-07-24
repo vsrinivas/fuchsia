@@ -4,13 +4,16 @@
 
 #include "intel-dsp.h"
 
+#include <string.h>
+#include <zircon/errors.h>
+
+#include <utility>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
-#include <string.h>
-
-#include <utility>
+#include <intel-hda/utils/nhlt.h>
 
 #include "intel-dsp-code-loader.h"
 #include "intel-hda-controller.h"
@@ -69,6 +72,43 @@ IntelDsp::~IntelDsp() {
   }
 }
 
+Status IntelDsp::ParseNhlt() {
+  // Get NHLT size.
+  const uint32_t signature = *reinterpret_cast<const uint32_t*>(ACPI_NHLT_SIGNATURE);
+  size_t size;
+  zx_status_t res = device_get_metadata_size(codec_device(), signature, &size);
+  if (res != ZX_OK) {
+    return Status(res, fbl::StringPrintf("Failed to fetch NHLT size."));
+  }
+
+  // Allocate buffer.
+  fbl::AllocChecker ac;
+  auto* buff = new (&ac) uint8_t[size];
+  if (!ac.check()) {
+    return Status(ZX_ERR_NO_MEMORY);
+  }
+  fbl::Array<uint8_t> buffer = fbl::Array<uint8_t>(buff, size);
+
+  // Fetch actual NHLT data.
+  size_t actual_size;
+  res = device_get_metadata(codec_device(), signature, buffer.begin(), buffer.size(), &actual_size);
+  if (res != ZX_OK) {
+    return Status(res, "Failed to fetch NHLT");
+  }
+  if (actual_size != buffer.size()) {
+    return Status(ZX_ERR_INTERNAL, "NHLT size different than reported.");
+  }
+
+  // Parse NHLT.
+  StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(std::move(buffer));
+  if (!nhlt.ok()) {
+    return nhlt.status();
+  }
+
+  nhlt_ = nhlt.ConsumeValueOrDie();
+  return OkStatus();
+}
+
 Status IntelDsp::Init(zx_device_t* dsp_dev) {
   Status result = Bind(dsp_dev, "intel-sst-dsp");
   if (!result.ok()) {
@@ -84,6 +124,7 @@ Status IntelDsp::Init(zx_device_t* dsp_dev) {
   if (!result.ok()) {
     return PrependMessage("Error parsing NHLT", result);
   }
+  LOG(TRACE, "parse success, found %zu formats\n", nhlt_->i2s_configs().size());
 
   // Perform hardware initialization in a thread.
   state_ = State::INITIALIZING;

@@ -29,7 +29,7 @@ if (current_cpu != "") {
       "$zx/system/dev/audio/codecs/max98373:max98373-test",
       "$zx/system/dev/audio/codecs/tas5782:tas5782-test",
       "$zx/system/dev/audio/codecs/tas5805:tas5805-test",
-      "$zx/system/dev/audio/intel-hda/test",
+      "$zx/system/dev/audio/intel-hda:test",
       "$zx/system/dev/audio/lib/simple-audio-stream:sa-unittest",
       "$zx/system/dev/backlight/sg-micro:sgm37603a-test",
       "$zx/system/dev/block/ahci:ahci-unittest",

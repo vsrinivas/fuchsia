@@ -26,6 +26,7 @@
 #include "intel-dsp-stream.h"
 #include "intel-dsp-topology.h"
 #include "intel-hda-stream.h"
+#include "nhlt.h"
 
 namespace audio {
 namespace intel_hda {
@@ -122,7 +123,6 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
 
   // Debug
   void DumpRegs();
-  void DumpNhlt(const nhlt_table_t* table, size_t length);
   void DumpFirmwareConfig(const TLVHeader* config, size_t length);
   void DumpHardwareConfig(const TLVHeader* config, size_t length);
   void DumpModulesInfo(const ModuleEntry* info, uint32_t count);
@@ -175,23 +175,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   Mailbox mailbox_in_;
   Mailbox mailbox_out_;
 
-  // NHLT buffer.
-  uint8_t nhlt_buf_[2 * PAGE_SIZE];
-
-  // I2S config
-  struct I2SConfig {
-    I2SConfig(uint8_t bid, uint8_t dir, const formats_config_t* f)
-        : valid(true), bus_id(bid), direction(dir), formats(f) {}
-    I2SConfig() = default;
-
-    bool valid = false;
-    uint8_t bus_id = 0;
-    uint8_t direction = 0;
-
-    const formats_config_t* formats = nullptr;
-  };
-  static constexpr size_t I2S_CONFIG_MAX = 8;
-  I2SConfig i2s_configs_[I2S_CONFIG_MAX];
+  std::unique_ptr<Nhlt> nhlt_;
 
   // Module IDs
   enum Module {

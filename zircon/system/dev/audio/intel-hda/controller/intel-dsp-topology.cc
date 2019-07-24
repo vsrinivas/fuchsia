@@ -302,7 +302,7 @@ const BaseModuleCfg MIXER_CFG = {
 zx_status_t IntelDsp::GetI2SBlob(uint8_t bus_id, uint8_t direction, const AudioDataFormat& format,
                                  const void** out_blob, size_t* out_size) {
   zx_status_t st = ZX_ERR_NOT_FOUND;
-  for (const auto& cfg : i2s_configs_) {
+  for (const auto& cfg : nhlt_->i2s_configs()) {
     if (!cfg.valid) {
       break;
     }

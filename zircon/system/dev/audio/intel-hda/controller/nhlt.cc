@@ -2,58 +2,57 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/string_printf.h>
-#include <intel-hda/utils/nhlt.h>
+#include "nhlt.h"
 
-#include "intel-dsp.h"
+#include <zircon/errors.h>
+
+#include <cstdint>
+
+#include <fbl/alloc_checker.h>
+#include <fbl/array.h>
+#include <fbl/string_printf.h>
+#include <fbl/vector.h>
+#include <intel-hda/utils/nhlt.h>
+#include <intel-hda/utils/status.h>
+
+#include "debug-logging.h"
 
 namespace audio::intel_hda {
 
-Status IntelDsp::ParseNhlt() {
-  size_t size = 0;
-  zx_status_t res =
-      device_get_metadata(codec_device(), *reinterpret_cast<const uint32_t*>(ACPI_NHLT_SIGNATURE),
-                          nhlt_buf_, sizeof(nhlt_buf_), &size);
-  if (res != ZX_OK) {
-    LOG(ERROR, "Failed to fetch NHLT (res %d)\n", res);
-    return Status(res);
+StatusOr<std::unique_ptr<Nhlt>> Nhlt::FromBuffer(fbl::Array<uint8_t> buffer) {
+  // Create output object.
+  fbl::AllocChecker ac;
+  auto result = fbl::make_unique_checked<Nhlt>(&ac);
+  if (!ac.check()) {
+    return Status(ZX_ERR_NO_MEMORY);
   }
 
-  nhlt_table_t* nhlt = reinterpret_cast<nhlt_table_t*>(nhlt_buf_);
+  const auto* nhlt = reinterpret_cast<const nhlt_table_t*>(buffer.begin());
 
   // Sanity check
-  if (size < sizeof(*nhlt)) {
-    return Status(ZX_ERR_INTERNAL, fbl::StringPrintf("NHLT too small (%zu bytes)\n", size));
+  if (buffer.size() < sizeof(*nhlt)) {
+    return Status(ZX_ERR_INTERNAL,
+                  fbl::StringPrintf("NHLT too small (%zu bytes)\n", buffer.size()));
   }
 
-  static_assert(sizeof(nhlt->header.signature) >= ACPI_NAME_SIZE, "");
-  static_assert(sizeof(ACPI_NHLT_SIGNATURE) >= ACPI_NAME_SIZE, "");
+  static_assert(sizeof(nhlt->header.signature) >= ACPI_NAME_SIZE);
+  static_assert(std::char_traits<char>::length(ACPI_NHLT_SIGNATURE) >= ACPI_NAME_SIZE);
 
   if (memcmp(nhlt->header.signature, ACPI_NHLT_SIGNATURE, ACPI_NAME_SIZE) != 0) {
     return Status(ZX_ERR_INTERNAL, "Invalid NHLT signature");
   }
 
-  uint8_t count = nhlt->endpoint_desc_count;
-  if (count > I2S_CONFIG_MAX) {
-    LOG(INFO,
-        "Too many NHLT endpoints (max %zu, got %u), "
-        "only the first %zu will be processed\n",
-        I2S_CONFIG_MAX, count, I2S_CONFIG_MAX);
-    count = I2S_CONFIG_MAX;
-  }
-
   // Extract the PCM formats and I2S config blob
-  size_t i = 0;
-  size_t desc_offset = reinterpret_cast<uint8_t*>(nhlt->endpoints) - nhlt_buf_;
-  while (count--) {
-    auto desc = reinterpret_cast<nhlt_descriptor_t*>(nhlt_buf_ + desc_offset);
+  size_t desc_offset = reinterpret_cast<const uint8_t*>(nhlt->endpoints) - buffer.begin();
+  for (size_t i = 0; i < nhlt->endpoint_desc_count; i++) {
+    const auto* desc = reinterpret_cast<const nhlt_descriptor_t*>(buffer.begin() + desc_offset);
 
     // Sanity check
-    if ((desc_offset + desc->length) > size) {
+    if ((desc_offset + desc->length) > buffer.size()) {
       return Status(ZX_ERR_INTERNAL, "NHLT endpoint descriptor out of bounds");
     }
 
-    size_t length = static_cast<size_t>(desc->length);
+    auto length = static_cast<size_t>(desc->length);
     if (length < sizeof(*desc)) {
       return Status(ZX_ERR_INTERNAL, "Short NHLT descriptor");
     }
@@ -73,7 +72,7 @@ Status IntelDsp::ParseNhlt() {
 
     // Must have at least one format
     auto formats = reinterpret_cast<const formats_config_t*>(
-        nhlt_buf_ + desc_offset + sizeof(*desc) + desc->config.capabilities_size);
+        buffer.begin() + desc_offset + sizeof(*desc) + desc->config.capabilities_size);
     if (formats->format_config_count == 0) {
       continue;
     }
@@ -93,56 +92,67 @@ Status IntelDsp::ParseNhlt() {
       return Status(ZX_ERR_INTERNAL, "Invalid NHLT endpoint descriptor length");
     }
 
-    i2s_configs_[i++] = {desc->virtual_bus_id, desc->direction, formats};
+    // Save the config.
+    I2SConfig config = {desc->virtual_bus_id, desc->direction, formats};
+    fbl::AllocChecker ac;
+    result->i2s_configs_.push_back(config, &ac);
+    if (!ac.check()) {
+      return Status(ZX_ERR_NO_MEMORY);
+    }
 
     desc_offset += desc->length;
   }
 
-  LOG(TRACE, "parse success, found %zu formats\n", i);
-  return OkStatus();
+  result->buffer_ = std::move(buffer);
+  return result;
 }
 
-void IntelDsp::DumpNhlt(const nhlt_table_t* table, size_t length) {
+void Nhlt::DumpNhlt(const uint8_t* data, size_t length) {
+  const auto* table = reinterpret_cast<const nhlt_table_t*>(data);
+
   if (length < sizeof(*table)) {
-    LOG(ERROR, "NHLT too small (%zu bytes)\n", length);
+    GLOBAL_LOG(ERROR, "NHLT too small (%zu bytes)\n", length);
     return;
   }
 
   if (memcmp(table->header.signature, ACPI_NHLT_SIGNATURE, ACPI_NAME_SIZE) != 0) {
-    LOG(ERROR, "Invalid NHLT signature (expected '%s', got '%s')\n", ACPI_NHLT_SIGNATURE,
-        table->header.signature);
+    GLOBAL_LOG(ERROR, "Invalid NHLT signature (expected '%s', got '%s')\n", ACPI_NHLT_SIGNATURE,
+               table->header.signature);
     return;
   }
 
   uint8_t count = table->endpoint_desc_count;
   const nhlt_descriptor_t* desc = table->endpoints;
-  LOG(INFO, "Got %u NHLT endpoints:\n", count);
+  GLOBAL_LOG(INFO, "Got %u NHLT endpoints:\n", count);
   while (count--) {
-    LOG(INFO, "Endpoint @ %p\n", desc);
-    LOG(INFO, "  link_type: %u\n", desc->link_type);
-    LOG(INFO, "  instance_id: %u\n", desc->instance_id);
-    LOG(INFO, "  vendor_id: 0x%x\n", desc->vendor_id);
-    LOG(INFO, "  device_id: 0x%x\n", desc->device_id);
-    LOG(INFO, "  revision_id: %u\n", desc->revision_id);
-    LOG(INFO, "  subsystem_id: %u\n", desc->subsystem_id);
-    LOG(INFO, "  device_type: %u\n", desc->device_type);
-    LOG(INFO, "  direction: %u\n", desc->direction);
-    LOG(INFO, "  virtual_bus_id: %u\n", desc->virtual_bus_id);
-    LOG(INFO, "  specific config @ %p size 0x%x\n", &desc->config, desc->config.capabilities_size);
+    GLOBAL_LOG(INFO, "Endpoint @ %p\n", desc);
+    GLOBAL_LOG(INFO, "  link_type: %u\n", desc->link_type);
+    GLOBAL_LOG(INFO, "  instance_id: %u\n", desc->instance_id);
+    GLOBAL_LOG(INFO, "  vendor_id: 0x%x\n", desc->vendor_id);
+    GLOBAL_LOG(INFO, "  device_id: 0x%x\n", desc->device_id);
+    GLOBAL_LOG(INFO, "  revision_id: %u\n", desc->revision_id);
+    GLOBAL_LOG(INFO, "  subsystem_id: %u\n", desc->subsystem_id);
+    GLOBAL_LOG(INFO, "  device_type: %u\n", desc->device_type);
+    GLOBAL_LOG(INFO, "  direction: %u\n", desc->direction);
+    GLOBAL_LOG(INFO, "  virtual_bus_id: %u\n", desc->virtual_bus_id);
+    GLOBAL_LOG(INFO, "  specific config @ %p size 0x%x\n", &desc->config,
+               desc->config.capabilities_size);
 
     auto formats = reinterpret_cast<const formats_config_t*>(
         reinterpret_cast<const uint8_t*>(&desc->config) + sizeof(desc->config.capabilities_size) +
         desc->config.capabilities_size);
-    LOG(INFO, "  formats_config  @ %p count %u\n", formats, formats->format_config_count);
+    GLOBAL_LOG(INFO, "  formats_config  @ %p count %u\n", formats, formats->format_config_count);
 
     desc = reinterpret_cast<const nhlt_descriptor_t*>(reinterpret_cast<const uint8_t*>(desc) +
                                                       desc->length);
     if (static_cast<size_t>(reinterpret_cast<const uint8_t*>(desc) -
                             reinterpret_cast<const uint8_t*>(table)) > length) {
-      LOG(ERROR, "descriptor at %p out of bounds\n", desc);
+      GLOBAL_LOG(ERROR, "descriptor at %p out of bounds\n", desc);
       break;
     }
   }
 }
+
+void Nhlt::Dump() const { DumpNhlt(buffer_.begin(), buffer_.size()); }
 
 }  // namespace audio::intel_hda

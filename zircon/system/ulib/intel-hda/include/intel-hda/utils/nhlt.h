@@ -13,6 +13,10 @@
  * November 2015
  */
 
+#include <zircon/compiler.h>
+
+#include <cstdint>
+
 // Including ACPI table header definitions here to avoid including
 // ACPICA header file
 
