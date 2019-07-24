@@ -2,14 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::{Ref, CHANNEL_BUFFER_SIZE};
 use crossbeam::queue::MsQueue;
 use futures::{channel::mpsc, lock::Mutex, stream::FusedStream, task::Context, Poll, Stream};
 use std::{ops::DerefMut, pin::Pin, rc::Rc};
 
 #[derive(Clone)]
 struct SenderSet<T> {
-    inner: Rc<Mutex<Vec<mpsc::Sender<T>>>>,
+    inner: Ref<Vec<mpsc::Sender<T>>>,
     pending_senders: Rc<MsQueue<mpsc::Sender<T>>>,
+}
+
+impl<T> Default for SenderSet<T> {
+    fn default() -> Self {
+        Self { inner: Ref::default(), pending_senders: Rc::new(MsQueue::new()) }
+    }
 }
 
 impl<T> SenderSet<T> {
@@ -41,6 +48,13 @@ impl<T> SenderSet<T> {
 #[derive(Clone)]
 pub struct Sender<T> {
     inner: SenderSet<T>,
+    buffer_size: usize,
+}
+
+impl<T> Default for Sender<T> {
+    fn default() -> Self {
+        Sender { inner: SenderSet::default(), buffer_size: CHANNEL_BUFFER_SIZE }
+    }
 }
 
 impl<T: Clone> Sender<T> {
@@ -53,6 +67,13 @@ impl<T: Clone> Sender<T> {
             }
         }
         await!(self.inner.append(living_senders));
+    }
+
+    #[allow(unused)]
+    pub fn new_receiver(&self) -> Receiver<T> {
+        let (sender, receiver) = mpsc::channel(self.buffer_size);
+        self.inner.enqueue_sender(sender);
+        Receiver { sources: self.inner.clone(), inner: receiver, buffer_size: self.buffer_size }
     }
 }
 
@@ -93,7 +114,10 @@ impl<T: Clone> FusedStream for Receiver<T> {
 pub fn channel<T: Clone>(buffer_size: usize) -> (Sender<T>, Receiver<T>) {
     let (sender, receiver) = mpsc::channel(buffer_size);
     let senders = SenderSet::new(sender);
-    (Sender { inner: senders.clone() }, Receiver { sources: senders, inner: receiver, buffer_size })
+    (
+        Sender { inner: senders.clone(), buffer_size },
+        Receiver { sources: senders, inner: receiver, buffer_size },
+    )
 }
 
 #[cfg(test)]
@@ -107,6 +131,18 @@ mod test {
     async fn it_works() {
         let (mut s, mut r1) = channel(100);
         let mut r2 = r1.clone();
+
+        await!(s.send(20));
+        assert_eq!(await!(r1.next()), Some(20));
+        assert_eq!(await!(r2.next()), Some(20));
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    async fn sender_side_initialization() {
+        let mut s = Sender::default();
+        let mut r1 = s.new_receiver();
+        let mut r2 = s.new_receiver();
 
         await!(s.send(20));
         assert_eq!(await!(r1.next()), Some(20));
