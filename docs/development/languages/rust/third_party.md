@@ -2,44 +2,61 @@
 
 ## Overview
 
-OSRB approval is required for third-party crates. To get approval, you will
-need to follow the instructions under the "Process for 3rd Party Hosted
-Code" section in [this document][osrb-process].
-
-Third-party crates depended on by `rustc_binary` and `rustc_library` targets
-are stored in [`//third-party/rust_crates/vendor`][3p-vendor].
+Fuchsia uses third-party Rust crates. They are placed in
+[`//third-party/rust_crates/vendor`][3p-vendor].
 This set of crates is based on the dependencies listed in
-[`//third_party/rust_crates/Cargo.toml`][3p-cargo-toml],
-and is updated by running `fx update-rustc-third-party`, which will update
-the precise versions of the crates used in the `Cargo.lock` file and download
-any necessary crates into the `vendor` dir.
+[`//third_party/rust_crates/Cargo.toml`][3p-cargo-toml].
+If you don't find a crate that you want to use, you may bring that into Fuchsia.
 
-## Adding a new vendored dependency
+Roughly, it is a 3-step process.
+ - Calculate dependencies.
+ - Get OSRB approval.
+ - Upload the change for code review.
 
-If a crate is not available in the vendor directory, it can to be added with
-the following steps:
+Pay attention to transitive dependencies: A third-party crate may depend on
+other third-party crates. List all the new crates that end up with being
+brought in, in the OSRB review. For OSRB, follow the instructions under the
+"Process for 3rd Party Hosted Code" section in [this document][osrb-process].
 
-1. Reference the crates you need in [`third_party/rust_crates/Cargo.toml`][3p-cargo-toml].
-1. Run `scripts/fx update-rustc-third-party`. This will download all crates listed in
-   [`rust_crates/Cargo.toml`][3p-cargo-toml] as well as their dependencies and
-   place them in the `vendor` directory. If on Linux, note that the `pkg-config`
-   package must be installed for this to work.
-1. Do a build that includes the Rust third-party build. `fx set core.x64 && fx build`
-   or similar is more than enough.
-1. Run `fx update-rustc-crate-map --output third_party/rust_crates/crate_map.json`.
-   This will update `crate_map.json` with information about the Rust crates available
-   for each target (Fuchsia and host).
-1. `git add` the `Cargo.toml`, `Cargo.lock`, `crate_map.json` and the `vendor` directory.
-1.  __Do not__  upload this change to gerrit yet.
-1. Get OSRB approval. Make sure to include the requested information for all
-   new crates pulled in by your new dependency.
+Note, one needs to get OSRB approval first _before_ uploading a CL for review.
+
+## Steps to add a third-party crate
+
+1. Change directory to Fuchsia repo base directory.
+   (eg. cd ~/fuchsia)
+1. Add an entry in
+   [`third_party/rust_crates/Cargo.toml`][3p-cargo-toml]
+   for the crate you want to add.
+1. Run the following command to Calculate the dependencies and download the
+   crates.
+   ```
+   fx update-rustc-third-party
+   ```
+   This will download all crates listed in
+   [`rust_crates/Cargo.toml`][3p-cargo-toml] as well as their dependencies,
+   place them in the `vendor` directory, and update `Cargo.toml' and
+   `Cargo.lock`.
+   Prerequisite: on Linux, `pkg-config` needs to be installed.
+1. Do a build test. For example,
+   ```
+   fx set core.x64 && fx build
+   ```
+1. Run the following command to Update crate-map.
+   ```
+   fx update-rustc-crate-map --output third_party/rust_crates/crate_map.json
+   ```
+   This will update `crate_map.json` with information about the Rust crates
+   available for each target (Fuchsia and host).
+1. Identify all the crates to be brought
+   (see the diff in //third_party/rust_crates/vendor/).
+   Do not submit the CL for code review. Get OSRB approval first.
    If there are any files in the source repository that are not included when
    vendored, make a note of that for the OSRB reviewer. For example, font files
    that are only used for testing but are excluded when the crate is vendored.
    If you are not a Google employee, you will need to ask a Google employee to
    do this part for you.
-1. After getting the OSRB approval, upload the change to Gerrit.
-Get code-review+2, merge the change into [third_party/rust_crates][3p-crates].
+1. After the OSRB approval, upload the change for review to Gerrit.
+1. Get code-review+2, merge the change into [third_party/rust_crates][3p-crates].
 
 ## Adding a new mirror
 
