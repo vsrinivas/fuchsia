@@ -17,8 +17,8 @@ namespace testing {
 //
 class SingleApTest : public ::testing::Test {
  public:
-  SingleApTest() : ap_(kApAddr, kSsid, kSsidLen, kChannel), fw_(&env_) {
-    assert(ZX_OK == fw_.Init());
+  SingleApTest() : ap_(kApAddr, kSsid, kSsidLen, kChannel), trans_(&env_) {
+    assert(ZX_OK == trans_.Init());
     env_.AddAp(&ap_);
   }
   ~SingleApTest() {}
@@ -31,7 +31,7 @@ class SingleApTest : public ::testing::Test {
 
   SimulatedEnvironment env_;
   SimulatedAp ap_;
-  TransportSim fw_;
+  TransportSim trans_;
 };
 
 }  // namespace testing
