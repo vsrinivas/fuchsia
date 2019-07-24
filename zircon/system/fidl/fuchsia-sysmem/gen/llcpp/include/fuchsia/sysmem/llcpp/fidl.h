@@ -136,12 +136,12 @@ struct VmoBuffer {
   //
   // The vmo field can be 0 if this is a VmoBuffer in BufferCollectionInfo_2
   // that's at or beyond BufferCollectionInfo_2.buffer_count.
-  ::zx::vmo vmo{};
+  ::zx::vmo vmo = {};
 
   // Offset within the VMO of the first usable byte.  Must be < the VMO's size
   // in bytes, and leave sufficient room for BufferMemorySettings.size_bytes
   // before the end of the VMO.
-  uint64_t vmo_usable_start{};
+  uint64_t vmo_usable_start = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionTokenDuplicateRequestTable;
@@ -2631,11 +2631,11 @@ struct ImagePlane {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // Byte offset of the start of the plane from the beginning of the image.
-  uint32_t byte_offset{};
+  uint32_t byte_offset = {};
 
   // Stride in bytes per row.
   // Only meaningful for linear buffer formats.
-  uint32_t bytes_per_row{};
+  uint32_t bytes_per_row = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferMemoryConstraintsTable;
@@ -2647,16 +2647,16 @@ struct BufferMemoryConstraints {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint32_t min_size_bytes{};
+  uint32_t min_size_bytes = {};
 
-  uint32_t max_size_bytes{};
+  uint32_t max_size_bytes = {};
 
-  bool physically_contiguous_required{};
+  bool physically_contiguous_required = {};
 
   // If true, at least one participant requires secure memory.
   //
   // When aggregating BufferCollectionConstraints, these values boolean-OR.
-  bool secure_required{};
+  bool secure_required = {};
 
   // By default, participants must ensure the CPU can read or write data to
   // the buffer without cache operations. If they support using the RAM
@@ -2665,17 +2665,17 @@ struct BufferMemoryConstraints {
   // incorrect data to RAM), and a consumer reading using the CPU must
   // invalidate CPU cache before reading (the producer doesn't guarantee
   // zero stale "clean" cache lines)
-  bool ram_domain_supported{};
+  bool ram_domain_supported = {};
 
-  bool cpu_domain_supported{};
+  bool cpu_domain_supported = {};
 
-  bool inaccessible_domain_supported{};
+  bool inaccessible_domain_supported = {};
 
   // Optional heap constraints. Participants that don't care which heap
   // memory is allocated on should leave this field 0.
-  uint32_t heap_permitted_count{};
+  uint32_t heap_permitted_count = {};
 
-  ::fidl::Array<HeapType, 32> heap_permitted{};
+  ::fidl::Array<HeapType, 32> heap_permitted = {};
 };
 
 
@@ -2692,7 +2692,7 @@ struct FormatModifier {
   //
   // This field and the values that go in this field are defined this way for
   // compatibility reasons.
-  uint64_t value{};
+  uint64_t value = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_PixelFormatTable;
@@ -2707,13 +2707,13 @@ struct PixelFormat {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  PixelFormatType type{};
+  PixelFormatType type = {};
 
   // This bool effectively makes format_modifier optional, to satisfy
   // 'Layout = "Simple"', to satisify "FIDL Simple C Bindings".
-  bool has_format_modifier{};
+  bool has_format_modifier = {};
 
-  FormatModifier format_modifier{};
+  FormatModifier format_modifier = {};
 };
 
 constexpr uint64_t FORMAT_MODIFIER_VENDOR_VIVANTE = 432345564227567616u;
@@ -2764,7 +2764,7 @@ struct ColorSpace {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ColorSpaceType type{};
+  ColorSpaceType type = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_ImageSpecTable;
@@ -2778,20 +2778,20 @@ struct ImageSpec {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // Minimum width in pixels.
-  uint32_t min_width{};
+  uint32_t min_width = {};
 
   // Minimum height in pixels.
-  uint32_t min_height{};
+  uint32_t min_height = {};
 
   // Number of layers within a multi-layered image.
   // Defaults to 1 if not specified.
-  uint32_t layers{};
+  uint32_t layers = {};
 
   // Pixel format.
-  PixelFormat pixel_format{};
+  PixelFormat pixel_format = {};
 
   // Color space.
-  ColorSpace color_space{};
+  ColorSpace color_space = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferSpecTable;
@@ -2870,30 +2870,30 @@ struct ImageFormat_2 {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // Pixel format.
-  PixelFormat pixel_format{};
+  PixelFormat pixel_format = {};
 
   // Row width in pixels that exist in the buffer.  Must be >= display_width.
   // Can be < the width implied by stride_bytes.
-  uint32_t coded_width{};
+  uint32_t coded_width = {};
 
   // Number of rows.  Must be >= display_height.
-  uint32_t coded_height{};
+  uint32_t coded_height = {};
 
-  uint32_t bytes_per_row{};
+  uint32_t bytes_per_row = {};
 
   // Row width in pixels that are to be displayed.  This can be <=
   // coded_width.  Any cropping occurs on the right of the image (not left).
-  uint32_t display_width{};
+  uint32_t display_width = {};
 
   // Number of rows to be displayed.  This can be <= coded_height, with any
   // cropping on the bottom (not top).
-  uint32_t display_height{};
+  uint32_t display_height = {};
 
   // Number of layers within a multi-layered image.
-  uint32_t layers{};
+  uint32_t layers = {};
 
   // Color space.
-  ColorSpace color_space{};
+  ColorSpace color_space = {};
 
   // The pixel_aspect_ratio_width : pixel_aspect_ratio_height is the
   // pixel aspect ratio (AKA sample aspect ratio aka SAR) for the luma
@@ -2910,11 +2910,11 @@ struct ImageFormat_2 {
   // authoritative. In this case (or in any case really) the receiver of
   // this message may have other OOB means to determine the actual
   // pixel_aspect_ratio.
-  bool has_pixel_aspect_ratio{};
+  bool has_pixel_aspect_ratio = {};
 
-  uint32_t pixel_aspect_ratio_width{};
+  uint32_t pixel_aspect_ratio_width = {};
 
-  uint32_t pixel_aspect_ratio_height{};
+  uint32_t pixel_aspect_ratio_height = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_ImageFormatConstraintsTable;
@@ -2933,13 +2933,13 @@ struct ImageFormatConstraints {
   // with an entry per PixelFormat.  It's not uncommon for the other fields
   // of ImageFormatConstraints to vary by PixelFormat - for example for a
   // linear format to support smaller max size than a tiled format.
-  PixelFormat pixel_format{};
+  PixelFormat pixel_format = {};
 
   // Empty is an error.  Redundant entries are an error.  Arbitrary ordering
   // is not an error.
-  uint32_t color_spaces_count{};
+  uint32_t color_spaces_count = {};
 
-  ::fidl::Array<ColorSpace, 32> color_space{};
+  ::fidl::Array<ColorSpace, 32> color_space = {};
 
   // Minimum permitted width in pixels.
   //
@@ -2951,54 +2951,54 @@ struct ImageFormatConstraints {
   // min.
   //
   // See also required_min_coded_width.
-  uint32_t min_coded_width{};
+  uint32_t min_coded_width = {};
 
   // Maximum width in pixels.  For example Scenic may set this field
   // (directly or via sub-participants) to the maximum width that can be
   // composited.
-  uint32_t max_coded_width{};
+  uint32_t max_coded_width = {};
 
   // Minimum height in pixels.  For example a video decoder participant may
   // set this field to the coded_height specified by a stream.
-  uint32_t min_coded_height{};
+  uint32_t min_coded_height = {};
 
   // Maximum height in pixels.  For example Scenic may set this field
   // (directly or via sub-participants) to the maximum height that can be
   // composited.
-  uint32_t max_coded_height{};
+  uint32_t max_coded_height = {};
 
   // Must be >= the value implied by min_coded_width for plane 0.
-  uint32_t min_bytes_per_row{};
+  uint32_t min_bytes_per_row = {};
 
   // Must be >= the value implied by max_coded_width for plane 0.
-  uint32_t max_bytes_per_row{};
+  uint32_t max_bytes_per_row = {};
 
   // The max image area in pixels is limited indirectly via
   // BufferSettings.size_bytes, and can also be enforced directly via this
   // field.
-  uint32_t max_coded_width_times_coded_height{};
+  uint32_t max_coded_width_times_coded_height = {};
 
   // Number of layers within a multi-layered image.
   // Defaults to 1 if not specified.
-  uint32_t layers{};
+  uint32_t layers = {};
 
   // coded_width % width_divisor must be 0.
-  uint32_t coded_width_divisor{};
+  uint32_t coded_width_divisor = {};
 
   // coded_height % height_divisor must be 0.
-  uint32_t coded_height_divisor{};
+  uint32_t coded_height_divisor = {};
 
   // bytes_per_row % bytes_per_row_divisor must be 0.
-  uint32_t bytes_per_row_divisor{};
+  uint32_t bytes_per_row_divisor = {};
 
   // vmo_usable_start % start_offset_divisor must be 0.
-  uint32_t start_offset_divisor{};
+  uint32_t start_offset_divisor = {};
 
   // display_width % display_width_divisor must be 0.
-  uint32_t display_width_divisor{};
+  uint32_t display_width_divisor = {};
 
   // display_height % display_height_divisor must be 0.
-  uint32_t display_height_divisor{};
+  uint32_t display_height_divisor = {};
 
   // required_ dimension bounds.
   //
@@ -3026,17 +3026,17 @@ struct ImageFormatConstraints {
   //
   // While the non-required_ fields aggregate by taking the intersection, the
   // required_ fields aggregate by taking the union.
-  uint32_t required_min_coded_width{};
+  uint32_t required_min_coded_width = {};
 
-  uint32_t required_max_coded_width{};
+  uint32_t required_max_coded_width = {};
 
-  uint32_t required_min_coded_height{};
+  uint32_t required_min_coded_height = {};
 
-  uint32_t required_max_coded_height{};
+  uint32_t required_max_coded_height = {};
 
-  uint32_t required_min_bytes_per_row{};
+  uint32_t required_min_bytes_per_row = {};
 
-  uint32_t required_max_bytes_per_row{};
+  uint32_t required_max_bytes_per_row = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_ImageFormatTable;
@@ -3050,22 +3050,22 @@ struct ImageFormat {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // Row width in pixels.
-  uint32_t width{};
+  uint32_t width = {};
 
   // Number of rows.
-  uint32_t height{};
+  uint32_t height = {};
 
   // Number of layers within a multi-layered image.
   // Defaults to 1 if not specified.
-  uint32_t layers{};
+  uint32_t layers = {};
 
   // Pixel format.
-  PixelFormat pixel_format{};
+  PixelFormat pixel_format = {};
 
   // Color space.
-  ColorSpace color_space{};
+  ColorSpace color_space = {};
 
-  ::fidl::Array<ImagePlane, 4> planes{};
+  ::fidl::Array<ImagePlane, 4> planes = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferFormatTable;
@@ -3144,11 +3144,11 @@ struct BufferCollectionInfo {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // The number of buffers in the collection.
-  uint32_t buffer_count{};
+  uint32_t buffer_count = {};
 
   // Describes how the contents of buffers are represented.
   // All buffers within the collection have the same format.
-  BufferFormat format{};
+  BufferFormat format = {};
 
   // VMO handles for each buffer in the collection.
   // The VMOs are only present when the buffers are backed by VMOs.
@@ -3159,11 +3159,11 @@ struct BufferCollectionInfo {
   // client specified when allocating the buffer collection.  For example,
   // a client which expressed a read-only usage will receive VMOs without
   // write rights.
-  ::fidl::Array<::zx::vmo, 64> vmos{};
+  ::fidl::Array<::zx::vmo, 64> vmos = {};
 
   // The size of each VMO provided.
   // This property is only present when the buffers are backed by VMOs.
-  uint64_t vmo_size{};
+  uint64_t vmo_size = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferMemorySettingsTable;
@@ -3175,17 +3175,17 @@ struct BufferMemorySettings {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint32_t size_bytes{};
+  uint32_t size_bytes = {};
 
-  bool is_physically_contiguous{};
+  bool is_physically_contiguous = {};
 
-  bool is_secure{};
+  bool is_secure = {};
 
-  CoherencyDomain coherency_domain{};
+  CoherencyDomain coherency_domain = {};
 
   // The specific heap from which buffers are allocated.
   // See above in this file for heap identifier values.
-  HeapType heap{};
+  HeapType heap = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_SingleBufferSettingsTable;
@@ -3201,7 +3201,7 @@ struct SingleBufferSettings {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  BufferMemorySettings buffer_settings{};
+  BufferMemorySettings buffer_settings = {};
 
   // Buffers holding data that is not uncompressed image data will not have
   // this field set.  Buffers holding data that is uncompressed image data
@@ -3209,9 +3209,9 @@ struct SingleBufferSettings {
   //
   // At least for now, changing the PixelFormat requires re-allocating
   // buffers.
-  bool has_image_format_constraints{};
+  bool has_image_format_constraints = {};
 
-  ImageFormatConstraints image_format_constraints{};
+  ImageFormatConstraints image_format_constraints = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_SingleBufferInfoTable;
@@ -3223,9 +3223,9 @@ struct SingleBufferInfo {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  SingleBufferSettings settings{};
+  SingleBufferSettings settings = {};
 
-  VmoBuffer buffer{};
+  VmoBuffer buffer = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionInfo_2Table;
@@ -3241,10 +3241,10 @@ struct BufferCollectionInfo_2 {
   // If this is the initial buffer collection allocation, this is the total
   // number of buffers.  If this is a single buffer allocation, this is zero,
   // and the rest of the fields only apply to the single buffer.
-  uint32_t buffer_count{};
+  uint32_t buffer_count = {};
 
   // These settings apply to all the buffers in the inital buffer allocation.
-  SingleBufferSettings settings{};
+  SingleBufferSettings settings = {};
 
   // VMO handles (and vmo_usable_start offset) for each buffer in the
   // collection.
@@ -3260,7 +3260,7 @@ struct BufferCollectionInfo_2 {
   // a client which expressed a read-only usage will receive VMOs without
   // write rights.  In addition, the rights can be attenuated by the parameter
   // to BufferCollectionToken.Duplicate() calls.
-  ::fidl::Array<VmoBuffer, 64> buffers{};
+  ::fidl::Array<VmoBuffer, 64> buffers = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocatedRequestTable;
@@ -3934,15 +3934,15 @@ struct BufferUsage {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint32_t none{};
+  uint32_t none = {};
 
-  uint32_t cpu{};
+  uint32_t cpu = {};
 
-  uint32_t vulkan{};
+  uint32_t vulkan = {};
 
-  uint32_t display{};
+  uint32_t display = {};
 
-  uint32_t video{};
+  uint32_t video = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionConstraintsTable;
@@ -3964,7 +3964,7 @@ struct BufferCollectionConstraints {
   //
   // At least one usage bit must be specified unless the whole
   // BufferCollectionConstraints is logically null due to !has_constraints.
-  BufferUsage usage{};
+  BufferUsage usage = {};
 
   // Per-participant minimum number of buffers that are needed for camping
   // purposes.  A participant should specify a number for min_buffer_count
@@ -3983,7 +3983,7 @@ struct BufferCollectionConstraints {
   // significant duration may (ideally will) be flagged as a failure.  In
   // testing scenarios, the participant may not be provided with more buffers
   // than this concurrently.
-  uint32_t min_buffer_count_for_camping{};
+  uint32_t min_buffer_count_for_camping = {};
 
   // Per-participant minimum number of buffers that are needed for slack
   // reasons, for better overlap of processing / better performance.
@@ -4001,7 +4001,7 @@ struct BufferCollectionConstraints {
   // participants are expected to continue to work without getting stuck.  If
   // a buffer is needed for forward progress reasons, that buffer should be
   // accounted for in min_buffer_count_for_camping.
-  uint32_t min_buffer_count_for_dedicated_slack{};
+  uint32_t min_buffer_count_for_dedicated_slack = {};
 
   // Similar to min_buffer_count_for_dedicated_slack, except when aggregating
   // these values max (instead of add).  The value here is not shared with
@@ -4018,7 +4018,7 @@ struct BufferCollectionConstraints {
   // participants are expected to continue to work without getting stuck.  If
   // a buffer is needed for forward progress reasons, that buffer should be
   // accounted for in min_buffer_count_for_camping.
-  uint32_t min_buffer_count_for_shared_slack{};
+  uint32_t min_buffer_count_for_shared_slack = {};
 
   // A particularly-picky participant may unfortunately need to demand a tight
   // range of buffer_count, or even a specific buffer_count.  This field
@@ -4026,10 +4026,10 @@ struct BufferCollectionConstraints {
   // constrain the overall BufferCollectionInfo_2.buffer_count.  Any such
   // participant should still fill out the min_buffer_count_for_* fields
   // above.
-  uint32_t min_buffer_count{};
+  uint32_t min_buffer_count = {};
 
   // 0 is treated as 0xFFFFFFFF.
-  uint32_t max_buffer_count{};
+  uint32_t max_buffer_count = {};
 
   // Constraints on BufferCollectionSettings.buffer_settings.
   //
@@ -4037,9 +4037,9 @@ struct BufferCollectionConstraints {
   // will typically specify the minimum buffer size implicitly via
   // image_format_constraints, and possibly specify only the max buffer size
   // via buffer_memory_constraints.
-  bool has_buffer_memory_constraints{};
+  bool has_buffer_memory_constraints = {};
 
-  BufferMemoryConstraints buffer_memory_constraints{};
+  BufferMemoryConstraints buffer_memory_constraints = {};
 
   // Optional constraints on the image format parameters of an image stored
   // in a buffer of the BufferCollection.  This includes pixel format and
@@ -4049,9 +4049,9 @@ struct BufferCollectionConstraints {
   // When aggregating, only pixel formats that are specified by all
   // particpants with non-zero image_format_constraints_count (and non-Null)
   // BufferCollectionConstraints) are retained.
-  uint32_t image_format_constraints_count{};
+  uint32_t image_format_constraints_count = {};
 
-  ::fidl::Array<ImageFormatConstraints, 32> image_format_constraints{};
+  ::fidl::Array<ImageFormatConstraints, 32> image_format_constraints = {};
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetEventSinkRequestTable;

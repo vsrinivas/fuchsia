@@ -35,16 +35,16 @@ struct ReadWriteOperation {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // Memory object describing buffer to read into or write from.
-  ::zx::vmo vmo{};
+  ::zx::vmo vmo = {};
 
   // VMO offset in bytes.
-  uint64_t vmo_offset{};
+  uint64_t vmo_offset = {};
 
   // Block # to begin operation from.
-  uint32_t block{};
+  uint32_t block = {};
 
   // Number of blocks to read or write.
-  uint32_t block_count{};
+  uint32_t block_count = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_PartitionInfoTable;
@@ -57,13 +57,13 @@ struct PartitionInfo {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // Partition type GUID.
-  ::fidl::Array<uint8_t, 16> partition_guid{};
+  ::fidl::Array<uint8_t, 16> partition_guid = {};
 
   // Describes the read/write size.
-  uint64_t block_size_bytes{};
+  uint64_t block_size_bytes = {};
 
   // Describes size of partition in terms of blocks.
-  uint32_t partition_block_count{};
+  uint32_t partition_block_count = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoResponseTable;

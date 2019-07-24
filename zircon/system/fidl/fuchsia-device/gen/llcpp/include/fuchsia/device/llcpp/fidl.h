@@ -1141,7 +1141,7 @@ struct NameProvider_GetDeviceName_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
 
-  ::fidl::StringView name{};
+  ::fidl::StringView name = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_NameProvider_GetDeviceName_ResultTable;

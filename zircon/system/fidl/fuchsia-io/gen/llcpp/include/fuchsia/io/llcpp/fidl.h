@@ -60,11 +60,11 @@ struct WatchedEvent {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 256;
 
-  uint8_t event{};
+  uint8_t event = {};
 
-  uint8_t len{};
+  uint8_t len = {};
 
-  ::fidl::VectorView<uint8_t> name{};
+  ::fidl::VectorView<uint8_t> name = {};
 };
 
 // Used by Directory::Watch. Requests transmission of WATCH_EVENT_REMOVED.
@@ -114,13 +114,13 @@ struct Vmofile {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // The VMO which backs this file.
-  ::zx::vmo vmo{};
+  ::zx::vmo vmo = {};
 
   // The index into `vmo` which represents the first byte of the file.
-  uint64_t offset{};
+  uint64_t offset = {};
 
   // The number of bytes, starting at `offset`, which may be used to represent this file.
-  uint64_t length{};
+  uint64_t length = {};
 };
 
 // Requests that the VMO be writable.
@@ -152,7 +152,7 @@ struct Tty {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::zx::event event{};
+  ::zx::event event = {};
 };
 
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventRequestTable;
@@ -312,7 +312,7 @@ struct Socket {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::zx::socket socket{};
+  ::zx::socket socket = {};
 };
 
 
@@ -326,7 +326,7 @@ struct Service {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint8_t __reserved{};
+  uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_io_PipeTable;
@@ -339,7 +339,7 @@ struct Pipe {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::zx::socket socket{};
+  ::zx::socket socket = {};
 };
 
 // Can write to target object.
@@ -423,25 +423,25 @@ struct NodeAttributes {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // Protection bits and node type information describe in 'mode'.
-  uint32_t mode{};
+  uint32_t mode = {};
 
   // A filesystem-unique ID.
-  uint64_t id{};
+  uint64_t id = {};
 
   // Node size, in bytes.
-  uint64_t content_size{};
+  uint64_t content_size = {};
 
   // Space needed to store node (possibly larger than size), in bytes.
-  uint64_t storage_size{};
+  uint64_t storage_size = {};
 
   // Hard link count.
-  uint64_t link_count{};
+  uint64_t link_count = {};
 
   // Time of creation (may be updated manually after creation) in ns since Unix epoch, UTC.
-  uint64_t creation_time{};
+  uint64_t creation_time = {};
 
   // Time of last modification in ns since Unix epoch, UTC.
-  uint64_t modification_time{};
+  uint64_t modification_time = {};
 };
 
 constexpr uint32_t NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME = 2u;
@@ -501,37 +501,37 @@ struct FilesystemInfo {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // The number of data bytes which may be stored in a filesystem.
-  uint64_t total_bytes{};
+  uint64_t total_bytes = {};
 
   // The number of data bytes which are in use by the filesystem.
-  uint64_t used_bytes{};
+  uint64_t used_bytes = {};
 
   // The number of nodes which may be stored in the filesystem.
-  uint64_t total_nodes{};
+  uint64_t total_nodes = {};
 
   // The number of nodes used by the filesystem.
-  uint64_t used_nodes{};
+  uint64_t used_nodes = {};
 
   // The amount of space which may be allocated from the underlying
   // volume manager. If unsupported, this will be zero.
-  uint64_t free_shared_pool_bytes{};
+  uint64_t free_shared_pool_bytes = {};
 
   // A unique identifier for this filesystem instance. Will not be preserved
   // across reboots.
-  uint64_t fs_id{};
+  uint64_t fs_id = {};
 
   // The size of a single filesystem block.
-  uint32_t block_size{};
+  uint32_t block_size = {};
 
   // The maximum length of a filesystem name.
-  uint32_t max_filename_size{};
+  uint32_t max_filename_size = {};
 
   // A unique identifier for the type of the underlying filesystem.
-  uint32_t fs_type{};
+  uint32_t fs_type = {};
 
-  uint32_t padding{};
+  uint32_t padding = {};
 
-  ::fidl::Array<int8_t, 32> name{};
+  ::fidl::Array<int8_t, 32> name = {};
 };
 
 extern "C" const fidl_type_t fuchsia_io_FileObjectTable;
@@ -550,7 +550,7 @@ struct FileObject {
   // connection that does not have the capability to read.
   //
   // The "FILE_SIGNAL_" values may be observed on this event.
-  ::zx::event event{};
+  ::zx::event event = {};
 };
 
 // Indicates the file is ready for writing.
@@ -569,7 +569,7 @@ struct DirectoryObject {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint8_t __reserved{};
+  uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_io_DeviceTable;
@@ -585,7 +585,7 @@ struct Device {
   // An optional event which transmits information about a device's state.
   //
   // The "DEVICE_SIGNAL_" values may be observed on this event.
-  ::zx::event event{};
+  ::zx::event event = {};
 };
 
 extern "C" const fidl_type_t fuchsia_io_NodeInfoTable;

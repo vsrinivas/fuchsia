@@ -117,7 +117,7 @@ struct Struct {
   // struct member comment #1
   //
   // struct member comment #3
-  int32_t Field{};
+  int32_t Field = {};
 };
 
 // interface comment #1

@@ -40,9 +40,9 @@ struct VsliceRange {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  bool allocated{};
+  bool allocated = {};
 
-  uint64_t count{};
+  uint64_t count = {};
 };
 
 
@@ -54,13 +54,13 @@ struct VolumeInfo {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint64_t slice_size{};
+  uint64_t slice_size = {};
 
-  uint64_t vslice_count{};
+  uint64_t vslice_count = {};
 
-  uint64_t pslice_total_count{};
+  uint64_t pslice_total_count = {};
 
-  uint64_t pslice_allocated_count{};
+  uint64_t pslice_allocated_count = {};
 };
 
 constexpr uint32_t MAX_SLICE_REQUESTS = 16u;

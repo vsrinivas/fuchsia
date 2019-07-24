@@ -39,17 +39,17 @@ struct BlockStats {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::llcpp::fuchsia::storage::metrics::CallStat read{};
+  ::llcpp::fuchsia::storage::metrics::CallStat read = {};
 
-  ::llcpp::fuchsia::storage::metrics::CallStat write{};
+  ::llcpp::fuchsia::storage::metrics::CallStat write = {};
 
-  ::llcpp::fuchsia::storage::metrics::CallStat trim{};
+  ::llcpp::fuchsia::storage::metrics::CallStat trim = {};
 
-  ::llcpp::fuchsia::storage::metrics::CallStat flush{};
+  ::llcpp::fuchsia::storage::metrics::CallStat flush = {};
 
-  ::llcpp::fuchsia::storage::metrics::CallStat barrier_before{};
+  ::llcpp::fuchsia::storage::metrics::CallStat barrier_before = {};
 
-  ::llcpp::fuchsia::storage::metrics::CallStat barrier_after{};
+  ::llcpp::fuchsia::storage::metrics::CallStat barrier_after = {};
 };
 
 
@@ -61,7 +61,7 @@ struct VmoID {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint16_t id{};
+  uint16_t id = {};
 };
 
 constexpr uint16_t VMOID_INVALID = 0u;
@@ -808,15 +808,15 @@ struct BlockInfo {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint64_t block_count{};
+  uint64_t block_count = {};
 
-  uint32_t block_size{};
+  uint32_t block_size = {};
 
-  uint32_t max_transfer_size{};
+  uint32_t max_transfer_size = {};
 
-  uint32_t flags{};
+  uint32_t flags = {};
 
-  uint32_t reserved{};
+  uint32_t reserved = {};
 };
 
 }  // namespace block

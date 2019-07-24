@@ -512,7 +512,7 @@ struct InterruptControllerInfo {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  InterruptControllerType type{};
+  InterruptControllerType type = {};
 };
 
 }  // namespace sysinfo

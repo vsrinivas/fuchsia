@@ -118,11 +118,11 @@ struct SimpleStruct {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  int32_t field{};
+  int32_t field = {};
 
-  ::zx::eventpair ep{};
+  ::zx::eventpair ep = {};
 
-  ::fidl::Array<::fidl::Array<::zx::eventpair, 4>, 5> arr{};
+  ::fidl::Array<::fidl::Array<::zx::eventpair, 4>, 5> arr = {};
 };
 
 extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;

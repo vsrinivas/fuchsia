@@ -239,7 +239,7 @@ struct Metadata {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  int64_t timestamp{};
+  int64_t timestamp = {};
 };
 
 constexpr uint32_t MAX_FORMATS_PER_RESPONSE = 16u;
@@ -253,11 +253,11 @@ struct FrameAvailableEvent {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  FrameStatus frame_status{};
+  FrameStatus frame_status = {};
 
-  uint32_t buffer_id{};
+  uint32_t buffer_id = {};
 
-  Metadata metadata{};
+  Metadata metadata = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_camera_StreamReleaseFrameRequestTable;
@@ -528,9 +528,9 @@ struct FrameRate {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint32_t frames_per_sec_numerator{};
+  uint32_t frames_per_sec_numerator = {};
 
-  uint32_t frames_per_sec_denominator{};
+  uint32_t frames_per_sec_denominator = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_camera_VideoFormatTable;
@@ -542,9 +542,9 @@ struct VideoFormat {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::llcpp::fuchsia::sysmem::ImageFormat format{};
+  ::llcpp::fuchsia::sysmem::ImageFormat format = {};
 
-  FrameRate rate{};
+  FrameRate rate = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_camera_DeviceInfoTable;
@@ -556,16 +556,16 @@ struct DeviceInfo {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint64_t camera_id{};
+  uint64_t camera_id = {};
 
-  uint16_t vendor_id{};
+  uint16_t vendor_id = {};
 
-  uint16_t product_id{};
+  uint16_t product_id = {};
 
   // The maximum number of stream interfaces that the device can support
-  uint16_t max_stream_count{};
+  uint16_t max_stream_count = {};
 
-  uint32_t output_capabilities{};
+  uint32_t output_capabilities = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlGetFormatsRequestTable;

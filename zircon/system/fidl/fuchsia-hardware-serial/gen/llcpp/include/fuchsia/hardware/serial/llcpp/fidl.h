@@ -66,15 +66,15 @@ struct Config {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  CharacterWidth character_width{};
+  CharacterWidth character_width = {};
 
-  StopWidth stop_width{};
+  StopWidth stop_width = {};
 
-  Parity parity{};
+  Parity parity = {};
 
-  FlowControl control_flow{};
+  FlowControl control_flow = {};
 
-  uint32_t baud_rate{};
+  uint32_t baud_rate = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassResponseTable;

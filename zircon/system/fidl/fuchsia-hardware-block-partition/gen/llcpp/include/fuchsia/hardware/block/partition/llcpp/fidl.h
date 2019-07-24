@@ -834,7 +834,7 @@ struct GUID {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::fidl::Array<uint8_t, 16> value{};
+  ::fidl::Array<uint8_t, 16> value = {};
 };
 
 }  // namespace partition

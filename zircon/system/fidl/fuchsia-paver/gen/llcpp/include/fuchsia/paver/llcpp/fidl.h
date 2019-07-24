@@ -53,10 +53,10 @@ struct ReadInfo {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // Offset into VMO where read data starts.
-  uint64_t offset{};
+  uint64_t offset = {};
 
   // Size of read data.
-  uint64_t size{};
+  uint64_t size = {};
 };
 
 extern "C" const fidl_type_t fuchsia_paver_ReadResultTable;
@@ -450,7 +450,7 @@ struct Paver_QueryActiveConfiguration_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  Configuration configuration{};
+  Configuration configuration = {};
 };
 
 extern "C" const fidl_type_t fuchsia_paver_Paver_QueryActiveConfiguration_ResultTable;

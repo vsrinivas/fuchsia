@@ -172,11 +172,11 @@ struct FunctionDescriptor {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint8_t interface_class{};
+  uint8_t interface_class = {};
 
-  uint8_t interface_subclass{};
+  uint8_t interface_subclass = {};
 
-  uint8_t interface_protocol{};
+  uint8_t interface_protocol = {};
 };
 
 
@@ -188,29 +188,29 @@ struct DeviceDescriptor {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint16_t bcdUSB{};
+  uint16_t bcdUSB = {};
 
-  uint8_t bDeviceClass{};
+  uint8_t bDeviceClass = {};
 
-  uint8_t bDeviceSubClass{};
+  uint8_t bDeviceSubClass = {};
 
-  uint8_t bDeviceProtocol{};
+  uint8_t bDeviceProtocol = {};
 
-  uint8_t bMaxPacketSize0{};
+  uint8_t bMaxPacketSize0 = {};
 
-  uint16_t idVendor{};
+  uint16_t idVendor = {};
 
-  uint16_t idProduct{};
+  uint16_t idProduct = {};
 
-  uint16_t bcdDevice{};
+  uint16_t bcdDevice = {};
 
-  uint8_t iManufacturer{};
+  uint8_t iManufacturer = {};
 
-  uint8_t iProduct{};
+  uint8_t iProduct = {};
 
-  uint8_t iSerialNumber{};
+  uint8_t iSerialNumber = {};
 
-  uint8_t bNumConfigurations{};
+  uint8_t bNumConfigurations = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetDeviceDescriptorResponseTable;

@@ -29,7 +29,7 @@ struct {{ .Name }} {
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  {{ .Type.LLDecl }} {{ .Name }}{};
+  {{ .Type.LLDecl }} {{ .Name }} = {};
   {{- end }}
 };
 {{- end }}

@@ -39,11 +39,11 @@ struct DirEnt {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
 
-  bool is_dir{};
+  bool is_dir = {};
 
-  ::fidl::StringView name{};
+  ::fidl::StringView name = {};
 
-  int32_t some_flags{};
+  int32_t some_flags = {};
 };
 
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesRequestTable;

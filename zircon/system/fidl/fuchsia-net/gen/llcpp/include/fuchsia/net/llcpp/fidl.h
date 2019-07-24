@@ -260,7 +260,7 @@ struct NameLookup_LookupHostname_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 256;
 
-  ::fidl::StringView hostname{};
+  ::fidl::StringView hostname = {};
 };
 
 
@@ -273,7 +273,7 @@ struct MacAddress {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::fidl::Array<uint8_t, 6> octets{};
+  ::fidl::Array<uint8_t, 6> octets = {};
 };
 
 constexpr uint64_t MAX_HOSTNAME_SIZE = 255u;
@@ -372,7 +372,7 @@ struct Ipv6Address {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::fidl::Array<uint8_t, 16> addr{};
+  ::fidl::Array<uint8_t, 16> addr = {};
 };
 
 
@@ -386,7 +386,7 @@ struct Ipv4Address {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::fidl::Array<uint8_t, 4> addr{};
+  ::fidl::Array<uint8_t, 4> addr = {};
 };
 
 extern "C" const fidl_type_t fuchsia_net_IpAddressInfoTable;
@@ -399,13 +399,13 @@ struct IpAddressInfo {
   static constexpr uint32_t MaxOutOfLine = 4294967295;
 
   // All of the IPv4 addresses for the requested hostname.
-  ::fidl::VectorView<Ipv4Address> ipv4_addrs{};
+  ::fidl::VectorView<Ipv4Address> ipv4_addrs = {};
 
   // All of the IPv6 addresses for the requested hostname.
-  ::fidl::VectorView<Ipv6Address> ipv6_addrs{};
+  ::fidl::VectorView<Ipv6Address> ipv6_addrs = {};
 
   // The canonical name of the requested hostname (usually the DNS CNAME record, if one exists).
-  ::fidl::StringView canonical_name{};
+  ::fidl::StringView canonical_name = {};
 };
 
 extern "C" const fidl_type_t fuchsia_net_NameLookup_LookupIp_ResponseTable;
@@ -417,7 +417,7 @@ struct NameLookup_LookupIp_Response {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
 
-  IpAddressInfo addr{};
+  IpAddressInfo addr = {};
 };
 
 extern "C" const fidl_type_t fuchsia_net_NameLookup_LookupIp_ResultTable;
@@ -600,13 +600,13 @@ struct Subnet {
 
   // The Ipv4 or Ipv6 address. Only the `prefix_len` most significant bits may be set in `addr`;
   // all bits in the host portion of the address must be zero.
-  IpAddress addr{};
+  IpAddress addr = {};
 
   // The prefix length of the netmask. E.g. for 192.168.1.0/24, the prefix
   // length is 24, corresponding to a netmask of 255.255.255.0.
   // For Ipv4, prefix_len must be in the range [0, 32].
   // For Ipv6, prefix_len must be in the range [0, 128].
-  uint8_t prefix_len{};
+  uint8_t prefix_len = {};
 };
 
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupIpRequestTable;
@@ -907,10 +907,10 @@ struct Endpoint {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // The IP address of the endpoint.
-  IpAddress addr{};
+  IpAddress addr = {};
 
   // The port number of the endpoint.
-  uint16_t port{};
+  uint16_t port = {};
 };
 
 
@@ -922,9 +922,9 @@ struct AddrStorage {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::fidl::Array<uint8_t, 16> val{};
+  ::fidl::Array<uint8_t, 16> val = {};
 
-  uint32_t len{};
+  uint32_t len = {};
 };
 
 extern "C" const fidl_type_t fuchsia_net_AddrInfoTable;
@@ -936,17 +936,17 @@ struct AddrInfo {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  int32_t flags{};
+  int32_t flags = {};
 
-  int32_t family{};
+  int32_t family = {};
 
-  int32_t sock_type{};
+  int32_t sock_type = {};
 
-  int32_t protocol{};
+  int32_t protocol = {};
 
-  AddrStorage addr{};
+  AddrStorage addr = {};
 
-  uint16_t port{};
+  uint16_t port = {};
 };
 
 extern "C" const fidl_type_t fuchsia_net_SocketProviderGetAddrInfoRequestTable;
@@ -1153,13 +1153,13 @@ struct AddrInfoHints {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  int32_t flags{};
+  int32_t flags = {};
 
-  int32_t family{};
+  int32_t family = {};
 
-  int32_t sock_type{};
+  int32_t sock_type = {};
 
-  int32_t protocol{};
+  int32_t protocol = {};
 };
 
 }  // namespace net

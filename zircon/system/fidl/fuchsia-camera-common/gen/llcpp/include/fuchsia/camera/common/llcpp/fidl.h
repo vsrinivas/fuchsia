@@ -53,7 +53,7 @@ struct RealWorldStreamConfig {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // Numeric identifier for the stream being configured.
-  int16_t stream_id{};
+  int16_t stream_id = {};
 };
 
 
@@ -66,7 +66,7 @@ struct Metadata {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  int64_t timestamp{};
+  int64_t timestamp = {};
 };
 
 
@@ -81,13 +81,13 @@ struct FrameAvailableEvent {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // Non zero if an error occurred.
-  FrameStatus frame_status{};
+  FrameStatus frame_status = {};
 
   // The index of the buffer in the buffer collection.
-  uint32_t buffer_id{};
+  uint32_t buffer_id = {};
 
   // Any associated metadata such as timestamp.
-  Metadata metadata{};
+  Metadata metadata = {};
 };
 
 extern "C" const fidl_type_t fuchsia_camera_common_StreamReleaseFrameRequestTable;
@@ -388,9 +388,9 @@ struct FrameRate {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // The frame rate is frames_per_sec_numerator / frames_per_sec_denominator.
-  uint32_t frames_per_sec_numerator{};
+  uint32_t frames_per_sec_numerator = {};
 
-  uint32_t frames_per_sec_denominator{};
+  uint32_t frames_per_sec_denominator = {};
 };
 
 extern "C" const fidl_type_t fuchsia_camera_common_VideoFormatTable;
@@ -403,9 +403,9 @@ struct VideoFormat {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::llcpp::fuchsia::sysmem::ImageFormat format{};
+  ::llcpp::fuchsia::sysmem::ImageFormat format = {};
 
-  FrameRate rate{};
+  FrameRate rate = {};
 };
 
 extern "C" const fidl_type_t fuchsia_camera_common_DeviceInfoTable;
@@ -419,20 +419,20 @@ struct DeviceInfo {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // Currently populated by the camera manager
-  uint64_t camera_id{};
+  uint64_t camera_id = {};
 
-  uint16_t vendor_id{};
+  uint16_t vendor_id = {};
 
   // string vendor_name;
-  uint16_t product_id{};
+  uint16_t product_id = {};
 
   // string product_name;
   // string serial_number;
   // The maximum number of stream interfaces that the device can support
   // simultaneously.
-  uint16_t max_stream_count{};
+  uint16_t max_stream_count = {};
 
-  uint32_t output_capabilities{};
+  uint32_t output_capabilities = {};
 };
 
 constexpr uint32_t CAMERA_OUTPUT_UNKNOWN = 0u;
@@ -461,7 +461,7 @@ struct ArtificialStreamConfig {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // Numeric identifier for the stream being configured.
-  int16_t stream_id{};
+  int16_t stream_id = {};
 };
 
 extern "C" const fidl_type_t fuchsia_camera_common_VirtualStreamConfigTable;
@@ -528,13 +528,13 @@ struct VirtualCameraConfig {
   static constexpr uint32_t MaxOutOfLine = 4294967295;
 
   // The formats that the controller will support.
-  ::fidl::VectorView<VideoFormat> formats{};
+  ::fidl::VectorView<VideoFormat> formats = {};
 
   // Device specific information that can be set by the user.
-  DeviceInfo info{};
+  DeviceInfo info = {};
 
   // Either an ArtificialStreamConfig or a RealWorldStreamConfig.
-  VirtualStreamConfig stream_config{};
+  VirtualStreamConfig stream_config = {};
 };
 
 extern "C" const fidl_type_t fuchsia_camera_common_VirtualCameraFactoryCreateDeviceRequestTable;

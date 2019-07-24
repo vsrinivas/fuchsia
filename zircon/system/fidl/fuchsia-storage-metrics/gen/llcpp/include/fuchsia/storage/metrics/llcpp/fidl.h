@@ -32,15 +32,15 @@ struct CallStatRaw {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint64_t minimum_latency{};
+  uint64_t minimum_latency = {};
 
-  uint64_t maximum_latency{};
+  uint64_t maximum_latency = {};
 
-  uint64_t total_time_spent{};
+  uint64_t total_time_spent = {};
 
-  uint64_t total_calls{};
+  uint64_t total_calls = {};
 
-  uint64_t bytes_transferred{};
+  uint64_t bytes_transferred = {};
 };
 
 
@@ -52,9 +52,9 @@ struct CallStat {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  CallStatRaw success{};
+  CallStatRaw success = {};
 
-  CallStatRaw failure{};
+  CallStatRaw failure = {};
 };
 
 
@@ -66,21 +66,21 @@ struct FsMetrics {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  CallStat create{};
+  CallStat create = {};
 
-  CallStat read{};
+  CallStat read = {};
 
-  CallStat write{};
+  CallStat write = {};
 
-  CallStat truncate{};
+  CallStat truncate = {};
 
-  CallStat unlink{};
+  CallStat unlink = {};
 
-  CallStat rename{};
+  CallStat rename = {};
 
-  CallStat lookup{};
+  CallStat lookup = {};
 
-  CallStat open{};
+  CallStat open = {};
 };
 
 }  // namespace metrics

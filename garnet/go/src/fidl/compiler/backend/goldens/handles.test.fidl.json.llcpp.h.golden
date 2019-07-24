@@ -49,45 +49,45 @@ struct Handles {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::zx::handle plain_handle{};
+  ::zx::handle plain_handle = {};
 
-  ::zx::bti bti_handle{};
+  ::zx::bti bti_handle = {};
 
-  ::zx::channel channel_handle{};
+  ::zx::channel channel_handle = {};
 
-  ::zx::debuglog debuglog_handle{};
+  ::zx::debuglog debuglog_handle = {};
 
-  ::zx::event event_handle{};
+  ::zx::event event_handle = {};
 
-  ::zx::eventpair eventpair_handle{};
+  ::zx::eventpair eventpair_handle = {};
 
-  ::zx::exception exception_handle{};
+  ::zx::exception exception_handle = {};
 
-  ::zx::fifo fifo_handle{};
+  ::zx::fifo fifo_handle = {};
 
-  ::zx::guest guest_handle{};
+  ::zx::guest guest_handle = {};
 
-  ::zx::interrupt interrupt_handle{};
+  ::zx::interrupt interrupt_handle = {};
 
-  ::zx::job job_handle{};
+  ::zx::job job_handle = {};
 
-  ::zx::process process_handle{};
+  ::zx::process process_handle = {};
 
-  ::zx::profile profile_handle{};
+  ::zx::profile profile_handle = {};
 
-  ::zx::port port_handle{};
+  ::zx::port port_handle = {};
 
-  ::zx::resource resource_handle{};
+  ::zx::resource resource_handle = {};
 
-  ::zx::socket socket_handle{};
+  ::zx::socket socket_handle = {};
 
-  ::zx::thread thread_handle{};
+  ::zx::thread thread_handle = {};
 
-  ::zx::timer timer_handle{};
+  ::zx::timer timer_handle = {};
 
-  ::zx::vmar vmar_handle{};
+  ::zx::vmar vmar_handle = {};
 
-  ::zx::vmo vmo_handle{};
+  ::zx::vmo vmo_handle = {};
 };
 
 }  // namespace name

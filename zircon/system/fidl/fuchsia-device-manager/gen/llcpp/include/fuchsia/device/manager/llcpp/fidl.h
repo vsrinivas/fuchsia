@@ -1878,10 +1878,10 @@ struct BindInstruction {
   static constexpr uint32_t MaxOutOfLine = 0;
 
   // bitfield that encodes the operation and execution conditions
-  uint32_t op{};
+  uint32_t op = {};
 
   // bitfield that encodes the arguments
-  uint32_t arg{};
+  uint32_t arg = {};
 };
 
 
@@ -1894,9 +1894,9 @@ struct DeviceComponentPart {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint32_t match_program_count{};
+  uint32_t match_program_count = {};
 
-  ::fidl::Array<BindInstruction, 32> match_program{};
+  ::fidl::Array<BindInstruction, 32> match_program = {};
 };
 
 
@@ -1909,9 +1909,9 @@ struct DeviceComponent {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  uint32_t parts_count{};
+  uint32_t parts_count = {};
 
-  ::fidl::Array<DeviceComponentPart, 16> parts{};
+  ::fidl::Array<DeviceComponentPart, 16> parts = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceRequestTable;
