@@ -6,11 +6,11 @@
 #define LIB_MODULAR_TESTING_CPP_TEST_HARNESS_BUILDER_H_
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
-#include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
+#include <lib/vfs/cpp/service.h>
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 
 // TestHarnessBuilder is a utility for building a
 // |fuchsia.modular.testing.TestHarnessSpec|. This utility provides methods for
@@ -26,8 +26,8 @@ namespace testing {
 // class MyTest : gtest::RealLoopFixture {};
 //
 // TEST_F(MyTest, TestOne) {
-//   modular::testing::TestHarnessLauncher test_harness_launcher;
-//   modular::testing::TestHarnessBuilder builder;
+//   modular_testing::TestHarnessLauncher test_harness_launcher;
+//   modular_testing::TestHarnessBuilder builder;
 //
 //   // Instruct the test harness to intercept the launch of a new component
 //   // within the test harness environment. Specify that the component should
@@ -75,11 +75,12 @@ class TestHarnessBuilder final {
 
   // Builds on top of an empty |fuchsia.modular.testing.TestHarnessSpec|.
   TestHarnessBuilder();
-  TestHarnessBuilder(TestHarnessBuilder&&) = default;
-
   // Builds on top of the supplied |spec|.
   explicit TestHarnessBuilder(fuchsia::modular::testing::TestHarnessSpec spec);
 
+  // Movable.
+  TestHarnessBuilder(TestHarnessBuilder&&) = default;
+  TestHarnessBuilder& operator=(TestHarnessBuilder&&) = default;
   // Not copyable.
   TestHarnessBuilder(const TestHarnessBuilder&) = delete;
   TestHarnessBuilder& operator=(const TestHarnessBuilder&) = delete;
@@ -164,6 +165,11 @@ class TestHarnessBuilder final {
     return AddServiceFromServiceDirectory(Interface::Name_, std::move(services));
   }
 
+  // Returns a generated fake URL. Subsequent calls to this method will generate
+  // a different URL. If |name| is provided, adds its contents to the component
+  // name. Non alpha-num characters (a-zA-Z0-9) are stripped.
+  static std::string GenerateFakeUrl(std::string name = "");
+
  private:
   // Takes the TestHarnessSpec built so far with the builder functions below.
   //
@@ -187,12 +193,6 @@ class TestHarnessBuilder final {
   std::unique_ptr<vfs::PseudoDir> env_services_;
 };
 
-// Returns a generated fake URL. Subsequent calls to this method will generate
-// a different URL. If |name| is provided, adds its contents to the component
-// name. Non alpha-num characters (a-zA-Z0-9) are stripped.
-std::string GenerateFakeUrl(std::string name = "");
-
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing
 
 #endif  // LIB_MODULAR_TESTING_CPP_TEST_HARNESS_BUILDER_H_

@@ -33,9 +33,9 @@ TEST_F(SessionmgrIntegrationTest, RebootCalledIfSessionmgrCrashNumberReachesRetr
   fidl::BindingSet<fuchsia::device::manager::Administrator> admin_bindings;
 
   modular::testing::FakeSessionShell session_shell;
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
   builder.InterceptSessionShell(session_shell.GetOnCreateHandler(),
-                                {.url = modular::testing::GenerateFakeUrl()});
+                                {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
   builder.AddService(admin_bindings.GetHandler(&mock_admin));
   builder.BuildAndRun(test_harness());
 

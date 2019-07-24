@@ -17,7 +17,7 @@ class SessionctlTest : public modular::testing::TestHarnessFixture {};
 TEST_F(SessionctlTest, FindSessionCtlService) {
   fuchsia::modular::testing::TestHarnessSpec spec;
   spec.set_environment_suffix("test");
-  modular::testing::TestHarnessBuilder builder(std::move(spec));
+  modular_testing::TestHarnessBuilder builder(std::move(spec));
   builder.BuildAndRun(test_harness());
 
   RunLoopUntil([&] { return files::Glob(kModularTestHarnessGlobPath).size() == 1; });

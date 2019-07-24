@@ -64,7 +64,7 @@ TEST_F(ClipboardTest, ClipboardAgentProvidesClipboard) {
   constexpr char kClipboardAgentUrl[] =
       "fuchsia-pkg://fuchsia.com/clipboard_agent#meta/clipboard_agent.cmx";
 
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
   builder.BuildAndRun(test_harness());
 
   fuchsia::modular::testing::ModularService svc;

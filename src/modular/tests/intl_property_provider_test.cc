@@ -43,7 +43,7 @@ class IntlPropertyProviderTest : public modular::testing::TestHarnessFixture {
  public:
   void SetUp() override {
     test_module_ = std::make_unique<IntlClientModule>();
-    test_module_url_ = modular::testing::GenerateFakeUrl();
+    test_module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
     builder_.InterceptComponent(
         test_module_->GetOnCreateHandler(),
         {.url = test_module_url_,
@@ -52,7 +52,7 @@ class IntlPropertyProviderTest : public modular::testing::TestHarnessFixture {
   }
 
   std::unique_ptr<IntlClientModule> test_module_;
-  modular::testing::TestHarnessBuilder builder_;
+  modular_testing::TestHarnessBuilder builder_;
   std::string test_module_url_;
 };
 

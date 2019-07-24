@@ -19,13 +19,13 @@ namespace {
 class StoryShellTest : public modular::testing::TestHarnessFixture {
  protected:
   void StartSession() {
-    modular::testing::TestHarnessBuilder builder;
+    modular_testing::TestHarnessBuilder builder;
 
     builder.InterceptSessionShell(session_shell_.GetOnCreateHandler(),
                                   {.sandbox_services = {"fuchsia.modular.SessionShellContext"}});
     builder.InterceptStoryShell(story_shell_.GetOnCreateHandler());
 
-    fake_module_url_ = modular::testing::GenerateFakeUrl("module");
+    fake_module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl("module");
     builder.InterceptComponent(
         [this](fuchsia::sys::StartupInfo startup_info,
                fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>

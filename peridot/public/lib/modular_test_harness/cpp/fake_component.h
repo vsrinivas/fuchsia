@@ -27,7 +27,7 @@ class FakeComponent : public fuchsia::modular::Lifecycle {
 
   // Returns a binder function that initializes members, dispatches OnCreate()
   // and wires OnDestroy() to the InterceptedComponent.OnKill event.
-  TestHarnessBuilder::OnNewComponentHandler GetOnCreateHandler();
+  modular_testing::TestHarnessBuilder::OnNewComponentHandler GetOnCreateHandler();
 
   // Returns true if the component was launched by the component manager and
   // has not yet been destroyed.

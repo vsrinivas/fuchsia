@@ -17,7 +17,7 @@ class LoginOverrideTest : public modular::testing::TestHarnessFixture {
   // Setting LoginOverride to AUTH_PROVIDER should launch the single user
   // base shell.
   void SetLoginOverride(fuchsia::setui::LoginOverride login_override,
-                        modular::testing::TestHarnessBuilder* builder) {
+                        modular_testing::TestHarnessBuilder* builder) {
     fuchsia::setui::AccountMutation account_mutation;
     account_mutation.set_operation(fuchsia::setui::AccountOperation::SET_LOGIN_OVERRIDE);
     account_mutation.set_login_override(login_override);
@@ -42,7 +42,7 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
       "fuchsia-pkg://fuchsia.com/single_user_base_shell#meta/"
       "single_user_base_shell.cmx";
 
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
   builder.AddServiceFromComponent<fuchsia::setui::SetUiService>(
       "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx");
   builder.AddServiceFromComponent<fuchsia::auth::account::AccountManager>(
@@ -57,7 +57,7 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
           fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
         intercepted = true;
       },
-      modular::testing::TestHarnessBuilder::InterceptOptions{.url = kSingleUserBaseShellUrl});
+      modular_testing::TestHarnessBuilder::InterceptOptions{.url = kSingleUserBaseShellUrl});
 
   // Setting AUTH_PROVIDER should launch the configured base shell.
   SetLoginOverride(fuchsia::setui::LoginOverride::AUTH_PROVIDER, &builder);
@@ -68,7 +68,7 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
 // Setting LoginOverride to AUTOLOGIN_GUEST should skip the base shell and
 // launch the session shell.
 TEST_F(LoginOverrideTest, AutoLoginGuestOverrideSkipsBaseShell) {
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
   builder.AddServiceFromComponent<fuchsia::setui::SetUiService>(
       "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx");
   builder.AddServiceFromComponent<fuchsia::auth::account::AccountManager>(

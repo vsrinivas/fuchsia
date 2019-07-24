@@ -16,24 +16,24 @@ class ComponentContextTest : public modular::testing::TestHarnessFixture {};
 // fuchsia::modular::ComponentContext.ConnectToAgent(). Asserts that closing
 // fuchsia::modular::AgentController triggers the agent to stop.
 TEST_F(ComponentContextTest, AgentStartsSecondAgent) {
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
 
   modular::testing::FakeModule fake_module;
-  const auto fake_module_url = modular::testing::GenerateFakeUrl();
+  const auto fake_module_url = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
   builder.InterceptComponent(
       fake_module.GetOnCreateHandler(),
       {.url = fake_module_url,
        .sandbox_services = modular::testing::FakeModule::GetSandboxServices()});
 
   modular::testing::FakeAgent first_fake_agent;
-  const auto first_fake_agent_url = modular::testing::GenerateFakeUrl();
+  const auto first_fake_agent_url = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
   builder.InterceptComponent(
       first_fake_agent.GetOnCreateHandler(),
       {.url = first_fake_agent_url,
        .sandbox_services = modular::testing::FakeAgent::GetSandboxServices()});
 
   modular::testing::FakeAgent second_fake_agent;
-  const auto second_fake_agent_url = modular::testing::GenerateFakeUrl();
+  const auto second_fake_agent_url = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
   builder.InterceptComponent(
       second_fake_agent.GetOnCreateHandler(),
       {.url = second_fake_agent_url,

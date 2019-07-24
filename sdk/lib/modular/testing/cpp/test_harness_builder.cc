@@ -6,8 +6,7 @@
 
 #include <sstream>
 
-namespace modular {
-namespace testing {
+namespace modular_testing {
 namespace {
 
 std::string StringsToCSV(std::vector<std::string> strings) {
@@ -97,7 +96,7 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptComponent(OnNewComponentHandler
                                                            InterceptOptions options) {
   ZX_ASSERT(on_new_component);
   if (options.url.empty()) {
-    options.url = modular::testing::GenerateFakeUrl();
+    options.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
   }
 
   fuchsia::modular::testing::InterceptSpec intercept_spec;
@@ -115,7 +114,7 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptComponent(OnNewComponentHandler
 TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(OnNewComponentHandler on_new_component,
                                                            InterceptOptions options) {
   if (options.url.empty()) {
-    options.url = modular::testing::GenerateFakeUrl("base_shell");
+    options.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("base_shell");
   }
   auto url = options.url;
   InterceptComponent(std::move(on_new_component), std::move(options));
@@ -127,7 +126,7 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(OnNewComponentHandler
 TestHarnessBuilder& TestHarnessBuilder::InterceptSessionShell(
     OnNewComponentHandler on_new_component, InterceptOptions options) {
   if (options.url.empty()) {
-    options.url = modular::testing::GenerateFakeUrl("session_shell");
+    options.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("session_shell");
   }
   auto url = options.url;
   InterceptComponent(std::move(on_new_component), std::move(options));
@@ -141,7 +140,7 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptSessionShell(
 TestHarnessBuilder& TestHarnessBuilder::InterceptStoryShell(OnNewComponentHandler on_new_component,
                                                             InterceptOptions options) {
   if (options.url.empty()) {
-    options.url = modular::testing::GenerateFakeUrl("story_shell");
+    options.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("story_shell");
   }
   auto url = options.url;
   InterceptComponent(std::move(on_new_component), std::move(options));
@@ -173,7 +172,8 @@ TestHarnessBuilder& TestHarnessBuilder::AddServiceFromServiceDirectory(
   });
 }
 
-std::string GenerateFakeUrl(std::string name) {
+// static
+std::string TestHarnessBuilder::GenerateFakeUrl(std::string name) {
   name.erase(std::remove_if(name.begin(), name.end(),
                             [](auto const& c) -> bool { return !std::isalnum(c); }),
              name.end());
@@ -198,5 +198,4 @@ std::string GenerateFakeUrl(std::string name) {
   return url;
 }
 
-}  // namespace testing
-}  // namespace modular
+}  // namespace modular_testing

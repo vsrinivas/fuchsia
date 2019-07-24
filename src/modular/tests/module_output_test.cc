@@ -21,7 +21,7 @@ class ModuleOutputTest : public modular::testing::TestHarnessFixture {
   void SetUp() override {
     test_module_ =
         std::make_unique<modular::testing::FakeModule>([](fuchsia::modular::Intent intent) {});
-    test_module_url_ = modular::testing::GenerateFakeUrl();
+    test_module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
     builder_.InterceptComponent(test_module_->GetOnCreateHandler(),
                                 {.url = test_module_url_,
                                  .sandbox_services = {"fuchsia.app.discover.ModuleOutputWriter",
@@ -30,7 +30,7 @@ class ModuleOutputTest : public modular::testing::TestHarnessFixture {
   }
 
   std::unique_ptr<modular::testing::FakeModule> test_module_;
-  modular::testing::TestHarnessBuilder builder_;
+  modular_testing::TestHarnessBuilder builder_;
   std::string test_module_url_;
   std::string test_entity_provider_agent_url_;
 };

@@ -22,7 +22,7 @@ TEST_F(TestHarnessFixtureTest, CanLaunchModular) {
       "fuchsia-pkg://example.com/FAKE_BASE_SHELL_PKG/fake_base_shell.cmx";
 
   // Setup base shell interception.
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
 
   bool intercepted = false;
   builder.InterceptBaseShell(
@@ -54,12 +54,12 @@ class TestComponent : public modular::testing::FakeComponent {
 // Tests that FakeComponent receives lifecycle events when it is killed
 // by its parent.
 TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledByParent) {
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
 
   bool running = false;
   TestComponent session_shell([&] { running = true; }, [&] { running = false; });
   builder.InterceptSessionShell(session_shell.GetOnCreateHandler(),
-                                {.url = modular::testing::GenerateFakeUrl(),
+                                {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
                                  .sandbox_services = {"fuchsia.modular.SessionShellContext"}});
   builder.BuildAndRun(test_harness());
 
@@ -77,12 +77,12 @@ TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledByParent) {
 // Tests that FakeComponent receives lifecycle events when it kills
 // itself.
 TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledBySelf) {
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
 
   bool running = false;
   TestComponent base_shell([&] { running = true; }, [&] { running = false; });
   builder.InterceptBaseShell(base_shell.GetOnCreateHandler(),
-                             {.url = modular::testing::GenerateFakeUrl()});
+                             {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
   builder.BuildAndRun(test_harness());
 
   RunLoopUntil([&] { return base_shell.is_running(); });
@@ -96,12 +96,12 @@ TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledBySelf) {
 // Tests that FakeComponent receives lifecycle events when it is killed
 // using fuchsia.modular.Lifecycle that is published in its outgoing directory.
 TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledByLifecycleService) {
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
 
   bool running = false;
   TestComponent base_shell([&] { running = true; }, [&] { running = false; });
   builder.InterceptBaseShell(base_shell.GetOnCreateHandler(),
-                             {.url = modular::testing::GenerateFakeUrl()});
+                             {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
   builder.BuildAndRun(test_harness());
 
   RunLoopUntil([&] { return base_shell.is_running(); });
@@ -121,13 +121,13 @@ TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledByLifecycleService) 
 }
 
 TEST_F(TestHarnessFixtureTest, AddModToStory) {
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
 
   modular::testing::FakeModule mod;
-  auto mod_url = modular::testing::GenerateFakeUrl();
+  auto mod_url = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
   builder.InterceptComponent(
       mod.GetOnCreateHandler(),
-      modular::testing::TestHarnessBuilder::InterceptOptions{.url = mod_url});
+      modular_testing::TestHarnessBuilder::InterceptOptions{.url = mod_url});
   builder.BuildAndRun(test_harness());
 
   modular::testing::AddModToStory(test_harness(), "mystory", "mymod",
@@ -141,11 +141,11 @@ class TestFixtureForTestingCleanup : public modular::testing::TestHarnessFixture
   // Runs the test harness and calls |on_running| once the base shell starts
   // running.
   void RunUntilBaseShell(fit::function<void()> on_running) {
-    modular::testing::TestHarnessBuilder builder;
+    modular_testing::TestHarnessBuilder builder;
     bool running = false;
     TestComponent base_shell([&] { running = true; }, [&] { running = false; });
     builder.InterceptBaseShell(base_shell.GetOnCreateHandler(),
-                               {.url = modular::testing::GenerateFakeUrl()});
+                               {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
     builder.BuildAndRun(test_harness());
 
     RunLoopUntil([&] { return running; });

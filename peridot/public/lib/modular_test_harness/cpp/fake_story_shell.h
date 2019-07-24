@@ -17,7 +17,7 @@ namespace testing {
 // test harness):
 //
 // modular::testing::FakeStoryShell fake_story_shell;
-// modular::testing::TestHarnessBuilder builder;
+// modular_testing::TestHarnessBuilder builder;
 // builder.InterceptSessionShell(fake_story_shell.GetOnCreateHandler(),
 //                               {.sandbox_services = {
 //                                    "fuchsia.modular.StoryShellContext"}});

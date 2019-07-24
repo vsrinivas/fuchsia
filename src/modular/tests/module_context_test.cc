@@ -17,7 +17,7 @@ namespace {
 
 class ModuleContextTest : public modular::testing::TestHarnessFixture {
  protected:
-  void StartSession(modular::testing::TestHarnessBuilder builder) {
+  void StartSession(modular_testing::TestHarnessBuilder builder) {
     builder.InterceptSessionShell(session_shell_.GetOnCreateHandler(),
                                   {.sandbox_services = {"fuchsia.modular.SessionShellContext"}});
     builder.BuildAndRun(test_harness());
@@ -78,7 +78,7 @@ class FakeModule : public modular::testing::FakeModule {
 // Intent specifies the same handler, versus if it specifies a different
 // handler.
 TEST_F(ModuleContextTest, AddModuleToStory) {
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
 
   struct FakeModuleInfo {
     std::string url;
@@ -87,9 +87,9 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
     fuchsia::modular::ModuleControllerPtr controller;
   };
 
-  FakeModuleInfo parent_module{.url = modular::testing::GenerateFakeUrl("parent_module")};
-  FakeModuleInfo child_module1{.url = modular::testing::GenerateFakeUrl("child_module1")};
-  FakeModuleInfo child_module2{.url = modular::testing::GenerateFakeUrl("child_module2")};
+  FakeModuleInfo parent_module{.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("parent_module")};
+  FakeModuleInfo child_module1{.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("child_module1")};
+  FakeModuleInfo child_module2{.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("child_module2")};
 
   builder.InterceptComponent(
       parent_module.component.GetOnCreateHandler(),
@@ -154,15 +154,15 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
 // down the module and removing it permanently from the story (if the story is
 // restarted, it is not relaunched).
 TEST_F(ModuleContextTest, RemoveSelfFromStory) {
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
 
   struct FakeModuleInfo {
     std::string url;
     FakeModule component;
   };
 
-  FakeModuleInfo module1{.url = modular::testing::GenerateFakeUrl("module1")};
-  FakeModuleInfo module2{.url = modular::testing::GenerateFakeUrl("module2")};
+  FakeModuleInfo module1{.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("module1")};
+  FakeModuleInfo module2{.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("module2")};
 
   builder.InterceptComponent(
       module1.component.GetOnCreateHandler(),
@@ -199,9 +199,9 @@ TEST_F(ModuleContextTest, RemoveSelfFromStory) {
 // Create a story-hosted Entity using ModuleContext, verify that it can be
 // updated and that it has a valid Entity reference.
 TEST_F(ModuleContextTest, CreateEntity) {
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
 
-  auto module_url = modular::testing::GenerateFakeUrl("module");
+  auto module_url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("module");
   FakeModule module;
   builder.InterceptComponent(module.GetOnCreateHandler(),
                              {.url = module_url, .sandbox_services = module.GetSandboxServices()});
@@ -331,15 +331,15 @@ class TestStoryActivityWatcher : fuchsia::modular::StoryActivityWatcher {
 // When a shell registers a watcher for ongoing activities and modules create
 // and destroy them, the shell should ge appropriately notified.
 TEST_F(ModuleContextTest, OngoingActivity_NotifyOnWatch) {
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
 
   struct FakeModuleInfo {
     std::string url;
     FakeModule component;
   };
 
-  FakeModuleInfo module1{.url = modular::testing::GenerateFakeUrl("module1")};
-  FakeModuleInfo module2{.url = modular::testing::GenerateFakeUrl("module2")};
+  FakeModuleInfo module1{.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("module1")};
+  FakeModuleInfo module2{.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("module2")};
 
   builder.InterceptComponent(
       module1.component.GetOnCreateHandler(),

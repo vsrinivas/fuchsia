@@ -21,7 +21,7 @@ TEST_F(AutoLoginBaseShellTest, AutoLoginBaseShellLaunchesSessionShell) {
   spec.mutable_basemgr_config()->mutable_base_shell()->mutable_app_config()->set_url(
       kAutoLoginBaseShellUrl);
 
-  modular::testing::TestHarnessBuilder builder(std::move(spec));
+  modular_testing::TestHarnessBuilder builder(std::move(spec));
   // Listen for session shell interception.
   bool intercepted = false;
   builder.InterceptSessionShell(

@@ -111,7 +111,7 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
     fuchsia::modular::testing::TestHarnessSpec spec;
     spec.mutable_basemgr_config()->set_use_session_shell_for_story_shell_factory(true);
 
-    modular::testing::TestHarnessBuilder builder(std::move(spec));
+    modular_testing::TestHarnessBuilder builder(std::move(spec));
     test_session_shell_ = std::make_unique<TestSessionShell>();
     builder.InterceptSessionShell(test_session_shell_->GetOnCreateHandler(),
                                   {.sandbox_services = {"fuchsia.modular.SessionShellContext",
@@ -119,7 +119,7 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
 
     // Listen for the module that is created in CreateStory().
     test_module_ = std::make_unique<modular::testing::FakeComponent>();
-    test_module_url_ = modular::testing::GenerateFakeUrl();
+    test_module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
     builder.InterceptComponent(test_module_->GetOnCreateHandler(), {.url = test_module_url_});
     builder.BuildAndRun(test_harness());
 

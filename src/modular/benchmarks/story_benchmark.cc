@@ -196,7 +196,7 @@ class StoryBenchmarkTest : public modular::testing::TestHarnessFixture {
 
   // Initializes and starts the modular test harness.
   void InitSession() {
-    modular::testing::TestHarnessBuilder builder;
+    modular_testing::TestHarnessBuilder builder;
 
     link_watcher_ = std::make_unique<TestLinkWatcher>();
     story_watcher_ = std::make_unique<TestStoryWatcher>();
@@ -208,7 +208,7 @@ class StoryBenchmarkTest : public modular::testing::TestHarnessFixture {
 
     // Listen for the module that is created in CreateStory().
     module_ = std::make_unique<TestModule>();
-    module_url_ = modular::testing::GenerateFakeUrl();
+    module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
     builder.InterceptComponent(
         module_->GetOnCreateHandler(),
         {.url = module_url_, .sandbox_services = module_->GetSandboxServices()});

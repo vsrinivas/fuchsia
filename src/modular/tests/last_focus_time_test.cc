@@ -115,7 +115,7 @@ class TestStoryWatcher : fuchsia::modular::StoryWatcher {
 const char kStoryName[] = "storyname";
 
 TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
 
   TestSessionShell test_session_shell;
   builder.InterceptSessionShell(test_session_shell.GetOnCreateHandler(),
@@ -124,7 +124,7 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
 
   // Listen for the module we're going to create.
   modular::testing::FakeComponent test_module;
-  const auto test_module_url = modular::testing::GenerateFakeUrl();
+  const auto test_module_url = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
   builder.InterceptComponent(test_module.GetOnCreateHandler(), {.url = test_module_url});
   builder.BuildAndRun(test_harness());
 

@@ -16,7 +16,7 @@ class TriggerTest : public modular::testing::TestHarnessFixture {
   void SetUp() override {
     // Intercept |fake_module_|
     fake_module_ = std::make_unique<modular::testing::FakeModule>();
-    fake_module_url_ = modular::testing::GenerateFakeUrl();
+    fake_module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
     builder_.InterceptComponent(
         fake_module_->GetOnCreateHandler(),
         {.url = fake_module_url_,
@@ -24,7 +24,7 @@ class TriggerTest : public modular::testing::TestHarnessFixture {
 
     // Intercept |fake_agent_|
     fake_agent_ = std::make_unique<modular::testing::FakeAgent>();
-    fake_agent_url_ = modular::testing::GenerateFakeUrl();
+    fake_agent_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
     builder_.InterceptComponent(
         fake_agent_->GetOnCreateHandler(),
         {.url = fake_agent_url_,
@@ -44,7 +44,7 @@ class TriggerTest : public modular::testing::TestHarnessFixture {
     RunLoopUntil([&] { return fake_agent_->is_running(); });
   }
 
-  modular::testing::TestHarnessBuilder builder_;
+  modular_testing::TestHarnessBuilder builder_;
   std::unique_ptr<modular::testing::FakeModule> fake_module_;
   std::unique_ptr<modular::testing::FakeAgent> fake_agent_;
   std::string fake_module_url_;

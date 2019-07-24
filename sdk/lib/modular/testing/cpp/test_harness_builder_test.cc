@@ -65,7 +65,7 @@ class TestHarnessBuilderTest : public modular::testing::TestHarnessFixture {
 
   std::tuple<fuchsia::modular::testing::TestHarnessSpec,
              fuchsia::modular::testing::TestHarness::OnNewComponentCallback>
-  TakeSpecAndHandler(modular::testing::TestHarnessBuilder* builder) {
+  TakeSpecAndHandler(modular_testing::TestHarnessBuilder* builder) {
     FakeTestHarness fake_test_harness;
     fidl::Binding<fuchsia::modular::testing::TestHarness> fake_test_harness_binding(
         &fake_test_harness);
@@ -96,14 +96,17 @@ class PingerImpl : public fuchsia::modular::test::harness::Pinger {
   bool pinged_ = false;
 };
 
-// Test that modular::testing::GenerateFakeUrl() returns new urls each time.
+// Test that modular_testing::TestHarnessBuilder::GenerateFakeUrl() returns new urls each time.
 TEST_F(TestHarnessBuilderTest, GenerateFakeUrl) {
-  modular::testing::TestHarnessBuilder builder;
-  EXPECT_NE(modular::testing::GenerateFakeUrl(), modular::testing::GenerateFakeUrl());
+  modular_testing::TestHarnessBuilder builder;
+  EXPECT_NE(modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+            modular_testing::TestHarnessBuilder::GenerateFakeUrl());
 
-  EXPECT_THAT(modular::testing::GenerateFakeUrl("foobar"), HasSubstr("foobar"));
-  EXPECT_THAT(modular::testing::GenerateFakeUrl("foo!_bar"), HasSubstr("foobar"));
-  EXPECT_THAT(modular::testing::GenerateFakeUrl("foo!_bar"), Not(HasSubstr("foo!_bar")));
+  EXPECT_THAT(modular_testing::TestHarnessBuilder::GenerateFakeUrl("foobar"), HasSubstr("foobar"));
+  EXPECT_THAT(modular_testing::TestHarnessBuilder::GenerateFakeUrl("foo!_bar"),
+              HasSubstr("foobar"));
+  EXPECT_THAT(modular_testing::TestHarnessBuilder::GenerateFakeUrl("foo!_bar"),
+              Not(HasSubstr("foo!_bar")));
 }
 
 bool JsonEq(std::string a, std::string b) {
@@ -119,7 +122,7 @@ bool JsonEq(std::string a, std::string b) {
 // Test that the TestHarnessBuilder builds a sane TestHarnessSpec and
 // OnNewComponent router function.
 TEST_F(TestHarnessBuilderTest, InterceptSpecTest) {
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
 
   std::string called;
   builder.InterceptComponent([&](auto launch_info, auto handle) { called = "generic"; },
@@ -180,7 +183,7 @@ TEST_F(TestHarnessBuilderTest, AddService) {
   PingerImpl pinger_impl;
   fidl::BindingSet<fuchsia::modular::test::harness::Pinger> pinger_bindings;
 
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
   builder.AddService<fuchsia::modular::test::harness::Pinger>(
       pinger_bindings.GetHandler(&pinger_impl));
   builder.BuildAndRun(test_harness());
@@ -196,8 +199,8 @@ TEST_F(TestHarnessBuilderTest, AddService) {
 // Test that TestHarnessBuilder::BuildSpec() populates the
 // env_services.services_from_components correctly.
 TEST_F(TestHarnessBuilderTest, AddServiceFromComponent) {
-  modular::testing::TestHarnessBuilder builder;
-  auto fake_url = modular::testing::GenerateFakeUrl();
+  modular_testing::TestHarnessBuilder builder;
+  auto fake_url = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
   builder.AddServiceFromComponent<fuchsia::modular::test::harness::Pinger>(fake_url);
 
   auto [spec, new_component_handler] = TakeSpecAndHandler(&builder);
@@ -216,7 +219,7 @@ TEST_F(TestHarnessBuilderTest, AddServiceFromServiceDirectory) {
 
   AddEnvService<fuchsia::modular::test::harness::Pinger>(pinger_bindings.GetHandler(&pinger_impl));
 
-  modular::testing::TestHarnessBuilder builder;
+  modular_testing::TestHarnessBuilder builder;
   builder.AddServiceFromServiceDirectory<fuchsia::modular::test::harness::Pinger>(
       env_service_dir());
   builder.BuildAndRun(test_harness());

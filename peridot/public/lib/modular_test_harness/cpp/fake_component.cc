@@ -33,7 +33,7 @@ std::unique_ptr<sys::ComponentContext> CreateComponentContext(
 
 FakeComponent::~FakeComponent() = default;
 
-TestHarnessBuilder::OnNewComponentHandler FakeComponent::GetOnCreateHandler() {
+modular_testing::TestHarnessBuilder::OnNewComponentHandler FakeComponent::GetOnCreateHandler() {
   return [this](fuchsia::sys::StartupInfo startup_info,
                 fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
                     intercepted_component) {

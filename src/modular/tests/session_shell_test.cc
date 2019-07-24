@@ -35,7 +35,7 @@ class SessionShellTest : public modular::testing::TestHarnessFixture {
   // Not done in SetUp() or the constructor to let the test reader know that
   // this is happening. Also, certain tests may want to change this flow.
   void RunHarnessAndInterceptSessionShell() {
-    modular::testing::TestHarnessBuilder builder;
+    modular_testing::TestHarnessBuilder builder;
     builder.InterceptSessionShell(fake_session_shell_.GetOnCreateHandler(),
                                   {.sandbox_services = {"fuchsia.modular.SessionShellContext",
                                                         "fuchsia.modular.PuppetMaster"}});
