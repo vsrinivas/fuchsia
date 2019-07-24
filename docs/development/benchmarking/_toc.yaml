@@ -6,10 +6,10 @@
 # team as reviewer.
 toc:
 - title: "Catapult user guide (Version 1)"
-  path: /fuchsia-src/development/benchmarking/catapult_user_guide.md
+  path: /fuchsia-src/development/benchmarking/catapult_user_guide
 - title: "Benchmark results schema"
-  path: /fuchsia-src/development/benchmarking/results_schema.md
+  path: /fuchsia-src/development/benchmarking/results_schema
 - title: "How to write benchmarks"
-  path: /fuchsia-src/development/benchmarking/running_on_ci.md
+  path: /fuchsia-src/development/benchmarking/running_on_ci
 - title: "Trace-based benchmarking"
-  path: /fuchsia-src/development/benchmarking/trace_based_benchmarking.md
+  path: /fuchsia-src/development/benchmarking/trace_based_benchmarking

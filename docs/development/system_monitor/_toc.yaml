@@ -6,17 +6,17 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/development/system_monitor/index
+  path: /fuchsia-src/development/system_monitor
 - title: "Dockyard"
   section:
   - title: "Overview"
-    path: /fuchsia-src/development/system_monitor/dockyard/index
+    path: /fuchsia-src/development/system_monitor/dockyard
   - title: "Terms"
     path: /fuchsia-src/development/system_monitor/dockyard/terms
 - title: "Harvester"
   section:
   - title: "Overview"
-    path: /fuchsia-src/development/system_monitor/harvester/index
+    path: /fuchsia-src/development/system_monitor/harvester
   - title: "Task samples"
     path: /fuchsia-src/development/system_monitor/harvester/task_samples
   - title: "Component introspection"

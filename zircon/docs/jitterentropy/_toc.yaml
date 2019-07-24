@@ -5,7 +5,7 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Jitterentropy: basic configuration"
-  path: /fuchsia-src/zircon/jitterentropy/config-basic.md
-- title: "Jitterentropy: tuning the configuration"
-  path: /fuchsia-src/zircon/jitterentropy/config-tuning.md
+- title: "Basic configuration"
+  path: /fuchsia-src/zircon/jitterentropy/config-basic
+- title: "Tuning the configuration"
+  path: /fuchsia-src/zircon/jitterentropy/config-tuning

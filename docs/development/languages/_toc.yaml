@@ -10,7 +10,11 @@ toc:
 - title: "Linting and formatting"
   path: /fuchsia-src/development/languages/lint_and_format
 - title: "Supporting new languages"
-  path: /fuchsia-src/development/languages/new/structure
+  section:
+    - title: "Overview"
+      path: /fuchsia-src/development/languages/new
+    - title: "Recommended structure to support Fuchsia"
+      path: /fuchsia-src/development/languages/new/structure
 - title: "C/C++"
   section:
   - include: /fuchsia-src/development/languages/c-cpp/_toc.yaml

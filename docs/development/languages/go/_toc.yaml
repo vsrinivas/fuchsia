@@ -6,6 +6,6 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/development/languages/go/index.md
+  path: /fuchsia-src/development/languages/go
 - title: "Syslog"
-  path: /fuchsia-src/development/languages/go/syslog.md
+  path: /fuchsia-src/development/languages/go/syslog

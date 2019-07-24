@@ -6,18 +6,18 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/development/languages/rust/index.md
+  path: /fuchsia-src/development/languages/rust
 - title: "Fuchsia Rust crates"
-  path: /fuchsia-src/development/languages/rust/crates.md
+  path: /fuchsia-src/development/languages/rust/crates
 - title: "Rust editor configurations"
-  path: /fuchsia-src/development/languages/rust/editors.md
+  path: /fuchsia-src/development/languages/rust/editors
 - title: "Syslog"
-  path: /fuchsia-src/development/languages/rust/syslog.md
+  path: /fuchsia-src/development/languages/rust/syslog
 - title: "Testing Rust Code"
-  path: /fuchsia-src/development/languages/rust/testing.md
+  path: /fuchsia-src/development/languages/rust/testing
 - title: "Third-party Rust crates"
-  path: /fuchsia-src/development/languages/rust/third_party.md
+  path: /fuchsia-src/development/languages/rust/third_party
 - title: "Unsafe code in Rust"
-  path: /fuchsia-src/development/languages/rust/unsafe.md
+  path: /fuchsia-src/development/languages/rust/unsafe
 - title: "Unstable Rust features"
-  path: /fuchsia-src/development/languages/rust/unstable.md
+  path: /fuchsia-src/development/languages/rust/unstable

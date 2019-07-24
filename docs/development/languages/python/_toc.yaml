@@ -6,6 +6,6 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /fuchsia-src/development/languages/python/index.md
+  path: /fuchsia-src/development/languages/python
 - title: "Python style guide"
-  path: /fuchsia-src/development/languages/python/python_style.md
+  path: /fuchsia-src/development/languages/python/python_style

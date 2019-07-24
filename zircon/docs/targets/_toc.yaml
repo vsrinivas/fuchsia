@@ -6,16 +6,16 @@
 # team as reviewer.
 toc:
 - title: "Acer Switch Alpha 12"
-  path: /fuchsia-src/zircon/targets/acer12.md
+  path: /fuchsia-src/zircon/targets/acer12
 - title: "Zircon on HiKey960 (96boards.org)"
-  path: /fuchsia-src/zircon/targets/hikey960.md
+  path: /fuchsia-src/zircon/targets/hikey960
 - title: "Zircon on iMX8M EVK"
-  path: /fuchsia-src/zircon/targets/imx8mevk.md
+  path: /fuchsia-src/zircon/targets/imx8mevk
 - title: "Zircon on Khadas VIM2 Board"
-  path: /fuchsia-src/zircon/targets/khadas-vim.md
+  path: /fuchsia-src/zircon/targets/khadas-vim
 - title: "Intel NUC (Kaby Lake, Skylake and Broadwell)"
-  path: /fuchsia-src/zircon/targets/nuc.md
+  path: /fuchsia-src/zircon/targets/nuc
 - title: "Toulouse"
-  path: /fuchsia-src/zircon/targets/toulouse.md
+  path: /fuchsia-src/zircon/targets/toulouse
 - title: "Setup with a USB Flash Drive"
-  path: /fuchsia-src/zircon/targets/usb_setup.md
+  path: /fuchsia-src/zircon/targets/usb_setup

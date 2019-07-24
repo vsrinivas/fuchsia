@@ -6,6 +6,6 @@
 # team as reviewer.
 toc:
 - title: "Developing with Fuchsia on a NUC"
-  path: /fuchsia-src/development/hardware/developing_on_nuc.md
+  path: /fuchsia-src/development/hardware/developing_on_nuc
 - title: "Preparing to install Fuchsia on Pixelbook"
-  path: /fuchsia-src/development/hardware/pixelbook.md
+  path: /fuchsia-src/development/hardware/pixelbook

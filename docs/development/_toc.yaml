@@ -5,8 +5,8 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: Development
-  path: /fuchsia-src/development/index
+- title: "Development"
+  path: /fuchsia-src/development
 - title: "ABI"
   section:
   - include: /fuchsia-src/development/abi/_toc.yaml

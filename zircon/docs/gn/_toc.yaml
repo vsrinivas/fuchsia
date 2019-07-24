@@ -6,6 +6,6 @@
 # team as reviewer.
 toc:
 - title: "A short introduction to GN"
-  path: /fuchsia-src/zircon/gn/intro.md
+  path: /fuchsia-src/zircon/gn/intro
 - title: "GN in Zircon"
-  path: /fuchsia-src/zircon/gn/zircon_gn.md
+  path: /fuchsia-src/zircon/gn/zircon_gn

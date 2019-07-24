@@ -6,10 +6,10 @@
 # team as reviewer.
 toc:
 - title: "SDK"
-  path: /fuchsia-src/development/sdk/index.md
+  path: /fuchsia-src/development/sdk
 - title: "Download the Fuchsia SDK"
-  path: /fuchsia-src/development/sdk/download.md
+  path: /fuchsia-src/development/sdk/download
 - title: "SDK layout"
-  path: /fuchsia-src/development/sdk/layout.md
+  path: /fuchsia-src/development/sdk/layout
 - title: "SDK standards"
-  path: /fuchsia-src/development/sdk/standards.md
+  path: /fuchsia-src/development/sdk/standards

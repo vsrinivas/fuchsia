@@ -6,6 +6,6 @@
 # team as reviewer.
 toc:
 - title: "ACPI debugging"
-  path: /fuchsia-src/zircon/debugging/acpi.md
+  path: /fuchsia-src/zircon/debugging/acpi
 - title: "Debugging tips"
-  path: /fuchsia-src/zircon/debugging/tips.md
+  path: /fuchsia-src/zircon/debugging/tips

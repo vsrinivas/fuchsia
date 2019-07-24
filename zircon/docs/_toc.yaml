@@ -8,6 +8,10 @@ toc:
 - title: "Getting started"
   path: /fuchsia-src/zircon/getting_started
 
+- title: "Building zircon"
+  section:
+  - include: /fuchsia-src/zircon/gn/_toc.yaml
+
 - title: "Architecture support"
   path: /fuchsia-src/zircon/architecture_support
 
@@ -55,6 +59,8 @@ toc:
     path: /fuchsia-src/zircon/kernel_scheduling
   - title: "Fair scheduling"
     path: /fuchsia-src/zircon/fair_scheduler
+  - title: "Kernel tracing"
+    path: /fuchsia-src/zircon/tracing/ktrace
 
 - title: "Errors"
   path: /fuchsia-src/zircon/errors
@@ -100,6 +106,9 @@ toc:
 - title: "Program loading"
   path: /fuchsia-src/zircon/program_loading
 
+- title: "Jitterentropy"
+  section:
+  - include: /fuchsia-src/zircon/jitterentropy/_toc.yaml
 - title: "Minfs"
   path: /fuchsia-src/zircon/minfs
 
@@ -117,6 +126,10 @@ toc:
 - title: "Targets"
   section:
   - include: /fuchsia-src/zircon/targets/_toc.yaml
+
+- title: "Debugging"
+  section:
+  - include: /fuchsia-src/zircon/debugging/_toc.yaml
 
 - title: "Testing"
   section:
