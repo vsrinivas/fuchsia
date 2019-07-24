@@ -25,17 +25,17 @@ public:
 
     // Performs typical i2c Read: writes device register address (1 byte) followed
     // by len reads into buf.
-    zx_status_t ReadSync(uint8_t addr, uint8_t* buf, uint8_t len) {
+    zx_status_t ReadSync(uint8_t addr, uint8_t* buf, size_t len) {
         return WriteReadSync(&addr, 1, buf, len);
     }
 
     // Writes len bytes from buffer with no trailing read
-    zx_status_t WriteSync(const uint8_t* buf, uint8_t len) {
+    zx_status_t WriteSync(const uint8_t* buf, size_t len) {
         return WriteReadSync(buf, len, nullptr, 0);
     }
 
-    zx_status_t WriteReadSync(const uint8_t* tx_buf, uint8_t tx_len,
-                              uint8_t* rx_buf, uint8_t rx_len) {
+    zx_status_t WriteReadSync(const uint8_t* tx_buf, size_t tx_len,
+                              uint8_t* rx_buf, size_t rx_len) {
         i2c_protocol_t proto;
         GetProto(&proto);
         return i2c_write_read_sync(&proto, tx_buf, tx_len, rx_buf, rx_len);
