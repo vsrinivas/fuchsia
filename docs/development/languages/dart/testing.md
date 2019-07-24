@@ -1,27 +1,24 @@
 # Testing
 
+## Types of tests
 
-The `dart_test` target is appropriate for unit tests.
-Each target yields a test script in the output directory under:
+Multiple Dart test targets are available:
 
-```sh
-out/<build-type>/gen/path/to/package/target_name.sh
-```
+- [dart_fuchsia_test] runs the test as a package on a fuchsia device. This must
+  be used if there is anything fuchsia specific being used like fidl. It is run
+  with `fx run-test`.
+- [dart_test] runs unit tests that can be run on the host or on a fuchsia
+  device. The dart:ui package is not made available to these tests. The test can
+  be run with `fx run-host-tests`.
+- [flutter_test] is just like dart_test except the dart:ui package is made
+  available to it, so it can test widget code.
 
-This script simply runs the given tests in the Flutter shell *on the host*.
+For information on integration testing [Flutter mods](mods.md), see [mod
+integration testing](mod_integration_testing.md).
 
-The `//scripts/run-dart-action.py` script may be used to run multiple test
-suites at once:
-
-```sh
-scripts/run-dart-action.py test --out out/<build-type> --tree //topaz/shell/*
-```
-
-It also works with a single suite:
-
-```sh
-scripts/run-dart-action.py test --out out/<build-type> --tree //topaz/shell/armadillo:test
-```
+Note that in order to be built and run on bots, the test targets need to be
+included in the packages that are configured to run there. For example, in
+topaz this can be achieved by adding those tests to `//topaz/packages/tests`.
 
 ## Code coverage
 
@@ -49,6 +46,6 @@ So if there are packages that have no tests at all, they won't be considered in
 the denominator of the report, which can give you a misleadingly high coverage
 number.
 
-## Integration Testing
-
-For information on integration testing [Flutter mods](mods.md), see [mod integration testing](mod_integration_testing.md).
+[dart_fuchsia_test]: https://fuchsia.googlesource.com/topaz/+/master/runtime/dart/dart_fuchsia_test.gni
+[dart_test]: /build/dart/test.gni
+[flutter_test]: https://fuchsia.googlesource.com/topaz/+/master/runtime/dart/flutter_test.gni
