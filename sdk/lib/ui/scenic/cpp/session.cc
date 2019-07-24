@@ -9,9 +9,12 @@
 
 namespace scenic {
 
-constexpr size_t kCommandsPerMessage =
-    (ZX_CHANNEL_MAX_MSG_BYTES - sizeof(fidl_message_header_t) - sizeof(fidl_vector_t)) /
-    sizeof(fuchsia::ui::scenic::Command);
+// Don't batch commands - enqueue every command as its own message. This is a workaround
+// for FL-258, where commands were getting corrupted. The commands are still batched
+// and processed per-Present() on the Scenic side.
+// TODO(SCN-1522) Once FL-258 is fixed, either batch commands or move away from
+// command-union pattern.
+constexpr size_t kCommandsPerMessage = 1u;
 
 SessionPtrAndListenerRequest CreateScenicSessionPtrAndListenerRequest(
     fuchsia::ui::scenic::Scenic* scenic) {
