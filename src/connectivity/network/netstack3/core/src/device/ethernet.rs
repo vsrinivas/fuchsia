@@ -288,7 +288,7 @@ pub(crate) fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
             };
             match types {
                 (ArpHardwareType::Ethernet, EtherType::Ipv4) => {
-                    crate::device::arp::receive_arp_packet::<D, Ipv4Addr, EthernetArpDevice, _>(
+                    crate::device::arp::receive_arp_packet::<_, D, Ipv4Addr, EthernetArpDevice>(
                         ctx, device_id, src, dst, buffer,
                     )
                 }
@@ -517,7 +517,7 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
     type HardwareAddr = Mac;
     const BROADCAST: Mac = Mac::BROADCAST;
 
-    fn send_arp_frame<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
+    fn send_arp_frame<B: BufferMut, D: BufferDispatcher<B>, S: Serializer<Buffer = B>>(
         ctx: &mut Context<D>,
         device_id: usize,
         dst: Self::HardwareAddr,

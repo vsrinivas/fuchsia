@@ -969,15 +969,34 @@ pub trait InnerPacketBuilder {
 
     /// Convert this `InnerPacketBuilder` into a `Serializer`.
     ///
-    /// `into_serializer` converts this `InnerPacketBuilder` into a type which
-    /// implements `Serialize` by treating it as the innermost body to be
-    /// contained within any encapsulating `PacketBuilder`s.
+    /// `into_serializer` is like [`into_serializer_with`], except that no
+    /// buffer is provided for reuse in serialization.
     #[inline]
-    fn into_serializer(self) -> InnerSerializer<Self>
+    fn into_serializer(self) -> InnerSerializer<Self, EmptyBuf>
     where
         Self: Sized,
     {
-        InnerSerializer(self)
+        self.into_serializer_with(EmptyBuf)
+    }
+
+    /// Convert this `InnerPacketBuilder` into a `Serializer` with a buffer that
+    /// can be used for serialization.
+    ///
+    /// `into_serializer_with` consumes a buffer and converts this
+    /// `InnerPacketBuilder` into a type which implements `Serialize` by
+    /// treating it as the innermost body to be contained within any
+    /// encapsulating `PacketBuilder`s. During serialization, the buffer will be
+    /// provided to the [`BufferProvider`], allowing it to reuse the buffer for
+    /// serialization and avoid allocating a new one if possible.
+    ///
+    /// The `buffer` will have its body shrunk to be zero bytes before the
+    /// `InnerSerializer` is constructed.
+    fn into_serializer_with<B: BufferMut>(self, mut buffer: B) -> InnerSerializer<Self, B>
+    where
+        Self: Sized,
+    {
+        buffer.shrink_back_to(0);
+        InnerSerializer { inner: self, buffer }
     }
 }
 
@@ -1498,31 +1517,36 @@ pub trait Serializer: Sized {
     }
 }
 
-// TODO(joshlf): Make a type that pairs an InnerPacketBuilder and a BufferMut
-// and tries to use the BufferMut before falling back on the BufferProvider.
-
 /// A [`Serializer`] constructed from an [`InnerPacketBuilder`].
 ///
-/// An `InnerSerializer` wraps an `InnerPacketBuilder`, and implements the
-/// `Serializer` trait. When a serialization is requested, it allocates a buffer
-/// large enough to hold itself and all outer `PacketBuilder`s.
+/// An `InnerSerializer` wraps an `InnerPacketBuilder` and a `BufferMut`, and
+/// implements the `Serializer` trait. When a serialization is requested, it
+/// either reuses the stored buffer or allocates a new one large enough to hold
+/// itself and all outer `PacketBuilder`s.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct InnerSerializer<I>(I);
+pub struct InnerSerializer<I, B> {
+    inner: I,
+    // The buffer's length must be zero since we encapsulate the buffer in a
+    // PacketBuilder. If the length were non-zero, that would have the effect of
+    // retaining the contents of the buffer when serializing, and putting them
+    // immediately after the bytes of `inner`.
+    buffer: B,
+}
 
-impl<B: InnerPacketBuilder> Serializer for InnerSerializer<B> {
-    type Buffer = EmptyBuf;
+impl<I: InnerPacketBuilder, B: BufferMut> Serializer for InnerSerializer<I, B> {
+    type Buffer = B;
 
     #[inline]
-    fn serialize<BB: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<EmptyBuf, BB>>(
+    fn serialize<BB: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<B, BB>>(
         self,
         outer: PB,
         provider: P,
-    ) -> Result<BB, (SerializeError<P::Error>, InnerSerializer<B>)> {
+    ) -> Result<BB, (SerializeError<P::Error>, InnerSerializer<I, B>)> {
         // A wrapper for InnerPacketBuilders which implements PacketBuilder by
         // treating the entire InnerPacketBuilder as the header of the
         // PacketBuilder. This allows us to compose our InnerPacketBuilder with
         // the outer PacketBuilders into a single, large PacketBuilder, and then
-        // serialize it using an empty buffer.
+        // serialize it using self.buffer.
         struct InnerPacketBuilderWrapper<I>(I);
 
         impl<I: InnerPacketBuilder> PacketBuilder for InnerPacketBuilderWrapper<I> {
@@ -1541,10 +1565,14 @@ impl<B: InnerPacketBuilder> Serializer for InnerSerializer<B> {
             }
         }
 
-        let pb = InnerPacketBuilderWrapper(self.0);
-        match EmptyBuf.encapsulate(&pb).serialize(outer, provider) {
+        let pb = InnerPacketBuilderWrapper(self.inner);
+        debug_assert_eq!(self.buffer.len(), 0);
+        match self.buffer.encapsulate(&pb).serialize(outer, provider) {
             Ok(buf) => Ok(buf),
-            Err((err, _)) => Err((err, InnerSerializer(pb.0))),
+            Err((err, buffer)) => {
+                let buffer = buffer.into_inner();
+                Err((err, InnerSerializer { inner: pb.0, buffer }))
+            }
         }
     }
 }
@@ -1988,7 +2016,7 @@ mod tests {
         }
 
         // Sanity check.
-        let buf = INNER.into_serializer().serialize_vec(()).unwrap();
+        let buf = INNER.into_serializer().serialize_vec_outer().unwrap();
         assert_eq!(buf.as_ref(), INNER);
 
         // A larger minimum body length requirement will cause padding to be
@@ -2022,6 +2050,19 @@ mod tests {
                 .unwrap_err()
                 .0,
             SerializeError::Mtu
+        );
+
+        // `into_serializer_with` truncates the buffer's body to zero before
+        // returning, so those body bytes are not included in the serialized
+        // output.
+        assert_eq!(
+            INNER
+                .into_serializer_with(Buf::new(vec![0xFF], ..))
+                .into_verifying(false)
+                .serialize_vec_outer()
+                .unwrap()
+                .as_ref(),
+            INNER
         );
     }
 

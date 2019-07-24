@@ -11,12 +11,12 @@ use std::time::Duration;
 
 use log::{debug, error};
 use net_types::ip::Ipv4Addr;
-use packet::{BufferMut, EmptyBuf, InnerPacketBuilder, Serializer};
+use packet::{BufferMut, InnerPacketBuilder, Serializer};
 
 use crate::device::ethernet::EthernetArpDevice;
 use crate::device::DeviceLayerTimerId;
 use crate::wire::arp::{ArpPacket, ArpPacketBuilder, HType, PType};
-use crate::{Context, EventDispatcher, StackState, TimerId, TimerIdInner};
+use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 
 /// The type of an ARP operation.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -108,7 +108,7 @@ pub(crate) trait ArpDevice<P: PType + Eq + Hash>: Sized {
     /// `send_arp_frame` accepts a device ID, a destination hardware address,
     /// and a `Serializer`. It computes the routing information, serializes the
     /// request in a device layer frame, and sends it.
-    fn send_arp_frame<D: EventDispatcher, S: Serializer<Buffer = EmptyBuf>>(
+    fn send_arp_frame<B: BufferMut, D: BufferDispatcher<B>, S: Serializer<Buffer = B>>(
         ctx: &mut Context<D>,
         device_id: usize,
         dst: Self::HardwareAddr,
@@ -208,10 +208,10 @@ fn handle_timeout_inner<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<
 /// `peek_arp_types` in order to determine which types to use in calling this
 /// function.
 pub(crate) fn receive_arp_packet<
-    D: EventDispatcher,
+    B: BufferMut,
+    D: BufferDispatcher<B>,
     P: PType + Eq + Hash,
     AD: ArpDevice<P>,
-    B: BufferMut,
 >(
     ctx: &mut Context<D>,
     device_id: usize,
@@ -342,7 +342,6 @@ pub(crate) fn receive_arp_packet<
     if addressed_to_me && packet.operation() == ArpOp::Request {
         let self_hw_addr = AD::get_hardware_addr(ctx.state(), device_id);
         increment_counter!(ctx, "arp::rx_request");
-        // TODO(joshlf): Reuse incoming buffer once that's supported.
         AD::send_arp_frame(
             ctx,
             device_id,
@@ -354,7 +353,7 @@ pub(crate) fn receive_arp_packet<
                 packet.sender_hardware_address(),
                 packet.sender_protocol_address(),
             )
-            .into_serializer(),
+            .into_serializer_with(buffer),
         );
     }
 }
@@ -620,7 +619,7 @@ mod tests {
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, EtherType::Ipv4);
 
-        receive_arp_packet::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice, _>(
+        receive_arp_packet::<_, DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
             ctx, device_id, sender_mac, target_mac, buf,
         );
     }
