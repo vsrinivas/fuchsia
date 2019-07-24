@@ -14,7 +14,9 @@ mod documentation;
 mod fidl_library;
 mod host_tool;
 mod json;
+mod loadable_module;
 mod manifest;
+mod sysroot;
 
 pub use crate::banjo_library::*;
 pub use crate::cc_prebuilt_library::*;
@@ -26,4 +28,6 @@ pub use crate::documentation::*;
 pub use crate::fidl_library::*;
 pub use crate::host_tool::*;
 pub use crate::json::JsonObject;
+pub use crate::loadable_module::*;
 pub use crate::manifest::*;
+pub use crate::sysroot::*;

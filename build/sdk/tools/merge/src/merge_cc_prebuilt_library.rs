@@ -114,13 +114,72 @@ mod tests {
         complement.add("pkg/foobar/include/two.h", "two");
         complement.add("arch/arm64/lib/libfoobar.so", "libarm64");
         let mut output = MockOutputTarball::new();
-        merge_cc_prebuilt_library(meta, &base, &complement, &mut output).expect("Should not fail!");
+        merge_cc_prebuilt_library(meta, &base, &complement, &mut output)
+            .expect("Merge routine failed");
         output.assert_has_file(meta);
         output.assert_has_file("pkg/foobar/include/one.h");
         output.assert_has_file("pkg/foobar/include/two.h");
         output.assert_has_file("arch/x64/lib/libfoobar.so");
         output.assert_has_file("arch/arm64/lib/libfoobar.so");
-        let data = CcPrebuiltLibrary::new(output.get_content(meta).as_bytes()).unwrap();
+        let data = CcPrebuiltLibrary::new(output.get_content(meta).as_bytes())
+            .expect("Generated metadata is invalid");
         assert!(data.binaries.len() == 2, "Invalid number of architectures");
+    }
+
+    #[test]
+    fn test_merge_failed() {
+        let meta = "pkg/foobar/meta.json";
+        let base_data = r#"
+        {
+            "name": "foobar",
+            "type": "cc_prebuilt_library",
+            "format": "shared",
+            "root": "pkg/foobar",
+            "headers": [
+                "pkg/foobar/include/one.h"
+            ],
+            "include_dir": "pkg/foobar/include",
+            "deps": [
+                "raboof"
+            ],
+            "binaries": {
+                "x64": {
+                    "link": "arch/x64/lib/libfoobar.so"
+                }
+            }
+        }
+        "#;
+        // This metadata has different headers.
+        let complement_data = r#"
+        {
+            "name": "foobar",
+            "type": "cc_prebuilt_library",
+            "format": "shared",
+            "root": "pkg/foobar",
+            "headers": [
+                "pkg/foobar/include/two.h"
+            ],
+            "include_dir": "pkg/foobar/include",
+            "deps": [
+                "raboof"
+            ],
+            "binaries": {
+                "arm64": {
+                    "link": "arch/arm64/lib/libfoobar.so"
+                }
+            }
+        }
+        "#;
+        let base = MockInputTarball::new();
+        base.add(meta, base_data);
+        base.add("pkg/foobar/include/one.h", "one");
+        base.add("arch/x64/lib/libfoobar.so", "libx64");
+        let complement = MockInputTarball::new();
+        complement.add(meta, complement_data);
+        complement.add("pkg/foobar/include/two.h", "two");
+        complement.add("arch/arm64/lib/libfoobar.so", "libarm64");
+        let mut output = MockOutputTarball::new();
+        let result = merge_cc_prebuilt_library(meta, &base, &complement, &mut output);
+        assert!(result.is_err(), "Merge routine should have failed");
     }
 }

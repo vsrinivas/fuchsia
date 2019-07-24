@@ -10,7 +10,7 @@ use structopt::StructOpt;
 
 use sdk_metadata::{
     BanjoLibrary, CcPrebuiltLibrary, CcSourceLibrary, DartLibrary, DeviceProfile, Documentation,
-    ElementType, FidlLibrary, HostTool, JsonObject, Manifest, Part,
+    ElementType, FidlLibrary, HostTool, JsonObject, LoadableModule, Manifest, Part, Sysroot,
 };
 
 mod app;
@@ -26,6 +26,8 @@ mod merge_device_profile;
 mod merge_documentation;
 mod merge_fidl_library;
 mod merge_host_tool;
+mod merge_loadable_module;
+mod merge_sysroot;
 mod tarball;
 #[cfg(test)]
 mod testing;
@@ -40,6 +42,8 @@ use crate::merge_device_profile::merge_device_profile;
 use crate::merge_documentation::merge_documentation;
 use crate::merge_fidl_library::merge_fidl_library;
 use crate::merge_host_tool::merge_host_tool;
+use crate::merge_loadable_module::merge_loadable_module;
+use crate::merge_sysroot::merge_sysroot;
 use crate::tarball::{InputTarball, OutputTarball, ResultTarball, SourceTarball, TarballContent};
 
 const MANIFEST_PATH: &str = "meta/manifest.json";
@@ -122,30 +126,10 @@ fn merge_manifests(base: &Manifest, complement: &Manifest) -> Result<Manifest> {
     Ok(result)
 }
 
-/// This is a temporary method that allows unimplemented element types to be skipped over.
-// TODO(DX-1056): delete when all types are supported.
-fn is_kind_supported(kind: &ElementType) -> bool {
-    match kind {
-        ElementType::BanjoLibrary
-        | ElementType::CcPrebuiltLibrary
-        | ElementType::CcSourceLibrary
-        | ElementType::DartLibrary
-        | ElementType::DeviceProfile
-        | ElementType::Documentation
-        | ElementType::FidlLibrary
-        | ElementType::HostTool => true,
-        _ => false,
-    }
-}
-
 fn merge_common_part<F: TarballContent>(
     part: &Part, base: &impl InputTarball<F>, complement: &impl InputTarball<F>,
     output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
-    if !is_kind_supported(&part.kind) {
-        println!("Skipping {}", part);
-        return Ok(());
-    }
     match part.kind {
         ElementType::BanjoLibrary => merge_banjo_library(&part.meta, base, complement, output),
         ElementType::CcPrebuiltLibrary => {
@@ -159,18 +143,14 @@ fn merge_common_part<F: TarballContent>(
         ElementType::Documentation => merge_documentation(&part.meta, base, complement, output),
         ElementType::FidlLibrary => merge_fidl_library(&part.meta, base, complement, output),
         ElementType::HostTool => merge_host_tool(&part.meta, base, complement, output),
-        _ => unreachable!("Type should have been skipped over: {:?}", part.kind),
+        ElementType::LoadableModule => merge_loadable_module(&part.meta, base, complement, output),
+        ElementType::Sysroot => merge_sysroot(&part.meta, base, complement, output),
     }
 }
 
 fn copy_part_as_is<F: TarballContent>(
     part: &Part, source: &impl InputTarball<F>, output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
-    if !is_kind_supported(&part.kind) {
-        println!("Skipping {}", part);
-        return Ok(());
-    }
-    println!("Copying {}", part);
     let provider: Box<dyn FileProvider> = match part.kind {
         ElementType::BanjoLibrary => Box::new(source.get_metadata::<BanjoLibrary>(&part.meta)?),
         ElementType::CcPrebuiltLibrary => {
@@ -184,7 +164,8 @@ fn copy_part_as_is<F: TarballContent>(
         ElementType::Documentation => Box::new(source.get_metadata::<Documentation>(&part.meta)?),
         ElementType::FidlLibrary => Box::new(source.get_metadata::<FidlLibrary>(&part.meta)?),
         ElementType::HostTool => Box::new(source.get_metadata::<HostTool>(&part.meta)?),
-        _ => unreachable!("Type should have been skipped over: {:?}", part.kind),
+        ElementType::LoadableModule => Box::new(source.get_metadata::<LoadableModule>(&part.meta)?),
+        ElementType::Sysroot => Box::new(source.get_metadata::<Sysroot>(&part.meta)?),
     };
     let mut paths = provider.get_all_files();
     paths.push(part.meta.clone());
@@ -209,17 +190,14 @@ fn main() -> Result<()> {
     let complement_parts: HashSet<Part> =
         HashSet::from_iter(complement_manifest.parts.iter().cloned());
 
-    println!("Common parts");
     for part in base_parts.intersection(&complement_parts) {
         merge_common_part(&part, &base, &complement, &mut output)?;
     }
 
-    println!("Unique base parts");
     for part in base_parts.difference(&complement_parts) {
         copy_part_as_is(&part, &base, &mut output)?;
     }
 
-    println!("Unique complement parts");
     for part in complement_parts.difference(&base_parts) {
         copy_part_as_is(&part, &complement, &mut output)?;
     }
