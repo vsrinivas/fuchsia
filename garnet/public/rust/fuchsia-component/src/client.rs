@@ -8,8 +8,9 @@ use {
     failure::{Error, Fail, ResultExt},
     fidl::endpoints::{DiscoverableService, Proxy},
     fidl_fuchsia_sys::{
-        ComponentControllerEvent, ComponentControllerProxy, FileDescriptor, FlatNamespace,
-        LaunchInfo, LauncherMarker, LauncherProxy, TerminationReason,
+        ComponentControllerEvent, ComponentControllerEventStream, ComponentControllerProxy,
+        FileDescriptor, FlatNamespace, LaunchInfo, LauncherMarker, LauncherProxy,
+        TerminationReason,
     },
     fuchsia_async as fasync,
     fuchsia_runtime::HandleType,
@@ -201,24 +202,7 @@ impl App {
 
     /// Wait for the component to terminate and return its exit status.
     pub fn wait(&mut self) -> impl Future<Output = Result<ExitStatus, Error>> {
-        self.controller
-            .take_event_stream()
-            .try_filter_map(|event| {
-                future::ready(match event {
-                    ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
-                        Ok(Some(ExitStatus { return_code, termination_reason }))
-                    }
-                    _ => Ok(None),
-                })
-            })
-            .into_future()
-            .map(|(next, _rest)| match next {
-                Some(result) => result.map_err(|err| err.into()),
-                _ => Ok(ExitStatus {
-                    return_code: -1,
-                    termination_reason: TerminationReason::Unknown,
-                }),
-            })
+        ExitStatus::from_event_stream(self.controller.take_event_stream())
     }
 
     /// Wait for the component to terminate and return its exit status, stdout, and stderr.
@@ -445,6 +429,30 @@ pub struct ExitStatus {
 }
 
 impl ExitStatus {
+    /// Consumes an `event_stream`, returning the `ExitStatus` of the component when it exits, or
+    /// the error encountered while waiting for the component to terminate.
+    pub fn from_event_stream(
+        event_stream: ComponentControllerEventStream,
+    ) -> impl Future<Output = Result<Self, Error>> {
+        event_stream
+            .try_filter_map(|event| {
+                future::ready(match event {
+                    ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
+                        Ok(Some(ExitStatus { return_code, termination_reason }))
+                    }
+                    _ => Ok(None),
+                })
+            })
+            .into_future()
+            .map(|(next, _rest)| match next {
+                Some(result) => result.map_err(|err| err.into()),
+                _ => Ok(ExitStatus {
+                    return_code: -1,
+                    termination_reason: TerminationReason::Unknown,
+                }),
+            })
+    }
+
     /// Did the component exit without an error?  Success is defined as a reason of exited and
     /// a code of 0.
     #[inline]

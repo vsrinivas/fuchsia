@@ -1,4 +1,12 @@
 {
+  "facets": {
+    "fuchsia.test": {
+       "system-services": [
+          "fuchsia.net.SocketProvider",
+          "fuchsia.posix.socket.Provider"
+       ]
+    }
+  },
   "program": {
     "binary": "test/fuchsia_pkg_testing_tests"
   },
@@ -11,8 +19,12 @@
       "deprecated-ambient-replace-as-executable"
     ],
     "services": [
+      "fuchsia.net.NameLookup",
+      "fuchsia.net.SocketProvider",
+      "fuchsia.posix.socket.Provider",
+      "fuchsia.process.Launcher",
       "fuchsia.sys.Launcher",
-      "fuchsia.process.Launcher"
+      "fuchsia.tracing.provider.Registry"
     ]
   }
 }
