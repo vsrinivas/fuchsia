@@ -20,7 +20,7 @@ use {
     failure::{err_msg, format_err, Error, ResultExt},
     fidl::endpoints::ServiceMarker,
     fidl_fidl_examples_echo::EchoMarker,
-    fidl_fuchsia_sysinfo as fsysinfo, fuchsia_async as fasync,
+    fidl_fuchsia_boot as fboot, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::prelude::*,
@@ -92,11 +92,10 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn get_root_job() -> Result<zx::Job, Error> {
-    let (proxy, server_end) = fidl::endpoints::create_proxy::<fsysinfo::DeviceMarker>()?;
-    fdio::service_connect("/dev/misc/sysinfo", server_end.into_channel())
-        .context("Failed to connect to sysinfo servie")?;
+    let (proxy, server_end) = fidl::endpoints::create_proxy::<fboot::RootJobMarker>()?;
+    fdio::service_connect("/svc/fuchsia.boot.RootJob", server_end.into_channel())
+        .context("Failed to connect to fuchsia.boot.RootJob service")?;
 
-    let (status, job) = await!(proxy.get_root_job())?;
-    zx::Status::ok(status)?;
-    Ok(job.ok_or(err_msg("sysinfo returned OK status but no root job handle!"))?)
+    let job = await!(proxy.get())?;
+    Ok(job)
 }

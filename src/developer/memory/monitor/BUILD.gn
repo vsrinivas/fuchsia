@@ -44,6 +44,7 @@ executable("bin") {
 
 package("monitor") {
   rootresource_svc = "//build"
+  rootjob_svc = "//build"
   package_name = "memory_monitor"
   deps = [
     ":bin",

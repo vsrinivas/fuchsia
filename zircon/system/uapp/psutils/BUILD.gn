@@ -22,7 +22,7 @@ executable("ps") {
     "ps.c",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/task-utils",
@@ -35,7 +35,7 @@ executable("top") {
     "top.c",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/task-utils",
@@ -48,7 +48,7 @@ executable("kill") {
     "kill.c",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/task-utils",
     "$zx/system/ulib/zircon",
@@ -60,7 +60,7 @@ executable("killall") {
     "killall.c",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/task-utils",
     "$zx/system/ulib/zircon",
@@ -72,7 +72,7 @@ executable("vmaps") {
     "vmaps.c",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/task-utils",
@@ -86,7 +86,7 @@ executable("vmos") {
     "vmos.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/task-utils",
@@ -141,7 +141,7 @@ executable("threads") {
     "threads.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/inspector",
@@ -157,7 +157,7 @@ executable("signal") {
     "signal.c",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/task-utils",
     "$zx/system/ulib/zircon",

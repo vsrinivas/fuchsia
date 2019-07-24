@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.RootJob"
+            ]
+        }
+    },
     "program": {
         "args": [
             "/pkg/test/process_builder_tests"
@@ -9,10 +16,8 @@
         "features": [
             "deprecated-ambient-replace-as-executable"
         ],
-        "dev": [
-            "misc/sysinfo"
-        ],
         "services": [
+            "fuchsia.boot.RootJob",
             "fuchsia.process.Launcher"
         ]
     }

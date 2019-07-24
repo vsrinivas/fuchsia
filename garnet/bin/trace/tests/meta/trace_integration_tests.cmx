@@ -10,7 +10,10 @@
                     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                     "--verbose=2"
                 ]
-            }
+            },
+            "system-services": [
+                "fuchsia.boot.RootJob"
+            ]
         }
     },
     "program": {
@@ -24,6 +27,7 @@
             "deprecated-ambient-replace-as-executable"
         ],
         "services": [
+            "fuchsia.boot.RootJob",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
             "fuchsia.sys.Launcher",

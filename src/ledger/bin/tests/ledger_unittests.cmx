@@ -8,20 +8,21 @@
                 "fuchsia.tracing.provider.Registry": [
                     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
                 ]
-            }
+            },
+            "system-services": [
+                "fuchsia.boot.RootJob"
+            ]
         }
     },
     "program": {
         "binary": "test/ledger_unittests"
     },
     "sandbox": {
-        "dev": [
-            "misc/sysinfo"
-        ],
         "features": [
             "isolated-persistent-storage"
         ],
         "services": [
+            "fuchsia.boot.RootJob",
             "fuchsia.logger.LogSink",
             "fuchsia.tracing.controller.Controller",
             "fuchsia.tracing.provider.Registry",

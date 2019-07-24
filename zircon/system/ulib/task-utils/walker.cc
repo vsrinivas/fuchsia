@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <fuchsia/sysinfo/c/fidl.h>
+#include <fuchsia/boot/c/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
@@ -331,22 +331,23 @@ zx_status_t walk_root_job_tree(task_callback_t job_callback,
                                task_callback_t process_callback,
                                task_callback_t thread_callback,
                                void* context) {
-    int fd = open("/dev/misc/sysinfo", O_RDWR);
-    if (fd < 0) {
-        fprintf(stderr, "task-utils/walker: cannot open sysinfo: %d\n", errno);
-        return ZX_ERR_NOT_FOUND;
-    }
-
-    zx::channel channel;
-    zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
     if (status != ZX_OK) {
         return status;
     }
 
-    zx_handle_t root_job;
-    zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootJob(channel.get(), &status, &root_job);
+    status = fdio_service_connect("/svc/fuchsia.boot.RootJob", remote.release());
+    if (status != ZX_OK) {
+      fprintf(stderr, "task-utils/walker: cannot open fuchsia.boot.RootJob: %s\n",
+              zx_status_get_string(status));
+      return status;
+    }
 
-    if (fidl_status != ZX_OK || status != ZX_OK) {
+    zx_handle_t root_job;
+    zx_status_t fidl_status = fuchsia_boot_RootJobGet(local.get(), &root_job);
+
+    if (fidl_status != ZX_OK) {
         fprintf(stderr, "task-utils/walker: cannot obtain root job\n");
         return ZX_ERR_NOT_FOUND;
     }
