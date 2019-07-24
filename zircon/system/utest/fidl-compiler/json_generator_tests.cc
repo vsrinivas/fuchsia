@@ -2438,6 +2438,141 @@ protocol Top {
   END_TEST;
 }
 
+bool json_generator_foreign_type_in_response_used_through_compose() {
+  BEGIN_TEST;
+
+  for (int i = 0; i < kRepeatTestCount; i++) {
+    SharedAmongstLibraries shared;
+    TestLibrary bottom_dep("bottom.fidl", R"FIDL(
+library bottom;
+
+struct Foo {
+  int32 a;
+};
+
+)FIDL",
+                           &shared);
+    ASSERT_TRUE(bottom_dep.Compile());
+    TestLibrary middle_dep("middle.fidl", R"FIDL(
+library middle;
+
+using bottom;
+
+[FragileBase]
+protocol Middle {
+  GetFoo() -> (bottom.Foo foo);
+};
+
+)FIDL",
+                           &shared);
+    ASSERT_TRUE(middle_dep.AddDependentLibrary(std::move(bottom_dep)));
+    ASSERT_TRUE(middle_dep.Compile());
+
+    TestLibrary library("top.fidl", R"FIDL(
+library top;
+
+using middle;
+
+protocol Top {
+  compose middle.Middle;
+};
+
+)FIDL",
+                        &shared);
+    ASSERT_TRUE(library.AddDependentLibrary(std::move(middle_dep)));
+    EXPECT_TRUE(checkJSONGenerator(std::move(library),
+                                   R"JSON(
+{
+  "version": "0.0.1",
+  "name": "top",
+  "library_dependencies": [
+    {
+      "name": "bottom",
+      "declarations": {
+        "bottom/Foo": "struct"
+      }
+    },
+    {
+      "name": "middle",
+      "declarations": {
+        "middle/Middle": "interface"
+      }
+    }
+  ],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "top/Top",
+      "location": {
+        "filename": "top.fidl",
+        "line": 6,
+        "column": 10
+      },
+      "methods": [
+        {
+          "ordinal": 187925920,
+          "generated_ordinal": 187925920,
+          "name": "GetFoo",
+          "location": {
+            "filename": "middle.fidl",
+            "line": 8,
+            "column": 3
+          },
+          "has_request": true,
+          "maybe_request": [],
+          "maybe_request_size": 16,
+          "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "bottom/Foo",
+                "nullable": false
+              },
+              "name": "foo",
+              "location": {
+                "filename": "middle.fidl",
+                "line": 8,
+                "column": 27
+              },
+              "size": 4,
+              "max_out_of_line": 0,
+              "alignment": 4,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 24,
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true,
+          "is_composed": true
+        }
+      ]
+    }
+  ],
+  "service_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "top/Top"
+  ],
+  "declarations": {
+    "top/Top": "interface"
+  }
+}
+)JSON"));
+  }
+
+  END_TEST;
+}
+
 bool json_generator_placement_of_attributes() {
   BEGIN_TEST;
 
@@ -3197,6 +3332,7 @@ RUN_TEST(json_generator_check_escaping)
 RUN_TEST(json_generator_constants)
 RUN_TEST(json_generator_transitive_dependencies)
 RUN_TEST(json_generator_transitive_dependencies_compose)
+RUN_TEST(json_generator_foreign_type_in_response_used_through_compose)
 RUN_TEST(json_generator_placement_of_attributes)
 RUN_TEST(json_generator_type_aliases)
 RUN_TEST(json_generator_service)

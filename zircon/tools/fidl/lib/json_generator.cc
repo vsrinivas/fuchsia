@@ -603,16 +603,33 @@ struct LibraryComparator {
 std::set<const flat::Library*, LibraryComparator> TransitiveDependencies(
     const flat::Library* library) {
   std::set<const flat::Library*, LibraryComparator> dependencies;
-  for (const auto& dep_library : library->dependencies()) {
+  auto add_dependency = [&] (const flat::Library* dep_library) {
     if (!dep_library->HasAttribute("Internal")) {
       dependencies.insert(dep_library);
     }
+  };
+  for (const auto& dep_library : library->dependencies()) {
+    add_dependency(dep_library);
   }
   // Discover additional dependencies that are required to support
   // cross-library protocol composition.
   for (const auto& protocol : library->protocol_declarations_) {
     for (const auto method_with_info : protocol->all_methods) {
-      dependencies.insert(method_with_info.method->owning_protocol->name.library());
+      if (auto request = method_with_info.method->maybe_request) {
+        for (const auto& member : request->members) {
+          if (auto dep_library = member.type_ctor->name.library()) {
+            add_dependency(dep_library);
+          }
+        }
+      }
+      if (auto response = method_with_info.method->maybe_response) {
+        for (const auto& member : response->members) {
+          if (auto dep_library = member.type_ctor->name.library()) {
+            add_dependency(dep_library);
+          }
+        }
+      }
+      add_dependency(method_with_info.method->owning_protocol->name.library());
     }
   }
   dependencies.erase(library);
