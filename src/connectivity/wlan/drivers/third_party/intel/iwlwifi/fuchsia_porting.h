@@ -81,9 +81,9 @@ typedef char* acpi_string;
 #define WARN(x, y, z) \
   do {                \
   } while (0)
-#define WARN_ON(x) ((x) && false)
-#define WARN_ON_ONCE(x) ((x) && false)
-#define BUILD_BUG_ON(x) ((x) && false)
+#define WARN_ON(x) (!!(x))
+#define WARN_ON_ONCE(x) (!!(x))
+#define BUILD_BUG_ON(x) (!!(x))
 
 #define offsetofend(type, member) (offsetof(type, member) + sizeof(((type*)NULL)->member))
 
