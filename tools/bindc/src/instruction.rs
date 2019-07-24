@@ -6,6 +6,8 @@
 
 #![allow(dead_code)]
 
+use bitfield::bitfield;
+
 bitfield! {
     /// Each instruction is a pair of 32 bit unsigned integers divided as
     /// follows.
