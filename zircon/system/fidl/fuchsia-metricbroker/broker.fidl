@@ -1,0 +1,71 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.metricbroker;
+
+using fuchsia.mem;
+using zx;
+
+// Provides a service for components to register themselves as metric providers.
+// When the Broker service comes up(if it comes up), it will request the
+// provider's info.
+[Discoverable]
+protocol Registry {
+    // Register |provider| with the metric registry. If and when the Registry service comes up,
+    // will perform IPC to request the provider's |ProjectInfo|.
+    RegisterMetricProvider(Provider provider) -> (zx.status status);
+};
+
+// Represents a service that is interested in providing metrics to the Registry,
+// such that at a later stage these will be mapped to consuming services based
+// on the project configuration.
+protocol Provider {
+    // Returns a |ProjectInfo| with enough information for the metrics to be processed.
+    GetProviderInfo() -> (ProviderInfo info) error zx.status;
+};
+
+// Describes a collection of Inspect metrics, both where to read them from, and how to export them.
+struct InspectCollectionConfig {
+    InspectConfig inspect_config;
+    InspectSource inspect_source;
+};
+
+// Information for identifying a metric provider and how should it be
+// handled by the broker.
+struct ProviderInfo {
+    // Configuration data for connecting to the Cobalt service.
+    // If empty, defaults are used from the calling program *somehow*.
+    // TODO(gevalentino): CF-676
+    CobaltProjectConfig? cobalt_configuration;
+
+    // Configuration data for reading inspect data and passing it along over Cobalt.
+    // May be empty, in which case no inspect data is collected.
+    InspectCollectionConfig? inspect_configuration;
+};
+
+// Data needed for forwarding cobalt metrics.
+struct CobaltProjectConfig {
+    // Serialized cobalt project configuration.
+    // If this is set, it will override the usage of project name.
+    fuchsia.mem.Buffer? cobalt_configuration;
+
+    // Project Name as expected by Cobalt Service.
+    string? project_name;
+};
+
+struct InspectSource {
+    // Inspection data served over a VMO.
+    handle<vmo> vmo;
+};
+
+// The configuration that actually describes where to find data in the InspectSource and turn it
+// into Cobalt metrics
+xunion InspectConfig {
+    // Inline configuration information.
+    fuchsia.mem.Buffer buffer;
+
+    // Reference to a broker built-in project ID that contains the config data. This is useful
+    // for components that do not have access to filesystems.
+    string:100 project_name;
+};
