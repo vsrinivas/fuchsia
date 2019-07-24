@@ -511,14 +511,18 @@ static int cmd_idlestats(int argc, const cmd_args* argv, uint32_t flags) {
     printf("Usage: %s (reset|print)\n", argv[0].str);
     return ZX_ERR_INVALID_ARGS;
   }
+  if (!use_monitor) {
+    printf("%s is only supported on systems with X86_FEATURE_MON\n", argv[0].str);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   if (!strcmp(argv[1].str, "reset")) {
     reset_idle_counters(bp_percpu.idle_states);
-    for (int i = 1; i < x86_num_cpus; ++i) {
+    for (unsigned i = 1; i < x86_num_cpus; ++i) {
       reset_idle_counters(ap_percpus[i - 1].idle_states);
     }
   } else if (!strcmp(argv[1].str, "print")) {
     report_idlestats(0, *bp_percpu.idle_states);
-    for (int i = 1; i < x86_num_cpus; ++i) {
+    for (unsigned i = 1; i < x86_num_cpus; ++i) {
       report_idlestats(i, *ap_percpus[i - 1].idle_states);
     }
   } else {
