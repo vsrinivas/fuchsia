@@ -73,10 +73,9 @@ Some information about how to use these tools can be found under `//docs`.
 
 ### Images
 
-At the present time, the Core SDK contains a set of Fuchsia images which may be
-installed on a selection of target devices.
-Note that these images are only there temporarily and will be replaced by a
-non-SDK distribution mechanism in a very near future.
+`//device` contains metadata describing device configurations matching a given
+version of the SDK.
+This metadata contains pointers to images that can be flashed onto said devices.
 
 
 ## Ingestion
