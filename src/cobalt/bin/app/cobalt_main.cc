@@ -87,8 +87,9 @@ constexpr bool kStartEventAggregatorWorkerDefault(true);
 // - devhost is the channel for development devices.
 // - fishfood-release is the main fishfood channel.
 // - qa-daily is a daily QA release.
+// - cobalt-test-lab mirrors fishfood-release.
 const std::vector<std::string> kDebugChannels({"devhost", "fishfood-release",
-                                               "qa-daily"});
+                                               "qa-daily", "cobalt-test-lab"});
 
 // ReadBoardName returns the board name of the currently running device.
 //
