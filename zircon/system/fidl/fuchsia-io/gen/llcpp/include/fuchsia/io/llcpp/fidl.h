@@ -13,6 +13,7 @@
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
+#include <lib/zx/eventpair.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
@@ -152,7 +153,7 @@ struct Tty {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::zx::event event = {};
+  ::zx::eventpair event = {};
 };
 
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventRequestTable;
@@ -587,7 +588,7 @@ struct Device {
   // An optional event which transmits information about a device's state.
   //
   // The "DEVICE_SIGNAL_" values may be observed on this event.
-  ::zx::event event = {};
+  ::zx::eventpair event = {};
 };
 
 extern "C" const fidl_type_t fuchsia_io_NodeInfoTable;

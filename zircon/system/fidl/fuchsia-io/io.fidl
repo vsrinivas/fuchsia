@@ -86,12 +86,12 @@ struct Device {
     /// An optional event which transmits information about a device's state.
     ///
     /// The "DEVICE_SIGNAL_" values may be observed on this event.
-    handle<event>? event;
+    handle<eventpair>? event;
 };
 
 /// The object may be cast to interface 'Tty'
 struct Tty {
-    handle<event>? event;
+    handle<eventpair>? event;
 };
 
 /// Can read from target object.
