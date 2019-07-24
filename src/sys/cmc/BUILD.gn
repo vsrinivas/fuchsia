@@ -101,3 +101,12 @@ install_host_tools("install") {
     "cmc",
   ]
 }
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":cmc_integration_test",
+    ":cmc_test($host_toolchain)",
+  ]
+}

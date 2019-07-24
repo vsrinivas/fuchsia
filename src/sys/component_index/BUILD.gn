@@ -68,3 +68,11 @@ test_package("component_index_tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":component_index_tests",
+  ]
+}

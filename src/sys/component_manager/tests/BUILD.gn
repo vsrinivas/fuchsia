@@ -13,9 +13,9 @@ rustc_library("test_utils") {
   edition = "2018"
   source_root = "test_utils.rs"
   deps = [
+    "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-runtime",
-    "//garnet/public/rust/fdio",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
   ]
 }
@@ -409,5 +409,18 @@ test_package("no_pkg_resolver_test") {
     {
       name = "no_pkg_resolver_test"
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":elf_runner_test",
+    ":hub_integration_test",
+    ":no_pkg_resolver_test",
+    ":routing_integration_test",
+    ":storage_integration_test",
+    "collections:collections_integration_test",
   ]
 }

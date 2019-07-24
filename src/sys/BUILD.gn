@@ -15,7 +15,13 @@ group("sys") {
 group("tests") {
   testonly = true
   deps = [
-    "component_manager_for_test/tests",
+    "cmc:tests",
+    "component_index:tests",
+    "component_manager:tests",
+    "component_manager_for_test:tests",
+    "dash:tests",
+    "lib:tests",
+    "locate:tests",
     "netclock:tests",
   ]
 }

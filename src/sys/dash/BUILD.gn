@@ -92,3 +92,11 @@ package("dash") {
 deprecated_fuchsia_component("dash_component") {
   manifest = rebase_path("meta/dash_hello.cml")
 }
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":dash_test",
+  ]
+}

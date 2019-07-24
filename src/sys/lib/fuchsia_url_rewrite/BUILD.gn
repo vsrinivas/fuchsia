@@ -38,3 +38,10 @@ test_package("fuchsia_url_rewrite_tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fuchsia_url_rewrite_tests",
+  ]
+}

@@ -53,3 +53,11 @@ package("component_manager_for_test") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "tests",
+  ]
+}

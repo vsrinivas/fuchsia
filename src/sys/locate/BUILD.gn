@@ -72,3 +72,11 @@ test_package("locate_integration_test") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":locate_integration_test",
+  ]
+}
