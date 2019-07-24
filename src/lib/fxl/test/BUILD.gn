@@ -27,9 +27,6 @@ source_set("gtest_main") {
     ":test_settings",
     "//src/lib/fxl",
   ]
-  if (is_fuchsia) {
-    deps += [ "//garnet/public/lib/syslog/cpp" ]
-  }
 
   public_deps = [
     "//third_party/googletest:gtest",
