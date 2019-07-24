@@ -5,10 +5,10 @@
 #ifndef SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_TEST_H_
 #define SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_TEST_H_
 
+#include <memory>
+
 #include <ddktl/device.h>
 #include <zxtest/zxtest.h>
-
-#include <memory>
 
 namespace camera {
 // |Imx227Devicetester| is spawned by the driver in |imx227.cc|

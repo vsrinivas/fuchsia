@@ -4,22 +4,23 @@
 
 #include "imx227.h"
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
-#include <ddk/metadata/camera.h>
 #include <endian.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
-#include <hw/reg.h>
 #include <lib/device-protocol/i2c.h>
 #include <stdint.h>
 #include <threads.h>
 #include <zircon/types.h>
 
 #include <memory>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/camera.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
+#include <hw/reg.h>
 
 #include "imx227-seq.h"
 #include "imx227-test.h"
@@ -85,11 +86,10 @@ uint8_t Imx227Device::ReadReg(uint16_t addr) {
   // The camera sensor expects in this format.
   uint16_t buf = htobe16(addr);
   uint8_t val = 0;
-  zx_status_t status = i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&buf),
-                                          sizeof(buf), &val, sizeof(val));
+  zx_status_t status =
+      i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&buf), sizeof(buf), &val, sizeof(val));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Imx227Device: could not read reg addr: 0x%08x  status: %d\n",
-           addr, status);
+    zxlogf(ERROR, "Imx227Device: could not read reg addr: 0x%08x  status: %d\n", addr, status);
     return -1;
   }
   return val;
@@ -114,8 +114,7 @@ void Imx227Device::WriteReg(uint16_t addr, uint8_t val) {
 }
 
 bool Imx227Device::ValidateSensorID() {
-  uint16_t sensor_id =
-      static_cast<uint16_t>((ReadReg(0x0016) << 8) | ReadReg(0x0017));
+  uint16_t sensor_id = static_cast<uint16_t>((ReadReg(0x0016) << 8) | ReadReg(0x0017));
   if (sensor_id != kSensorId) {
     zxlogf(ERROR, "Imx227Device: Invalid sensor ID\n");
     return false;
@@ -213,9 +212,9 @@ zx_status_t Imx227Device::CameraSensorGetInfo(sensor_info_t* out_info) {
   return ZX_OK;
 }
 
-zx_status_t Imx227Device::CameraSensorGetSupportedModes(
-    sensor_mode_t* out_modes_list, size_t modes_count,
-    size_t* out_modes_actual) {
+zx_status_t Imx227Device::CameraSensorGetSupportedModes(sensor_mode_t* out_modes_list,
+                                                        size_t modes_count,
+                                                        size_t* out_modes_actual) {
   if (out_modes_list == nullptr || out_modes_actual == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -224,15 +223,13 @@ zx_status_t Imx227Device::CameraSensorGetSupportedModes(
     return ZX_ERR_INVALID_ARGS;
   }
 
-  memcpy(out_modes_list, &supported_modes,
-         sizeof(sensor_mode_t) * countof(supported_modes));
+  memcpy(out_modes_list, &supported_modes, sizeof(sensor_mode_t) * countof(supported_modes));
   *out_modes_actual = countof(supported_modes);
   return ZX_OK;
 }
 
 zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
-  zxlogf(INFO, "%s IMX227 Camera Sensor Mode Set request to %d\n", __func__,
-         mode);
+  zxlogf(INFO, "%s IMX227 Camera Sensor Mode Set request to %d\n", __func__, mode);
 
   // Get Sensor ID to see if sensor is initialized.
   if (!IsSensorInitialized() || !ValidateSensorID()) {
@@ -328,13 +325,9 @@ zx_status_t Imx227Device::CameraSensorStopStreaming() {
   return ZX_OK;
 }
 
-int32_t Imx227Device::CameraSensorSetAnalogGain(int32_t gain) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+int32_t Imx227Device::CameraSensorSetAnalogGain(int32_t gain) { return ZX_ERR_NOT_SUPPORTED; }
 
-int32_t Imx227Device::CameraSensorSetDigitalGain(int32_t gain) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+int32_t Imx227Device::CameraSensorSetDigitalGain(int32_t gain) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t Imx227Device::CameraSensorSetIntegrationTime(int32_t int_time) {
   // TODO(braval): Add support for this.
@@ -361,10 +354,10 @@ zx_status_t Imx227Device::Setup(void* ctx, zx_device_t* parent,
   }
 
   fbl::AllocChecker ac;
-  auto sensor_device = std::unique_ptr<Imx227Device>(new (&ac) Imx227Device(
-      parent, components[COMPONENT_I2C], components[COMPONENT_GPIO_VANA],
-      components[COMPONENT_GPIO_VDIG], components[COMPONENT_GPIO_CAM_RST],
-      components[COMPONENT_CLK24], components[COMPONENT_MIPICSI]));
+  auto sensor_device = std::unique_ptr<Imx227Device>(
+      new (&ac) Imx227Device(parent, components[COMPONENT_I2C], components[COMPONENT_GPIO_VANA],
+                             components[COMPONENT_GPIO_VDIG], components[COMPONENT_GPIO_CAM_RST],
+                             components[COMPONENT_CLK24], components[COMPONENT_MIPICSI]));
   if (!ac.check()) {
     zxlogf(ERROR, "%s Could not create Imx227Device device\n", __func__);
     return ZX_ERR_NO_MEMORY;

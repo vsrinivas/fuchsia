@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/device-protocol/i2c-channel.h>
+#include <lib/device-protocol/pdev.h>
+
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/camerasensor.h>
@@ -10,8 +13,6 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/mipicsi.h>
-#include <lib/device-protocol/i2c-channel.h>
-#include <lib/device-protocol/pdev.h>
 
 namespace camera {
 
@@ -48,9 +49,8 @@ typedef struct sensor_context {
 class Imx227Device;
 using DeviceType = ddk::Device<Imx227Device, ddk::Unbindable>;
 
-class Imx227Device
-    : public DeviceType,
-      public ddk::CameraSensorProtocol<Imx227Device, ddk::base_protocol> {
+class Imx227Device : public DeviceType,
+                     public ddk::CameraSensorProtocol<Imx227Device, ddk::base_protocol> {
  public:
   enum {
     COMPONENT_I2C,
@@ -64,8 +64,8 @@ class Imx227Device
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
   Imx227Device(zx_device_t* device, zx_device_t* i2c, zx_device_t* gpio_vana,
-               zx_device_t* gpio_vdig, zx_device_t* gpio_cam_rst,
-               zx_device_t* clk24, zx_device_t* mipicsi)
+               zx_device_t* gpio_vdig, zx_device_t* gpio_cam_rst, zx_device_t* clk24,
+               zx_device_t* mipicsi)
       : DeviceType(device),
         i2c_(i2c),
         gpio_vana_enable_(gpio_vana),
@@ -73,8 +73,7 @@ class Imx227Device
         gpio_cam_rst_(gpio_cam_rst),
         clk24_(clk24),
         mipi_(mipicsi) {}
-  static zx_status_t Setup(void* ctx, zx_device_t* parent,
-                           std::unique_ptr<Imx227Device>* device);
+  static zx_status_t Setup(void* ctx, zx_device_t* parent, std::unique_ptr<Imx227Device>* device);
   // Methods required by the ddk mixins.
   void DdkUnbind();
   void DdkRelease();
@@ -94,8 +93,7 @@ class Imx227Device
   zx_status_t CameraSensorSetIntegrationTime(int32_t int_time);
   zx_status_t CameraSensorUpdate();
   zx_status_t CameraSensorGetInfo(sensor_info_t* out_info);
-  zx_status_t CameraSensorGetSupportedModes(sensor_mode_t* out_modes_list,
-                                            size_t modes_count,
+  zx_status_t CameraSensorGetSupportedModes(sensor_mode_t* out_modes_list, size_t modes_count,
                                             size_t* out_modes_actual);
 
  private:

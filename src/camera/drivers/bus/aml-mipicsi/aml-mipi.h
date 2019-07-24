@@ -2,13 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/metadata/camera.h>
-#include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/mipicsi.h>
-#include <fbl/unique_ptr.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fzl/pinned-vmo.h>
@@ -16,6 +9,14 @@
 #include <lib/zx/interrupt.h>
 
 #include <atomic>
+
+#include <ddk/metadata/camera.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/platform/bus.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/mipicsi.h>
+#include <fbl/unique_ptr.h>
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
 #endif

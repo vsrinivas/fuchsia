@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
-#include <hw/reg.h>
 #include <stdint.h>
 #include <zircon/types.h>
+
+#include <ddk/debug.h>
+#include <hw/reg.h>
 
 #include "aml-mipi-regs.h"
 #include "aml-mipi.h"

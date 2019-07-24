@@ -5,14 +5,15 @@
 #ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_TASK_H_
 #define SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_TASK_H_
 
-#include <ddktl/protocol/gdc.h>
-#include <fbl/unique_ptr.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-pool.h>
 #include <lib/syslog/global.h>
 #include <zircon/fidl.h>
 
 #include <deque>
+
+#include <ddktl/protocol/gdc.h>
+#include <fbl/unique_ptr.h>
 
 namespace gdc {
 // The |Task| class store all the information pertaining to

@@ -5,8 +5,9 @@
 #ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_REGS_H_
 #define SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_REGS_H_
 
-#include <hwreg/bitfields.h>
 #include <zircon/types.h>
+
+#include <hwreg/bitfields.h>
 
 namespace gdc {
 

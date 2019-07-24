@@ -10,15 +10,6 @@
 #define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
 #include <threads.h>
 #endif
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/gdc.h>
-#include <fbl/auto_lock.h>
-#include <fbl/condition_variable.h>
-#include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
-#include <hw/reg.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
@@ -30,6 +21,16 @@
 #include <atomic>
 #include <deque>
 #include <unordered_map>
+
+#include <ddk/protocol/platform/bus.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/gdc.h>
+#include <fbl/auto_lock.h>
+#include <fbl/condition_variable.h>
+#include <fbl/mutex.h>
+#include <fbl/unique_ptr.h>
+#include <hw/reg.h>
 
 #include "task.h"
 

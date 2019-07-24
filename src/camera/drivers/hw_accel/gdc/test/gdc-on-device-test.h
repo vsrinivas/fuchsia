@@ -5,9 +5,9 @@
 #ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_TEST_GDC_ON_DEVICE_TEST_H_
 #define SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_TEST_GDC_ON_DEVICE_TEST_H_
 
-#include <zxtest/zxtest.h>
-
 #include <memory>
+
+#include <zxtest/zxtest.h>
 
 namespace gdc {
 // |GdcDeviceTester| is spawned by the driver in |gdc.cc|

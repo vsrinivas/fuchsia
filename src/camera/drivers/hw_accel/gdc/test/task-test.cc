@@ -4,20 +4,21 @@
 
 #include "../task.h"
 
-#include <ddk/debug.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/mmio/mmio.h>
 #include <lib/syslog/global.h>
-#include <mock-mmio-reg/mock-mmio-reg.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <zxtest/zxtest.h>
 
 #include <cstddef>
 #include <cstdint>
 #include <utility>
 #include <vector>
+
+#include <ddk/debug.h>
+#include <mock-mmio-reg/mock-mmio-reg.h>
+#include <zxtest/zxtest.h>
 
 #include "../gdc-regs.h"
 #include "../gdc.h"

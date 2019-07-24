@@ -4,13 +4,14 @@
 
 #include "task.h"
 
-#include <ddk/debug.h>
-#include <fbl/alloc_checker.h>
 #include <lib/syslog/global.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
 #include <memory>
+
+#include <ddk/debug.h>
+#include <fbl/alloc_checker.h>
 
 namespace gdc {
 

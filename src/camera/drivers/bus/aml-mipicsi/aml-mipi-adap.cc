@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
+#include <math.h>
+#include <stdint.h>
+#include <zircon/types.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
@@ -9,11 +14,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
-#include <fcntl.h>
 #include <hw/reg.h>
-#include <math.h>
-#include <stdint.h>
-#include <zircon/types.h>
 
 #include "aml-mipi-regs.h"
 #include "aml-mipi.h"

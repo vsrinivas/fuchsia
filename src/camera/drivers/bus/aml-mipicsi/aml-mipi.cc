@@ -4,6 +4,12 @@
 
 #include "aml-mipi.h"
 
+#include <stdint.h>
+#include <threads.h>
+#include <zircon/types.h>
+
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
@@ -11,11 +17,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
-#include <stdint.h>
-#include <threads.h>
-#include <zircon/types.h>
-
-#include <memory>
 
 #include "aml-mipi-regs.h"
 

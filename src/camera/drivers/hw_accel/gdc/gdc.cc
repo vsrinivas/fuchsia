@@ -4,13 +4,6 @@
 
 #include "gdc.h"
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/driver.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
-#include <hw/reg.h>
 #include <lib/image-format/image_format.h>
 #include <stdint.h>
 #include <zircon/assert.h>
@@ -18,6 +11,14 @@
 #include <zircon/types.h>
 
 #include <memory>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/driver.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
+#include <hw/reg.h>
 
 #include "gdc-regs.h"
 
