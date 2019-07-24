@@ -9,6 +9,7 @@ use fdio;
 use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
+use fidl_fuchsia_posix_socket;
 use fuchsia_async as fasync;
 use fuchsia_component::{
     client::AppBuilder,
@@ -153,7 +154,7 @@ async fn main() -> Result<(), Error> {
     let mut services = ServiceFs::new_local();
     services
         .add_proxy_service_to::<StackMarker, _>(ns_builder.directory_request().unwrap().clone())
-        .add_proxy_service_to::<net::SocketProviderMarker, _>(
+        .add_proxy_service_to::<fidl_fuchsia_posix_socket::ProviderMarker, _>(
             ns_builder.directory_request().unwrap().clone(),
         );
 

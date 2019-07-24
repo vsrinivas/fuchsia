@@ -22,5 +22,6 @@ rustc_binary("enclosed_runner") {
     "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
     "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
+    "//zircon/public/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
   ]
 }
