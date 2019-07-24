@@ -52,6 +52,7 @@ copy("copy_test_data") {
   sources = [
     "test_data/example_benchmark.fxt",
     "test_data/example_benchmark_expected.json",
+    "test_data/no_magic.fxt",
     "test_data/simple_trace.fxt",
     "test_data/simple_trace.fxt.gz",
     "test_data/simple_trace_expected.json",
@@ -66,6 +67,7 @@ copy("copy_test_data") {
     test_runtime_deps = [
       "$root_out_dir/test_data/trace2json/example_benchmark.fxt",
       "$root_out_dir/test_data/trace2json/example_benchmark_expected.json",
+      "$root_out_dir/test_data/trace2json/no_magic.fxt",
       "$root_out_dir/test_data/trace2json/simple_trace.fxt",
       "$root_out_dir/test_data/trace2json/simple_trace.fxt.gz",
       "$root_out_dir/test_data/trace2json/simple_trace_expected.json",

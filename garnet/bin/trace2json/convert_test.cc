@@ -13,6 +13,7 @@
 #include <mach-o/dyld.h>
 #endif
 
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 
@@ -55,11 +56,10 @@ std::string GetTestDataPath() {
 // The gzip header contains a marker byte at offset 9 that contains which OS the file was generated
 // on. The gzip files in test_data/ were generated on linux, so a naive comparison leads to the
 // tests failing when they run on mac.
-const ssize_t kNoIgnores[] = { -1 };
-const ssize_t kIgnoreGzipOs[] = { 9, -1 };
+const ssize_t kNoIgnores[] = {-1};
+const ssize_t kIgnoreGzipOs[] = {9, -1};
 
-void ConvertAndCompare(ConvertSettings settings,
-                       std::string expected_output_file,
+void ConvertAndCompare(ConvertSettings settings, std::string expected_output_file,
                        const ssize_t* ignored_offsets) {
   ASSERT_TRUE(ConvertTrace(settings));
   std::string actual_out, expected_out;
@@ -145,6 +145,15 @@ TEST(ConvertTest, SimpleTraceCompressedInputAndOutput) {
   settings.compressed_input = true;
   settings.compressed_output = true;
   ConvertAndCompare(settings, test_data_path + "simple_trace_expected.json.gz", kIgnoreGzipOs);
+}
+
+TEST(ConvertTest, MissingMagicNumber) {
+  std::string test_data_path = GetTestDataPath();
+  ConvertSettings settings;
+  settings.input_file_name = test_data_path + "no_magic.fxt";
+  settings.output_file_name = test_data_path + "no_magic.json";
+  EXPECT_FALSE(ConvertTrace(settings));
+  EXPECT_FALSE(std::filesystem::exists(settings.output_file_name));
 }
 
 }  // namespace

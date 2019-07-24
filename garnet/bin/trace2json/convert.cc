@@ -4,15 +4,16 @@
 
 #include "garnet/bin/trace2json/convert.h"
 
-#include <src/lib/fxl/logging.h>
-#include <third_party/zlib/contrib/iostream3/zfstream.h>
-#include <trace-reader/reader.h>
 #include <unistd.h>
 
 #include <cstddef>
 #include <fstream>
 #include <iostream>
 #include <vector>
+
+#include <src/lib/fxl/logging.h>
+#include <third_party/zlib/contrib/iostream3/zfstream.h>
+#include <trace-reader/reader.h>
 
 #include "garnet/bin/trace2json/trace_parser.h"
 
@@ -77,19 +78,17 @@ bool ConvertTrace(ConvertSettings settings) {
     }
   }
 
-  if (settings.perform_magic_check) {
-    // Look for the magic number record at the start of the trace file and bail
-    // before opening (and thus truncating) the output file if we don't find it.
-    char initial_bytes[kMagicSize];
-    if (in_stream->read(initial_bytes, kMagicSize).gcount() != kMagicSize) {
-      FXL_LOG(ERROR) << "Failed to read magic number.";
-      return false;
-    }
-    if (!CompareMagic(initial_bytes, kLittleEndianMagicRecord)) {
-      FXL_LOG(ERROR) << "Input file does not start with Fuchsia Trace magic "
-                        "number. Aborting.";
-      return false;
-    }
+  // Look for the magic number record at the start of the trace file and bail
+  // before opening (and thus truncating) the output file if we don't find it.
+  char initial_bytes[kMagicSize];
+  if (in_stream->read(initial_bytes, kMagicSize).gcount() != kMagicSize) {
+    FXL_LOG(ERROR) << "Failed to read magic number.";
+    return false;
+  }
+  if (!CompareMagic(initial_bytes, kLittleEndianMagicRecord)) {
+    FXL_LOG(ERROR) << "Input file does not start with Fuchsia Trace magic "
+                      "number. Aborting.";
+    return false;
   }
 
   if (!settings.output_file_name.empty()) {

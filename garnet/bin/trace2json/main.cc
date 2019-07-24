@@ -16,12 +16,11 @@ namespace {
 const char kHelp[] = "help";
 const char kInputFile[] = "input-file";
 const char kOutputFile[] = "output-file";
-const char kMagicCheck[] = "perform-magic-check";
 const char kCompressedInput[] = "compressed-input";
 const char kCompressedOutput[] = "compressed-output";
 
 std::set<std::string> kKnownOptions = {
-    kHelp, kInputFile, kOutputFile, kMagicCheck, kCompressedInput, kCompressedOutput,
+    kHelp, kInputFile, kOutputFile, kCompressedInput, kCompressedOutput,
 };
 
 bool ParseBooleanOption(const fxl::CommandLine& command_line, const char* arg_name,
@@ -50,9 +49,6 @@ void PrintHelpMessage() {
       {"output-file=[]",
        "Write the converted trace to the specified file. If no file is "
        "specified, the output is written to stdout."},
-      {"perform-magic-check=[true]",
-       "Check that the first eight bytes of the trace are a valid Fuchsia "
-       "magic number record. Can be set to false to bypass the check."},
       {"compressed-input=[false]", "If true, the input is first gzip-decompressed."},
       {"compressed-output=[false]",
        "If true, the output is gzip-compressed. Writing compressed output to "
@@ -118,10 +114,6 @@ int main(int argc, char** argv) {
     return 1;
   }
   if (!ParseBooleanOption(command_line, kCompressedOutput, &settings.compressed_output)) {
-    PrintHelpMessage();
-    return 1;
-  }
-  if (!ParseBooleanOption(command_line, kMagicCheck, &settings.perform_magic_check)) {
     PrintHelpMessage();
     return 1;
   }
