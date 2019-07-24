@@ -16,6 +16,7 @@ impl TarballContent for String {
     }
 }
 
+#[derive(Clone)]
 pub struct MockInputTarball {
     files: RefCell<HashMap<String, String>>,
 }

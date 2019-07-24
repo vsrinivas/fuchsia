@@ -9,14 +9,14 @@ use crate::json::JsonObject;
 
 pub type PackageName = String;
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct ThirdPartyLibrary {
     pub name: PackageName,
     pub version: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct DartLibrary {
     pub name: PackageName,
@@ -37,15 +37,12 @@ impl JsonObject for DartLibrary {
 
 #[cfg(test)]
 mod tests {
-    use crate::json::JsonObject;
-
     use super::DartLibrary;
 
-    #[test]
-    /// Verifies that the DartLibrary class matches its schema.
-    /// This is a quick smoke test to ensure the class and its schema remain in sync.
-    fn test_validation() {
-        let data = r#"
+    test_validation! {
+        name = test_validation,
+        kind = DartLibrary,
+        data = r#"
         {
             "name": "fuchsia_foobar",
             "type": "dart_library",
@@ -68,8 +65,35 @@ mod tests {
                 }
             ]
         }
-        "#;
-        let library = DartLibrary::new(data.as_bytes()).unwrap();
-        library.validate().unwrap();
+        "#,
+        valid = true,
+    }
+
+    test_validation! {
+        name = test_validation_invalid,
+        kind = DartLibrary,
+        data = r#"
+        {
+            "name": "fuchsia_foobar",
+            "type": "dart_library",
+            "root": "dart/fuchsia_foobar",
+            "sources": [],
+            "deps": [
+                "fuchsia_raboof"
+            ],
+            "fidl_deps": [
+                "fuchsia.foobar",
+                "fuchsia.raboof"
+            ],
+            "third_party_deps": [
+                {
+                    "name": "meta",
+                    "version": "0.1.1"
+                }
+            ]
+        }
+        "#,
+        // Sources are empty.
+        valid = false,
     }
 }

@@ -50,15 +50,12 @@ impl JsonObject for CcPrebuiltLibrary {
 
 #[cfg(test)]
 mod tests {
-    use crate::json::JsonObject;
-
     use super::CcPrebuiltLibrary;
 
-    #[test]
-    /// Verifies that the CcPrebuiltLibrary class matches its schema.
-    /// This is a quick smoke test to ensure the class and its schema remain in sync.
-    fn test_validation() {
-        let data = r#"
+    test_validation! {
+        name = test_validation,
+        kind = CcPrebuiltLibrary,
+        data = r#"
         {
             "name": "foobar",
             "type": "cc_prebuilt_library",
@@ -83,18 +80,17 @@ mod tests {
                 }
             }
         }
-        "#;
-        let library = CcPrebuiltLibrary::new(data.as_bytes()).unwrap();
-        library.validate().unwrap();
+        "#,
+        valid = true,
     }
 
-    #[test]
-    fn test_validation_invalid() {
-        // Type is invalid.
-        let data = r#"
+    test_validation! {
+        name = test_validation_invalid,
+        kind = CcPrebuiltLibrary,
+        data = r#"
         {
             "name": "foobar",
-            "type": "host_tool",
+            "type": "cc_prebuilt_library",
             "format": "shared",
             "root": "pkg/foobar",
             "deps": [
@@ -105,22 +101,10 @@ mod tests {
                 "pkg/foobar/include/two.h"
             ],
             "include_dir": "pkg/foobar/include",
-            "binaries": {
-                "x64": {
-                    "link": "arch/x64/lib/libfoobar.so",
-                    "dist": "arch/x64/dist/libfoobar.so",
-                    "dist_path": "lib/libfoobar.so"
-                },
-                "arm64": {
-                    "link": "arch/arm64/lib/libfoobar.so"
-                }
-            }
+            "binaries": {}
         }
-        "#;
-        let library = CcPrebuiltLibrary::new(data.as_bytes()).unwrap();
-        assert!(
-            library.validate().is_err(),
-            "Validation should have failed."
-        );
+        "#,
+        // Binaries are empty.
+        valid = false,
     }
 }

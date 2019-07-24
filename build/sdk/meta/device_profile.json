@@ -21,6 +21,10 @@
             }
           ]
         },
+        "name": {
+          "description": "Name of the profile",
+          "type": "string"
+        },
         "description": {
           "description": "A description of the device's configuration",
           "type": "string"

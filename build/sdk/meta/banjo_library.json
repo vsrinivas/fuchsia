@@ -27,11 +27,12 @@
         },
         "root": {
           "description": "The root of the element in the SDK",
-          "type": "string"
+          "$ref": "common.json#/definitions/file"
         },
         "sources": {
           "description": "List of library sources",
           "type": "array",
+          "minItems": 1,
           "items": {
             "$ref": "common.json#/definitions/file"
           }

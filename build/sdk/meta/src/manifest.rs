@@ -47,15 +47,36 @@ impl JsonObject for Manifest {
 
 #[cfg(test)]
 mod tests {
-    use crate::json::JsonObject;
-
     use super::Manifest;
 
-    #[test]
-    /// Verifies that the Manifest class matches its schema.
-    /// This is a quick smoke test to ensure the class and its schema remain in sync.
-    fn test_validation() {
-        let data = r#"
+    test_validation! {
+        name = test_validation,
+        kind = Manifest,
+        data = r#"
+        {
+            "arch": {
+                "host": "x86_128-fuchsia",
+                "target": [
+                    "x64"
+                ]
+            },
+            "parts": [
+                {
+                    "meta": "pkg/foo/meta.json",
+                    "type": "cc_source_library"
+                }
+            ],
+            "id": "foobarblah",
+            "schema_version": "314"
+        }
+        "#,
+        valid = true,
+    }
+
+    test_validation! {
+        name = test_validation_invalid,
+        kind = Manifest,
+        data = r#"
         {
             "arch": {
                 "host": "x86_128-fuchsia",
@@ -66,8 +87,9 @@ mod tests {
             "parts": [],
             "id": "foobarblah",
             "schema_version": "314"
-        }"#;
-        let manifest = Manifest::new(data.as_bytes()).unwrap();
-        manifest.validate().unwrap();
+        }
+        "#,
+        // Parts are empty.
+        valid = false,
     }
 }

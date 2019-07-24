@@ -13,6 +13,8 @@ pub enum Error {
     PathAlreadyExists { path: String },
     #[fail(display = "could not merge: {}", error)]
     CannotMerge { error: String },
+    #[fail(display = "meta files differ")]
+    MetaFilesDiffer,
 }
 
 /// Common result types for methods in this crate.

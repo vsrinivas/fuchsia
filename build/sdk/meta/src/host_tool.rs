@@ -30,15 +30,12 @@ impl JsonObject for HostTool {
 
 #[cfg(test)]
 mod tests {
-    use crate::json::JsonObject;
-
     use super::HostTool;
 
-    #[test]
-    /// Verifies that the HostTool class matches its schema.
-    /// This is a quick smoke test to ensure the class and its schema remain in sync.
-    fn test_validation() {
-        let data = r#"
+    test_validation! {
+        name = test_validation,
+        kind = HostTool,
+        data = r#"
         {
             "name": "foobar",
             "type": "host_tool",
@@ -53,15 +50,14 @@ mod tests {
                 ]
             }
         }
-        "#;
-        let tool = HostTool::new(data.as_bytes()).unwrap();
-        tool.validate().unwrap();
+        "#,
+        valid = true,
     }
 
-    #[test]
-    fn test_validation_invalid() {
-        // This data has the wrong type.
-        let data = r#"
+    test_validation! {
+        name = test_validation_invalid,
+        kind = HostTool,
+        data = r#"
         {
             "name": "foobar",
             "type": "cc_prebuilt_library",
@@ -76,8 +72,8 @@ mod tests {
                 ]
             }
         }
-        "#;
-        let tool = HostTool::new(data.as_bytes()).unwrap();
-        assert!(tool.validate().is_err(), "Validation should have failed.");
+        "#,
+        // Type is invalid.
+        valid = false,
     }
 }

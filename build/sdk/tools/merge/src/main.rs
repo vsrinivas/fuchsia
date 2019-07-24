@@ -9,14 +9,22 @@ use std::iter::{FromIterator, Iterator};
 use structopt::StructOpt;
 
 use sdk_metadata::{
-    CcPrebuiltLibrary, DartLibrary, ElementType, HostTool, JsonObject, Manifest, Part,
+    BanjoLibrary, CcPrebuiltLibrary, CcSourceLibrary, DartLibrary, DeviceProfile, Documentation,
+    ElementType, FidlLibrary, HostTool, JsonObject, Manifest, Part,
 };
 
 mod app;
 mod file_provider;
 mod flags;
+#[macro_use]
+mod immutable;
+mod merge_banjo_library;
 mod merge_cc_prebuilt_library;
+mod merge_cc_source_library;
 mod merge_dart_library;
+mod merge_device_profile;
+mod merge_documentation;
+mod merge_fidl_library;
 mod merge_host_tool;
 mod tarball;
 #[cfg(test)]
@@ -24,8 +32,13 @@ mod testing;
 
 use crate::app::{Error, Result};
 use crate::file_provider::FileProvider;
+use crate::merge_banjo_library::merge_banjo_library;
 use crate::merge_cc_prebuilt_library::merge_cc_prebuilt_library;
+use crate::merge_cc_source_library::merge_cc_source_library;
 use crate::merge_dart_library::merge_dart_library;
+use crate::merge_device_profile::merge_device_profile;
+use crate::merge_documentation::merge_documentation;
+use crate::merge_fidl_library::merge_fidl_library;
 use crate::merge_host_tool::merge_host_tool;
 use crate::tarball::{InputTarball, OutputTarball, ResultTarball, SourceTarball, TarballContent};
 
@@ -113,9 +126,14 @@ fn merge_manifests(base: &Manifest, complement: &Manifest) -> Result<Manifest> {
 // TODO(DX-1056): delete when all types are supported.
 fn is_kind_supported(kind: &ElementType) -> bool {
     match kind {
-        ElementType::CcPrebuiltLibrary => true,
-        ElementType::DartLibrary => true,
-        ElementType::HostTool => true,
+        ElementType::BanjoLibrary
+        | ElementType::CcPrebuiltLibrary
+        | ElementType::CcSourceLibrary
+        | ElementType::DartLibrary
+        | ElementType::DeviceProfile
+        | ElementType::Documentation
+        | ElementType::FidlLibrary
+        | ElementType::HostTool => true,
         _ => false,
     }
 }
@@ -129,10 +147,17 @@ fn merge_common_part<F: TarballContent>(
         return Ok(());
     }
     match part.kind {
+        ElementType::BanjoLibrary => merge_banjo_library(&part.meta, base, complement, output),
         ElementType::CcPrebuiltLibrary => {
             merge_cc_prebuilt_library(&part.meta, base, complement, output)
         }
+        ElementType::CcSourceLibrary => {
+            merge_cc_source_library(&part.meta, base, complement, output)
+        }
         ElementType::DartLibrary => merge_dart_library(&part.meta, base, complement, output),
+        ElementType::DeviceProfile => merge_device_profile(&part.meta, base, complement, output),
+        ElementType::Documentation => merge_documentation(&part.meta, base, complement, output),
+        ElementType::FidlLibrary => merge_fidl_library(&part.meta, base, complement, output),
         ElementType::HostTool => merge_host_tool(&part.meta, base, complement, output),
         _ => unreachable!("Type should have been skipped over: {:?}", part.kind),
     }
@@ -147,10 +172,17 @@ fn copy_part_as_is<F: TarballContent>(
     }
     println!("Copying {}", part);
     let provider: Box<dyn FileProvider> = match part.kind {
+        ElementType::BanjoLibrary => Box::new(source.get_metadata::<BanjoLibrary>(&part.meta)?),
         ElementType::CcPrebuiltLibrary => {
             Box::new(source.get_metadata::<CcPrebuiltLibrary>(&part.meta)?)
         }
+        ElementType::CcSourceLibrary => {
+            Box::new(source.get_metadata::<CcSourceLibrary>(&part.meta)?)
+        }
         ElementType::DartLibrary => Box::new(source.get_metadata::<DartLibrary>(&part.meta)?),
+        ElementType::DeviceProfile => Box::new(source.get_metadata::<DeviceProfile>(&part.meta)?),
+        ElementType::Documentation => Box::new(source.get_metadata::<Documentation>(&part.meta)?),
+        ElementType::FidlLibrary => Box::new(source.get_metadata::<FidlLibrary>(&part.meta)?),
         ElementType::HostTool => Box::new(source.get_metadata::<HostTool>(&part.meta)?),
         _ => unreachable!("Type should have been skipped over: {:?}", part.kind),
     };
@@ -297,13 +329,23 @@ mod tests {
         name = test_different_schema_versions,
         base = json!({
           "arch": { "host": "x86_64-linux-gnu", "target": ["x64"] },
-          "parts": [],
+          "parts": [
+              {
+                  "meta": "pkg/foo/meta.json",
+                  "type": "cc_source_library"
+              }
+          ],
           "id": "bleh",
           "schema_version": "1",
         }),
         complement = json!({
           "arch": { "host": "x86_64-linux-gnu", "target": ["x64"] },
-          "parts": [],
+          "parts": [
+              {
+                  "meta": "pkg/foo/meta.json",
+                  "type": "cc_source_library"
+              }
+          ],
           "id": "bleh",
           "schema_version": "2",
         }),
@@ -314,13 +356,23 @@ mod tests {
         name = test_different_ids,
         base = json!({
           "arch": { "host": "x86_64-linux-gnu", "target": ["x64"] },
-          "parts": [],
+          "parts": [
+              {
+                  "meta": "pkg/foo/meta.json",
+                  "type": "cc_source_library"
+              }
+          ],
           "id": "whoops",
           "schema_version": "1",
         }),
         complement = json!({
           "arch": { "host": "x86_64-linux-gnu", "target": ["x64"] },
-          "parts": [],
+          "parts": [
+              {
+                  "meta": "pkg/foo/meta.json",
+                  "type": "cc_source_library"
+              }
+          ],
           "id": "bleh",
           "schema_version": "1",
         }),
@@ -331,13 +383,23 @@ mod tests {
         name = test_empty_id,
         base = json!({
           "arch": { "host": "x86_64-linux-gnu", "target": ["x64"] },
-          "parts": [],
+          "parts": [
+              {
+                  "meta": "pkg/foo/meta.json",
+                  "type": "cc_source_library"
+              }
+          ],
           "id": "whoops",
           "schema_version": "1",
         }),
         complement = json!({
           "arch": { "host": "x86_64-linux-gnu", "target": ["x64"] },
-          "parts": [],
+          "parts": [
+              {
+                  "meta": "pkg/foo/meta.json",
+                  "type": "cc_source_library"
+              }
+          ],
           "id": "",
           "schema_version": "1",
         }),
@@ -349,13 +411,23 @@ mod tests {
         name = test_two_empty_ids,
         base = json!({
           "arch": { "host": "x86_64-linux-gnu", "target": ["x64"] },
-          "parts": [],
+          "parts": [
+              {
+                  "meta": "pkg/foo/meta.json",
+                  "type": "cc_source_library"
+              }
+          ],
           "id": "",
           "schema_version": "1",
         }),
         complement = json!({
           "arch": { "host": "x86_64-linux-gnu", "target": ["x64"] },
-          "parts": [],
+          "parts": [
+              {
+                  "meta": "pkg/foo/meta.json",
+                  "type": "cc_source_library"
+              }
+          ],
           "id": "",
           "schema_version": "1",
         }),
@@ -486,13 +558,23 @@ mod tests {
         name = test_same_target_architecture,
         base = json!({
           "arch": { "host": "x86_64-linux-gnu", "target": ["x64"] },
-          "parts": [],
+          "parts": [
+              {
+                  "meta": "pkg/foo/meta.json",
+                  "type": "cc_source_library"
+              }
+          ],
           "id": "whoops",
           "schema_version": "1",
         }),
         complement = json!({
           "arch": { "host": "x86_64-linux-gnu", "target": ["x64"] },
-          "parts": [],
+          "parts": [
+              {
+                  "meta": "pkg/foo/meta.json",
+                  "type": "cc_source_library"
+              }
+          ],
           "id": "whoops",
           "schema_version": "1",
         }),
@@ -504,13 +586,23 @@ mod tests {
         name = test_different_target_architectures,
         base = json!({
           "arch": { "host": "x86_64-linux-gnu", "target": ["arm64"] },
-          "parts": [],
+          "parts": [
+              {
+                  "meta": "pkg/foo/meta.json",
+                  "type": "cc_source_library"
+              }
+          ],
           "id": "whoops",
           "schema_version": "1",
         }),
         complement = json!({
           "arch": { "host": "x86_64-linux-gnu", "target": ["x64"] },
-          "parts": [],
+          "parts": [
+              {
+                  "meta": "pkg/foo/meta.json",
+                  "type": "cc_source_library"
+              }
+          ],
           "id": "whoops",
           "schema_version": "1",
         }),

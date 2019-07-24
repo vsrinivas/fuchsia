@@ -33,6 +33,7 @@
     "parts": {
       "description": "The elements in this SDK",
       "type": "array",
+      "minItems": 1,
       "items": {
         "type": "object",
         "properties": {
