@@ -12,15 +12,16 @@ namespace media::audio::test {
 
 class HermeticAudioTest : public TestFixture {
  public:
-  static void SetUpTestSuite();
-  static void TearDownTestSuite();
-  void SetUp() override;
-
   HermeticAudioEnvironment* environment() const {
     auto ptr = HermeticAudioTest::environment_.get();
     FXL_CHECK(ptr) << "No Environment; Did you forget to call SetUpTestSuite?";
     return ptr;
   }
+
+ protected:
+  static void SetUpTestSuite();
+  static void TearDownTestSuite();
+  void SetUp() override;
 
  private:
   static std::unique_ptr<HermeticAudioEnvironment> environment_;

@@ -13,7 +13,7 @@
 namespace media::audio::test {
 namespace {
 
-// The IsloatedDevmgr will expose a fuchsia.io.Directory protocol under this service name in the
+// The IsolatedDevmgr will expose a fuchsia.io.Directory protocol under this service name in the
 // devmgrs public directory.
 constexpr const char kIsolatedDevmgrServiceName[] = "fuchsia.media.AudioTestDevmgr";
 
@@ -70,7 +70,7 @@ void HermeticAudioEnvironment::Start(async::Loop* loop) {
   auto real_services = sys::ServiceDirectory::CreateFromNamespace();
   auto real_env = real_services->Connect<fuchsia::sys::Environment>();
   // Add in the services that will be available in our hermetic environment. Note the '_nodevfs'
-  // cmx files; these are needed to allow us to map in our isloated devmgr under /dev for each
+  // cmx files; these are needed to allow us to map in our isolated devmgr under /dev for each
   // component, otherwise these components would still be provided the shared/global devmgr.
   auto services = sys::testing::EnvironmentServices::Create(real_env);
   services->AddServiceWithLaunchInfo("audio_core", AudioCoreLaunchInfo(real_services),
@@ -106,7 +106,7 @@ HermeticAudioEnvironment::~HermeticAudioEnvironment() {
 }
 
 bool HermeticAudioEnvironment::EnsureStart(TestFixture* fixture) {
-  if (started) {
+  if (started_) {
     return true;
   }
 
@@ -115,7 +115,7 @@ bool HermeticAudioEnvironment::EnsureStart(TestFixture* fixture) {
     cv_.wait(lock);
   }
 
-  // IsolatedDevmgr will not serve any messages on the directory unit /dev/test/virtual_audio
+  // IsolatedDevmgr will not serve any messages on the directory until /dev/test/virtual_audio
   // is ready. Run a simple Describe operation to ensure the devmgr is ready for traffic.
   //
   // Note we specifically use the |TextFixture| overrides of the virtual methods. This is needed
@@ -130,7 +130,7 @@ bool HermeticAudioEnvironment::EnsureStart(TestFixture* fixture) {
     return false;
   }
   devfs_dir.Unbind();
-  started = true;
+  started_ = true;
   return true;
 }
 

@@ -52,7 +52,7 @@ class HermeticAudioEnvironment {
   std::mutex mutex_;
 
   std::unique_ptr<sys::testing::EnclosingEnvironment> hermetic_environment_;
-  bool started = false;
+  bool started_ = false;
   std::thread env_thread_;
   async::Loop* loop_ = nullptr;
 };
