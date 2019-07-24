@@ -154,15 +154,15 @@ impl TypefaceInfoAndCharSet {
     }
 }
 
-impl Into<fonts_exp::TypefaceInfo> for TypefaceInfoAndCharSet {
-    fn into(self) -> fonts_exp::TypefaceInfo {
+impl From<TypefaceInfoAndCharSet> for fonts_exp::TypefaceInfo {
+    fn from(info: TypefaceInfoAndCharSet) -> fonts_exp::TypefaceInfo {
         fonts_exp::TypefaceInfo {
-            asset_id: Some(self.asset_id),
-            font_index: Some(self.font_index),
-            family: Some(self.family),
-            style: Some(self.style),
-            languages: Some(self.languages),
-            generic_family: self.generic_family,
+            asset_id: Some(info.asset_id),
+            font_index: Some(info.font_index),
+            family: Some(info.family),
+            style: Some(info.style),
+            languages: Some(info.languages),
+            generic_family: info.generic_family,
         }
     }
 }
@@ -449,7 +449,7 @@ impl FontService {
         let family = self
             .match_family(&UniCase::new(family_name.name.clone()))
             .ok_or(fonts_exp::Error::NotFound)?;
-        let faces = family.extract_faces().map(|f| f.into()).collect();
+        let faces = family.extract_faces().map_into().collect();
         let response = fonts_exp::TypefaceInfoResponse { results: Some(faces) };
         Ok(response)
     }
@@ -557,7 +557,7 @@ impl FontService {
         };
 
         // Filter
-        let matched_faces = matched_faces.filter(total_predicate).map(|f| f.into()).collect();
+        let matched_faces = matched_faces.filter(total_predicate).map_into().collect();
 
         Ok(matched_faces)
     }
