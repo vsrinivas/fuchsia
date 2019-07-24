@@ -5,6 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SINGLE_AP_TEST_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SINGLE_AP_TEST_H_
 
+#include <zircon/assert.h>
+#include <zircon/status.h>
+
 #include "gtest/gtest.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/trans-sim.h"
@@ -18,7 +21,9 @@ namespace testing {
 class SingleApTest : public ::testing::Test {
  public:
   SingleApTest() : ap_(kApAddr, kSsid, kSsidLen, kChannel), trans_(&env_) {
-    assert(ZX_OK == trans_.Init());
+    zx_status_t status = trans_.Init();
+    ZX_ASSERT_MSG(ZX_OK == status, "Transportation initialization failed: %s",
+                  zx_status_get_string(status));
     env_.AddAp(&ap_);
   }
   ~SingleApTest() {}
