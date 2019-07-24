@@ -33,7 +33,7 @@ inline void* GetBlock(uint64_t block_size, const void* data, uint64_t blkno) {
 // - Cross-operation writeback delays
 class BlockTxn;
 
-// TransactionHandler defines the interface the must be fulfilled
+// TransactionHandler defines the interface that must be fulfilled
 // for an entity to issue transactions to the underlying device.
 class TransactionHandler {
 public:

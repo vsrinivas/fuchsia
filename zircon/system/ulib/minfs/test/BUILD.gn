@@ -5,54 +5,29 @@
 group("test") {
   testonly = true
   deps = [
-    ":minfs-format-unit",
-    ":minfs-inspector-unit",
-    ":minfs-work-queue-unit",
+    ":minfs-unit",
   ]
 }
 
-test("minfs-work-queue-unit") {
+test("minfs-unit") {
   test_group = "fs"
   sources = [
+    "format-test.cc",
+    "inspector-test.cc",
+    "superblock-test.cc",
     "work-queue-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-minfs:c",
     "$zx/system/ulib/block-client",
-    "$zx/system/ulib/minfs",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zxtest",
-  ]
-  include_dirs = [ "$zx/system/ulib/minfs" ]
-}
-
-test("minfs-format-unit") {
-  test_group = "fs"
-  sources = [
-    "format-test.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/minfs",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zxtest",
-  ]
-  include_dirs = [ "$zx/system/ulib/minfs" ]
-}
-
-test("minfs-inspector-unit") {
-  test_group = "fs"
-  sources = [
-    "inspector-test.cc",
-  ]
-  deps = [
-    "$zx/system/fidl/fuchsia-minfs:c",
-    "$zx/system/ulib/block-client",
+    "$zx/system/ulib/block-client:fake-device",
     "$zx/system/ulib/disk-inspector",
+    "$zx/system/ulib/fvm",
     "$zx/system/ulib/minfs",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zxtest",
+    "$zx/third_party/ulib/cksum",
   ]
   include_dirs = [ "$zx/system/ulib/minfs" ]
   configs += [ "$zx/public/gn/config:static-libc++" ]

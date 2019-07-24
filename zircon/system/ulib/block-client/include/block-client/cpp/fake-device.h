@@ -36,7 +36,6 @@ public:
     void SetBlockSize(uint32_t block_size);
     bool IsRegistered(vmoid_t vmoid) const;
 
-protected:
     zx_status_t GetDevicePath(size_t buffer_len, char* out_name,
                               size_t* out_len) const override {
         return ZX_ERR_NOT_SUPPORTED;
@@ -65,6 +64,7 @@ protected:
     zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final;
     zx_status_t BlockAttachVmo(zx::vmo vmo, fuchsia_hardware_block_VmoID* out_vmoid) final;
 
+protected:
     // Resizes the block device to be at least |new_size| bytes.
     void ResizeDeviceToAtLeast(uint64_t new_size);
 

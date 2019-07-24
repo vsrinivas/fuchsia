@@ -26,9 +26,15 @@ namespace minfs {
 // Validates header information.
 zx_status_t CheckSuperblock(const Superblock* info, block_client::BlockDevice* device,
                             uint32_t max_blocks);
+// Reconstructs and updates the alloc_*_counts of superblock.
+zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
+                                   block_client::BlockDevice* device, Superblock* out_info);
 #else
 // Validates header information.
 zx_status_t CheckSuperblock(const Superblock* info, uint32_t max_blocks);
+// Reconstructs and updates the alloc_*_counts of superblock.
+zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
+                                   Superblock* out_info);
 #endif
 
 // On success, returns ZX_OK and copies the number of bytes used by data

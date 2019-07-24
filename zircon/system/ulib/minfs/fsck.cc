@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <minfs/block-txn.h>
 #include <minfs/format.h>
 #include <minfs/fsck.h>
 
@@ -14,6 +15,16 @@
 #include <utility>
 
 namespace minfs {
+
+namespace {
+
+#ifdef __Fuchsia__
+using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
+#else
+using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
+#endif
+
+} // namespace
 
 class MinfsChecker {
 public:
@@ -690,6 +701,107 @@ zx_status_t UsedSize(fbl::unique_ptr<Bcache>& bc, uint64_t* out_size) {
     }
 
     *out_size = (NonDataBlocks(info) + info.alloc_block_count) * info.block_size;
+    return ZX_OK;
+}
+
+#ifdef __Fuchsia__
+zx_status_t CalculateBitsSetBitmap(fs::TransactionHandler* transaction_handler,
+                                   block_client::BlockDevice* device, blk_t start_block,
+                                   uint32_t num_blocks, uint32_t* out_bits_set) {
+#else
+zx_status_t CalculateBitsSetBitmap(fs::TransactionHandler* transaction_handler, blk_t start_block,
+                                   uint32_t num_blocks, uint32_t* out_bits_set) {
+#endif
+    minfs::RawBitmap bitmap;
+    zx_status_t status = bitmap.Reset(num_blocks * kMinfsBlockBits);
+    if (status != ZX_OK) {
+        return status;
+    }
+    fs::ReadTxn read_transaction(transaction_handler);
+#ifdef __Fuchsia__
+    zx::vmo xfer_vmo;
+    status = bitmap.StorageUnsafe()->GetVmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
+    if (status != ZX_OK) {
+        return status;
+    }
+    fuchsia_hardware_block_VmoID map_vmoid;
+    status = device->BlockAttachVmo(std::move(xfer_vmo), &map_vmoid);
+    if (status != ZX_OK) {
+        return status;
+    }
+    read_transaction.Enqueue(map_vmoid.id, 0, start_block, num_blocks);
+#else
+    read_transaction.Enqueue(bitmap.StorageUnsafe()->GetData(), 0, start_block, num_blocks);
+#endif
+    status = read_transaction.Transact();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Efficiently iterate through the bitmap to count the number of bits set in the bitmap.
+    size_t off = 0;
+    size_t bitmap_size = bitmap.size();
+    size_t count = 0;
+
+    while (off < bitmap_size) {
+        size_t ind = 0;
+        if (bitmap.Find(true, off, bitmap_size, 1, &ind) == ZX_OK) {
+            size_t scan_ind = 0;
+            if (bitmap.Scan(ind, bitmap_size, true, &scan_ind)) {
+                count += (bitmap_size - ind);
+                break;
+            }
+            count += (scan_ind - ind);
+            off = scan_ind + 1;
+
+        } else {
+            break;
+        }
+    }
+
+    *out_bits_set = static_cast<uint32_t>(count);
+    return ZX_OK;
+}
+
+#ifdef __Fuchsia__
+zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
+                                   block_client::BlockDevice* device,
+                                   Superblock* out_info) {
+#else
+zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
+                                   Superblock* out_info) {
+#endif
+    uint32_t allocation_bitmap_num_blocks =
+                            (out_info->block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
+
+#ifdef __Fuchsia__
+    // Correct allocated block count.
+    zx_status_t status = CalculateBitsSetBitmap(transaction_handler, device, out_info->abm_block,
+                                                allocation_bitmap_num_blocks,
+                                                &(out_info->alloc_block_count));
+#else
+    zx_status_t status = CalculateBitsSetBitmap(transaction_handler, out_info->abm_block,
+                                                allocation_bitmap_num_blocks,
+                                                &(out_info->alloc_block_count));
+#endif
+    if (status != ZX_OK) {
+        return status;
+    }
+    uint32_t inode_bitmap_num_blocks =
+                        (out_info->inode_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
+
+#ifdef __Fuchsia__
+    // Correct allocated inode count.
+    status = CalculateBitsSetBitmap(transaction_handler, device, out_info->ibm_block,
+                                    inode_bitmap_num_blocks, &(out_info->alloc_inode_count));
+#else
+    status = CalculateBitsSetBitmap(transaction_handler, out_info->ibm_block,
+                                    inode_bitmap_num_blocks, &(out_info->alloc_inode_count));
+#endif
+
+    if (status != ZX_OK) {
+        return status;
+    }
     return ZX_OK;
 }
 
