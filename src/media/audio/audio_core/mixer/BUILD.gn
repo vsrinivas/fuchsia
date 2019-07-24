@@ -1,6 +1,5 @@
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
@@ -32,6 +31,7 @@ source_set("audio_mixer_lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.media",
+    "//src/media/audio/audio_core:logging",
   ]
 
   deps = [

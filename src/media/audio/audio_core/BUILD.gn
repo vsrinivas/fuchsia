@@ -48,6 +48,7 @@ package("audio_core") {
       path = rebase_path("meta/audio_core.cmx")
       dest = "audio_core.cmx"
     },
+
     # The nodevfs cmx is used in some test environments where we would like to provide our own
     # devfs for the test. At this time we need to remove any dev sandbox metadata as appmgr does
     # not allow these namespaces to be overridden.
@@ -55,6 +56,16 @@ package("audio_core") {
       path = rebase_path("meta/audio_core_nodevfs.cmx")
       dest = "audio_core_nodevfs.cmx"
     },
+  ]
+}
+
+source_set("logging") {
+  sources = [
+    "logging.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl:fxl_logging",
   ]
 }
 
@@ -99,7 +110,6 @@ source_set("audio_core_lib") {
     "driver_utils.cc",
     "driver_utils.h",
     "fwd_decls.h",
-    "logging.h",
     "pending_flush_token.cc",
     "pending_flush_token.h",
     "reporter.cc",
@@ -125,6 +135,7 @@ source_set("audio_core_lib") {
     "//sdk/lib/media/cpp:no_converters",
     "//sdk/lib/sys/cpp:cpp",
     "//src/lib/fxl",
+    "//src/media/audio/audio_core:logging",
     "//src/media/audio/audio_core/mixer:audio_mixer_lib",
     "//src/media/audio/lib/effects_loader",
     "//src/media/audio/lib/wav_writer:wav_writer",

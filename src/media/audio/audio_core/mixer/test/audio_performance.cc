@@ -161,7 +161,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
   }
 
   uint32_t source_buffer_size = kFreqTestBufSize * dest_rate / source_rate;
-  uint32_t source_frames = source_buffer_size + 1;
+  uint32_t source_frames = source_buffer_size;
 
   auto source = std::make_unique<SampleType[]>(source_frames * num_input_chans);
   auto accum = std::make_unique<float[]>(kFreqTestBufSize * num_output_chans);
@@ -209,6 +209,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
 
   info.gain.SetDestGain(Gain::kUnityGainDb);
   info.gain.SetDestMute(false);
+  auto width = mixer->pos_filter_width();
 
   for (uint32_t i = 0; i < kNumMixerProfilerRuns; ++i) {
     info.gain.SetSourceGain(gain_db);
@@ -233,6 +234,9 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
 
       // Mix() might process less than all of accum, so Advance() after each.
       info.gain.Advance(dest_offset - previous_dest_offset, TimelineRate(source_rate, ZX_SEC(1)));
+      if (frac_src_offset + width >= frac_src_frames) {
+        frac_src_offset -= frac_src_frames;
+      }
     }
 
     auto elapsed = (zx::clock::get_monotonic() - start_time).get();
