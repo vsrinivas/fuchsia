@@ -14,7 +14,10 @@ rustc_library("lib") {
   edition = "2018"
 
   # Only for internal use.
-  visibility = [ "//src/sys/component_manager/*" ]
+  visibility = [
+    "//src/sys/component_manager/*",
+    "//src/sys/component_manager_for_test/*",
+  ]
 
   deps = [
     "//garnet/lib/rust/cm_fidl_translator",
@@ -57,9 +60,7 @@ rustc_library("lib") {
   # Test-only deps. Prefer adding deps used only in tests here instead of
   # above, which has the benefit of keeping unneeded deps out of the production
   # binary and allows depending on 'testonly' targets.
-  test_deps = [
-    "//src/lib/process_builder:test-util-fidl-rustc",
-  ]
+  test_deps = [ "//src/lib/process_builder:test-util-fidl-rustc" ]
 
   non_rust_deps = [
     "//zircon/public/lib/async",

@@ -25,15 +25,12 @@ struct TestInput {
 
 class TestSuite : public fuchsia::test::Suite {
  public:
-  explicit TestSuite(async::Loop* loop, std::vector<TestInput> inputs,
-                     Options options = Options{});
+  explicit TestSuite(async::Loop* loop, std::vector<TestInput> inputs, Options options = Options{});
 
   void GetTests(GetTestsCallback callback) override;
 
-  void Run(
-      std::vector<fuchsia::test::Invocation> tests,
-      fuchsia::test::RunOptions /*unused*/,
-      fidl::InterfaceHandle<fuchsia::test::RunListener> run_listener) override;
+  void Run(std::vector<fuchsia::test::Invocation> tests, fuchsia::test::RunOptions /*unused*/,
+           fidl::InterfaceHandle<fuchsia::test::RunListener> run_listener) override;
 
   fidl::InterfaceRequestHandler<fuchsia::test::Suite> GetHandler();
 

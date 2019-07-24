@@ -137,6 +137,10 @@ package("example-tests") {
       dest = "passing-test-example.cmx"
     },
     {
+      path = "meta/passing-test-example_v2.cml"
+      dest = "passing-test-example_v2.cm"
+    },
+    {
       path = "meta/no-test-example.cmx"
       dest = "no-test-example.cmx"
     },

@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/component_manager_for_test_bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.pkg.PackageResolver",
+            "fuchsia.process.Launcher",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

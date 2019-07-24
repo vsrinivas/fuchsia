@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/passing-test-example",
+    },
+    "expose": [
+        {
+            "service": "/svc/fuchsia.test.Suite",
+            "from": "self",
+        },
+    ],
+}
+
