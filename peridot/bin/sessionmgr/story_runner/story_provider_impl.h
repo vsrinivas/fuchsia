@@ -11,8 +11,8 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_ptr.h>
@@ -20,11 +20,12 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 
 #include <map>
 #include <memory>
 #include <set>
+
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "peridot/bin/sessionmgr/component_context_impl.h"
@@ -62,7 +63,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
                     EntityProviderRunner* entity_provider_runner,
                     modular::ModuleFacetReader* module_facet_reader,
                     PresentationProvider* presentation_provider,
-                    fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot, bool test);
+                    fuchsia::ui::scenic::SnapshooterPtr view_snapshot, bool test);
 
   ~StoryProviderImpl() override;
 
@@ -300,7 +301,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   fidl::Binding<fuchsia::modular::FocusWatcher> focus_watcher_binding_;
 
   // Service provided by scenic to take snapshots of stories.
-  fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot_;
+  fuchsia::ui::scenic::SnapshooterPtr snapshooter_;
 
   // Cached mapping of story ID's to the story view koids. Used as a token to
   // take snapshots of stories. This is a temporary hack because koids are

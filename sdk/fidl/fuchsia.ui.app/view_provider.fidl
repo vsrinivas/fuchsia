@@ -6,10 +6,6 @@ library fuchsia.ui.app;
 
 using fuchsia.sys;
 
-/// NOTE: This is likely not the ViewProvider you are looking for!  This is
-/// the new ViewProvider interface that will be deprecating the old one soon.
-/// The old ViewProvider is in fuchsia.ui.viewsv1.ViewProvider.
-///
 /// ViewProvider is the standard mechanism for two modules to each obtain half
 /// of a shared eventpair token.  The shared token is a capability allowing the
 /// modules to ask Scenic to create a ViewHolder/View pair.  The resulting
@@ -19,7 +15,6 @@ using fuchsia.sys;
 /// eventpair token, and use this to create the linked ViewHolder/View.
 /// ViewProvider is given for the convenience of clients that don't require
 /// a more complex implementation.
-// TODO(SCN-589): Remove this when old ViewProvider is deleted.
 [Discoverable]
 protocol ViewProvider {
     /// Creates a new View under the control of the ViewProvider.

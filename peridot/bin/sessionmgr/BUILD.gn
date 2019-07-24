@@ -58,7 +58,6 @@ source_set("sessionmgr_lib") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//src/ledger/cloud_provider_firestore/bin/fidl",
   ]
 

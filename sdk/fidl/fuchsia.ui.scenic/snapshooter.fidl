@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.ui.viewsv1;
+library fuchsia.ui.scenic;
 
 using fuchsia.mem;
 
 /// Defines an interface to take view snapshots.
 [Discoverable]
-protocol ViewSnapshot {
-    // TODO(SCN-1019): Use zx::eventpair instead of koid.
+protocol Snapshooter {
+    // TODO(SCN-1019,SCN-1410): Use fuchsia.ui.views.ViewRef instead of koid.
     /// Takes a snapshot of a view and returns it in a callback.
     ///
     /// The `view_koid` identifies the view whose snapshot needs to be taken.
     ///
     /// The callback is invoked with the VMO buffer containing the snapshot.
     /// If successful, the buffer size is non-zero, otherwise it is 0.
-    TakeSnapshot(uint64 view_koid)
+    TakeViewSnapshot(uint64 view_koid)
         -> (fuchsia.mem.Buffer snapshot);
 };

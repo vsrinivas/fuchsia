@@ -13,11 +13,12 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
+
 #include <src/lib/fxl/macros.h>
 
 namespace shadertoy_client {
 
-// TODO(SCN-589): Should be folded back into ShadertoyClientView. This used to
+// TODO(SCN-1521): Should be folded back into ShadertoyClientView. This used to
 // be common functionality for |ShadertoyClientView| and a different View class
 // that used the old Views API.
 class ViewImpl {

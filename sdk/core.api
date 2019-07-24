@@ -59,8 +59,6 @@ sdk://fidl/fuchsia.ui.policy
 sdk://fidl/fuchsia.ui.scenic
 sdk://fidl/fuchsia.ui.vectorial
 sdk://fidl/fuchsia.ui.views
-sdk://fidl/fuchsia.ui.viewsv1
-sdk://fidl/fuchsia.ui.viewsv1token
 sdk://fidl/fuchsia.web
 sdk://fidl/fuchsia.wlan.common
 sdk://fidl/fuchsia.wlan.service

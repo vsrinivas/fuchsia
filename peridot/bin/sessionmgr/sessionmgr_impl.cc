@@ -11,7 +11,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fsl/types/type_converters.h>
@@ -621,7 +620,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
       std::move(focus_provider_story_provider), user_intelligence_provider_impl_.get(),
       discover_registry_service_.get(), module_resolver_service_.get(),
       entity_provider_runner_.get(), module_facet_reader_.get(), presentation_provider_impl_.get(),
-      component_context_->svc()->Connect<fuchsia::ui::viewsv1::ViewSnapshot>(),
+      component_context_->svc()->Connect<fuchsia::ui::scenic::Snapshooter>(),
       (config_.enable_story_shell_preload())));
   story_provider_impl_->Connect(std::move(story_provider_request));
 

@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <png.h>
-#include <trace-provider/provider.h>
 
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+
+#include <trace-provider/provider.h>
 
 #include "garnet/lib/ui/gfx/resources/snapshot/snapshot_generated.h"
 #include "garnet/lib/ui/gfx/resources/snapshot/version.h"
@@ -87,9 +88,9 @@ class SnapshotTaker {
       loop_->Quit();
     });
 
-    // Connect to the ViewSnapshot service.
-    view_snapshot_ = context_->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewSnapshot>();
-    view_snapshot_.set_error_handler([this](zx_status_t status) {
+    // Connect to the Snapshooter service.
+    snapshooter_ = context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Snapshooter>();
+    snapshooter_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Lost connection to Snapshot service.";
       encountered_error_ = true;
       loop_->Quit();
@@ -105,7 +106,7 @@ class SnapshotTaker {
     // the GFX system is initialized, which is a prerequisite for taking a
     // screenshot. TODO(SCN-678): Remove call to GetDisplayInfo once bug done.
     scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo /*unused*/) {
-      view_snapshot_->TakeSnapshot(0, [this](fuchsia::mem::Buffer buffer) {
+      snapshooter_->TakeViewSnapshot(0, [this](fuchsia::mem::Buffer buffer) {
         std::vector<uint8_t> data;
         if (!fsl::VectorFromVmo(buffer, &data)) {
           FXL_LOG(ERROR) << "TakeSnapshot failed";
@@ -411,7 +412,7 @@ class SnapshotTaker {
   std::unique_ptr<component::StartupContext> context_;
   bool encountered_error_ = false;
   fuchsia::ui::scenic::ScenicPtr scenic_;
-  fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot_;
+  fuchsia::ui::scenic::SnapshooterPtr snapshooter_;
   Document document_;
 };
 

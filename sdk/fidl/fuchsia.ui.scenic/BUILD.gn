@@ -12,6 +12,7 @@ fidl("fuchsia.ui.scenic") {
     "events.fidl",
     "scenic.fidl",
     "session.fidl",
+    "snapshooter.fidl",
   ]
 
   public_deps = [

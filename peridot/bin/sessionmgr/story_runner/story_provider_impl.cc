@@ -277,7 +277,7 @@ StoryProviderImpl::StoryProviderImpl(
     EntityProviderRunner* const entity_provider_runner,
     modular::ModuleFacetReader* const module_facet_reader,
     PresentationProvider* const presentation_provider,
-    fuchsia::ui::viewsv1::ViewSnapshotPtr view_snapshot, const bool enable_story_shell_preload)
+    fuchsia::ui::scenic::SnapshooterPtr view_snapshot, const bool enable_story_shell_preload)
     : user_environment_(user_environment),
       session_storage_(session_storage),
       device_id_(std::move(device_id)),
@@ -293,7 +293,7 @@ StoryProviderImpl::StoryProviderImpl(
       presentation_provider_(presentation_provider),
       focus_provider_(std::move(focus_provider)),
       focus_watcher_binding_(this),
-      view_snapshot_(std::move(view_snapshot)),
+      snapshooter_(std::move(view_snapshot)),
       weak_factory_(this) {
   session_storage_->set_on_story_deleted(
       [weak_ptr = weak_factory_.GetWeakPtr()](fidl::StringPtr story_id) {
@@ -723,10 +723,10 @@ void StoryProviderImpl::TakeSnapshot(fidl::StringPtr story_id,
                                      fit::function<void(fuchsia::mem::Buffer)> callback) {
   auto it = view_endpoints_.find(story_id);
   if (it != view_endpoints_.end()) {
-    view_snapshot_->TakeSnapshot(it->second,
-                                 [callback = std::move(callback)](fuchsia::mem::Buffer buffer) {
-                                   callback(std::move(buffer));
-                                 });
+    snapshooter_->TakeViewSnapshot(it->second,
+                                   [callback = std::move(callback)](fuchsia::mem::Buffer buffer) {
+                                     callback(std::move(buffer));
+                                   });
   } else {
     callback(fuchsia::mem::Buffer{});
   }
