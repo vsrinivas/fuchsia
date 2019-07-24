@@ -4,3 +4,4 @@
 
 mod labels;
 mod node_table;
+mod salt_slab;
