@@ -12,6 +12,5 @@ group("test") {
     "mock-device",
     "operation",
     "sysdev",
-    "usb",
   ]
 }

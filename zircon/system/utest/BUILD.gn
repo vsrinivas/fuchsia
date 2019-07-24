@@ -63,7 +63,7 @@ if (current_cpu != "") {
       "$zx/system/dev/lib/fake-bti/test:fake-bti",
       "$zx/system/dev/lib/mt8167:mt8167-audio-lib-test",
       "$zx/system/dev/lib/scsi:scsilib-disk-test",
-      "$zx/system/dev/lib/usb:usb-wrapper-test",
+      "$zx/system/dev/lib/usb:usb-lib-test",
       "$zx/system/dev/light-sensor/lite-on:ltr-578als-test",
       "$zx/system/dev/nand/broker/test",
       "$zx/system/dev/nand/nand/test",
