@@ -16,8 +16,6 @@ source_set("cpp") {
     "observations_collector.cc",
     "observations_collector.h",
   ]
-
-  public_configs = [ "//garnet/public:config" ]
 }
 
 source_set("cobalt_logger") {
