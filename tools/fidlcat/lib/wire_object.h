@@ -5,11 +5,12 @@
 #ifndef TOOLS_FIDLCAT_LIB_WIRE_OBJECT_H_
 #define TOOLS_FIDLCAT_LIB_WIRE_OBJECT_H_
 
+#include <lib/fidl/cpp/message.h>
+
 #include <memory>
 #include <string_view>
 #include <vector>
 
-#include <lib/fidl/cpp/message.h>
 #include <src/lib/fxl/logging.h>
 
 #include "tools/fidlcat/lib/library_loader.h"
@@ -34,6 +35,10 @@ class Field {
   // whole display size for an object: the computation is stopped as soon as we
   // find that the object doesn't fit.
   virtual int DisplaySize(int remaining_size) const = 0;
+
+  // Returns the uint8_t value of the field. If the field is not a uint8_t value this returns zero.
+  // This is used to eventually display a vector of uint8_t values as a string.
+  virtual uint8_t GetUint8Value() const { return 0; }
 
   // Decode the extra content of the field (in a secondary object).
   virtual void DecodeContent(MessageDecoder* decoder, uint64_t offset) = 0;
@@ -104,6 +109,12 @@ class NumericField : public InlineField {
     return (data() == nullptr)
                ? 7
                : std::to_string(internal::MemoryFrom<T, const uint8_t*>(data())).size();
+  }
+
+  uint8_t GetUint8Value() const override {
+    return ((data() != nullptr) && (sizeof(T) == 1))
+               ? internal::MemoryFrom<T, const uint8_t*>(data())
+               : 0;
   }
 
   void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
@@ -298,6 +309,8 @@ class VectorField : public NullableField {
   const uint64_t size_;
   const Type* const component_type_;
   std::vector<std::unique_ptr<Field>> fields_;
+  bool is_string_ = false;
+  bool has_new_line_ = false;
 };
 
 // An enum.

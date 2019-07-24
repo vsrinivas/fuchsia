@@ -4,13 +4,13 @@
 
 #include "tools/fidlcat/lib/wire_parser.h"
 
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include <fuchsia/sys/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
@@ -387,6 +387,30 @@ fidl::VectorPtr<std::string> TwoStringVectorFromVals(std::string v1, std::string
   return fidl::VectorPtr(brother_vector);
 }
 
+fidl::VectorPtr<uint8_t> VectorUint8() {
+  std::vector<std::uint8_t> result;
+  for (int i = 0; i <= 40; ++i) {
+    result.push_back(i);
+  }
+  return fidl::VectorPtr(result);
+}
+
+fidl::VectorPtr<uint8_t> VectorUint8(const char* text) {
+  std::vector<std::uint8_t> result;
+  while (*text != 0) {
+    result.push_back(*text++);
+  }
+  return fidl::VectorPtr(result);
+}
+
+fidl::VectorPtr<uint32_t> VectorUint32() {
+  std::vector<std::uint32_t> result;
+  for (int i = 0; i <= 25; ++i) {
+    result.push_back(i + ((i & 1) << 16));
+  }
+  return fidl::VectorPtr(result);
+}
+
 }  // namespace
 
 TEST_DECODE_WIRE(TwoStringVectorInt, TwoStringVectorInt, R"({"vec":["harpo", "chico"], "i32":"1"})",
@@ -403,6 +427,56 @@ TEST_DECODE_WIRE(TwoStringVectors, TwoStringVectors,
                  "\n}",
                  TwoStringVectorFromVals("harpo", "chico"),
                  TwoStringVectorFromVals("groucho", "zeppo"))
+
+TEST_DECODE_WIRE(
+    VectorUint8, VectorUint8,
+    R"({"v":["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40"]})",
+    "{\n"
+    "  v: #gre#vector<uint8>#rst# = [\n"
+    "    #blu#0#rst#, #blu#1#rst#, #blu#2#rst#, #blu#3#rst#, #blu#4#rst#, #blu#5#rst#, "
+    "#blu#6#rst#, #blu#7#rst#, #blu#8#rst#, #blu#9#rst#, #blu#10#rst#, #blu#11#rst#, #blu#12#rst#, "
+    "#blu#13#rst#, #blu#14#rst#, #blu#15#rst#, #blu#16#rst#, #blu#17#rst#, #blu#18#rst#, "
+    "#blu#19#rst#, #blu#20#rst#,\n"
+    "    #blu#21#rst#, #blu#22#rst#, #blu#23#rst#, #blu#24#rst#, #blu#25#rst#, #blu#26#rst#, "
+    "#blu#27#rst#, #blu#28#rst#, #blu#29#rst#, #blu#30#rst#, #blu#31#rst#, #blu#32#rst#, "
+    "#blu#33#rst#, #blu#34#rst#, #blu#35#rst#, #blu#36#rst#, #blu#37#rst#, #blu#38#rst#, "
+    "#blu#39#rst#,\n"
+    "    #blu#40#rst#\n"
+    "  ]\n"
+    "}",
+    VectorUint8())
+
+TEST_DECODE_WIRE(
+    VectorUint8String, VectorUint8,
+    R"({"v":["72","101","108","108","111","32","116","101","115","116","105","110","103","32","119","111","114","108","100","33"]})",
+    "{ v: #gre#vector<uint8>#rst# = \"Hello testing world!\" }",
+    VectorUint8("Hello testing world!"))
+
+TEST_DECODE_WIRE(
+    VectorUint8MultilineString, VectorUint8,
+    R"({"v":["72","101","108","108","111","32","116","101","115","116","105","110","103","32","119","111","114","108","100","33","10","72","111","119","32","97","114","101","32","121","111","117","32","116","111","100","97","121","63","10","73","39","109","32","116","101","115","116","105","110","103","32","102","105","100","108","99","97","116","46"]})",
+    "{\n"
+    "  v: #gre#vector<uint8>#rst# = [\n"
+    "    Hello testing world!\n"
+    "    How are you today?\n"
+    "    I'm testing fidlcat.\n"
+    "  ]\n"
+    "}",
+    VectorUint8("Hello testing world!\nHow are you today?\nI'm testing fidlcat."))
+
+TEST_DECODE_WIRE(
+    VectorUint32, VectorUint32,
+    R"({"v":["0","65537","2","65539","4","65541","6","65543","8","65545","10","65547","12","65549","14","65551","16","65553","18","65555","20","65557","22","65559","24","65561"]})",
+    "{\n"
+    "  v: #gre#vector<uint32>#rst# = [\n"
+    "    #blu#0#rst#, #blu#65537#rst#, #blu#2#rst#, #blu#65539#rst#, #blu#4#rst#, #blu#65541#rst#, "
+    "#blu#6#rst#, #blu#65543#rst#, #blu#8#rst#, #blu#65545#rst#, #blu#10#rst#, #blu#65547#rst#, "
+    "#blu#12#rst#, #blu#65549#rst#, #blu#14#rst#,\n"
+    "    #blu#65551#rst#, #blu#16#rst#, #blu#65553#rst#, #blu#18#rst#, #blu#65555#rst#, "
+    "#blu#20#rst#, #blu#65557#rst#, #blu#22#rst#, #blu#65559#rst#, #blu#24#rst#, #blu#65561#rst#\n"
+    "  ]\n"
+    "}",
+    VectorUint32())
 
 // Struct Tests
 

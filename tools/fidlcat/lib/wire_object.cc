@@ -486,6 +486,9 @@ int VectorField::DisplaySize(int remaining_size) const {
   if (is_null()) {
     return 4;
   }
+  if (is_string_) {
+    return size_ + 2;  // The string and the two quotes.
+  }
   int size = 0;
   for (const auto& field : fields_) {
     // Two characters for the separator ("[ " or ", ").
@@ -500,9 +503,21 @@ int VectorField::DisplaySize(int remaining_size) const {
 }
 
 void VectorField::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
+  if (size_ == 0) {
+    return;
+  }
+  is_string_ = true;
   for (uint64_t i = 0; i < size_; ++i) {
     std::unique_ptr<Field> field = component_type_->Decode(decoder, "", offset);
     if (field != nullptr) {
+      uint8_t value = field->GetUint8Value();
+      if (value < 0x20) {
+        if ((value == '\r') || (value == '\n')) {
+          has_new_line_ = true;
+        } else {
+          is_string_ = false;
+        }
+      }
       fields_.push_back(std::move(field));
     }
     offset += component_type_->InlineSize();
@@ -529,6 +544,32 @@ void VectorField::PrettyPrint(std::ostream& os, const Colors& colors, std::strin
     os << colors.blue << "null" << colors.reset;
   } else if (fields_.empty()) {
     os << "[]";
+  } else if (is_string_) {
+    if (has_new_line_) {
+      os << "[\n";
+      bool needs_header = true;
+      for (const auto& field : fields_) {
+        if (needs_header) {
+          os << line_header << std::string((tabs + 1) * kTabSize, ' ');
+          needs_header = false;
+        }
+        uint8_t value = field->GetUint8Value();
+        os << value;
+        if (value == '\n') {
+          needs_header = true;
+        }
+      }
+      if (!needs_header) {
+        os << '\n';
+      }
+      os << line_header << std::string(tabs * kTabSize, ' ') << ']';
+    } else {
+      os << '"';
+      for (const auto& field : fields_) {
+        os << field->GetUint8Value();
+      }
+      os << '"';
+    }
   } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
     const char* separator = "[ ";
     for (const auto& field : fields_) {
@@ -539,12 +580,24 @@ void VectorField::PrettyPrint(std::ostream& os, const Colors& colors, std::strin
     os << " ]";
   } else {
     os << "[\n";
+    int size = 0;
     for (const auto& field : fields_) {
-      int size = (tabs + 1) * kTabSize;
-      os << line_header << std::string((tabs + 1) * kTabSize, ' ');
+      int field_size = field->DisplaySize(max_line_size - size);
+      if (size == 0) {
+        os << line_header << std::string((tabs + 1) * kTabSize, ' ');
+        size = (tabs + 1) * kTabSize;
+      } else if (field_size + 3 > max_line_size - size) {
+        os << ",\n";
+        os << line_header << std::string((tabs + 1) * kTabSize, ' ');
+        size = (tabs + 1) * kTabSize;
+      } else {
+        os << ", ";
+        size += 2;
+      }
       field->PrettyPrint(os, colors, line_header, tabs + 1, max_line_size - size, max_line_size);
-      os << "\n";
+      size += field_size;
     }
+    os << '\n';
     os << line_header << std::string(tabs * kTabSize, ' ') << ']';
   }
 }

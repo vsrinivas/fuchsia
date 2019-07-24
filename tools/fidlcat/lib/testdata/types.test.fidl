@@ -33,6 +33,8 @@ protocol FidlcatTestInterface {
     TwoStringArrayInt(array<string>:2 arr, int32 i32);
     TwoStringVectorInt(vector<string> vec, int32 i32);
     TwoStringVectors(vector<string> v_1, vector<string> v_2);
+    VectorUint8(vector<uint8> v);
+    VectorUint32(vector<uint32> v);
 
     Struct(primitive_types p);
     NullableStruct(primitive_types? p);
