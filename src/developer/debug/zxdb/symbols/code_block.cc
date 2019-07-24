@@ -44,7 +44,8 @@ bool CodeBlock::ContainsAddress(const SymbolContext& symbol_context,
 }
 
 const CodeBlock* CodeBlock::GetMostSpecificChild(const SymbolContext& symbol_context,
-                                                 uint64_t absolute_address) const {
+                                                 uint64_t absolute_address,
+                                                 bool recurse_into_inlines) const {
   if (!ContainsAddress(symbol_context, absolute_address))
     return nullptr;  // This block doesn't contain the address.
 
@@ -55,7 +56,11 @@ const CodeBlock* CodeBlock::GetMostSpecificChild(const SymbolContext& symbol_con
     const CodeBlock* inner_block = inner.Get()->AsCodeBlock();
     if (!inner_block)
       continue;  // Corrupted symbols.
-    const CodeBlock* found = inner_block->GetMostSpecificChild(symbol_context, absolute_address);
+    if (!recurse_into_inlines && inner_block->tag() == DwarfTag::kInlinedSubroutine)
+      continue;  // Skip inlined function.
+
+    const CodeBlock* found =
+        inner_block->GetMostSpecificChild(symbol_context, absolute_address, recurse_into_inlines);
     if (found)
       return found;
   }

@@ -64,13 +64,17 @@ class CodeBlock : public Symbol {
   // Recursively searches all children of this block for the innermost block covering the given
   // address. Returns |this| if the current block is already the most specific, or nullptr if the
   // current block doesn't contain the address.
+  //
+  // Whether this function will go into inlined subroutines is controlled by recurse_into_inlines.
+  // In many cases the Stack will handle expanding inlined subroutines and one would use this
+  // function to find the most specific code block in the current virtual frame.
   const CodeBlock* GetMostSpecificChild(const SymbolContext& symbol_context,
-                                        uint64_t absolute_address) const;
+                                        uint64_t absolute_address,
+                                        bool recurse_into_inlines = false) const;
 
   // Recursively searches the containing blocks until it finds a function. If this code block is a
-  // function, returns |this| as a Function. Returns null
-  // on error, but this should not happen for well-formed symbols (all code should be inside
-  // functions).
+  // function, returns |this| as a Function. Returns null on error, but this should not happen for
+  // well-formed symbols (all code should be inside functions).
   const Function* GetContainingFunction() const;
 
   // Returns the chain of inline functions to the current code block.

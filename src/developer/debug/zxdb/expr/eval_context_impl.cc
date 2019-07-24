@@ -84,7 +84,6 @@ EvalContextImpl::EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symb
     return;
   const CodeBlock* function = location.symbol().Get()->AsCodeBlock();
   if (function) {
-    // Const cast unfortunately required for RefPtr constructor.
     block_ =
         RefPtrTo(function->GetMostSpecificChild(location.symbol_context(), location.address()));
 
