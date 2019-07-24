@@ -102,6 +102,14 @@ def includes():
 def get_name(export):
   return export['name'][len('magma_'):]
 
+# Generate a 4-digit hex string for a given integer, checking against collisions
+def format_id(id, used):
+  ret = '0x{:04X}'.format(id)
+  if (id > len(used) or used[id]):
+    raise Exception('Command ID collision: ' + ret)
+  used[id] = True
+  return ret
+
 # Generate enum
 def gen_enums(magma):
   global fuchsia
@@ -113,13 +121,19 @@ def gen_enums(magma):
   string_table += tab + 'switch (type) {\n'
   expected_response_table = 'inline enum virtio_magma_ctrl_type virtio_magma_expected_response_type(enum virtio_magma_ctrl_type type) {\n'
   expected_response_table += tab + 'switch (type) {\n'
-  command_id = ' = 0x0400'
-  response_id = ' = 0x1180'
-  error_id = ' = 0x1280'
+  command_id_base = 0x1000
+  response_id_base = 0x2000
+  error_id_base = 0x3000
+  max_id_count = 0x4000
+  used = [False] * max_id_count
   for export in magma['exports']:
     name = get_name(export).upper()
-    commands += tab + 'VIRTIO_MAGMA_CMD_' + name + command_id + ',\n'
-    responses += tab + 'VIRTIO_MAGMA_RESP_' + name + response_id + ',\n'
+    ordinal = export['ordinal']
+    assert ordinal < magma['next-free-ordinal']
+    command_id = command_id_base + ordinal
+    response_id = response_id_base + ordinal
+    commands += tab + 'VIRTIO_MAGMA_CMD_' + name + ' = ' + format_id(command_id, used) + ',\n'
+    responses += tab + 'VIRTIO_MAGMA_RESP_' + name + ' = ' + format_id(response_id, used) + ',\n'
     command_id = response_id = ''
     string_table += tab + tab + 'case VIRTIO_MAGMA_CMD_' + name + ': return "VIRTIO_MAGMA_CMD_' + name + '";\n'
     string_table += tab + tab + 'case VIRTIO_MAGMA_RESP_' + name + ': return "VIRTIO_MAGMA_RESP_' + name + '";\n'
@@ -132,10 +146,11 @@ def gen_enums(magma):
     'VIRTIO_MAGMA_RESP_ERR_INVALID_COMMAND',
     'VIRTIO_MAGMA_RESP_ERR_INVALID_ARGUMENT'
   ]
-  errors += tab + error_names[0] + error_id + ',\n'
-  for error_name in error_names[1:]:
-    errors += tab + error_name + ',\n'
+  error_id = error_id_base + 1
+  for error_name in error_names:
+    errors += tab + error_name + ' = ' + format_id(error_id, used) + ',\n'
     string_table += tab + tab + 'case ' + error_name + ': return "' + error_name + '";\n'
+    error_id = error_id + 1
   string_table += tab + tab + 'default: return "[invalid virtio_magma_ctrl_type]";\n'
   string_table += tab + '}\n'
   string_table += '}\n'

@@ -1,0 +1,20 @@
+{
+  "magma-interface": {
+    "next-free-ordinal": 20,
+    "exports": [
+      {
+        "ordinal": 42,
+        "name": "magma_foo",
+        "type": "magma_status_t",
+        "description": "test",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "test"
+          }
+        ]
+      }
+    ]
+  }
+}

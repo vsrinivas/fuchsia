@@ -26,9 +26,34 @@ action("magma_header_compare") {
   ]
 }
 
+action_foreach("magma_ordinal_error_tests") {
+  # This target validates that the virtio_magma.h generation script catches ordinal errors.
+  testonly = true
+  sources = [
+    "magma_bad-next-free.json",
+    "magma_ordinal-collision.json",
+    "magma_ordinal-overflow.json",
+  ]
+  inputs = [
+    "//garnet/lib/magma/include/virtio/virtio_magma.h.gen.py"
+  ]
+  script = "call_expect_error.sh"
+  args = [
+    rebase_path("$target_gen_dir/{{source_name_part}}-exitcode", root_build_dir),
+    rebase_path("//garnet/lib/magma/include/virtio/virtio_magma.h.gen.py", root_build_dir),
+    "fuchsia",
+    "{{source}}",
+    rebase_path("$target_gen_dir/{{source_name_part}}.h", root_build_dir),
+  ]
+  outputs = [
+    "$target_gen_dir/{{source_name_part}}-exitcode"
+  ]
+}
+
 group("codegen") {
   testonly = true
   deps = [
     ":magma_header_compare",
+    ":magma_ordinal_error_tests",
   ]
 }
