@@ -5,11 +5,11 @@
 #ifndef LIB_INSPECT_CPP_INSPECT_H_
 #define LIB_INSPECT_CPP_INSPECT_H_
 
-#include <string>
-
 #include <lib/fit/result.h>
 #include <lib/inspect/cpp/vmo/state.h>
 #include <lib/inspect/cpp/vmo/types.h>
+
+#include <string>
 
 namespace inspect {
 
@@ -26,11 +26,18 @@ struct InspectSettings {
 // An Inspector owns a particular tree of Inspect data.
 class Inspector final {
  public:
-  // Construct a new tree with the given name and default settings.
+  // Construct a new Inspector with the given name and default settings.
   explicit Inspector(const std::string& name);
 
-  // Construct a new tree with the given name and settings.
+  // Construct a new Inspector with the given name and settings.
   Inspector(const std::string& name, const InspectSettings& settings);
+
+  // Construct a new Inspector with the given name backed by the given VMO.
+  //
+  // The VMO must support ZX_RIGHT_WRITE, ZX_VM_CAN_MAP_WRITE, and ZX_VM_CAN_MAP_READ permissions.
+  //
+  // If an invalid VMO is passed all Node operations will will have no effect.
+  Inspector(const std::string& name, zx::vmo vmo);
 
   // Gets a reference to the VMO backing this inspector's tree if one exists, otherwise return
   // fit::error.
@@ -43,6 +50,11 @@ class Inspector final {
   // Future calls for GetRoot or TakeRoot will return a separate no-op node, but will not crash.
   // DEPRECATED: This function will be removed, do not depend on being able to take the root.
   Node TakeRoot();
+
+  // Boolean value of an Inspector is whether it is actually backed by a VMO.
+  //
+  // This method returns false if and only if Node operations on the Inspector are no-ops.
+  explicit operator bool() { return state_ != nullptr; }
 
  private:
   // The root node for the Inspector.

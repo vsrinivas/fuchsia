@@ -2,18 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
-#include <memory>
-#include <sstream>
-
 #include <lib/fit/result.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/vmo/heap.h>
+
+#include <atomic>
+#include <memory>
+#include <sstream>
 
 namespace inspect {
 
 namespace {
 const InspectSettings kDefaultInspectSettings = {.maximum_size = 256 * 1024};
+
+std::shared_ptr<State> CreateState(zx::vmo vmo) {
+  auto heap = std::make_unique<Heap>(std::move(vmo));
+  auto state = State::Create(std::move(heap));
+  if (!state) {
+    return nullptr;
+  }
+  return state;
+}
+
 }  // namespace
 
 Inspector::Inspector(const std::string& name) : Inspector(name, kDefaultInspectSettings) {}
@@ -25,8 +35,33 @@ Inspector::Inspector(const std::string& name, const InspectSettings& settings)
     return;
   }
 
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  state_ = State::Create(std::move(heap));
+  state_ = CreateState(std::move(vmo));
+  if (!state_) {
+    return;
+  }
+
+  *root_ = state_->CreateNode(name, 0 /* parent */);
+}
+
+Inspector::Inspector(const std::string& name, zx::vmo vmo) : root_(std::make_unique<Node>()) {
+  size_t size;
+
+  zx_status_t status;
+  if (ZX_OK != (status = vmo.get_size(&size))) {
+    return;
+  }
+
+  if (size == 0) {
+    // VMO cannot be zero size.
+    return;
+  }
+
+  // Decommit all pages, reducing memory usage of the VMO and zeroing it.
+  if (ZX_OK != (status = vmo.op_range(ZX_VMO_OP_DECOMMIT, 0, size, nullptr, 0))) {
+    return;
+  }
+
+  state_ = CreateState(std::move(vmo));
   if (!state_) {
     return;
   }
