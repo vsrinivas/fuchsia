@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
+#include <atomic>
+#include <thread>
 #include <vector>
 
 #include <digest/digest.h>
@@ -173,6 +175,29 @@ TEST_F(BlobfsTest, NullBlob) {
 
 TEST_F(BlobfsTestWithFvm, NullBlob) {
     RunNullBlobTest();
+}
+
+void RunExclusiveCreateTest() {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 17, &info));
+    fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+    ASSERT_TRUE(fd);
+
+    fbl::unique_fd fd2(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+    EXPECT_FALSE(fd2, "Should not be able to exclusively create twice");
+
+    // But a second open should work.
+    fd2.reset(open(info->path, O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd2);
+}
+
+TEST_F(BlobfsTest, ExclusiveCreate) {
+    RunExclusiveCreateTest();
+}
+
+TEST_F(BlobfsTestWithFvm, ExclusiveCreate) {
+    RunExclusiveCreateTest();
 }
 
 void RunCompressibleBlobTest(BlobfsTest* test) {
@@ -897,57 +922,31 @@ TEST_F(BlobfsTestWithFvm, CreateUmountRemountSmall) {
     RunCreateUmountRemountSmallTest(this);
 }
 
-/*
-
-static bool check_not_readable(int fd) {
-    BEGIN_HELPER;
-    struct pollfd fds;
-    fds.fd = fd;
-    fds.events = POLLIN;
-    ASSERT_EQ(poll(&fds, 1, 10), 0, "Failed to wait for readable blob");
-
+bool IsReadable(int fd) {
     char buf[1];
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-    ASSERT_LT(read(fd, buf, sizeof(buf)), 0, "Blob should not be readable yet");
-    END_HELPER;
+    return pread(fd, buf, sizeof(buf), 0) == sizeof(buf);
 }
 
-static bool check_readable(int fd) {
-    BEGIN_HELPER;
-    struct pollfd fds;
-    fds.fd = fd;
-    fds.events = POLLIN;
-    ASSERT_EQ(poll(&fds, 1, 10), 1, "Failed to wait for readable blob");
-    ASSERT_EQ(fds.revents, POLLIN);
+// Tests that we cannot read from the Blob until it has been fully written.
+void RunEarlyReadTest() {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
 
-    char buf[1];
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-    ASSERT_EQ(read(fd, buf, sizeof(buf)), sizeof(buf));
-    END_HELPER;
-}
-
-static bool EarlyRead(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    // Check that we cannot read from the Blob until it has been fully written
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << 17, &info));
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 17, &info));
     fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
-    ASSERT_TRUE(fd, "Failed to create blob");
+    ASSERT_TRUE(fd);
 
-    ASSERT_LT(open(info->path, O_CREAT | O_EXCL | O_RDWR), 0,
-              "Should not be able to exclusively create twice");
-
-    // This second fd should also not be readable
+    // A second fd should also not be readable.
     fbl::unique_fd fd2(open(info->path, O_CREAT | O_RDWR));
-    ASSERT_TRUE(fd2, "Failed to create blob");
+    ASSERT_TRUE(fd2);
 
-    ASSERT_TRUE(check_not_readable(fd.get()), "Should not be readable after open");
-    ASSERT_TRUE(check_not_readable(fd2.get()), "Should not be readable after open");
-    ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
-    ASSERT_TRUE(check_not_readable(fd.get()), "Should not be readable after alloc");
-    ASSERT_TRUE(check_not_readable(fd2.get()), "Should not be readable after alloc");
-    ASSERT_EQ(fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
+    ASSERT_FALSE(IsReadable(fd.get()), "Should not be readable after open");
+    ASSERT_FALSE(IsReadable(fd2.get()), "Should not be readable after open");
+
+    ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
+    ASSERT_FALSE(IsReadable(fd.get()), "Should not be readable after alloc");
+    ASSERT_FALSE(IsReadable(fd2.get()), "Should not be readable after alloc");
+
+    ASSERT_EQ(0, fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data),
               "Failed to write Data");
 
     // Okay, NOW we can read.
@@ -955,87 +954,76 @@ static bool EarlyRead(BlobfsTest* blobfsTest) {
     ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
     ASSERT_TRUE(fs_test_utils::VerifyContents(fd2.get(), info->data.get(), info->size_data));
 
-    // Cool, everything is readable. What if we try accessing the blob status now?
-    EXPECT_TRUE(check_readable(fd.get()));
-
-    ASSERT_EQ(close(fd.release()), 0);
-    ASSERT_EQ(close(fd2.release()), 0);
-    ASSERT_EQ(unlink(info->path), 0);
-    END_HELPER;
+    ASSERT_TRUE(IsReadable(fd.get()));
 }
 
-static bool wait_readable(int fd) {
-    BEGIN_HELPER;
+TEST_F(BlobfsTest, EarlyRead) {
+    RunEarlyReadTest();
+}
+
+TEST_F(BlobfsTestWithFvm, EarlyRead) {
+    RunEarlyReadTest();
+}
+
+// Waits for up to 10 seconds until the file is readable. Returns 0 on success.
+void CheckReadable(fbl::unique_fd fd, std::atomic<bool>* result) {
     struct pollfd fds;
-    fds.fd = fd;
+    fds.fd = fd.get();
     fds.events = POLLIN;
-    ASSERT_EQ(poll(&fds, 1, 10000), 1, "Failed to wait for readable blob");
-    ASSERT_EQ(fds.revents, POLLIN);
-    END_HELPER;
-}
 
-// Check that we cannot read from the Blob until it has been fully written
-static bool WaitForRead(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << 17, &info));
-    fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
-    ASSERT_TRUE(fd, "Failed to create blob");
-
-    ASSERT_LT(open(info->path, O_CREAT | O_EXCL | O_RDWR), 0,
-              "Should not be able to exclusively create twice");
-
-    // Launch a background thread to wait for fd to become readable
-    auto wait_until_readable = [](void* arg) {
-        fbl::unique_fd fd(*static_cast<int*>(arg));
-        if (!wait_readable(fd.get())) {
-            return -1;
-        }
-
-        if (!check_readable(fd.get())) {
-            return -1;
-        }
-
-        if (close(fd.release()) != 0) {
-            return -1;
-        }
-
-        return 0;
-    };
-
-    int dupfd = dup(fd.get());
-    thrd_t waiter_thread;
-    thrd_create(&waiter_thread, wait_until_readable, &dupfd);
-    int result;
-    int success;
-
-    {
-        // In case the test fails, join the thread before returning from the test.
-        auto join_thread = fbl::MakeAutoCall([&]() {
-            success = thrd_join(waiter_thread, &result);
-        });
-
-        ASSERT_TRUE(check_not_readable(fd.get()), "Should not be readable after open");
-        ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
-        ASSERT_TRUE(check_not_readable(fd.get()), "Should not be readable after alloc");
-        ASSERT_EQ(fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
-                "Failed to write Data");
-
-        // Cool, everything is readable. What if we try accessing the blob status now?
-        EXPECT_TRUE(check_readable(fd.get()));
+    if (poll(&fds, 1, 10000) != 1) {
+        printf("Failed to wait for readable blob\n");
+        *result = false;
     }
 
-    // Our background thread should have also completed successfully...
-    ASSERT_EQ(success, thrd_success, "thrd_join failed");
-    ASSERT_EQ(result, 0, "Unexpected result from background thread");
+    if (fds.revents != POLLIN) {
+        printf("Unexpected event\n");
+        *result = false;
+    }
+
+    if (!IsReadable(fd.get())) {
+        printf("Not readable\n");
+        *result = false;
+    }
+
+    *result = true;
+}
+
+// Tests that poll() can tell, at some point, when it's ok to read.
+void RunWaitForReadTest() {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 17, &info));
+    fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+    ASSERT_TRUE(fd);
+
+    {
+        // Launch a background thread to wait for the file to become readable.
+        std::atomic<bool> result;
+        std::thread waiter_thread(CheckReadable, std::move(fd), &result);
+
+        MakeBlob(info.get(), &fd);
+
+        waiter_thread.join();
+        ASSERT_TRUE(result.load(), "Background operation failed");
+    }
+
+    // Before continuing, make sure that MakeBlob was successful.
+    ASSERT_NO_FAILURES();
 
     // Double check that attempting to read early didn't cause problems...
     ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-    ASSERT_EQ(close(fd.release()), 0);
-    ASSERT_EQ(unlink(info->path), 0);
-    END_HELPER;
 }
+
+TEST_F(BlobfsTest, WaitForRead) {
+    RunWaitForReadTest();
+}
+
+TEST_F(BlobfsTestWithFvm, WaitForRead) {
+    RunWaitForReadTest();
+}
+
+/*
 
 // Check that seeks during writing are ignored
 static bool WriteSeekIgnored(BlobfsTest* blobfsTest) {
@@ -2114,8 +2102,6 @@ BEGIN_TEST_CASE(blobfs_tests)
 RUN_TESTS(MEDIUM, TestDiskTooSmall)
 RUN_TESTS_SILENT(MEDIUM, CorruptedBlob)
 RUN_TESTS_SILENT(MEDIUM, CorruptedDigest)
-RUN_TESTS(MEDIUM, EarlyRead)
-RUN_TESTS(MEDIUM, WaitForRead)
 RUN_TESTS(MEDIUM, WriteSeekIgnored)
 RUN_TESTS(MEDIUM, UnlinkTiming)
 RUN_TESTS(MEDIUM, InvalidOps)
