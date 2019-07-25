@@ -12,7 +12,7 @@
   "pkg/zx/include/lib/zx/interrupt.h": "5780515194251239ab37cf0f4917ae39",
   "pkg/zx/include/lib/zx/iommu.h": "1317e7341bfb0e30d97c0c8c56951015",
   "pkg/zx/include/lib/zx/job.h": "b579e06a11f0e5d9b231a571557b455b",
-  "pkg/zx/include/lib/zx/object.h": "e1389a24a6da6632834bbf6080b55b6b",
+  "pkg/zx/include/lib/zx/object.h": "20763b45a5313cdd9972ca57181f25d2",
   "pkg/zx/include/lib/zx/object_traits.h": "1494ef96f756b9755a229d25849c08c7",
   "pkg/zx/include/lib/zx/pager.h": "8c917ee38ee33c566575616189afab5c",
   "pkg/zx/include/lib/zx/pmt.h": "71cd61ab2fd0b81246e01955fac04426",

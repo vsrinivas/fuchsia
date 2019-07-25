@@ -11,6 +11,7 @@ group("test") {
 
 test("zx") {
   sources = [
+    "object-test.cc",
     "traits.cc",
     "zx-test.cc",
   ]

@@ -313,6 +313,78 @@ private:
     T value_;
 };
 
+template <typename T> bool operator==(const unowned<T>& a, const unowned<T>& b) {
+    return a->get() == b->get();
+}
+
+template <typename T> bool operator!=(const unowned<T>& a, const unowned<T>& b) {
+    return !(a == b);
+}
+
+template <typename T> bool operator<(const unowned<T>& a, const unowned<T>& b) {
+    return a->get() < b->get();
+}
+
+template <typename T> bool operator>(const unowned<T>& a, const unowned<T>& b) {
+    return a->get() > b->get();
+}
+
+template <typename T> bool operator<=(const unowned<T>& a, const unowned<T>& b) {
+    return !(a > b);
+}
+
+template <typename T> bool operator>=(const unowned<T>& a, const unowned<T>& b) {
+    return !(a < b);
+}
+
+template <typename T> bool operator==(zx_handle_t a, const unowned<T>& b) {
+    return a == b->get();
+}
+
+template <typename T> bool operator!=(zx_handle_t a, const unowned<T>& b) {
+    return !(a == b);
+}
+
+template <typename T> bool operator<(zx_handle_t a, const unowned<T>& b) {
+    return a < b->get();
+}
+
+template <typename T> bool operator>(zx_handle_t a, const unowned<T>& b) {
+    return a > b->get();
+}
+
+template <typename T> bool operator<=(zx_handle_t a, const unowned<T>& b) {
+    return !(a > b);
+}
+
+template <typename T> bool operator>=(zx_handle_t a, const unowned<T>& b) {
+    return !(a < b);
+}
+
+template <typename T> bool operator==(const unowned<T>& a, zx_handle_t b) {
+    return a->get() == b;
+}
+
+template <typename T> bool operator!=(const unowned<T>& a, zx_handle_t b) {
+    return !(a == b);
+}
+
+template <typename T> bool operator<(const unowned<T>& a, zx_handle_t b) {
+    return a->get() < b;
+}
+
+template <typename T> bool operator>(const unowned<T>& a, zx_handle_t b) {
+    return a->get() > b;
+}
+
+template <typename T> bool operator<=(const unowned<T>& a, zx_handle_t b) {
+    return !(a > b);
+}
+
+template <typename T> bool operator>=(const unowned<T>& a, zx_handle_t b) {
+    return !(a < b);
+}
+
 } // namespace zx
 
 #endif  // LIB_ZX_OBJECT_H_
