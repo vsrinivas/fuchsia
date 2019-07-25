@@ -16,6 +16,7 @@ use log::{debug, error};
 use net_types::ip::{IpAddress, Ipv4Addr};
 use net_types::MulticastAddr;
 use packet::{Buf, BufferMut, InnerPacketBuilder};
+use rand::Rng;
 use specialize_ip_macro::specialize_ip_address;
 use zerocopy::ByteSlice;
 
@@ -51,16 +52,16 @@ pub(crate) fn receive_igmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
 
         if let Err(e) = match packet {
             IgmpPacket::MembershipQueryV2(msg) => {
-                let now = ctx.dispatcher().now();
-                handle_igmp_message(ctx, device, msg, |state, msg| {
-                    state.query_received(msg.max_response_time().into(), now)
+                let now = ctx.dispatcher.now();
+                handle_igmp_message(ctx, device, msg, |rng, state, msg| {
+                    state.query_received(rng, msg.max_response_time().into(), now)
                 })
             }
             IgmpPacket::MembershipReportV1(msg) => {
-                handle_igmp_message(ctx, device, msg, |state, _| state.report_received())
+                handle_igmp_message(ctx, device, msg, |_, state, _| state.report_received())
             }
             IgmpPacket::MembershipReportV2(msg) => {
-                handle_igmp_message(ctx, device, msg, |state, _| state.report_received())
+                handle_igmp_message(ctx, device, msg, |_, state, _| state.report_received())
             }
             IgmpPacket::LeaveGroup(_) => {
                 debug!("Hosts are not interested in Leave Group messages");
@@ -90,17 +91,21 @@ where
     D: EventDispatcher,
     B: ByteSlice,
     M: MessageType<B, FixedHeader = Ipv4Addr>,
-    F: Fn(&mut IgmpGroupState<D::Instant>, &IgmpMessage<B, M>) -> Actions<Igmpv2ProtocolSpecific>,
+    F: Fn(
+        &mut D::Rng,
+        &mut IgmpGroupState<D::Instant>,
+        &IgmpMessage<B, M>,
+    ) -> Actions<Igmpv2ProtocolSpecific>,
 {
     let group_addr = msg.group_addr();
+    let (state, dispatcher) = ctx.state_and_dispatcher();
     if group_addr.is_unspecified() {
-        let mut addr_and_actions = ctx
-            .state_mut()
+        let mut addr_and_actions = state
             .ip
             .get_igmp_state_mut(device.id())
             .groups
             .iter_mut()
-            .map(|(addr, state)| (addr.clone(), handler(state, &msg)))
+            .map(|(addr, state)| (addr.clone(), handler(dispatcher.rng(), state, &msg)))
             .collect::<Vec<_>>();
         // `addr` must be a multicast address, otherwise it will not have
         // an associated state in the first place
@@ -109,11 +114,10 @@ where
         }
         Ok(())
     } else if let Some(group_addr) = MulticastAddr::new(group_addr) {
-        let actions =
-            match ctx.state_mut().ip.get_igmp_state_mut(device.id()).groups.get_mut(&group_addr) {
-                Some(state) => handler(state, &msg),
-                None => return Err(IgmpError::NotAMember { addr: *group_addr }),
-            };
+        let actions = match state.ip.get_igmp_state_mut(device.id()).groups.get_mut(&group_addr) {
+            Some(state) => handler(dispatcher.rng(), state, &msg),
+            None => return Err(IgmpError::NotAMember { addr: *group_addr }),
+        };
         // `group_addr` here must be a multicast address for similar reasons
         run_actions(ctx, device, actions, group_addr);
         Ok(())
@@ -386,12 +390,13 @@ fn run_action<D: EventDispatcher>(
 }
 
 impl<I: Instant> IgmpInterface<I> {
-    fn join_group(
+    fn join_group<R: Rng>(
         &mut self,
+        rng: &mut R,
         addr: MulticastAddr<Ipv4Addr>,
         now: I,
     ) -> Actions<Igmpv2ProtocolSpecific> {
-        self.groups.entry(addr).or_insert(GmpStateMachine::default()).join_group(now)
+        self.groups.entry(addr).or_insert(GmpStateMachine::default()).join_group(rng, now)
     }
 
     fn leave_group(
@@ -413,8 +418,10 @@ pub(crate) fn igmp_join_group<D>(
 ) where
     D: EventDispatcher,
 {
-    let now = ctx.dispatcher().now();
-    let actions = ctx.state_mut().ip.get_igmp_state_mut(device.id()).join_group(group_addr, now);
+    let (state, dispatcher) = ctx.state_and_dispatcher();
+    let now = dispatcher.now();
+    let rng = dispatcher.rng();
+    let actions = state.ip.get_igmp_state_mut(device.id()).join_group(rng, group_addr, now);
     // actions will be `Nothing` if the the host is not in the `NonMember` state.
     run_actions(ctx, device, actions, group_addr);
 }
@@ -461,9 +468,10 @@ mod tests {
 
     #[test]
     fn test_igmp_state_with_igmpv1_router() {
+        let mut rng = new_rng(0);
         let mut s = IgmpGroupState::default();
-        s.join_group(time::Instant::now());
-        s.query_received(Duration::from_secs(0), time::Instant::now());
+        s.join_group(&mut rng, time::Instant::now());
+        s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
         let actions = s.report_timer_expired();
         at_least_one_action(
             actions,
@@ -476,8 +484,9 @@ mod tests {
     #[test]
     fn test_igmp_state_igmpv1_router_present_timer_expires() {
         let mut s = IgmpGroupState::default();
-        s.join_group(time::Instant::now());
-        s.query_received(Duration::from_secs(0), time::Instant::now());
+        let mut rng = new_rng(0);
+        s.join_group(&mut rng, time::Instant::now());
+        s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
         match s.get_inner() {
             MemberState::Delaying(state) => {
                 assert!(state.get_protocol_specific().v1_router_present);
@@ -491,7 +500,7 @@ mod tests {
             }
             _ => panic!("Wrong State!"),
         }
-        s.query_received(Duration::from_secs(0), time::Instant::now());
+        s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
         s.report_received();
         s.v1_router_present_timer_expired();
         match s.get_inner() {
