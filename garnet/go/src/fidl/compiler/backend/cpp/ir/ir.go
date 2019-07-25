@@ -481,6 +481,9 @@ func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier
 		strs = append(strs, c.namespaceFormatter(val.Library, appendNamespace))
 	}
 	strs = append(strs, changeIfReserved(val.Name, ext))
+	if string(val.Member) != "" {
+		strs = append(strs, string(val.Member))
+	}
 	return strings.Join(strs, "::")
 }
 
@@ -532,11 +535,7 @@ func (c *compiler) compileLiteral(val types.Literal, typ types.Type) string {
 func (c *compiler) compileConstant(val types.Constant, t *Type, typ types.Type, appendNamespace string) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
-		v := c.compileCompoundIdentifier(val.Identifier, "", appendNamespace)
-		if t != nil && (t.DeclType == types.BitsDeclType || t.DeclType == types.EnumDeclType) {
-			v = fmt.Sprintf("%s::%s", t.Decl, v)
-		}
-		return v
+		return c.compileCompoundIdentifier(val.Identifier, "", appendNamespace)
 	case types.LiteralConstant:
 		return c.compileLiteral(val.Literal, typ)
 	default:

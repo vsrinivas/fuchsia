@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fstream>
+
 #include <fidl/flat_ast.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
 #include <unittest/unittest.h>
-
-#include <fstream>
 
 #include "examples.h"
 #include "test_library.h"
@@ -359,12 +359,10 @@ protocol EmptyProtocol {
 // This targets a specific issue with identifier naming where the identifier
 // library is incorrectly the current library name rather than the name of the
 // identifiers own library.
-// TODO(FIDL-735) Update this test when the bug is fixed.
 bool json_generator_test_struct_default_value_enum_library_reference() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-
     SharedAmongstLibraries shared;
     TestLibrary dependency("dependent.fidl", R"FIDL(
   library dependent;
@@ -374,7 +372,7 @@ bool json_generator_test_struct_default_value_enum_library_reference() {
   };
 
   )FIDL",
-                          &shared);
+                           &shared);
     ASSERT_TRUE(dependency.Compile());
 
     TestLibrary library("example.fidl", R"FIDL(
@@ -431,7 +429,7 @@ bool json_generator_test_struct_default_value_enum_library_reference() {
           },
           "maybe_default_value": {
             "kind": "identifier",
-            "identifier": "example/A"
+            "identifier": "dependent/MyEnum.A"
           },
           "size": 4,
           "max_out_of_line": 0,
@@ -1733,6 +1731,8 @@ struct Struct {
   int64 int64_with_default = 007;
   string string_with_default = "stuff";
   bool bool_with_default = true;
+  Enum enum_with_default = Enum.E;
+  Bits bits_with_default = Bits.B;
 };
 
 )FIDL",
@@ -2131,9 +2131,53 @@ struct Struct {
           "alignment": 1,
           "offset": 24,
           "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "values/Enum",
+            "nullable": false
+          },
+          "name": "enum_with_default",
+          "location": {
+            "filename": "json.fidl",
+            "line": 29,
+            "column": 8
+          },
+          "maybe_default_value": {
+            "kind": "identifier",
+            "identifier": "values/Enum.E"
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 28,
+          "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "values/Bits",
+            "nullable": false
+          },
+          "name": "bits_with_default",
+          "location": {
+            "filename": "json.fidl",
+            "line": 30,
+            "column": 8
+          },
+          "maybe_default_value": {
+            "kind": "identifier",
+            "identifier": "values/Bits.B"
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 32,
+          "max_handles": 0
         }
       ],
-      "size": 32,
+      "size": 40,
       "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 0,
@@ -2149,7 +2193,6 @@ struct Struct {
     "values/UINT64",
     "values/UINT32",
     "values/UINT16",
-    "values/Struct",
     "values/STRING",
     "values/INT8",
     "values/INT64",
@@ -2159,6 +2202,7 @@ struct Struct {
     "values/FLOAT32",
     "values/Enum",
     "values/Bits",
+    "values/Struct",
     "values/BOOL"
   ],
   "declarations": {
