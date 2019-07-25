@@ -15,7 +15,7 @@ template("crashpad_agent_package") {
 
     meta = [
       {
-        path = rebase_path("meta/crashpad_agent.cmx")
+        path = "meta/crashpad_agent.cmx"
         dest = "crashpad_agent.cmx"
       },
     ]

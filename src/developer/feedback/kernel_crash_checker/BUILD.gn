@@ -18,7 +18,7 @@ package("kernel_crash_checker") {
 
   meta = [
     {
-      path = rebase_path("meta/kernel_crash_checker.cmx")
+      path = "meta/kernel_crash_checker.cmx"
       dest = "kernel_crash_checker.cmx"
     },
   ]
