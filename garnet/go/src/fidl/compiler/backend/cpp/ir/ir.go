@@ -197,6 +197,10 @@ type Interface struct {
 	EventSenderName       string
 	SyncName              string
 	SyncProxyName         string
+	RequestEncoderName    string
+	RequestDecoderName    string
+	ResponseEncoderName   string
+	ResponseDecoderName   string
 	Methods               []Method
 	HasEvents             bool
 	StackAllocEventBuffer bool
@@ -795,16 +799,20 @@ func (m Method) NewLLProps(r Interface) LLProps {
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
-		Attributes:      val.Attributes,
-		Namespace:       c.namespace,
-		Name:            c.compileCompoundIdentifier(val.Name, "", ""),
-		ClassName:       c.compileCompoundIdentifier(val.Name, "_clazz", ""),
-		ServiceName:     val.GetServiceName(),
-		ProxyName:       c.compileCompoundIdentifier(val.Name, "_Proxy", ""),
-		StubName:        c.compileCompoundIdentifier(val.Name, "_Stub", ""),
-		EventSenderName: c.compileCompoundIdentifier(val.Name, "_EventSender", ""),
-		SyncName:        c.compileCompoundIdentifier(val.Name, "_Sync", ""),
-		SyncProxyName:   c.compileCompoundIdentifier(val.Name, "_SyncProxy", ""),
+		Attributes:          val.Attributes,
+		Namespace:           c.namespace,
+		Name:                c.compileCompoundIdentifier(val.Name, "", ""),
+		ClassName:           c.compileCompoundIdentifier(val.Name, "_clazz", ""),
+		ServiceName:         val.GetServiceName(),
+		ProxyName:           c.compileCompoundIdentifier(val.Name, "_Proxy", ""),
+		StubName:            c.compileCompoundIdentifier(val.Name, "_Stub", ""),
+		EventSenderName:     c.compileCompoundIdentifier(val.Name, "_EventSender", ""),
+		SyncName:            c.compileCompoundIdentifier(val.Name, "_Sync", ""),
+		SyncProxyName:       c.compileCompoundIdentifier(val.Name, "_SyncProxy", ""),
+		RequestEncoderName:  c.compileCompoundIdentifier(val.Name, "_RequestEncoder", ""),
+		RequestDecoderName:  c.compileCompoundIdentifier(val.Name, "_RequestDecoder", ""),
+		ResponseEncoderName: c.compileCompoundIdentifier(val.Name, "_ResponseEncoder", ""),
+		ResponseDecoderName: c.compileCompoundIdentifier(val.Name, "_ResponseDecoder", ""),
 	}
 
 	hasEvents := false

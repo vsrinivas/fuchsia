@@ -17,6 +17,13 @@ class SwitchingOrdinals_EventSender;
 class SwitchingOrdinals_Sync;
 using SwitchingOrdinalsSyncPtr = ::fidl::SynchronousInterfacePtr<SwitchingOrdinals>;
 class SwitchingOrdinals_SyncProxy;
+namespace internal {
+constexpr uint64_t kSwitchingOrdinals_OrdinalFive_Ordinal = 0x7784636700000000lu;
+constexpr uint64_t kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal = 0x27c9581f00000000lu;
+constexpr uint64_t kSwitchingOrdinals_EventOrdinalFifteen_Ordinal = 0x577495a100000000lu;
+constexpr uint64_t kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal = 0x7fec464e00000000lu;
+
+}  // namespace
 #endif // __Fuchsia__
 #ifdef __Fuchsia__
 
@@ -35,6 +42,108 @@ class SwitchingOrdinals {
       fit::function<void()>;
   using EventOnlyGeneratedOrdinalCallback =
       fit::function<void()>;
+};
+
+class SwitchingOrdinals_RequestEncoder {
+ public:
+  static ::fidl::Message OrdinalFive(::fidl::Encoder* _encoder) {
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    return _encoder->GetMessage();
+  }
+  static ::fidl::Message OnlyGeneratedOrdinal(::fidl::Encoder* _encoder) {
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    return _encoder->GetMessage();
+  }
+};
+
+class SwitchingOrdinals_RequestDecoder {
+ public:
+  SwitchingOrdinals_RequestDecoder() = default;
+  virtual ~SwitchingOrdinals_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  zx_status_t Decode_(::fidl::Message request) {
+    bool needs_response;
+    const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = request.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder request_decoder(std::move(request));
+    switch (request.ordinal()) {
+      case internal::kSwitchingOrdinals_OrdinalFive_Ordinal:
+      {
+        OrdinalFive();
+        break;
+      }
+      case internal::kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal:
+      {
+        OnlyGeneratedOrdinal();
+        break;
+      }
+      default: {
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+      }
+    }
+    return status;
+  }
+  virtual void OrdinalFive() = 0;
+  virtual void OnlyGeneratedOrdinal() = 0;
+};
+
+class SwitchingOrdinals_ResponseEncoder {
+ public:
+  static ::fidl::Message EventOrdinalFifteen(::fidl::Encoder* _encoder) {
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    return _encoder->GetMessage();
+  }
+  static ::fidl::Message EventOnlyGeneratedOrdinal(::fidl::Encoder* _encoder) {
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    return _encoder->GetMessage();
+  }
+};
+
+class SwitchingOrdinals_ResponseDecoder {
+ public:
+  SwitchingOrdinals_ResponseDecoder() = default;
+  virtual ~SwitchingOrdinals_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+  zx_status_t Decode_(::fidl::Message response) {
+    const fidl_type_t* response_type = GetType(response.ordinal());
+    if (response_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = response.Decode(response_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder response_decoder(std::move(response));
+    switch (response.ordinal()) {
+      case internal::kSwitchingOrdinals_EventOrdinalFifteen_Ordinal:
+      {
+        EventOrdinalFifteen();
+        break;
+      }
+      case internal::kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal:
+      {
+        EventOnlyGeneratedOrdinal();
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    return ZX_OK;
+  }
+  virtual void EventOrdinalFifteen() = 0;
+  virtual void EventOnlyGeneratedOrdinal() = 0;
 };
 
 class SwitchingOrdinals_EventSender {

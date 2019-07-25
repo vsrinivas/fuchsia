@@ -15,12 +15,27 @@ class {{ .EventSenderName }};
 class {{ .SyncName }};
 using {{ .Name }}SyncPtr = ::fidl::SynchronousInterfacePtr<{{ .Name }}>;
 class {{ .SyncProxyName }};
+namespace internal {
+
+{{- range .Methods }}
+  {{- range .Ordinals.Reads }}
+constexpr uint64_t {{ .Name }} = {{ .Ordinal }}lu;
+  {{- end }}
+{{- end }}
+
+}  // namespace
 #endif // __Fuchsia__
 {{- end }}
 
 {{- define "Params" -}}
   {{- range $index, $param := . -}}
     {{- if $index }}, {{ end -}}{{ $param.Type.Decl }} {{ $param.Name }}
+  {{- end -}}
+{{ end }}
+
+{{- define "PointerParams" -}}
+  {{- range $index, $param := . -}}
+    , {{ $param.Type.Decl }}* {{ $param.Name }}
   {{- end -}}
 {{ end }}
 
@@ -86,6 +101,140 @@ class {{ .Name }} {
       {{- else }}
   virtual void {{ template "RequestMethodSignature" . }} = 0;
       {{- end }}
+    {{- end }}
+  {{- end }}
+};
+
+class {{ .RequestEncoderName }} {
+ public:
+  {{- range .Methods }}
+    {{- if .HasRequest }}
+  static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Request }}) {
+    _encoder->Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
+    {{- range .Request }}
+    ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
+    {{- end }}
+    return _encoder->GetMessage();
+  }
+    {{- end }}
+  {{- end }}
+};
+
+class {{ .RequestDecoderName }} {
+ public:
+  {{ .RequestDecoderName }}() = default;
+  virtual ~{{ .RequestDecoderName }}() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  zx_status_t Decode_(::fidl::Message request) {
+    bool needs_response;
+    const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = request.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder request_decoder(std::move(request));
+    switch (request.ordinal()) {
+      {{- range .Methods }}
+        {{- if .HasRequest }}
+          {{- range .Ordinals.Reads }}
+      case internal::{{ .Name }}:
+          {{- end }}
+      {
+          {{- if .Request }}
+            {{- range $index, $param := .Request }}
+        auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&request_decoder, {{ .Offset }});
+            {{- end }}
+          {{- end }}
+        {{ .Name }}(
+          {{- range $index, $param := .Request -}}
+            {{- if $index }}, {{ end }}std::move(arg{{ $index }})
+          {{- end -}}
+        );
+        break;
+      }
+        {{- end }}
+      {{- end }}
+      default: {
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+      }
+    }
+    return status;
+  }
+
+  {{- range .Methods }}
+    {{- if .HasRequest }}
+  virtual void {{ .Name }}({{ template "Params" .Request }}) = 0;
+    {{- end }}
+  {{- end }}
+};
+
+class {{ .ResponseEncoderName }} {
+ public:
+  {{- range .Methods }}
+    {{- if .HasResponse }}
+  static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Response }}) {
+    _encoder->Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
+      {{- range .Response }}
+    ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
+      {{- end }}
+    return _encoder->GetMessage();
+  }
+    {{- end }}
+  {{- end }}
+};
+
+class {{ .ResponseDecoderName }} {
+ public:
+  {{ .ResponseDecoderName }}() = default;
+  virtual ~{{ .ResponseDecoderName }}() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+  zx_status_t Decode_(::fidl::Message response) {
+    const fidl_type_t* response_type = GetType(response.ordinal());
+    if (response_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = response.Decode(response_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder response_decoder(std::move(response));
+    switch (response.ordinal()) {
+      {{- range .Methods }}
+        {{- if .HasResponse }}
+          {{- range .Ordinals.Reads }}
+      case internal::{{ .Name }}:
+          {{- end }}
+      {
+            {{- range $index, $param := .Response }}
+        auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&response_decoder, {{ .Offset }});
+            {{- end }}
+        {{ .Name }}(
+          {{- range $index, $param := .Response -}}
+            {{- if $index }}, {{ end }}std::move(arg{{ $index }})
+          {{- end -}}
+        );
+        break;
+      }
+        {{- end }}
+      {{- end }}
+      default: {
+        break;
+      }
+    }
+    return ZX_OK;
+  }
+
+  {{- range .Methods }}
+    {{- if .HasResponse }}
+  virtual void {{ .Name }}({{ template "Params" .Response }}) = 0;
     {{- end }}
   {{- end }}
 };
@@ -181,15 +330,12 @@ class {{ .SyncProxyName }} : public {{ .SyncName }} {
 namespace {
 
 {{- range .Methods }}
-  {{- range .Ordinals.Reads }}
-constexpr uint64_t {{ .Name }} = {{ .Ordinal }}lu;
-  {{- end }}
-  {{- if .HasRequest }}
+{{ if .HasRequest }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
-  {{- end }}
-  {{- if .HasResponse }}
+{{- end }}
+{{- if .HasResponse }}
 extern "C" const fidl_type_t {{ .ResponseTypeName }};
-  {{- end }}
+{{- end }}
 {{- end }}
 
 }  // namespace
@@ -199,6 +345,42 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{- if .ServiceName }}
 const char {{ .Name }}::Name_[] = {{ .ServiceName }};
 {{- end }}
+
+const fidl_type_t* {{ .RequestDecoderName }}::GetType(uint64_t ordinal, bool* out_needs_response) {
+  switch (ordinal) {
+    {{- range .Methods }}
+      {{- if .HasRequest }}
+          {{- range .Ordinals.Reads }}
+    case internal::{{ .Name }}:
+          {{- end }}
+        {{- if .HasResponse }}
+      *out_needs_response = true;
+        {{- else }}
+      *out_needs_response = false;
+        {{- end }}
+      return &{{ .RequestTypeName }};
+      {{- end }}
+    {{- end }}
+    default:
+      *out_needs_response = false;
+      return nullptr;
+  }
+}
+
+const fidl_type_t* {{ .ResponseDecoderName }}::GetType(uint64_t ordinal) {
+  switch (ordinal) {
+    {{- range .Methods }}
+      {{- if .HasResponse }}
+          {{- range .Ordinals.Reads }}
+    case internal::{{ .Name }}:
+          {{- end }}
+      return &{{ .ResponseTypeName }};
+      {{- end }}
+    {{- end }}
+    default:
+      return nullptr;
+  }
+}
 
 {{ .EventSenderName }}::~{{ .EventSenderName }}() = default;
 
@@ -218,7 +400,7 @@ zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message message) {
       {{- if not .HasRequest }}
         {{- if .HasResponse }}
           {{- range .Ordinals.Reads }}
-    case {{ .Name }}:
+    case internal::{{ .Name }}:
           {{- end }}
     {
       if (!{{ .Name }}) {
@@ -299,18 +481,18 @@ class {{ .ResponseHandlerType }} final : public ::fidl::internal::MessageHandler
 }  // namespace
 {{- end }}
 void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
-  ::fidl::Encoder _encoder({{ .Ordinals.Write.Name }});
-    {{- if .Request }}
-  _encoder.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
-      {{- range .Request }}
-  ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
-      {{- end }}
-    {{- end }}
-    {{- if .HasResponse }}
-  controller_->Send(&{{ .RequestTypeName }}, _encoder.GetMessage(), std::make_unique<{{ .ResponseHandlerType }}>(std::move(callback)));
-    {{- else }}
-  controller_->Send(&{{ .RequestTypeName }}, _encoder.GetMessage(), nullptr);
-    {{- end }}
+  ::fidl::Encoder _encoder(internal::{{ .Ordinals.Write.Name }});
+  controller_->Send(&{{ .RequestTypeName }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
+  {{- range $index, $param := .Request -}}
+    , &{{ $param.Name }}
+  {{- end -}}
+  )
+  {{- if .HasResponse -}}
+    , std::make_unique<{{ .ResponseHandlerType }}>(std::move(callback))
+  {{- else -}}
+    , nullptr
+  {{- end -}}
+  );
 }
   {{- end }}
 {{- end }}
@@ -328,23 +510,20 @@ namespace {
 
 class {{ .ResponderType }} final {
  public:
-  {{ .ResponderType }}(::fidl::internal::PendingResponse response, uint64_t ordinal)
-      : response_(std::move(response)), ordinal_(ordinal) {}
+  {{ .ResponderType }}(::fidl::internal::PendingResponse response)
+      : response_(std::move(response)) {}
 
   void operator()({{ template "Params" .Response }}) {
-    ::fidl::Encoder _encoder(ordinal_);
-      {{- if .Response }}
-    _encoder.Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
-        {{- range .Response }}
-    ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
-        {{- end }}
-      {{- end }}
-    response_.Send(&{{ .ResponseTypeName }}, _encoder.GetMessage());
+    ::fidl::Encoder _encoder(internal::{{ .Ordinals.Write.Name }});
+    response_.Send(&{{ .ResponseTypeName }}, {{ $.ResponseEncoderName }}::{{ .Name }}(&_encoder
+  {{- range $index, $param := .Response -}}
+    , &{{ $param.Name }}
+  {{- end -}}
+  ));
   }
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint64_t ordinal_;
 };
     {{- end }}
   {{- end }}
@@ -355,27 +534,33 @@ class {{ .ResponderType }} final {
 zx_status_t {{ .StubName }}::Dispatch_(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
-  zx_status_t status = ZX_OK;
+  bool needs_response;
+  const fidl_type_t* request_type = {{ .RequestDecoderName }}::GetType(message.ordinal(), &needs_response);
+  if (request_type == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Decode(request_type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+    return status;
+  }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     {{- range .Methods }}
       {{- if .HasRequest }}
         {{- range .Ordinals.Reads }}
-    case {{ .Name }}:
+    case internal::{{ .Name }}:
         {{- end }}
     {
-      {{- if .HasResponse }}
-      if (!response.needs_response()) {
-        FIDL_REPORT_DECODING_ERROR(message, &{{ .RequestTypeName }}, "Message needing a response with no txid");
-        return ZX_ERR_INVALID_ARGS;
-      }
-      {{- end }}
-      const char* error_msg = nullptr;
-      status = message.Decode(&{{ .RequestTypeName }}, &error_msg);
-      if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(message, &{{ .RequestTypeName }}, error_msg);
-        break;
-      }
         {{- if .Request }}
       ::fidl::Decoder decoder(std::move(message));
           {{- range $index, $param := .Request }}
@@ -387,7 +572,7 @@ zx_status_t {{ .StubName }}::Dispatch_(
           {{- if $index }}, {{ end }}std::move(arg{{ $index }})
         {{- end -}}
         {{- if .HasResponse -}}
-          {{- if .Request }}, {{ end -}}{{ .ResponderType }}(std::move(response), ordinal)
+          {{- if .Request }}, {{ end -}}{{ .ResponderType }}(std::move(response))
         {{- end -}}
       );
       break;
@@ -406,14 +591,12 @@ zx_status_t {{ .StubName }}::Dispatch_(
   {{- if not .HasRequest }}
     {{- if .HasResponse }}
 void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
-  ::fidl::Encoder _encoder({{ .Ordinals.Write.Name }});
-    {{- if .Response }}
-  _encoder.Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
-      {{- range .Response }}
-  ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
-      {{- end }}
-    {{- end }}
-  sender_()->Send(&{{ .ResponseTypeName }}, _encoder.GetMessage());
+  ::fidl::Encoder _encoder(internal::{{ .Ordinals.Write.Name }});
+  sender_()->Send(&{{ .ResponseTypeName }}, {{ $.ResponseEncoderName }}::{{ .Name }}(&_encoder
+  {{- range $index, $param := .Response -}}
+    , &{{ $param.Name }}
+  {{- end -}}
+  ));
 }
     {{- end }}
   {{- end }}
@@ -426,18 +609,17 @@ void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
 
 {{- range .Methods }}
   {{- if .HasRequest }}
+
 zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }} {
-  ::fidl::Encoder _encoder({{ .Ordinals.Write.Name }});
-    {{- if .Request }}
-  _encoder.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
-      {{- range .Request }}
-  ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
-      {{- end }}
-    {{- end }}
+  ::fidl::Encoder _encoder(internal::{{ .Ordinals.Write.Name }});
     {{- if .HasResponse }}
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
-  zx_status_t status_ = proxy_.Call(&{{ .RequestTypeName }}, &{{ .ResponseTypeName }}, _encoder.GetMessage(), &response_);
+  zx_status_t status_ = proxy_.Call(&{{ .RequestTypeName }}, &{{ .ResponseTypeName }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
+  {{- range $index, $param := .Request -}}
+    , &{{ $param.Name }}
+  {{- end -}}
+  ), &response_);
   if (status_ != ZX_OK)
     return status_;
       {{- if .Response }}
@@ -448,7 +630,11 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
       {{- end }}
   return ZX_OK;
     {{- else }}
-  return proxy_.Send(&{{ .RequestTypeName }}, _encoder.GetMessage());
+  return proxy_.Send(&{{ .RequestTypeName }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
+  {{- range $index, $param := .Request -}}
+    , &{{ $param.Name }}
+  {{- end -}}
+  ));
     {{- end }}
 }
   {{- end }}

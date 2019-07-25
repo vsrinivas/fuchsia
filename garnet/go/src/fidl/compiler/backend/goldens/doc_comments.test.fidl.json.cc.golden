@@ -194,14 +194,34 @@ zx_status_t Struct::Clone(Struct* _result) const {
 }
 #ifdef __Fuchsia__
 namespace {
-constexpr uint64_t kInterface_Method_Ordinal = 0x3f43684c00000000lu;
+
 extern "C" const fidl_type_t test_name_InterfaceMethodRequestTable;
-constexpr uint64_t kInterface_OnEvent_Ordinal = 0x136d200d00000000lu;
+
 extern "C" const fidl_type_t test_name_InterfaceOnEventEventTable;
 
 }  // namespace
 
 Interface::~Interface() = default;
+
+const fidl_type_t* Interface_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+  switch (ordinal) {
+    case internal::kInterface_Method_Ordinal:
+      *out_needs_response = false;
+      return &test_name_InterfaceMethodRequestTable;
+    default:
+      *out_needs_response = false;
+      return nullptr;
+  }
+}
+
+const fidl_type_t* Interface_ResponseDecoder::GetType(uint64_t ordinal) {
+  switch (ordinal) {
+    case internal::kInterface_OnEvent_Ordinal:
+      return &test_name_InterfaceOnEventEventTable;
+    default:
+      return nullptr;
+  }
+}
 
 Interface_EventSender::~Interface_EventSender() = default;
 
@@ -217,7 +237,7 @@ Interface_Proxy::~Interface_Proxy() = default;
 zx_status_t Interface_Proxy::Dispatch_(::fidl::Message message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
-    case kInterface_OnEvent_Ordinal:
+    case internal::kInterface_OnEvent_Ordinal:
     {
       if (!OnEvent) {
         status = ZX_OK;
@@ -242,8 +262,8 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::Message message) {
 
 
 void Interface_Proxy::Method() {
-  ::fidl::Encoder _encoder(kInterface_Method_Ordinal);
-  controller_->Send(&test_name_InterfaceMethodRequestTable, _encoder.GetMessage(), nullptr);
+  ::fidl::Encoder _encoder(internal::kInterface_Method_Ordinal);
+  controller_->Send(&test_name_InterfaceMethodRequestTable, Interface_RequestEncoder::Method(&_encoder), nullptr);
 }
 
 Interface_Stub::Interface_Stub(Interface_clazz* impl) : impl_(impl) {
@@ -259,17 +279,29 @@ namespace {
 zx_status_t Interface_Stub::Dispatch_(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
-  zx_status_t status = ZX_OK;
+  bool needs_response;
+  const fidl_type_t* request_type = Interface_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  if (request_type == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Decode(request_type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+    return status;
+  }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case kInterface_Method_Ordinal:
+    case internal::kInterface_Method_Ordinal:
     {
-      const char* error_msg = nullptr;
-      status = message.Decode(&test_name_InterfaceMethodRequestTable, &error_msg);
-      if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(message, &test_name_InterfaceMethodRequestTable, error_msg);
-        break;
-      }
       impl_->Method();
       break;
     }
@@ -281,17 +313,18 @@ zx_status_t Interface_Stub::Dispatch_(
   return status;
 }
 void Interface_Stub::OnEvent() {
-  ::fidl::Encoder _encoder(kInterface_OnEvent_Ordinal);
-  sender_()->Send(&test_name_InterfaceOnEventEventTable, _encoder.GetMessage());
+  ::fidl::Encoder _encoder(internal::kInterface_OnEvent_Ordinal);
+  sender_()->Send(&test_name_InterfaceOnEventEventTable, Interface_ResponseEncoder::OnEvent(&_encoder));
 }
 
 Interface_SyncProxy::Interface_SyncProxy(::zx::channel channel)
     : proxy_(::std::move(channel)) {}
 
 Interface_SyncProxy::~Interface_SyncProxy() = default;
+
 zx_status_t Interface_SyncProxy::Method() {
-  ::fidl::Encoder _encoder(kInterface_Method_Ordinal);
-  return proxy_.Send(&test_name_InterfaceMethodRequestTable, _encoder.GetMessage());
+  ::fidl::Encoder _encoder(internal::kInterface_Method_Ordinal);
+  return proxy_.Send(&test_name_InterfaceMethodRequestTable, Interface_RequestEncoder::Method(&_encoder));
 }
 
 #endif // __Fuchsia__

@@ -20,6 +20,11 @@ class Interface_EventSender;
 class Interface_Sync;
 using InterfaceSyncPtr = ::fidl::SynchronousInterfacePtr<Interface>;
 class Interface_SyncProxy;
+namespace internal {
+constexpr uint64_t kInterface_Method_Ordinal = 0x3f43684c00000000lu;
+constexpr uint64_t kInterface_OnEvent_Ordinal = 0x136d200d00000000lu;
+
+}  // namespace
 #endif // __Fuchsia__
 
 // union comment #1
@@ -210,6 +215,88 @@ class Interface {
   virtual void Method() = 0;
   using OnEventCallback =
       fit::function<void()>;
+};
+
+class Interface_RequestEncoder {
+ public:
+  static ::fidl::Message Method(::fidl::Encoder* _encoder) {
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    return _encoder->GetMessage();
+  }
+};
+
+class Interface_RequestDecoder {
+ public:
+  Interface_RequestDecoder() = default;
+  virtual ~Interface_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  zx_status_t Decode_(::fidl::Message request) {
+    bool needs_response;
+    const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = request.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder request_decoder(std::move(request));
+    switch (request.ordinal()) {
+      case internal::kInterface_Method_Ordinal:
+      {
+        Method();
+        break;
+      }
+      default: {
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+      }
+    }
+    return status;
+  }
+  virtual void Method() = 0;
+};
+
+class Interface_ResponseEncoder {
+ public:
+  static ::fidl::Message OnEvent(::fidl::Encoder* _encoder) {
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    return _encoder->GetMessage();
+  }
+};
+
+class Interface_ResponseDecoder {
+ public:
+  Interface_ResponseDecoder() = default;
+  virtual ~Interface_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+  zx_status_t Decode_(::fidl::Message response) {
+    const fidl_type_t* response_type = GetType(response.ordinal());
+    if (response_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = response.Decode(response_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder response_decoder(std::move(response));
+    switch (response.ordinal()) {
+      case internal::kInterface_OnEvent_Ordinal:
+      {
+        OnEvent();
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    return ZX_OK;
+  }
+  virtual void OnEvent() = 0;
 };
 
 class Interface_EventSender {
