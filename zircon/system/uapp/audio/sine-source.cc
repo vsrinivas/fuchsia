@@ -14,6 +14,7 @@ zx_status_t SineSource::Init(float freq,
                              float duration_secs,
                              uint32_t frame_rate,
                              uint32_t channels,
+                             uint32_t active,
                              audio_sample_format_t sample_format) {
 
     if (!frame_rate)
@@ -24,6 +25,7 @@ zx_status_t SineSource::Init(float freq,
 
     frame_rate_ = frame_rate;
     channels_ = channels;
+    active_ = active;
 
     frames_to_produce_ = (duration_secs == 0.0)
                        ? std::numeric_limits<uint64_t>::max()
@@ -66,6 +68,7 @@ template <>
 struct SampleTraits<AUDIO_SAMPLE_FORMAT_8BIT> {
     using SampleType   = uint8_t;
     using ComputedType = int8_t;
+    static constexpr SampleType SilenceValue = 0;
     static SampleType encode(ComputedType v) {
         return static_cast<ComputedType>(static_cast<SampleType>(v) + 0x80);
     }
@@ -75,6 +78,7 @@ template <>
 struct SampleTraits<AUDIO_SAMPLE_FORMAT_16BIT> {
     using SampleType   = int16_t;
     using ComputedType = int16_t;
+    static constexpr SampleType SilenceValue = 0;
     static SampleType encode(ComputedType v) { return v; }
 };
 
@@ -82,6 +86,7 @@ template <>
 struct SampleTraits<AUDIO_SAMPLE_FORMAT_20BIT_IN32> {
     using SampleType   = int32_t;
     using ComputedType = int32_t;
+    static constexpr SampleType SilenceValue = 0;
     static SampleType encode(ComputedType v) {
         return static_cast<SampleType>(static_cast<uint32_t>(v) & 0xFFFFF000);
     }
@@ -91,6 +96,7 @@ template <>
 struct SampleTraits<AUDIO_SAMPLE_FORMAT_24BIT_IN32> {
     using SampleType   = int32_t;
     using ComputedType = int32_t;
+    static constexpr SampleType SilenceValue = 0;
     static SampleType encode(ComputedType v) {
         return static_cast<SampleType>(static_cast<uint32_t>(v) & 0xFFFFFF00);
     }
@@ -100,6 +106,7 @@ template <>
 struct SampleTraits<AUDIO_SAMPLE_FORMAT_32BIT> {
     using SampleType   = int32_t;
     using ComputedType = int32_t;
+    static constexpr SampleType SilenceValue = 0;
     static SampleType encode(ComputedType v) { return v; }
 };
 
@@ -139,8 +146,13 @@ zx_status_t SineSource::GetFramesInternal(void* buffer, uint32_t buf_space, uint
     for (uint64_t i = 0; i < todo; ++i) {
         auto val = static_cast<ComputedType>(amp_ * sin(pos));
 
-        for (uint32_t j = 0; j < channels_; ++j)
-            *(buf++) = Traits::encode(val);
+        for (uint32_t j = 0; j < channels_; ++j) {
+          if (active_ == kAllChannelsActive || active_ == j) {
+                *(buf++) = Traits::encode(val);
+            } else {
+                *(buf++) = Traits::SilenceValue;
+            }
+        }
 
         pos += sine_scalar_;
     }

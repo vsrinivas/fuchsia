@@ -28,6 +28,7 @@ static constexpr float DEFAULT_RECORD_DURATION = 30.0f;
 static constexpr uint32_t DEFAULT_FRAME_RATE = 48000;
 static constexpr uint32_t DEFAULT_BITS_PER_SAMPLE = 16;
 static constexpr uint32_t DEFAULT_CHANNELS = 2;
+static constexpr uint32_t DEFAULT_ACTIVE_CHANNELS = SineSource::kAllChannelsActive;
 static constexpr audio_sample_format_t AUDIO_SAMPLE_FORMAT_UNSIGNED_8BIT =
     static_cast<audio_sample_format_t>(AUDIO_SAMPLE_FORMAT_8BIT |
                                        AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED);
@@ -58,7 +59,9 @@ void usage(const char* prog_name) {
          "                     Otherwise, defaults to output.\n"
          "  -r <frame rate>  : Frame rate to use.  Defaults to 48000 Hz\n"
          "  -b <bits/sample> : Bits per sample to use.  Defaults to 16\n"
-         "  -c <channels>    : Channels to use.  Defaults to 2\n");
+         "  -c <channels>    : Number of channels to use.  Defaults to 2\n"
+         "  -a <active>      : Active channel (choose from 0 to <channels> - 1 inclusive).\n"
+         "                     Defaults to all channels active (not set).\n");
   printf("\nValid command are\n");
   printf("info   : Fetches capability and status info for the specified stream\n");
   printf("mute   : Mute the specified stream\n");
@@ -273,6 +276,7 @@ int main(int argc, const char** argv) {
     uint32_t frame_rate = DEFAULT_FRAME_RATE;
     uint32_t bits_per_sample = DEFAULT_BITS_PER_SAMPLE;
     uint32_t channels = DEFAULT_CHANNELS;
+    uint32_t active = DEFAULT_ACTIVE_CHANNELS;
     Command cmd = Command::INVALID;
     auto print_usage = fbl::MakeAutoCall([prog_name = argv[0]]() { usage(prog_name); });
     int arg = 1;
@@ -289,6 +293,7 @@ int main(int argc, const char** argv) {
     { .name = "-r", .tag = "frame rate",  .val = &frame_rate },
     { .name = "-b", .tag = "bits/sample", .val = &bits_per_sample },
     { .name = "-c", .tag = "channels",    .val = &channels },
+    { .name = "-a", .tag = "active",      .val = &active },
     // clang-format on
     };
 
@@ -516,7 +521,8 @@ int main(int argc, const char** argv) {
         }
 
         SineSource sine_source;
-        res = sine_source.Init(tone_freq, 1.0, duration, frame_rate, channels, sample_format);
+        res = sine_source.Init(tone_freq, 1.0, duration, frame_rate, channels, active,
+                               sample_format);
         if (res != ZX_OK) {
             printf("Failed to initialize sine wav generator (res %d)\n", res);
             return res;
