@@ -4,6 +4,7 @@
 
 #include "bus.h"
 
+#include <lib/zx/clock.h>
 #include <unistd.h>
 
 namespace ahci {

@@ -9,6 +9,7 @@
 #include <ddk/debug.h>
 #include <ddk/phys-iter.h>
 #include <fbl/auto_lock.h>
+#include <lib/zx/clock.h>
 
 #include "port.h"
 #include "controller.h"
