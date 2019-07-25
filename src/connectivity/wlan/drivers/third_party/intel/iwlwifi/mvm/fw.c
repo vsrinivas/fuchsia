@@ -298,7 +298,6 @@ static zx_status_t iwl_mvm_load_ucode_wait_alive(struct iwl_mvm* mvm,
    * just wait for the ALIVE notification here.
    */
   ret = iwl_wait_notification(&mvm->notif_wait, &alive_wait, MVM_UCODE_ALIVE_TIMEOUT);
-
   if (ret != ZX_OK) {
     struct iwl_trans* trans = mvm->trans;
 
@@ -313,7 +312,7 @@ static zx_status_t iwl_mvm_load_ucode_wait_alive(struct iwl_mvm* mvm,
     return ret;
   }
 
-  if (!alive_data.valid) {
+  if (mvm->trans->to_load_firmware && !alive_data.valid) {
     IWL_ERR(mvm, "Loaded ucode is not valid!\n");
     iwl_fw_set_current_image(&mvm->fwrt, old_type);
     return ZX_ERR_IO_INVALID;
@@ -529,7 +528,7 @@ zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
 
   /* Will also start the device */
   ret = iwl_mvm_load_ucode_wait_alive(mvm, IWL_UCODE_INIT);
-  if (ret) {
+  if (ret != ZX_OK) {
     IWL_ERR(mvm, "Failed to start INIT ucode: %s\n", zx_status_get_string(ret));
     goto remove_notif;
   }
@@ -986,8 +985,7 @@ static int iwl_mvm_load_rt_fw(struct iwl_mvm* mvm) {
 #endif  // NEEDS_PORTING
 
   ret = iwl_run_init_mvm_ucode(mvm, false);
-
-  if (ret) {
+  if (ret != ZX_OK) {
     IWL_ERR(mvm, "Failed to run INIT ucode: %d\n", ret);
 
     if (iwlmvm_mod_params.init_dbg) {
@@ -1300,6 +1298,7 @@ error:
   if (!iwlmvm_mod_params.init_dbg || ret == ZX_OK) {
     iwl_mvm_stop_device(mvm);
   }
+
   return ret;
 }
 

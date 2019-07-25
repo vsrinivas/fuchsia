@@ -918,6 +918,7 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     mtx_lock(&mvm->mutex);
     iwl_mvm_ref(mvm, IWL_MVM_REF_INIT_UCODE);
     err = iwl_run_init_mvm_ucode(mvm, true);
+
 #if 0   // NEEDS_PORTING
     if (test_bit(IWL_FWRT_STATUS_WAIT_ALIVE, &mvm->fwrt.status)) {
         iwl_fw_alive_error_dump(&mvm->fwrt);
@@ -988,7 +989,6 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
 #endif
 
   iwl_mvm_toggle_tx_ant(mvm, &mvm->mgmt_last_antenna_idx);
-
   return op_mode;
 
 out_unregister:

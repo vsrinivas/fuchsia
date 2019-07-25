@@ -14,15 +14,16 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/trans-sim.h"
 
+#include <lib/fake_ddk/fake_ddk.h>
+#include <zircon/status.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/wlanphyimpl.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/status.h>
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
@@ -47,7 +48,7 @@ static void iwl_trans_sim_fw_alive(struct iwl_trans* trans, uint32_t scd_addr) {
 static void iwl_trans_sim_stop_device(struct iwl_trans* trans, bool low_power) {}
 
 static zx_status_t iwl_trans_sim_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
-  return ZX_ERR_NOT_SUPPORTED;
+  return ZX_OK;  // Temporarily returns OK to pass the unit test.
 }
 
 static zx_status_t iwl_trans_sim_tx(struct iwl_trans* trans, struct sk_buff* skb,
@@ -245,7 +246,17 @@ static zx_status_t transport_sim_bind(void* ctx, zx_device_t* dev) {
     goto remove_dev;
   }
 
-  return status;
+  {
+    // Kick off the firmware.
+    //
+    // Since we don't have a real firmware to load, there will be no notification from the firmware.
+    // Fake a RX packet so that we won't get blocked in the iwl_mvm_mac_start().
+    struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(iwl_trans->op_mode);
+    iwl_notification_notify(&mvm->notif_wait);
+
+    // Hopefully everything should be ready. Go!
+    return iwl_mvm_mac_start(mvm);
+  }
 
 remove_dev:
   device_remove(iwl_trans->zxdev);
