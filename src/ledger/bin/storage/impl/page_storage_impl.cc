@@ -419,7 +419,8 @@ void PageStorageImpl::AddObjectFromLocal(ObjectType object_type,
             managed_data_source_ptr, object_type,
             [this](ObjectDigest object_digest) {
               FXL_DCHECK(IsDigestValid(object_digest));
-              return encryption_service_->MakeObjectIdentifier(std::move(object_digest));
+              return encryption_service_->MakeObjectIdentifier(&object_identifier_factory_,
+                                                               std::move(object_digest));
             },
             std::move(chunking_permutation),
             [this, waiter, managed_data_source = std::move(managed_data_source),

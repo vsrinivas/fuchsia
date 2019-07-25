@@ -82,7 +82,8 @@ Status FakePageStorage::GetHeadCommits(std::vector<std::unique_ptr<const Commit>
   std::vector<std::unique_ptr<const Commit>> commits;
   commits.reserve(heads.size());
   for (const auto& [commit_id, _] : heads) {
-    commits.push_back(std::make_unique<FakeCommit>(journals_[commit_id].get()));
+    commits.push_back(
+        std::make_unique<FakeCommit>(journals_[commit_id].get(), &object_identifier_factory_));
   }
   if (commits.empty()) {
     commits.push_back(std::make_unique<const FakeRootCommit>());
@@ -114,7 +115,8 @@ void FakePageStorage::GetCommit(
 
   async::PostTask(environment_->dispatcher(),
                   [this, commit_id = commit_id.ToString(), callback = std::move(callback)] {
-                    callback(Status::OK, std::make_unique<FakeCommit>(journals_[commit_id].get()));
+                    callback(Status::OK, std::make_unique<FakeCommit>(journals_[commit_id].get(),
+                                                                      &object_identifier_factory_));
                   });
 }
 
@@ -126,8 +128,9 @@ std::unique_ptr<Journal> FakePageStorage::StartCommit(std::unique_ptr<const Comm
     next_generation = journals_[commit_id].get()->GetGeneration() + 1;
     data = journals_[commit_id].get()->GetData();
   }
-  auto delegate = std::make_unique<FakeJournalDelegate>(environment_->random(), std::move(data),
-                                                        commit_id, autocommit_, next_generation);
+  auto delegate = std::make_unique<FakeJournalDelegate>(
+      environment_->random(), &object_identifier_factory_, std::move(data), commit_id, autocommit_,
+      next_generation);
   auto journal = std::make_unique<FakeJournal>(delegate.get());
   journals_[delegate->GetId()] = std::move(delegate);
   return journal;
@@ -139,7 +142,8 @@ std::unique_ptr<Journal> FakePageStorage::StartMergeCommit(std::unique_ptr<const
   const CommitId& right_id = right->GetId();
 
   auto delegate = std::make_unique<FakeJournalDelegate>(
-      environment_->random(), journals_[left_id].get()->GetData(), left_id, right_id, autocommit_,
+      environment_->random(), &object_identifier_factory_, journals_[left_id].get()->GetData(),
+      left_id, right_id, autocommit_,
       1 + std::max(journals_[left_id].get()->GetGeneration(),
                    journals_[right_id].get()->GetGeneration()));
   auto journal = std::make_unique<FakeJournal>(delegate.get());
@@ -213,8 +217,8 @@ void FakePageStorage::AddObjectFromLocal(ObjectType /*object_type*/,
         auto view = chunk->Get();
         value->append(view.data(), view.size());
         if (status == DataSource::Status::DONE) {
-          ObjectIdentifier object_identifier =
-              encryption_service_.MakeObjectIdentifier(FakeDigest(*value));
+          ObjectIdentifier object_identifier = encryption_service_.MakeObjectIdentifier(
+              &object_identifier_factory_, FakeDigest(*value));
           objects_[object_identifier] = std::move(*value);
           references_[object_identifier.object_digest()] = std::move(tree_references);
           callback(Status::OK, std::move(object_identifier));

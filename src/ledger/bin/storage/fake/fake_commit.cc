@@ -9,6 +9,7 @@
 
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/fake/fake_journal_delegate.h"
+#include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/iterator.h"
@@ -16,11 +17,12 @@
 namespace storage {
 namespace fake {
 
-FakeCommit::FakeCommit(FakeJournalDelegate* journal) : journal_(journal) {}
+FakeCommit::FakeCommit(FakeJournalDelegate* journal, FakeObjectIdentifierFactory* factory)
+    : journal_(journal), factory_(factory) {}
 FakeCommit::~FakeCommit() {}
 
 std::unique_ptr<const Commit> FakeCommit::Clone() const {
-  return std::make_unique<FakeCommit>(journal_);
+  return std::make_unique<FakeCommit>(journal_, factory_);
 }
 
 const CommitId& FakeCommit::GetId() const { return journal_->GetId(); }
@@ -33,7 +35,7 @@ uint64_t FakeCommit::GetGeneration() const { return journal_->GetGeneration(); }
 
 ObjectIdentifier FakeCommit::GetRootIdentifier() const {
   // The object digest is fake here: using journal id is arbitrary.
-  return encryption::MakeDefaultObjectIdentifier(ObjectDigest(journal_->GetId()));
+  return encryption::MakeDefaultObjectIdentifier(factory_, ObjectDigest(journal_->GetId()));
 }
 
 fxl::StringView FakeCommit::GetStorageBytes() const { return fxl::StringView(); }

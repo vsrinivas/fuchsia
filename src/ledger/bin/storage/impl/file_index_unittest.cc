@@ -5,6 +5,7 @@
 #include "src/ledger/bin/storage/impl/file_index.h"
 
 #include "gtest/gtest.h"
+#include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
@@ -22,14 +23,15 @@ TEST_F(FileIndexSerializationTest, CheckInvalid) {
 }
 
 TEST_F(FileIndexSerializationTest, SerializationDeserialization) {
+  fake::FakeObjectIdentifierFactory factory;
   const std::vector<FileIndexSerialization::ObjectIdentifierAndSize> elements = {
-      {RandomObjectIdentifier(environment_.random()), 1},
-      {RandomObjectIdentifier(environment_.random()), 2},
-      {RandomObjectIdentifier(environment_.random()), 3},
-      {RandomObjectIdentifier(environment_.random()), 4},
-      {RandomObjectIdentifier(environment_.random()), 3},
-      {RandomObjectIdentifier(environment_.random()), 2},
-      {RandomObjectIdentifier(environment_.random()), 1},
+      {RandomObjectIdentifier(environment_.random(), &factory), 1},
+      {RandomObjectIdentifier(environment_.random(), &factory), 2},
+      {RandomObjectIdentifier(environment_.random(), &factory), 3},
+      {RandomObjectIdentifier(environment_.random(), &factory), 4},
+      {RandomObjectIdentifier(environment_.random(), &factory), 3},
+      {RandomObjectIdentifier(environment_.random(), &factory), 2},
+      {RandomObjectIdentifier(environment_.random(), &factory), 1},
   };
 
   constexpr size_t expected_total_size = 16;

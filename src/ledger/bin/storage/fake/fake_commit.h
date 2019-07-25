@@ -10,6 +10,7 @@
 
 #include "src/ledger/bin/storage/fake/fake_journal.h"
 #include "src/ledger/bin/storage/fake/fake_journal_delegate.h"
+#include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/public/commit.h"
 
 namespace storage {
@@ -18,7 +19,7 @@ namespace fake {
 // A |FakeCommit| is a commit based on a |FakeJournalDelegate|.
 class FakeCommit : public Commit {
  public:
-  explicit FakeCommit(FakeJournalDelegate* journal);
+  explicit FakeCommit(FakeJournalDelegate* journal, FakeObjectIdentifierFactory* factory);
 
   ~FakeCommit() override;
 
@@ -41,6 +42,7 @@ class FakeCommit : public Commit {
 
  private:
   FakeJournalDelegate* journal_;
+  FakeObjectIdentifierFactory* factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeCommit);
 };
 

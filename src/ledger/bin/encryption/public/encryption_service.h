@@ -40,7 +40,8 @@ class EncryptionService {
   // index and a default |deletion_scope_id|.
   // TODO(qsr): The user should have some control on the |deletion_scope_id| to
   // decide on the scope of deletion for objects.
-  virtual storage::ObjectIdentifier MakeObjectIdentifier(storage::ObjectDigest digest) = 0;
+  virtual storage::ObjectIdentifier MakeObjectIdentifier(storage::ObjectIdentifierFactory* factory,
+                                                         storage::ObjectDigest digest) = 0;
 
   // Encrypts the given commit storage bytes for storing in the cloud.
   virtual void EncryptCommit(std::string commit_storage,

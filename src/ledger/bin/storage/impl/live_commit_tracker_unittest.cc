@@ -4,10 +4,10 @@
 
 #include "src/ledger/bin/storage/impl/live_commit_tracker.h"
 
-#include <memory>
-
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
+
+#include <memory>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -84,7 +84,10 @@ class LiveCommitTrackerTest : public ledger::TestWithEnvironment {
   // Returns a randomly created new commit, child of |base|.
   std::unique_ptr<const Commit> CreateRandomCommit(std::unique_ptr<const Commit> base) {
     std::unique_ptr<Journal> journal = storage_->StartCommit(std::move(base));
-    journal->Put("key", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
+    journal->Put(
+        "key",
+        RandomObjectIdentifier(environment_.random(), storage_->GetObjectIdentifierFactory()),
+        KeyPriority::EAGER);
     bool called;
     Status status;
     std::unique_ptr<const Commit> commit;

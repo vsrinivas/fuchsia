@@ -4,19 +4,20 @@
 
 #include "src/ledger/bin/cloud_sync/impl/batch_upload.h"
 
-#include <functional>
-#include <map>
-#include <utility>
-
 #include <lib/async/dispatcher.h>
 #include <lib/callback/capture.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
 
+#include <functional>
+#include <map>
+#include <utility>
+
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_cloud.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/fake/fake_object.h"
+#include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
@@ -142,6 +143,7 @@ class BaseBatchUploadTest : public gtest::TestLoopFixture {
 
  public:
   TestPageStorage storage_;
+  storage::fake::FakeObjectIdentifierFactory object_identifier_factory_;
   E encryption_service_;
   cloud_provider::PageCloudPtr page_cloud_ptr_;
   TestPageCloud page_cloud_;
@@ -174,11 +176,11 @@ class BaseBatchUploadTest : public gtest::TestLoopFixture {
   }
 
   // Returns an object identifier for the provided fake |object_digest|.
-  // |object_digest| need not be valid (wrt. internal storage constraints) as it
+  // |object_digest| does not need to be valid (wrt. internal storage constraints) as it
   // is only used as an opaque identifier for cloud_sync.
   storage::ObjectIdentifier MakeObjectIdentifier(std::string object_digest) {
     return encryption_service_.MakeObjectIdentifier(
-        storage::ObjectDigest(std::move(object_digest)));
+        &object_identifier_factory_, storage::ObjectDigest(std::move(object_digest)));
   }
 
  private:

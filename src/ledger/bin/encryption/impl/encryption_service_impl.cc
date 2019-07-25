@@ -4,11 +4,12 @@
 
 #include "src/ledger/bin/encryption/impl/encryption_service_impl.h"
 
-#include <flatbuffers/flatbuffers.h>
 #include <lib/async/cpp/task.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
+
+#include <flatbuffers/flatbuffers.h>
 
 #include "src/ledger/bin/encryption/impl/encrypted_commit_generated.h"
 #include "src/ledger/bin/encryption/primitives/encrypt.h"
@@ -109,8 +110,9 @@ EncryptionServiceImpl::EncryptionServiceImpl(ledger::Environment* environment,
 EncryptionServiceImpl::~EncryptionServiceImpl() {}
 
 storage::ObjectIdentifier EncryptionServiceImpl::MakeObjectIdentifier(
-    storage::ObjectDigest digest) {
-  return {GetCurrentKeyIndex(), kDefaultDeletionScopeId, std::move(digest)};
+    storage::ObjectIdentifierFactory* factory, storage::ObjectDigest digest) {
+  return factory->MakeObjectIdentifier(GetCurrentKeyIndex(), kDefaultDeletionScopeId,
+                                       std::move(digest));
 }
 
 void EncryptionServiceImpl::EncryptCommit(std::string commit_storage,

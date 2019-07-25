@@ -20,7 +20,8 @@ namespace encryption {
 //
 // This method is always constructing the indentifier with the same key index
 // and deletion scope.
-storage::ObjectIdentifier MakeDefaultObjectIdentifier(storage::ObjectDigest digest);
+storage::ObjectIdentifier MakeDefaultObjectIdentifier(storage::ObjectIdentifierFactory* factory,
+                                                      storage::ObjectDigest digest);
 
 // Do a static permutation.
 // This method applies a static permutation to a |chunk_window_hash|. It does
@@ -33,7 +34,8 @@ class FakeEncryptionService : public EncryptionService {
   ~FakeEncryptionService() override;
 
   // EncryptionService:
-  storage::ObjectIdentifier MakeObjectIdentifier(storage::ObjectDigest digest) override;
+  storage::ObjectIdentifier MakeObjectIdentifier(storage::ObjectIdentifierFactory* factory,
+                                                 storage::ObjectDigest digest) override;
   void EncryptCommit(std::string commit_storage,
                      fit::function<void(Status, std::string)> callback) override;
   void DecryptCommit(convert::ExtendedStringView storage_bytes,

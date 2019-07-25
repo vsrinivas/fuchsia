@@ -25,23 +25,26 @@ storage::CommitId RandomCommitId(rng::Random* random) {
 
 }  // namespace
 
-FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, Data initial_data, CommitId parent_id,
-                                         bool autocommit, uint64_t generation = 0)
+FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, FakeObjectIdentifierFactory* factory,
+                                         Data initial_data, CommitId parent_id, bool autocommit,
+                                         uint64_t generation = 0)
     : autocommit_(autocommit),
       id_(RandomCommitId(random)),
       parent_id_(std::move(parent_id)),
       data_(std::move(initial_data)),
-      generation_(generation) {}
+      generation_(generation),
+      factory_(factory) {}
 
-FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, Data initial_data, CommitId parent_id,
-                                         CommitId other_id, bool autocommit,
-                                         uint64_t generation = 0)
+FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, FakeObjectIdentifierFactory* factory,
+                                         Data initial_data, CommitId parent_id, CommitId other_id,
+                                         bool autocommit, uint64_t generation = 0)
     : autocommit_(autocommit),
       id_(RandomCommitId(random)),
       parent_id_(std::move(parent_id)),
       other_id_(std::move(other_id)),
       data_(std::move(initial_data)),
-      generation_(generation) {}
+      generation_(generation),
+      factory_(factory) {}
 
 FakeJournalDelegate::~FakeJournalDelegate() {}
 
@@ -93,7 +96,7 @@ void FakeJournalDelegate::ResolvePendingCommit(Status /*status*/) {
   is_committed_ = true;
   auto callback = std::move(commit_callback_);
   commit_callback_ = nullptr;
-  callback(Status::OK, std::make_unique<const FakeCommit>(this));
+  callback(Status::OK, std::make_unique<const FakeCommit>(this, factory_));
 }
 
 const FakeJournalDelegate::Data& FakeJournalDelegate::GetData() const { return data_; }

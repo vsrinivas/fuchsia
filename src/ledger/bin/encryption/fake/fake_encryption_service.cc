@@ -21,8 +21,9 @@ std::string Decode(fxl::StringView encrypted_content) {
 }
 }  // namespace
 
-storage::ObjectIdentifier MakeDefaultObjectIdentifier(storage::ObjectDigest digest) {
-  return {1u, 1u, std::move(digest)};
+storage::ObjectIdentifier MakeDefaultObjectIdentifier(storage::ObjectIdentifierFactory* factory,
+                                                      storage::ObjectDigest digest) {
+  return factory->MakeObjectIdentifier(1u, 1u, std::move(digest));
 }
 
 uint64_t DefaultPermutation(uint64_t chunk_window_hash) { return 1 + chunk_window_hash; }
@@ -33,8 +34,8 @@ FakeEncryptionService::FakeEncryptionService(async_dispatcher_t* dispatcher)
 FakeEncryptionService::~FakeEncryptionService() {}
 
 storage::ObjectIdentifier FakeEncryptionService::MakeObjectIdentifier(
-    storage::ObjectDigest digest) {
-  return MakeDefaultObjectIdentifier(std::move(digest));
+    storage::ObjectIdentifierFactory* factory, storage::ObjectDigest digest) {
+  return MakeDefaultObjectIdentifier(factory, std::move(digest));
 }
 
 void FakeEncryptionService::EncryptCommit(std::string commit_storage,

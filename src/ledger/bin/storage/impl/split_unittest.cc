@@ -4,11 +4,10 @@
 
 #include "src/ledger/bin/storage/impl/split.h"
 
+#include <lib/fit/function.h>
 #include <string.h>
 
 #include <map>
-
-#include <lib/fit/function.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -19,6 +18,7 @@
 #include "src/ledger/bin/storage/impl/file_index.h"
 #include "src/ledger/bin/storage/impl/file_index_generated.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/impl/object_identifier_factory_impl.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -94,7 +94,8 @@ struct SplitResult {
   std::map<ObjectDigest, std::unique_ptr<Piece>> pieces;
 };
 
-void DoSplit(DataSource* source, ObjectType object_type, fit::function<void(SplitResult)> callback,
+void DoSplit(DataSource* source, ObjectIdentifierFactory* factory, ObjectType object_type,
+             fit::function<void(SplitResult)> callback,
              fit::function<uint64_t(uint64_t)> chunk_permutation = nullptr) {
   auto result = std::make_unique<SplitResult>();
   if (!chunk_permutation) {
@@ -102,8 +103,8 @@ void DoSplit(DataSource* source, ObjectType object_type, fit::function<void(Spli
   }
   SplitDataSource(
       source, object_type,
-      [](ObjectDigest digest) {
-        return encryption::MakeDefaultObjectIdentifier(std::move(digest));
+      [factory](ObjectDigest digest) {
+        return encryption::MakeDefaultObjectIdentifier(factory, std::move(digest));
       },
       std::move(chunk_permutation),
       [result = std::move(result), callback = std::move(callback)](
@@ -174,8 +175,9 @@ TEST_P(SplitSmallValueTest, SmallValue) {
   const std::string content = NewString(std::get<0>(GetParam()));
   const ObjectType object_type = std::get<1>(GetParam());
   auto source = DataSource::Create(content);
+  ObjectIdentifierFactoryImpl factory;
   SplitResult split_result;
-  DoSplit(source.get(), object_type,
+  DoSplit(source.get(), &factory, object_type,
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
   ASSERT_EQ(split_result.calls.size(), 1u);
@@ -195,8 +197,9 @@ TEST_P(SplitBigValueTest, BigValues) {
   const std::string content = NewString(std::get<0>(GetParam()));
   const ObjectType object_type = std::get<1>(GetParam());
   auto source = DataSource::Create(content);
+  ObjectIdentifierFactoryImpl factory;
   SplitResult split_result;
-  DoSplit(source.get(), object_type,
+  DoSplit(source.get(), &factory, object_type,
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
   EXPECT_EQ(split_result.calls.back().status, IterationStatus::DONE);
@@ -248,8 +251,9 @@ INSTANTIATE_TEST_SUITE_P(
 TEST(SplitTest, PathologicalCase) {
   constexpr size_t kDataSize = 1024 * 1024 * 128;
   auto source = std::make_unique<PathologicalDataSource>(kDataSize);
+  ObjectIdentifierFactoryImpl factory;
   SplitResult split_result;
-  DoSplit(source.get(), ObjectType::TREE_NODE,
+  DoSplit(source.get(), &factory, ObjectType::TREE_NODE,
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
   ASSERT_EQ(split_result.calls.back().status, IterationStatus::DONE);
@@ -271,8 +275,9 @@ TEST(SplitTest, PathologicalCase) {
 TEST(SplitTest, IndexToInlinePiece) {
   constexpr size_t kDataSize = kMaxChunkSize + 1;
   auto source = std::make_unique<PathologicalDataSource>(kDataSize);
+  ObjectIdentifierFactoryImpl factory;
   SplitResult split_result;
-  DoSplit(source.get(), ObjectType::TREE_NODE,
+  DoSplit(source.get(), &factory, ObjectType::TREE_NODE,
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
   ASSERT_EQ(split_result.calls.back().status, IterationStatus::DONE);
@@ -295,20 +300,21 @@ TEST(SplitTest, IndexToInlinePiece) {
 
 TEST(SplitTest, Error) {
   auto source = std::make_unique<ErrorDataSource>();
+  ObjectIdentifierFactoryImpl factory;
   SplitResult split_result;
-  DoSplit(source.get(), ObjectType::TREE_NODE,
+  DoSplit(source.get(), &factory, ObjectType::TREE_NODE,
           [&split_result](SplitResult c) { split_result = std::move(c); });
 
   ASSERT_EQ(split_result.calls.size(), 1u);
   ASSERT_EQ(split_result.calls.back().status, IterationStatus::ERROR);
 }
 
-ObjectIdentifier MakeIndexId(size_t i) {
+ObjectIdentifier MakeIndexId(size_t i, ObjectIdentifierFactory* factory) {
   std::string value;
   value.resize(sizeof(i));
   memcpy(&value[0], &i, sizeof(i));
   return encryption::MakeDefaultObjectIdentifier(
-      ComputeObjectDigest(PieceType::INDEX, ObjectType::BLOB, value));
+      factory, ComputeObjectDigest(PieceType::INDEX, ObjectType::BLOB, value));
 }
 
 TEST(SplitTest, CollectPieces) {
@@ -339,18 +345,20 @@ TEST(SplitTest, CollectPieces) {
 
   std::map<ObjectIdentifier, std::unique_ptr<DataSource::DataChunk>> objects;
 
+  ObjectIdentifierFactoryImpl factory;
   for (size_t i = 0; i < parts.size(); ++i) {
     std::vector<FileIndexSerialization::ObjectIdentifierAndSize> children;
     for (size_t child : parts[i]) {
-      children.push_back({MakeIndexId(child), 1});
+      children.push_back({MakeIndexId(child, &factory), 1});
     }
     size_t total_size;
-    FileIndexSerialization::BuildFileIndex(children, &objects[MakeIndexId(i)], &total_size);
+    FileIndexSerialization::BuildFileIndex(children, &objects[MakeIndexId(i, &factory)],
+                                           &total_size);
   }
   IterationStatus status;
   std::set<ObjectIdentifier> identifiers;
   CollectPieces(
-      MakeIndexId(0),
+      MakeIndexId(0, &factory),
       [&objects](ObjectIdentifier object_identifier,
                  fit::function<void(Status, fxl::StringView)> callback) {
         callback(Status::OK, objects[object_identifier]->Get());
@@ -376,18 +384,19 @@ TEST(SplitTest, CollectPiecesError) {
   const size_t nb_successfull_called = 128;
   IterationStatus status;
   size_t called = 0;
+  ObjectIdentifierFactoryImpl factory;
   CollectPieces(
-      MakeIndexId(0),
-      [&called](ObjectIdentifier identifier,
-                fit::function<void(Status, fxl::StringView)> callback) {
+      MakeIndexId(0, &factory),
+      [&factory, &called](ObjectIdentifier identifier,
+                          fit::function<void(Status, fxl::StringView)> callback) {
         if (called >= nb_successfull_called) {
           callback(Status::INTERNAL_ERROR, "");
           return;
         }
         ++called;
         std::vector<FileIndexSerialization::ObjectIdentifierAndSize> children;
-        children.push_back({MakeIndexId(2 * called), 1});
-        children.push_back({MakeIndexId(2 * called + 1), 1});
+        children.push_back({MakeIndexId(2 * called, &factory), 1});
+        children.push_back({MakeIndexId(2 * called + 1, &factory), 1});
         std::unique_ptr<DataSource::DataChunk> data;
         size_t total_size;
         FileIndexSerialization::BuildFileIndex(children, &data, &total_size);
@@ -410,11 +419,12 @@ TEST_F(SplitTestWithEnvironment, DifferentPermutations) {
   auto bit_generator = environment_.random()->NewBitGenerator<uint64_t>();
 
   auto source = DataSource::Create(content);
+  ObjectIdentifierFactoryImpl factory;
   SplitResult split_result1;
   uint64_t d1 =
       std::uniform_int_distribution(0ul, std::numeric_limits<uint64_t>::max())(bit_generator);
   DoSplit(
-      source.get(), ObjectType::BLOB,
+      source.get(), &factory, ObjectType::BLOB,
       [&split_result1](SplitResult c) { split_result1 = std::move(c); },
       [&d1](uint64_t chunk_window_hash) { return chunk_window_hash ^ d1; });
   EXPECT_EQ(split_result1.calls.back().status, IterationStatus::DONE);
@@ -424,7 +434,7 @@ TEST_F(SplitTestWithEnvironment, DifferentPermutations) {
   uint64_t d2 =
       std::uniform_int_distribution(0ul, std::numeric_limits<uint64_t>::max())(bit_generator);
   DoSplit(
-      source.get(), ObjectType::BLOB,
+      source.get(), &factory, ObjectType::BLOB,
       [&split_result2](SplitResult c) { split_result2 = std::move(c); },
       [&d2](uint64_t chunk_window_hash) { return chunk_window_hash ^ d2; });
   EXPECT_EQ(split_result2.calls.back().status, IterationStatus::DONE);

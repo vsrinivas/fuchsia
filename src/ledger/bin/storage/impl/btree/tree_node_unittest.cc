@@ -88,7 +88,8 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
   EXPECT_NE(nullptr, found_node);
 
   TreeNode::FromIdentifier(
-      &fake_storage_, RandomObjectIdentifier(environment_.random()),
+      &fake_storage_,
+      RandomObjectIdentifier(environment_.random(), fake_storage_.GetObjectIdentifierFactory()),
       callback::Capture(callback::SetWhenCalled(&called), &status, &found_node));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
@@ -179,8 +180,14 @@ TEST_F(TreeNodeTest, References) {
   // References to inline objects are ignored so we ensure object00 and object01
   // are big enough not to be inlined.
   std::unique_ptr<const Object> object0, object1, object2;
-  ASSERT_TRUE(AddObject(ObjectData("object00", InlineBehavior::PREVENT).value, &object0));
-  ASSERT_TRUE(AddObject(ObjectData("object01", InlineBehavior::PREVENT).value, &object1));
+  ASSERT_TRUE(AddObject(
+      ObjectData(fake_storage_.GetObjectIdentifierFactory(), "object00", InlineBehavior::PREVENT)
+          .value,
+      &object0));
+  ASSERT_TRUE(AddObject(
+      ObjectData(fake_storage_.GetObjectIdentifierFactory(), "object01", InlineBehavior::PREVENT)
+          .value,
+      &object1));
   // Inline object, the references to it should be skipped.
   ASSERT_TRUE(AddObject("object02", &object2));
   const ObjectIdentifier object0_id = object0->GetIdentifier();

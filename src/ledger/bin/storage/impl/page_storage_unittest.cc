@@ -305,13 +305,14 @@ class PageStorageTest : public ledger::TestWithEnvironment {
   }
 
   ObjectIdentifier RandomObjectIdentifier() {
-    return storage::RandomObjectIdentifier(environment_.random());
+    return storage::RandomObjectIdentifier(environment_.random(),
+                                           storage_->GetObjectIdentifierFactory());
   }
 
-  // Returns an ObjectData built with the provided |args|.
+  // Returns an ObjectData built with the provided |args| and tracked by |storage_|.
   template <typename... Args>
   ObjectData MakeObject(Args&&... args) {
-    return ObjectData(std::forward<Args>(args)...);
+    return ObjectData(storage_->GetObjectIdentifierFactory(), std::forward<Args>(args)...);
   }
 
   std::unique_ptr<const Commit> TryCommitFromSync() {
@@ -659,7 +660,8 @@ TEST_F(PageStorageTest, AddLocalCommitsReferences) {
   // creating two identical journals and commiting them. We then check that both
   // commits are stored as inbound references of said object.
   std::unique_ptr<const Commit> base = GetFirstHead();
-  const ObjectData data = MakeObject(RandomString(environment_.random(), 65536), InlineBehavior::PREVENT);
+  const ObjectData data =
+      MakeObject(RandomString(environment_.random(), 65536), InlineBehavior::PREVENT);
   const ObjectIdentifier object_id = data.object_identifier;
   std::unique_ptr<Journal> journal = storage_->StartCommit(base->Clone());
   journal->Put("key", object_id, KeyPriority::EAGER);
@@ -777,7 +779,8 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
 TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
   // Try to add a commit before its parent and see the error.
   std::vector<std::unique_ptr<const Commit>> parent;
-  parent.emplace_back(std::make_unique<CommitRandomImpl>(environment_.random()));
+  parent.emplace_back(std::make_unique<CommitRandomImpl>(environment_.random(),
+                                                         storage_->GetObjectIdentifierFactory()));
   ObjectIdentifier empty_object_id;
   GetEmptyNodeIdentifier(&empty_object_id);
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
@@ -1403,7 +1406,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncEndOfChunk) {
   std::vector<size_t> chunk_lengths;
   std::vector<ObjectIdentifier> chunk_identifiers;
   ObjectIdentifier object_identifier = ForEachPiece(
-      data_str, ObjectType::BLOB,
+      data_str, ObjectType::BLOB, storage_->GetObjectIdentifierFactory(),
       [&sync, &chunk_lengths, &chunk_identifiers](std::unique_ptr<const Piece> piece) {
         ObjectIdentifier object_identifier = piece->GetIdentifier();
         ObjectDigestInfo digest_info = GetObjectDigestInfo(object_identifier.object_digest());
@@ -1447,7 +1450,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncStartOfChunk) {
   std::vector<size_t> chunk_lengths;
   std::vector<ObjectIdentifier> chunk_identifiers;
   ObjectIdentifier object_identifier = ForEachPiece(
-      data_str, ObjectType::BLOB,
+      data_str, ObjectType::BLOB, storage_->GetObjectIdentifierFactory(),
       [&sync, &chunk_lengths, &chunk_identifiers](std::unique_ptr<const Piece> piece) {
         ObjectIdentifier object_identifier = piece->GetIdentifier();
         ObjectDigestInfo digest_info = GetObjectDigestInfo(object_identifier.object_digest());
@@ -1484,8 +1487,9 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncZeroBytes) {
   std::string data_str = RandomString(environment_.random(), 2 * 65536 + 1);
 
   FakeSyncDelegate sync;
-  ObjectIdentifier object_identifier =
-      ForEachPiece(data_str, ObjectType::BLOB, [&sync](std::unique_ptr<const Piece> piece) {
+  ObjectIdentifier object_identifier = ForEachPiece(
+      data_str, ObjectType::BLOB, storage_->GetObjectIdentifierFactory(),
+      [&sync](std::unique_ptr<const Piece> piece) {
         ObjectIdentifier object_identifier = piece->GetIdentifier();
         ObjectDigestInfo digest_info = GetObjectDigestInfo(object_identifier.object_digest());
         if (digest_info.is_inlined()) {
@@ -1524,7 +1528,7 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
   FakeSyncDelegate sync;
   std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
   ObjectIdentifier object_identifier =
-      ForEachPiece(data_str, ObjectType::BLOB,
+      ForEachPiece(data_str, ObjectType::BLOB, storage_->GetObjectIdentifierFactory(),
                    [&sync, &digest_to_identifier](std::unique_ptr<const Piece> piece) {
                      ObjectIdentifier object_identifier = piece->GetIdentifier();
                      if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
@@ -1577,13 +1581,14 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSyncNegativeOffset) {
 
   FakeSyncDelegate sync;
   ObjectIdentifier object_identifier =
-      ForEachPiece(data_str, ObjectType::BLOB, [&sync](std::unique_ptr<const Piece> piece) {
-        ObjectIdentifier object_identifier = piece->GetIdentifier();
-        if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
-          return;
-        }
-        sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
-      });
+      ForEachPiece(data_str, ObjectType::BLOB, storage_->GetObjectIdentifierFactory(),
+                   [&sync](std::unique_ptr<const Piece> piece) {
+                     ObjectIdentifier object_identifier = piece->GetIdentifier();
+                     if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
+                       return;
+                     }
+                     sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
+                   });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   storage_->SetSyncDelegate(&sync);
 
@@ -1627,13 +1632,14 @@ TEST_F(PageStorageTest, FullDownloadAfterPartial) {
 
   FakeSyncDelegate sync;
   ObjectIdentifier object_identifier =
-      ForEachPiece(data_str, ObjectType::BLOB, [&sync](std::unique_ptr<const Piece> piece) {
-        ObjectIdentifier object_identifier = piece->GetIdentifier();
-        if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
-          return;
-        }
-        sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
-      });
+      ForEachPiece(data_str, ObjectType::BLOB, storage_->GetObjectIdentifierFactory(),
+                   [&sync](std::unique_ptr<const Piece> piece) {
+                     ObjectIdentifier object_identifier = piece->GetIdentifier();
+                     if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
+                       return;
+                     }
+                     sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
+                   });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   storage_->SetSyncDelegate(&sync);
 
@@ -1757,8 +1763,9 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromSync) {
   std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
   std::map<ObjectIdentifier, ObjectReferencesAndPriority> inbound_references;
   ObjectIdentifier object_identifier = ForEachPiece(
-      data_str, ObjectType::TREE_NODE,
-      [&sync, &digest_to_identifier, &inbound_references](std::unique_ptr<const Piece> piece) {
+      data_str, ObjectType::TREE_NODE, storage_->GetObjectIdentifierFactory(),
+      [&sync, &digest_to_identifier, &inbound_references,
+       factory = storage_->GetObjectIdentifierFactory()](std::unique_ptr<const Piece> piece) {
         ObjectIdentifier piece_identifier = piece->GetIdentifier();
         if (GetObjectDigestInfo(piece_identifier.object_digest()).is_inlined()) {
           return;

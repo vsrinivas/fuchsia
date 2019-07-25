@@ -4,15 +4,15 @@
 
 #include "src/ledger/bin/storage/impl/page_db.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/callback/set_when_called.h>
+#include <lib/zx/time.h>
+
 #include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <lib/async/cpp/task.h>
-#include <lib/callback/set_when_called.h>
-#include <lib/zx/time.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -68,7 +68,8 @@ class PageDbTest : public ledger::TestWithEnvironment {
   }
 
   ObjectIdentifier RandomObjectIdentifier() {
-    return storage::RandomObjectIdentifier(environment_.random());
+    return storage::RandomObjectIdentifier(environment_.random(),
+                                           page_storage_.GetObjectIdentifierFactory());
   }
 
  protected:
@@ -164,7 +165,8 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestampThenId) {
 TEST_F(PageDbTest, Commits) {
   RunInCoroutine([&](CoroutineHandler* handler) {
     std::vector<std::unique_ptr<const Commit>> parents;
-    parents.emplace_back(std::make_unique<CommitRandomImpl>(environment_.random()));
+    parents.emplace_back(std::make_unique<CommitRandomImpl>(
+        environment_.random(), page_storage_.GetObjectIdentifierFactory()));
     LiveCommitTracker tracker;
 
     std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(

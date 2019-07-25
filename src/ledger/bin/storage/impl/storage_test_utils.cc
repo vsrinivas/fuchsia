@@ -12,12 +12,14 @@
 #include <numeric>
 
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
+#include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/impl/btree/builder.h"
 #include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/bin/storage/impl/split.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -41,8 +43,10 @@ std::string ResizeForBehavior(std::string value, InlineBehavior inline_behavior)
   return value;
 }
 
-ObjectIdentifier GetObjectIdentifier(std::string value, ObjectType object_type) {
-  return ForEachPiece(std::move(value), object_type, [](std::unique_ptr<const Piece> /*piece*/) {});
+ObjectIdentifier GetObjectIdentifier(std::string value, ObjectType object_type,
+                                     ObjectIdentifierFactory* factory) {
+  return ForEachPiece(std::move(value), object_type, factory,
+                      [](std::unique_ptr<const Piece> /*piece*/) {});
 }
 
 // Pre-determined node level function.
@@ -62,10 +66,11 @@ constexpr btree::NodeLevelCalculator kTestNodeLevelCalculator = {&GetTestNodeLev
 
 }  // namespace
 
-ObjectData::ObjectData(std::string value, ObjectType object_type, InlineBehavior inline_behavior)
+ObjectData::ObjectData(ObjectIdentifierFactory* factory, std::string value, ObjectType object_type,
+                       InlineBehavior inline_behavior)
     : value(ResizeForBehavior(std::move(value), inline_behavior)),
       size(this->value.size()),
-      object_identifier(GetObjectIdentifier(this->value, object_type)) {}
+      object_identifier(GetObjectIdentifier(this->value, object_type, factory)) {}
 
 std::unique_ptr<DataSource> ObjectData::ToDataSource() { return DataSource::Create(value); }
 
@@ -82,18 +87,20 @@ ObjectDigest MakeObjectDigest(std::string content, InlineBehavior inline_behavio
 }
 
 ObjectIdentifier MakeObjectIdentifier(std::string content, InlineBehavior inline_behavior) {
-  ObjectData data(std::move(content), inline_behavior);
+  fake::FakeObjectIdentifierFactory factory;
+  ObjectData data(&factory, std::move(content), inline_behavior);
   return data.object_identifier;
 }
 
 ObjectIdentifier ForEachPiece(std::string content, ObjectType type,
+                              ObjectIdentifierFactory* factory,
                               fit::function<void(std::unique_ptr<const Piece>)> callback) {
   ObjectDigest result;
   auto data_source = DataSource::Create(std::move(content));
   SplitDataSource(
       data_source.get(), type,
-      [](ObjectDigest object_digest) {
-        return encryption::MakeDefaultObjectIdentifier(std::move(object_digest));
+      [factory](ObjectDigest object_digest) {
+        return encryption::MakeDefaultObjectIdentifier(factory, std::move(object_digest));
       },
       [](uint64_t chunk_window_hash) { return encryption::DefaultPermutation(chunk_window_hash); },
       [&result, callback = std::move(callback)](IterationStatus status,
@@ -103,7 +110,7 @@ ObjectIdentifier ForEachPiece(std::string content, ObjectType type,
         }
         callback(std::move(piece));
       });
-  return encryption::MakeDefaultObjectIdentifier(std::move(result));
+  return encryption::MakeDefaultObjectIdentifier(factory, std::move(result));
 }
 
 std::string RandomString(rng::Random* random, size_t size) {
@@ -116,12 +123,13 @@ std::string RandomString(rng::Random* random, size_t size) {
 CommitId RandomCommitId(rng::Random* random) { return RandomString(random, kCommitIdSize); }
 
 ObjectDigest RandomObjectDigest(rng::Random* random) {
-  ObjectData data(RandomString(random, 16), InlineBehavior::PREVENT);
+  fake::FakeObjectIdentifierFactory factory;
+  ObjectData data(&factory, RandomString(random, 16), InlineBehavior::PREVENT);
   return data.object_identifier.object_digest();
 }
 
-ObjectIdentifier RandomObjectIdentifier(rng::Random* random) {
-  return encryption::MakeDefaultObjectIdentifier(RandomObjectDigest(random));
+ObjectIdentifier RandomObjectIdentifier(rng::Random* random, ObjectIdentifierFactory* factory) {
+  return encryption::MakeDefaultObjectIdentifier(factory, RandomObjectDigest(random));
 }
 
 EntryChange NewEntryChange(std::string key, std::string object_digest, KeyPriority priority) {

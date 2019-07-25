@@ -10,11 +10,11 @@
 
 namespace storage {
 
-CommitRandomImpl::CommitRandomImpl(rng::Random* random)
+CommitRandomImpl::CommitRandomImpl(rng::Random* random, ObjectIdentifierFactory* factory)
     : id_(RandomCommitId(random)),
       timestamp_(random->Draw<zx::time_utc>()),
       generation_(random->Draw<uint64_t>()),
-      root_node_identifier_(RandomObjectIdentifier(random)),
+      root_node_identifier_(RandomObjectIdentifier(random, factory)),
       parent_ids_{RandomCommitId(random)},
       parent_ids_views_{parent_ids_[0]},
       storage_bytes_(RandomString(random, 64)) {}
