@@ -142,7 +142,7 @@ func TestSourceRecoverFromInterruptedInstall(t *testing.T) {
 	}
 }
 
-func TestRepoRecoverFromInterruptedInstall(t *testing.T) {
+func TestRepoRecoverFromPreinstalledBlobs(t *testing.T) {
 	// Make the test package
 	cfg := build.TestConfig()
 	cfg.PkgName = randName(t.Name())
@@ -230,6 +230,112 @@ func TestRepoRecoverFromInterruptedInstall(t *testing.T) {
 	for _, blob := range blobs {
 		// Install only those blobs that are missing
 		installBlob(t, blob.SourcePath, blob.Merkle.String(), int64(blob.Size), true)
+	}
+
+	// Write the meta FAR as a blob (so the package installation flow is not triggered)
+	installBlob(t, metaFar.SourcePath, metaFar.Merkle.String(), int64(metaFar.Size), false)
+
+	// Now attempt to install the package
+	noMerklePin := ""
+	actualMerkle, zxStatus, err := r.GetUpdateComplete(cfg.PkgName, &cfg.PkgVersion, &noMerklePin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if zxStatus != zx.ErrOk {
+		t.Fatal(zxStatus)
+	}
+	if metaFar.Merkle.String() != actualMerkle {
+		t.Fatalf("invalid merkle: expected %q, got %q", metaFar.Merkle, actualMerkle)
+	}
+
+	// Ensure the package now exists and is readable
+	pkgDir := filepath.Join("/pkgfs/versions", metaFar.Merkle.String())
+	if _, err := os.Stat(pkgDir); err != nil {
+		t.Fatal(err)
+	}
+}
+func TestRepoRecoverFromInterruptedInstall(t *testing.T) {
+	// Make the test package
+	cfg := build.TestConfig()
+	cfg.PkgName = randName(t.Name())
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+	build.BuildTestPackage(cfg)
+
+	pkgManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
+	blobs, err := cfg.BlobInfo()
+	if err != nil {
+		t.Fatal(err)
+	}
+	metaFar, blobs := blobs[0], blobs[1:]
+
+	// Ensure pkgfs is in a good state (no previous test has written this test package)
+	if _, err := os.Stat(filepath.Join("/pkgfs/versions", metaFar.Merkle.String())); err == nil {
+		t.Fatal("test package already readable")
+	}
+
+	if _, err := os.Stat(filepath.Join("/pkgfs/needs/packages", metaFar.Merkle.String())); err == nil {
+		t.Fatal("test package already has needs dir")
+	}
+
+	// Make the test repo, and start serving it over http
+	repoDir, err := ioutil.TempDir("", "amber-install-test-repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(repoDir)
+
+	repo, err := repo.New(repoDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Init(); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.GenKeys(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.PublishManifest(pkgManifestPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.CommitUpdates(false); err != nil {
+		t.Fatal(err)
+	}
+
+	server, err := serveStaticRepo(t, filepath.Join(repoDir, "repository"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+
+	// Open a new repository, and register this source
+	keys, err := repo.RootKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rootKeys := []pkg.RepositoryKeyConfig{}
+	for _, key := range keys {
+		keyConfig := &pkg.RepositoryKeyConfig{}
+		keyConfig.SetEd25519Key(([]byte)(key.Value.Public))
+		rootKeys = append(rootKeys, *keyConfig)
+	}
+
+	r, err := source.OpenRepository(&pkg.RepositoryConfig{
+		RepoUrl:        "fuchsia-pkg://installtest",
+		RepoUrlPresent: true,
+		Mirrors: []pkg.MirrorConfig{
+			{
+				MirrorUrl:        server.baseURL,
+				MirrorUrlPresent: true,
+			},
+		},
+		MirrorsPresent:  true,
+		RootKeys:        rootKeys,
+		RootKeysPresent: true,
+	}, source.PkgfsDir{"/pkgfs"})
+
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// Write the meta FAR as a blob (so the package installation flow is not triggered)

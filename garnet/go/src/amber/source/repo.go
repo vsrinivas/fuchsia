@@ -139,10 +139,6 @@ type packageInstaller struct {
 
 func (i packageInstaller) GetPkg(merkle string, length int64) error {
 	err := i.fetcher.fetchInto(merkle, length, i.pkgfs.PkgInstallDir())
-	if os.IsExist(err) {
-		return nil
-	}
-
 	if err != nil {
 		// If the package already existed but was missing the meta FAR (or the
 		// meta FAR wasn't indexed), it may now be valid and readable.
