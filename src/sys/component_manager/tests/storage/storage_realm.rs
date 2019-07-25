@@ -24,11 +24,9 @@ async fn main() -> Result<(), Error> {
     let realm_proxy = connect_to_service::<fsys::RealmMarker>()?;
 
     let (child_data_proxy, server_end) = create_proxy::<fio::DirectoryMarker>()?;
-    await!(realm_proxy.bind_child(
-        fsys::ChildRef { name: Some("storage_user".to_string()), collection: None },
-        server_end
-    ))?
-    .map_err(|e| format_err!("failed to bind: {:?}", e))?;
+    let mut child_ref = fsys::ChildRef { name: "storage_user".to_string(), collection: None };
+    await!(realm_proxy.bind_child(&mut child_ref, server_end))?
+        .map_err(|e| format_err!("failed to bind: {:?}", e))?;
     let child_data_proxy = io_util::open_directory(
         &child_data_proxy,
         &PathBuf::from("data"),
@@ -51,11 +49,9 @@ async fn main() -> Result<(), Error> {
     fx_log_info!("successfully wrote to file \"hippo\" in child's outgoing directory");
 
     let (memfs_proxy, server_end) = create_proxy::<fio::DirectoryMarker>()?;
-    await!(realm_proxy.bind_child(
-        fsys::ChildRef { name: Some("memfs".to_string()), collection: None },
-        server_end
-    ))?
-    .map_err(|e| format_err!("failed to bind: {:?}", e))?;
+    let mut child_ref = fsys::ChildRef { name: "memfs".to_string(), collection: None };
+    await!(realm_proxy.bind_child(&mut child_ref, server_end))?
+        .map_err(|e| format_err!("failed to bind: {:?}", e))?;
     let memfs_proxy = io_util::open_directory(
         &memfs_proxy,
         &PathBuf::from("memfs"),

@@ -35,11 +35,11 @@ fn main() {
         })];
         let offers = vec![OfferDecl::Service(OfferServiceDecl {
             source: Some(Ref::Child(ChildRef {
-                name: Some("logger".to_string()),
+                name: "logger".to_string(),
                 collection: None,
             })),
             source_path: Some("/svc/fuchsia.logger.Log".to_string()),
-            target: Some(Ref::Collection(CollectionRef { name: Some("modular".to_string()) })),
+            target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
             target_path: Some("/svc/fuchsia.logger.Log".to_string()),
         })];
         let children = vec![ChildDecl {

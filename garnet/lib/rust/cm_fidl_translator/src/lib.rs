@@ -224,19 +224,19 @@ impl CmInto<fsys::SelfRef> for cm::SelfRef {
 
 impl CmInto<fsys::ChildRef> for cm::ChildRef {
     fn cm_into(self) -> Result<fsys::ChildRef, Error> {
-        Ok(fsys::ChildRef { name: Some(self.name), collection: None })
+        Ok(fsys::ChildRef { name: self.name, collection: None })
     }
 }
 
 impl CmInto<fsys::CollectionRef> for cm::CollectionRef {
     fn cm_into(self) -> Result<fsys::CollectionRef, Error> {
-        Ok(fsys::CollectionRef { name: Some(self.name) })
+        Ok(fsys::CollectionRef { name: self.name })
     }
 }
 
 impl CmInto<fsys::StorageRef> for cm::StorageRef {
     fn cm_into(self) -> Result<fsys::StorageRef, Error> {
-        Ok(fsys::StorageRef { name: Some(self.name) })
+        Ok(fsys::StorageRef { name: self.name })
     }
 }
 
@@ -604,7 +604,7 @@ mod tests {
                     fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
-                            name: Some("logger".to_string()),
+                            name: "logger".to_string(),
                             collection: None,
                         })),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
@@ -781,7 +781,7 @@ mod tests {
                         source_path: Some("/data/assets".to_string()),
                         target: Some(fsys::Ref::Child(
                            fsys::ChildRef {
-                               name: Some("logger".to_string()),
+                               name: "logger".to_string(),
                                collection: None,
                            }
                         )),
@@ -792,7 +792,7 @@ mod tests {
                         source_path: Some("/data/config".to_string()),
                         target: Some(fsys::Ref::Collection(
                            fsys::CollectionRef {
-                               name: Some("modular".to_string()),
+                               name: "modular".to_string(),
                            }
                         )),
                         target_path: Some("/data/config".to_string()),
@@ -802,7 +802,7 @@ mod tests {
                         source_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
                         target: Some(fsys::Ref::Child(
                            fsys::ChildRef {
-                               name: Some("logger".to_string()),
+                               name: "logger".to_string(),
                                collection: None,
                            }
                         )),
@@ -810,13 +810,13 @@ mod tests {
                     }),
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
-                            name: Some("logger".to_string()),
+                            name: "logger".to_string(),
                             collection: None,
                         })),
                         source_path: Some("/svc/fuchsia.logger.Log".to_string()),
                         target: Some(fsys::Ref::Collection(
                            fsys::CollectionRef {
-                               name: Some("modular".to_string()),
+                               name: "modular".to_string(),
                            }
                         )),
                         target_path: Some("/svc/fuchsia.logger.SysLog".to_string()),
@@ -824,33 +824,33 @@ mod tests {
                     fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                         type_: Some(fsys::StorageType::Data),
                         source: Some(fsys::Ref::Storage(fsys::StorageRef {
-                            name: Some("memfs".to_string()),
+                            name: "memfs".to_string(),
                         })),
                         target: Some(fsys::Ref::Collection(
-                            fsys::CollectionRef { name: Some("modular".to_string()) }
+                            fsys::CollectionRef { name: "modular".to_string() }
                         )),
                     }),
                     fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                         type_: Some(fsys::StorageType::Data),
                         source: Some(fsys::Ref::Storage(fsys::StorageRef {
-                            name: Some("memfs".to_string()),
+                            name: "memfs".to_string(),
                         })),
                         target: Some(fsys::Ref::Child(
-                           fsys::ChildRef { name: Some("logger".to_string()), collection: None }
+                           fsys::ChildRef { name: "logger".to_string(), collection: None }
                         )),
                     }),
                     fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                         type_: Some(fsys::StorageType::Meta),
                         source: Some(fsys::Ref::Realm(fsys::RealmRef { })),
                         target: Some(fsys::Ref::Collection(
-                            fsys::CollectionRef { name: Some("modular".to_string()) }
+                            fsys::CollectionRef { name: "modular".to_string() }
                         )),
                     }),
                     fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                         type_: Some(fsys::StorageType::Meta),
                         source: Some(fsys::Ref::Realm(fsys::RealmRef { })),
                         target: Some(fsys::Ref::Child(
-                           fsys::ChildRef { name: Some("logger".to_string()), collection: None }
+                           fsys::ChildRef { name: "logger".to_string(), collection: None }
                         )),
                     }),
                 ];
@@ -1111,13 +1111,13 @@ mod tests {
                 let offers = vec![
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
-                            name: Some("logger".to_string()),
+                            name: "logger".to_string(),
                             collection: None,
                         })),
                         source_path: Some("/svc/fuchsia.logger.Log".to_string()),
                         target: Some(fsys::Ref::Child(
                            fsys::ChildRef {
-                               name: Some("netstack".to_string()),
+                               name: "netstack".to_string(),
                                collection: None,
                            }
                         )),

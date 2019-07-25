@@ -27,7 +27,7 @@ async fn main() -> Result<(), Error> {
     // Create a couple child components.
     println!("Creating children");
     for name in vec!["a", "b"] {
-        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
         let child_decl = fsys::ChildDecl {
             name: Some(name.to_string()),
             url: Some(format!(
@@ -36,7 +36,7 @@ async fn main() -> Result<(), Error> {
             )),
             startup: Some(fsys::StartupMode::Lazy),
         };
-        await!(realm.create_child(collection_ref, child_decl))
+        await!(realm.create_child(&mut collection_ref, child_decl))
             .context(format!("create_child {} failed", name))?
             .expect(&format!("failed to create child {}", name));
     }
@@ -46,9 +46,9 @@ async fn main() -> Result<(), Error> {
     // Bind to children, causing them to execute.
     println!("Binding to children");
     for name in vec!["a", "b"] {
-        let child_ref = new_child_ref(name, "coll");
+        let mut child_ref = new_child_ref(name, "coll");
         let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        await!(realm.bind_child(child_ref, server_end))
+        await!(realm.bind_child(&mut child_ref, server_end))
             .context(format!("bind_child {} failed", name))?
             .expect(&format!("failed to bind to child {}", name));
         let trigger = open_trigger_svc(&dir)?;
@@ -58,7 +58,8 @@ async fn main() -> Result<(), Error> {
     // Destroy one.
     println!("Destroying child");
     {
-        await!(realm.destroy_child(new_child_ref("a", "coll")))
+        let mut child_ref = new_child_ref("a", "coll");
+        await!(realm.destroy_child(&mut child_ref))
             .context("destroy_child a failed")?
             .expect("failed to destroy child");
     }
@@ -67,7 +68,8 @@ async fn main() -> Result<(), Error> {
     println!("Binding to destroyed child");
     {
         let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        let res = await!(realm.bind_child(new_child_ref("a", "coll"), server_end))
+        let mut child_ref = new_child_ref("a", "coll");
+        let res = await!(realm.bind_child(&mut child_ref, server_end))
             .context("second bind_child a failed")?;
         let err = res.err().ok_or(format_err!("expected bind_child a to fail"))?;
         assert_eq!(err, fsys::Error::InstanceNotFound);
@@ -78,7 +80,7 @@ async fn main() -> Result<(), Error> {
     // Recreate child (with different URL), and bind to it. Should work.
     println!("Recreating and binding to child");
     {
-        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
         let child_decl = fsys::ChildDecl {
             name: Some("a".to_string()),
             url: Some(
@@ -87,13 +89,14 @@ async fn main() -> Result<(), Error> {
             ),
             startup: Some(fsys::StartupMode::Lazy),
         };
-        await!(realm.create_child(collection_ref, child_decl))
+        await!(realm.create_child(&mut collection_ref, child_decl))
             .context("second create_child a failed")?
             .expect("failed to create second child a");
     }
     {
         let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        await!(realm.bind_child(new_child_ref("a", "coll"), server_end))
+        let mut child_ref = new_child_ref("a", "coll");
+        await!(realm.bind_child(&mut child_ref, server_end))
             .context("bind_child a failed")?
             .expect("failed to bind to child a");
         let trigger = open_trigger_svc(&dir)?;
@@ -107,26 +110,20 @@ async fn main() -> Result<(), Error> {
 }
 
 fn new_child_ref(name: &str, collection: &str) -> fsys::ChildRef {
-    fsys::ChildRef { name: Some(name.to_string()), collection: Some(collection.to_string()) }
+    fsys::ChildRef { name: name.to_string(), collection: Some(collection.to_string()) }
 }
 
 async fn list_children(realm: &fsys::RealmProxy) -> Result<String, Error> {
     let (iterator_proxy, server_end) = endpoints::create_proxy().unwrap();
-    let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
-    await!(realm.list_children(collection_ref, server_end))
+    let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+    await!(realm.list_children(&mut collection_ref, server_end))
         .context("list_children failed")?
         .expect("failed to list children");
     let res = await!(iterator_proxy.next());
     let children = res.expect("failed to iterate over children");
     let children: Vec<_> = children
         .iter()
-        .map(|c| {
-            format!(
-                "{}:{}",
-                c.collection.as_ref().expect("no name"),
-                c.name.as_ref().expect("no collection")
-            )
-        })
+        .map(|c| format!("{}:{}", c.collection.as_ref().expect("no collection"), &c.name))
         .collect();
     Ok(format!("Found children ({})", children.join(",")))
 }

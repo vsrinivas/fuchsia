@@ -578,10 +578,10 @@ mod capability_util {
         )
         .expect("failed to open realm service");
         let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
-        let child_ref = fsys::ChildRef { name: Some("my_child".to_string()), collection: None };
+        let mut child_ref = fsys::ChildRef { name: "my_child".to_string(), collection: None };
         let (_client_chan, server_chan) = zx::Channel::create().unwrap();
         let exposed_capabilities = ServerEnd::new(server_chan);
-        let res = await!(realm_proxy.bind_child(child_ref, exposed_capabilities));
+        let res = await!(realm_proxy.bind_child(&mut child_ref, exposed_capabilities));
 
         // Check for side effects: realm service should have received the `bind_child` call.
         let _ = res.expect("failed to use realm service");
@@ -608,9 +608,9 @@ mod capability_util {
         )
         .expect("failed to open realm service");
         let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
-        let collection_ref = fsys::CollectionRef { name: Some(collection.to_string()) };
+        let mut collection_ref = fsys::CollectionRef { name: collection.to_string() };
         let child_decl = child_decl.native_into_fidl();
-        let res = await!(realm_proxy.create_child(collection_ref, child_decl));
+        let res = await!(realm_proxy.create_child(&mut collection_ref, child_decl));
         let _ = res.expect("failed to create child");
     }
 

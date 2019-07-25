@@ -202,11 +202,10 @@ impl RealFrameworkServiceHost {
         collection: fsys::CollectionRef,
         child_decl: fsys::ChildDecl,
     ) -> Result<(), fsys::Error> {
-        let collection_name = collection.name.ok_or(fsys::Error::InvalidArguments)?;
         cm_fidl_validator::validate_child(&child_decl)
             .map_err(|_| fsys::Error::InvalidArguments)?;
         let child_decl = child_decl.fidl_into_native();
-        await!(realm.add_dynamic_child(collection_name, &child_decl, &model.hooks)).map_err(
+        await!(realm.add_dynamic_child(collection.name, &child_decl, &model.hooks)).map_err(
             |e| match e {
                 ModelError::InstanceAlreadyExists { .. } => fsys::Error::InstanceAlreadyExists,
                 ModelError::CollectionNotFound { .. } => fsys::Error::CollectionNotFound,
@@ -226,9 +225,7 @@ impl RealFrameworkServiceHost {
         child: fsys::ChildRef,
         exposed_dir: ServerEnd<DirectoryMarker>,
     ) -> Result<(), fsys::Error> {
-        let child_name = child.name.ok_or(fsys::Error::InvalidArguments)?;
-        let collection = child.collection;
-        let child_moniker = ChildMoniker::new(child_name, collection);
+        let child_moniker = ChildMoniker::new(child.name, child.collection);
         await!(realm.resolve_decl()).map_err(|e| match e {
             ModelError::ResolverError { err } => {
                 debug!("failed to resolve: {:?}", err);
@@ -269,10 +266,8 @@ impl RealFrameworkServiceHost {
         realm: Arc<Realm>,
         child: fsys::ChildRef,
     ) -> Result<(), fsys::Error> {
-        let child_name = child.name.ok_or(fsys::Error::InvalidArguments)?;
-        let collection = child.collection;
-        collection.as_ref().ok_or(fsys::Error::InvalidArguments)?;
-        let child_moniker = ChildMoniker::new(child_name, collection);
+        child.collection.as_ref().ok_or(fsys::Error::InvalidArguments)?;
+        let child_moniker = ChildMoniker::new(child.name, child.collection);
         await!(realm.remove_dynamic_child(&child_moniker, &model.hooks)).map_err(|e| match e {
             ModelError::InstanceNotFound { .. } => fsys::Error::InstanceNotFound,
             ModelError::Unsupported { .. } => fsys::Error::Unsupported,
@@ -289,7 +284,6 @@ impl RealFrameworkServiceHost {
         collection: fsys::CollectionRef,
         iter: ServerEnd<fsys::ChildIteratorMarker>,
     ) -> Result<(), fsys::Error> {
-        let collection_name = collection.name.ok_or(fsys::Error::InvalidArguments)?;
         await!(realm.resolve_decl()).map_err(|e| {
             error!("resolve_decl() failed: {}", e);
             fsys::Error::Internal
@@ -297,7 +291,7 @@ impl RealFrameworkServiceHost {
         let state = await!(realm.state.lock());
         let decl = state.decl.as_ref().unwrap();
         let _ = decl
-            .find_collection(&collection_name)
+            .find_collection(&collection.name)
             .ok_or_else(|| fsys::Error::CollectionNotFound)?;
         let mut children: Vec<_> = state
             .child_realms
@@ -306,9 +300,9 @@ impl RealFrameworkServiceHost {
             .keys()
             .filter_map(|m| match m.collection() {
                 Some(c) => {
-                    if c == collection_name {
+                    if c == collection.name {
                         Some(fsys::ChildRef {
-                            name: Some(m.name().to_string()),
+                            name: m.name().to_string(),
                             collection: m.collection().map(|s| s.to_string()),
                         })
                     } else {
@@ -319,8 +313,8 @@ impl RealFrameworkServiceHost {
             })
             .collect();
         children.sort_unstable_by(|a, b| {
-            let a = a.name.as_ref().unwrap();
-            let b = b.name.as_ref().unwrap();
+            let a = &a.name;
+            let b = &b.name;
             if a == b {
                 cmp::Ordering::Equal
             } else if a < b {
@@ -349,9 +343,8 @@ impl RealFrameworkServiceHost {
             match request {
                 fsys::ChildIteratorRequest::Next { responder } => {
                     let n_to_send = std::cmp::min(children.len(), batch_size);
-                    let res: Vec<_> = children.drain(..n_to_send).collect();
-                    let mut res = res.into_iter();
-                    responder.send(&mut res)?;
+                    let mut res: Vec<_> = children.drain(..n_to_send).collect();
+                    responder.send(&mut res.iter_mut())?;
                 }
             }
         }
@@ -462,12 +455,12 @@ mod tests {
             await!(FrameworkServiceTest::new(mock_resolver, mock_runner, vec!["system"].into()));
 
         // Create children "a" and "b" in collection.
-        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
-        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl("a")));
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+        let res = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl("a")));
         let _ = res.expect("failed to create child a").expect("failed to create child a");
 
-        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
-        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl("b")));
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+        let res = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl("b")));
         let _ = res.expect("failed to create child b").expect("failed to create child b");
 
         // Verify that the component topology matches expectations.
@@ -515,20 +508,13 @@ mod tests {
 
         // Invalid arguments.
         {
-            let collection_ref = fsys::CollectionRef { name: None };
-            let err = await!(test.realm_proxy.create_child(collection_ref, child_decl("a")))
-                .expect("fidl call failed")
-                .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::InvalidArguments);
-        }
-        {
-            let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
+            let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
             let child_decl = fsys::ChildDecl {
                 name: Some("a".to_string()),
                 url: None,
                 startup: Some(fsys::StartupMode::Lazy),
             };
-            let err = await!(test.realm_proxy.create_child(collection_ref, child_decl))
+            let err = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl))
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
             assert_eq!(err, fsys::Error::InvalidArguments);
@@ -536,11 +522,11 @@ mod tests {
 
         // Instance already exists.
         {
-            let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
-            let res = await!(test.realm_proxy.create_child(collection_ref, child_decl("a")));
+            let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+            let res = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl("a")));
             let _ = res.expect("failed to create child a");
-            let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
-            let err = await!(test.realm_proxy.create_child(collection_ref, child_decl("a")))
+            let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+            let err = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl("a")))
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
             assert_eq!(err, fsys::Error::InstanceAlreadyExists);
@@ -548,8 +534,8 @@ mod tests {
 
         // Collection not found.
         {
-            let collection_ref = fsys::CollectionRef { name: Some("nonexistent".to_string()) };
-            let err = await!(test.realm_proxy.create_child(collection_ref, child_decl("a")))
+            let mut collection_ref = fsys::CollectionRef { name: "nonexistent".to_string() };
+            let err = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl("a")))
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
             assert_eq!(err, fsys::Error::CollectionNotFound);
@@ -557,20 +543,20 @@ mod tests {
 
         // Unsupported.
         {
-            let collection_ref = fsys::CollectionRef { name: Some("pcoll".to_string()) };
-            let err = await!(test.realm_proxy.create_child(collection_ref, child_decl("a")))
+            let mut collection_ref = fsys::CollectionRef { name: "pcoll".to_string() };
+            let err = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl("a")))
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
             assert_eq!(err, fsys::Error::Unsupported);
         }
         {
-            let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
+            let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
             let child_decl = fsys::ChildDecl {
                 name: Some("b".to_string()),
                 url: Some("test:///b".to_string()),
                 startup: Some(fsys::StartupMode::Eager),
             };
-            let err = await!(test.realm_proxy.create_child(collection_ref, child_decl))
+            let err = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl))
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
             assert_eq!(err, fsys::Error::Unsupported);
@@ -607,12 +593,12 @@ mod tests {
             await!(FrameworkServiceTest::new(mock_resolver, mock_runner, vec!["system"].into()));
 
         // Create children "a" and "b" in collection.
-        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
-        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl("a")));
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+        let res = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl("a")));
         let _ = res.expect("failed to create child a").expect("failed to create child a");
 
-        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
-        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl("b")));
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+        let res = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl("b")));
         let _ = res.expect("failed to create child b").expect("failed to create child b");
 
         let child_realm = await!(get_child(&test.realm, "coll:a"));
@@ -620,9 +606,9 @@ mod tests {
         assert_eq!("(system(coll:a,coll:b))", test.hook.print());
 
         // Destroy "a". "a" is gone from the topology.
-        let child_ref =
-            fsys::ChildRef { name: Some("a".to_string()), collection: Some("coll".to_string()) };
-        let res = await!(test.realm_proxy.destroy_child(child_ref));
+        let mut child_ref =
+            fsys::ChildRef { name: "a".to_string(), collection: Some("coll".to_string()) };
+        let res = await!(test.realm_proxy.destroy_child(&mut child_ref));
         let _ = res.expect("failed to destroy child a").expect("failed to destroy child a");
 
         let actual_children = await!(get_children(&test.realm));
@@ -632,13 +618,13 @@ mod tests {
         assert_eq!("(system(coll:b))", test.hook.print());
 
         // Recreate "a". Verify "a" is back (but it's a different "a").
-        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
         let child_decl = fsys::ChildDecl {
             name: Some("a".to_string()),
             url: Some("test:///a_alt".to_string()),
             startup: Some(fsys::StartupMode::Lazy),
         };
-        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl));
+        let res = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl));
         let _ = res.expect("failed to recreate child a").expect("failed to recreate child a");
 
         assert_eq!("(system(coll:a,coll:b))", test.hook.print());
@@ -676,21 +662,14 @@ mod tests {
             await!(FrameworkServiceTest::new(mock_resolver, mock_runner, vec!["system"].into()));
 
         // Create child "a" in collection.
-        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
-        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl("a")));
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+        let res = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl("a")));
         let _ = res.expect("failed to create child a").expect("failed to create child a");
 
         // Invalid arguments.
         {
-            let child_ref = fsys::ChildRef { name: Some("a".to_string()), collection: None };
-            let err = await!(test.realm_proxy.destroy_child(child_ref))
-                .expect("fidl call failed")
-                .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::InvalidArguments);
-        }
-        {
-            let child_ref = fsys::ChildRef { name: None, collection: Some("coll".to_string()) };
-            let err = await!(test.realm_proxy.destroy_child(child_ref))
+            let mut child_ref = fsys::ChildRef { name: "a".to_string(), collection: None };
+            let err = await!(test.realm_proxy.destroy_child(&mut child_ref))
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
             assert_eq!(err, fsys::Error::InvalidArguments);
@@ -698,11 +677,11 @@ mod tests {
 
         // Instance not found.
         {
-            let child_ref = fsys::ChildRef {
-                name: Some("b".to_string()),
+            let mut child_ref = fsys::ChildRef {
+                name: "b".to_string(),
                 collection: Some("coll".to_string()),
             };
-            let err = await!(test.realm_proxy.destroy_child(child_ref))
+            let err = await!(test.realm_proxy.destroy_child(&mut child_ref))
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
             assert_eq!(err, fsys::Error::InstanceNotFound);
@@ -750,9 +729,9 @@ mod tests {
         let test = await!(FrameworkServiceTest::new(mock_resolver, mock_runner, vec![].into()));
 
         // Bind to child and use exposed service.
-        let child_ref = fsys::ChildRef { name: Some("system".to_string()), collection: None };
+        let mut child_ref = fsys::ChildRef { name: "system".to_string(), collection: None };
         let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        let res = await!(test.realm_proxy.bind_child(child_ref, server_end));
+        let res = await!(test.realm_proxy.bind_child(&mut child_ref, server_end));
         let _ = res.expect("failed to bind to system").expect("failed to bind to system");
         let node_proxy = io_util::open_node(
             &dir_proxy,
@@ -809,17 +788,17 @@ mod tests {
         let test = await!(FrameworkServiceTest::new(mock_resolver, mock_runner, vec![].into()));
 
         // Add "system" to collection.
-        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
-        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl("system")));
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+        let res = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl("system")));
         let _ = res.expect("failed to create child system").expect("failed to create child system");
 
         // Bind to child and use exposed service.
-        let child_ref = fsys::ChildRef {
-            name: Some("system".to_string()),
+        let mut child_ref = fsys::ChildRef {
+            name: "system".to_string(),
             collection: Some("coll".to_string()),
         };
         let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        let res = await!(test.realm_proxy.bind_child(child_ref, server_end));
+        let res = await!(test.realm_proxy.bind_child(&mut child_ref, server_end));
         let _ = res.expect("failed to bind to system").expect("failed to bind to system");
         let node_proxy = io_util::open_node(
             &dir_proxy,
@@ -871,21 +850,11 @@ mod tests {
         mock_runner.cause_failure("unrunnable");
         let test = await!(FrameworkServiceTest::new(mock_resolver, mock_runner, vec![].into()));
 
-        // Invalid arguments.
-        {
-            let child_ref = fsys::ChildRef { name: None, collection: None };
-            let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-            let err = await!(test.realm_proxy.bind_child(child_ref, server_end))
-                .expect("fidl call failed")
-                .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::InvalidArguments);
-        }
-
         // Instance not found.
         {
-            let child_ref = fsys::ChildRef { name: Some("missing".to_string()), collection: None };
+            let mut child_ref = fsys::ChildRef { name: "missing".to_string(), collection: None };
             let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-            let err = await!(test.realm_proxy.bind_child(child_ref, server_end))
+            let err = await!(test.realm_proxy.bind_child(&mut child_ref, server_end))
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
             assert_eq!(err, fsys::Error::InstanceNotFound);
@@ -893,10 +862,10 @@ mod tests {
 
         // Instance cannot start.
         {
-            let child_ref =
-                fsys::ChildRef { name: Some("unrunnable".to_string()), collection: None };
+            let mut child_ref =
+                fsys::ChildRef { name: "unrunnable".to_string(), collection: None };
             let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-            let err = await!(test.realm_proxy.bind_child(child_ref, server_end))
+            let err = await!(test.realm_proxy.bind_child(&mut child_ref, server_end))
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
             assert_eq!(err, fsys::Error::InstanceCannotStart);
@@ -904,10 +873,10 @@ mod tests {
 
         // Instance cannot resolve.
         {
-            let child_ref =
-                fsys::ChildRef { name: Some("unresolvable".to_string()), collection: None };
+            let mut child_ref =
+                fsys::ChildRef { name: "unresolvable".to_string(), collection: None };
             let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-            let err = await!(test.realm_proxy.bind_child(child_ref, server_end))
+            let err = await!(test.realm_proxy.bind_child(&mut child_ref, server_end))
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
             assert_eq!(err, fsys::Error::InstanceCannotResolve);
@@ -953,26 +922,26 @@ mod tests {
         let test = await!(FrameworkServiceTest::new(mock_resolver, mock_runner, vec![].into()));
 
         // Create children "a" and "b" in collection 1, "c" in collection 2.
-        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
-        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl("a")));
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+        let res = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl("a")));
         let _ = res.expect("failed to create child a").expect("failed to create child a");
 
-        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
-        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl("b")));
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+        let res = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl("b")));
         let _ = res.expect("failed to create child b").expect("failed to create child b");
 
-        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
-        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl("c")));
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+        let res = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl("c")));
         let _ = res.expect("failed to create child c").expect("failed to create child c");
 
-        let collection_ref = fsys::CollectionRef { name: Some("coll2".to_string()) };
-        let res = await!(test.realm_proxy.create_child(collection_ref, child_decl("d")));
+        let mut collection_ref = fsys::CollectionRef { name: "coll2".to_string() };
+        let res = await!(test.realm_proxy.create_child(&mut collection_ref, child_decl("d")));
         let _ = res.expect("failed to create child d").expect("failed to create child d");
 
         // Verify that we see the expected children when listing the collection.
         let (iterator_proxy, server_end) = endpoints::create_proxy().unwrap();
-        let collection_ref = fsys::CollectionRef { name: Some("coll".to_string()) };
-        let res = await!(test.realm_proxy.list_children(collection_ref, server_end));
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+        let res = await!(test.realm_proxy.list_children(&mut collection_ref, server_end));
         let _ = res.expect("failed to list children").expect("failed to list children");
 
         let res = await!(iterator_proxy.next());
@@ -981,11 +950,11 @@ mod tests {
             children,
             vec![
                 fsys::ChildRef {
-                    name: Some("a".to_string()),
+                    name: "a".to_string(),
                     collection: Some("coll".to_string())
                 },
                 fsys::ChildRef {
-                    name: Some("b".to_string()),
+                    name: "b".to_string(),
                     collection: Some("coll".to_string())
                 },
             ]
@@ -996,7 +965,7 @@ mod tests {
         assert_eq!(
             children,
             vec![fsys::ChildRef {
-                name: Some("c".to_string()),
+                name: "c".to_string(),
                 collection: Some("coll".to_string())
             },]
         );
@@ -1023,21 +992,11 @@ mod tests {
         let mock_runner = MockRunner::new();
         let test = await!(FrameworkServiceTest::new(mock_resolver, mock_runner, vec![].into()));
 
-        // Invalid arguments.
-        {
-            let collection_ref = fsys::CollectionRef { name: None };
-            let (_, server_end) = endpoints::create_proxy().unwrap();
-            let err = await!(test.realm_proxy.list_children(collection_ref, server_end))
-                .expect("fidl call failed")
-                .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::InvalidArguments);
-        }
-
         // Collection not found.
         {
-            let collection_ref = fsys::CollectionRef { name: Some("nonexistent".to_string()) };
+            let mut collection_ref = fsys::CollectionRef { name: "nonexistent".to_string() };
             let (_, server_end) = endpoints::create_proxy().unwrap();
-            let err = await!(test.realm_proxy.list_children(collection_ref, server_end))
+            let err = await!(test.realm_proxy.list_children(&mut collection_ref, server_end))
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
             assert_eq!(err, fsys::Error::CollectionNotFound);

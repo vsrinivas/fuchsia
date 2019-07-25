@@ -336,7 +336,7 @@ impl<'a> ValidationContext<'a> {
             Some(fsys::Ref::Self_(_)) => None,
             Some(fsys::Ref::Child(child)) => {
                 self.validate_source_child(child, "StorageDecl");
-                child.name.as_ref().map(|s| s.as_str())
+                Some(&child.name as &str)
             }
             Some(_) => {
                 self.errors.push(Error::invalid_field("StorageDecl", "source"));
@@ -357,7 +357,7 @@ impl<'a> ValidationContext<'a> {
 
     fn validate_source_child(&mut self, child: &fsys::ChildRef, decl_type: &str) {
         let mut valid = true;
-        valid &= NAME.check(child.name.as_ref(), decl_type, "source.child.name", &mut self.errors);
+        valid &= NAME.check(Some(&child.name), decl_type, "source.child.name", &mut self.errors);
         valid &= if child.collection.is_some() {
             self.errors.push(Error::extraneous_field(decl_type, "source.child.collection"));
             false
@@ -367,27 +367,15 @@ impl<'a> ValidationContext<'a> {
         if !valid {
             return;
         }
-        if let Some(child_name) = &child.name {
-            if !self.all_children.contains(child_name as &str) {
-                self.errors.push(Error::invalid_child(decl_type, "source", child_name as &str));
-            }
-        } else {
-            self.errors.push(Error::missing_field(decl_type, "source.child.name"));
+        if !self.all_children.contains(&child.name as &str) {
+            self.errors.push(Error::invalid_child(decl_type, "source", &child.name as &str));
         }
     }
 
     fn validate_storage_source(&mut self, source: &fsys::StorageRef, decl_type: &str) {
-        if NAME.check(source.name.as_ref(), decl_type, "source.storage.name", &mut self.errors) {
-            if let Some(storage_name) = &source.name {
-                if !self.all_storage_and_sources.contains_key(storage_name as &str) {
-                    self.errors.push(Error::invalid_storage(
-                        decl_type,
-                        "source",
-                        storage_name as &str,
-                    ));
-                }
-            } else {
-                self.errors.push(Error::missing_field(decl_type, "source.storage.name"));
+        if NAME.check(Some(&source.name), decl_type, "source.storage.name", &mut self.errors) {
+            if !self.all_storage_and_sources.contains_key(&source.name as &str) {
+                self.errors.push(Error::invalid_storage(decl_type, "source", &source.name as &str));
             }
         }
     }
@@ -534,7 +522,7 @@ impl<'a> ValidationContext<'a> {
             Some(fsys::Ref::Realm(_)) => None,
             Some(fsys::Ref::Storage(s)) => {
                 self.validate_storage_source(s, decl);
-                s.name.as_ref().map(|s| s.as_str())
+                Some(&s.name as &str)
             }
             Some(_) => {
                 self.errors.push(Error::invalid_field(decl, "source"));
@@ -556,7 +544,7 @@ impl<'a> ValidationContext<'a> {
         target_path: Option<&'a String>,
     ) {
         let mut valid = true;
-        valid &= NAME.check(child.name.as_ref(), decl, "target.child.name", &mut self.errors);
+        valid &= NAME.check(Some(&child.name), decl, "target.child.name", &mut self.errors);
         valid &= if child.collection.is_some() {
             self.errors.push(Error::extraneous_field(decl, "target.child.collection"));
             false
@@ -567,24 +555,19 @@ impl<'a> ValidationContext<'a> {
             return;
         }
         if let Some(target_path) = target_path {
-            let child_name: &str = child.name.as_ref().unwrap();
-            if !self.all_children.contains(child_name) {
-                self.errors.push(Error::invalid_child(decl, "target", child_name));
+            if !self.all_children.contains(&child.name as &str) {
+                self.errors.push(Error::invalid_child(decl, "target", &child.name as &str));
             }
             let paths_for_target =
-                self.child_target_paths.entry(child_name.to_string()).or_insert(HashSet::new());
+                self.child_target_paths.entry(child.name.to_string()).or_insert(HashSet::new());
             if !paths_for_target.insert(target_path) {
                 self.errors.push(Error::duplicate_field(decl, "target_path", target_path as &str));
             }
             if let Some(source) = source {
                 if let fsys::Ref::Child(source_child) = source {
-                    if let Some(source_child_name) = &source_child.name {
-                        if source_child_name == child_name {
-                            self.errors.push(Error::offer_target_equals_source(
-                                decl,
-                                source_child_name as &str,
-                            ));
-                        }
+                    if source_child.name == child.name {
+                        self.errors
+                            .push(Error::offer_target_equals_source(decl, &child.name as &str));
                     }
                 }
             }
@@ -597,17 +580,20 @@ impl<'a> ValidationContext<'a> {
         collection: &fsys::CollectionRef,
         target_path: Option<&'a String>,
     ) {
-        if !NAME.check(collection.name.as_ref(), decl, "target.collection.name", &mut self.errors) {
+        if !NAME.check(Some(&collection.name), decl, "target.collection.name", &mut self.errors) {
             return;
         }
         if let Some(target_path) = target_path {
-            let collection_name: &str = collection.name.as_ref().unwrap();
-            if !self.all_collections.contains(collection_name) {
-                self.errors.push(Error::invalid_collection(decl, "target", collection_name));
+            if !self.all_collections.contains(&collection.name as &str) {
+                self.errors.push(Error::invalid_collection(
+                    decl,
+                    "target",
+                    &collection.name as &str,
+                ));
             }
             let paths_for_target = self
                 .collection_target_paths
-                .entry(collection_name.to_string())
+                .entry(collection.name.to_string())
                 .or_insert(HashSet::new());
             if !paths_for_target.insert(target_path) {
                 self.errors.push(Error::duplicate_field(decl, "target_path", target_path as &str));
@@ -623,14 +609,14 @@ impl<'a> ValidationContext<'a> {
     ) {
         match target {
             Some(fsys::Ref::Child(c)) => {
-                if !NAME.check(c.name.as_ref(), decl, "target.child.name", &mut self.errors) {
+                if !NAME.check(Some(&c.name), decl, "target.child.name", &mut self.errors) {
                     return;
                 }
                 if c.collection.is_some() {
                     self.errors.push(Error::extraneous_field(decl, "target.child.collection"));
                     return;
                 }
-                let name: &str = c.name.as_ref().unwrap();
+                let name: &str = &c.name;
                 if !self.all_children.contains(name) {
                     self.errors.push(Error::invalid_child(decl, "target", name));
                 }
@@ -641,10 +627,10 @@ impl<'a> ValidationContext<'a> {
                 }
             }
             Some(fsys::Ref::Collection(c)) => {
-                if !NAME.check(c.name.as_ref(), decl, "target.collection.name", &mut self.errors) {
+                if !NAME.check(Some(&c.name), decl, "target.collection.name", &mut self.errors) {
                     return;
                 }
-                let name: &str = c.name.as_ref().unwrap();
+                let name: &str = &c.name;
                 if !self.all_collections.contains(name) {
                     self.errors.push(Error::invalid_collection(decl, "target", name));
                 }
@@ -1002,7 +988,7 @@ mod tests {
                 decl.exposes = Some(vec![
                     ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("logger".to_string()),
+                            name: "logger".to_string(),
                             collection: Some("modular".to_string()),
                         })),
                         source_path: Some("/svc/logger".to_string()),
@@ -1010,7 +996,7 @@ mod tests {
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("netstack".to_string()),
+                            name: "netstack".to_string(),
                             collection: Some("modular".to_string()),
                         })),
                         source_path: Some("/data".to_string()),
@@ -1030,7 +1016,7 @@ mod tests {
                 decl.exposes = Some(vec![
                     ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("^bad".to_string()),
+                            name: "^bad".to_string(),
                             collection: None,
                         })),
                         source_path: Some("foo/".to_string()),
@@ -1038,7 +1024,7 @@ mod tests {
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("^bad".to_string()),
+                            name: "^bad".to_string(),
                             collection: None,
                         })),
                         source_path: Some("foo/".to_string()),
@@ -1062,7 +1048,7 @@ mod tests {
                 decl.exposes = Some(vec![
                     ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("b".repeat(101)),
+                            name: "b".repeat(101),
                             collection: None,
                         })),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
@@ -1070,7 +1056,7 @@ mod tests {
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("b".repeat(101)),
+                            name: "b".repeat(101),
                             collection: None,
                         })),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
@@ -1094,7 +1080,7 @@ mod tests {
                 decl.exposes = Some(vec![
                     ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("netstack".to_string()),
+                            name: "netstack".to_string(),
                             collection: None,
                         })),
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
@@ -1102,7 +1088,7 @@ mod tests {
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("netstack".to_string()),
+                            name: "netstack".to_string(),
                             collection: None,
                         })),
                         source_path: Some("/data/netstack".to_string()),
@@ -1184,13 +1170,13 @@ mod tests {
                 decl.offers = Some(vec![
                     OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("a".repeat(101)),
+                            name: "a".repeat(101),
                             collection: None,
                         })),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target: Some(Ref::Child(
                            ChildRef {
-                               name: Some("b".repeat(101)),
+                               name: "b".repeat(101),
                                collection: None,
                            }
                         )),
@@ -1201,20 +1187,20 @@ mod tests {
                         source_path: Some("/a".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef {
-                               name: Some("b".repeat(101)),
+                               name: "b".repeat(101),
                            }
                         )),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                     }),
                    OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("a".repeat(101)),
+                            name: "a".repeat(101),
                             collection: None,
                         })),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target: Some(Ref::Child(
                            ChildRef {
-                               name: Some("b".repeat(101)),
+                               name: "b".repeat(101),
                                collection: None,
                            }
                         )),
@@ -1225,7 +1211,7 @@ mod tests {
                         source_path: Some("/a".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef {
-                               name: Some("b".repeat(101)),
+                               name: "b".repeat(101),
                            }
                         )),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
@@ -1235,7 +1221,7 @@ mod tests {
                         source: Some(Ref::Realm(RealmRef {})),
                         target: Some(Ref::Child(
                             ChildRef {
-                                name: Some("b".repeat(101)),
+                                name: "b".repeat(101),
                                 collection: None,
                             }
                         )),
@@ -1244,7 +1230,7 @@ mod tests {
                         type_: Some(StorageType::Data),
                         source: Some(Ref::Realm(RealmRef {})),
                         target: Some(Ref::Collection(
-                            CollectionRef { name: Some("b".repeat(101)) }
+                            CollectionRef { name: "b".repeat(101) }
                         )),
                     }),
                 ]);
@@ -1273,13 +1259,13 @@ mod tests {
                 decl.offers = Some(vec![
                     OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("logger".to_string()),
+                            name: "logger".to_string(),
                             collection: Some("modular".to_string()),
                         })),
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         target: Some(Ref::Child(
                             ChildRef {
-                                name: Some("netstack".to_string()),
+                                name: "netstack".to_string(),
                                 collection: Some("modular".to_string()),
                             }
                         )),
@@ -1287,13 +1273,13 @@ mod tests {
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("logger".to_string()),
+                            name: "logger".to_string(),
                             collection: Some("modular".to_string()),
                         })),
                         source_path: Some("/data/assets".to_string()),
                         target: Some(Ref::Child(
                             ChildRef {
-                                name: Some("netstack".to_string()),
+                                name: "netstack".to_string(),
                                 collection: Some("modular".to_string()),
                             }
                         )),
@@ -1304,7 +1290,7 @@ mod tests {
                         source: Some(Ref::Realm(RealmRef{ })),
                         target: Some(Ref::Child(
                             ChildRef {
-                                name: Some("netstack".to_string()),
+                                name: "netstack".to_string(),
                                 collection: Some("modular".to_string()),
                             }
                         )),
@@ -1326,13 +1312,13 @@ mod tests {
                 decl.offers = Some(vec![
                     OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("logger".to_string()),
+                            name: "logger".to_string(),
                             collection: None,
                         })),
                         source_path: Some("/svc/logger".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
-                               name: Some("logger".to_string()),
+                               name: "logger".to_string(),
                                collection: None,
                            }
                         )),
@@ -1340,13 +1326,13 @@ mod tests {
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("logger".to_string()),
+                            name: "logger".to_string(),
                             collection: None,
                         })),
                         source_path: Some("/data/assets".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
-                               name: Some("logger".to_string()),
+                               name: "logger".to_string(),
                                collection: None,
                            }
                         )),
@@ -1371,11 +1357,11 @@ mod tests {
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),
                         source: Some(Ref::Storage(StorageRef {
-                            name: Some("minfs".to_string()),
+                            name: "minfs".to_string(),
                         })),
                         target: Some(Ref::Child(
                             ChildRef {
-                                name: Some("logger".to_string()),
+                                name: "logger".to_string(),
                                 collection: None,
                             }
                         )),
@@ -1393,7 +1379,7 @@ mod tests {
                         name: Some("minfs".to_string()),
                         source_path: Some("/minfs".to_string()),
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("logger".to_string()),
+                            name: "logger".to_string(),
                             collection: None,
                         })),
                     }
@@ -1410,13 +1396,13 @@ mod tests {
                 decl.offers = Some(vec![
                     OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("logger".to_string()),
+                            name: "logger".to_string(),
                             collection: None,
                         })),
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
-                               name: Some("netstack".to_string()),
+                               name: "netstack".to_string(),
                                collection: None,
                            }
                         )),
@@ -1424,12 +1410,12 @@ mod tests {
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("logger".to_string()),
+                            name: "logger".to_string(),
                             collection: None,
                         })),
                         source_path: Some("/data/assets".to_string()),
                         target: Some(Ref::Collection(
-                           CollectionRef { name: Some("modular".to_string()) }
+                           CollectionRef { name: "modular".to_string() }
                         )),
                         target_path: Some("/data".to_string()),
                     }),
@@ -1439,7 +1425,7 @@ mod tests {
                         name: Some("memfs".to_string()),
                         source_path: Some("/memfs".to_string()),
                         source: Some(Ref::Child(ChildRef {
-                            name: Some("logger".to_string()),
+                            name: "logger".to_string(),
                             collection: None,
                         })),
                     },
@@ -1474,7 +1460,7 @@ mod tests {
                         source_path: Some("/svc/logger".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
-                               name: Some("netstack".to_string()),
+                               name: "netstack".to_string(),
                                collection: None,
                            }
                         )),
@@ -1485,7 +1471,7 @@ mod tests {
                         source_path: Some("/svc/logger".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
-                               name: Some("netstack".to_string()),
+                               name: "netstack".to_string(),
                                collection: None,
                            }
                         )),
@@ -1495,7 +1481,7 @@ mod tests {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/data/assets".to_string()),
                         target: Some(Ref::Collection(
-                           CollectionRef { name: Some("modular".to_string()) }
+                           CollectionRef { name: "modular".to_string() }
                         )),
                         target_path: Some("/data".to_string()),
                     }),
@@ -1503,7 +1489,7 @@ mod tests {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/data/assets".to_string()),
                         target: Some(Ref::Collection(
-                           CollectionRef { name: Some("modular".to_string()) }
+                           CollectionRef { name: "modular".to_string() }
                         )),
                         target_path: Some("/data".to_string()),
                     }),
@@ -1537,7 +1523,7 @@ mod tests {
                         source_path: Some("/svc/logger".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
-                               name: Some("netstack".to_string()),
+                               name: "netstack".to_string(),
                                collection: None,
                            }
                         )),
@@ -1547,7 +1533,7 @@ mod tests {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger".to_string()),
                         target: Some(Ref::Collection(
-                           CollectionRef { name: Some("modular".to_string()) }
+                           CollectionRef { name: "modular".to_string(), }
                         )),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     }),
@@ -1556,7 +1542,7 @@ mod tests {
                         source_path: Some("/data/assets".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
-                               name: None,
+                               name: "netstack".to_string(),
                                collection: None,
                            }
                         )),
@@ -1566,7 +1552,7 @@ mod tests {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/data/assets".to_string()),
                         target: Some(Ref::Collection(
-                           CollectionRef { name: None }
+                           CollectionRef { name: "modular".to_string(), }
                         )),
                         target_path: Some("/data".to_string()),
                     }),
@@ -1575,7 +1561,7 @@ mod tests {
                         source: Some(Ref::Realm(RealmRef{})),
                         target: Some(Ref::Child(
                             ChildRef {
-                                name: Some("netstack".to_string()),
+                                name: "netstack".to_string(),
                                 collection: None,
                             }
                         )),
@@ -1584,24 +1570,7 @@ mod tests {
                         type_: Some(StorageType::Data),
                         source: Some(Ref::Realm(RealmRef{})),
                         target: Some(Ref::Collection(
-                            CollectionRef { name: Some("modular".to_string()) }
-                        )),
-                    }),
-                    OfferDecl::Storage(OfferStorageDecl {
-                        type_: Some(StorageType::Data),
-                        source: Some(Ref::Realm(RealmRef{})),
-                        target: Some(Ref::Child(
-                            ChildRef {
-                                name: None,
-                                collection: None,
-                            }
-                        )),
-                    }),
-                    OfferDecl::Storage(OfferStorageDecl {
-                        type_: Some(StorageType::Data),
-                        source: Some(Ref::Realm(RealmRef{})),
-                        target: Some(Ref::Collection(
-                            CollectionRef { name: None }
+                            CollectionRef { name: "modular".to_string(), }
                         )),
                     }),
                 ]);
@@ -1610,12 +1579,10 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::invalid_child("OfferServiceDecl", "target", "netstack"),
                 Error::invalid_collection("OfferServiceDecl", "target", "modular"),
-                Error::missing_field("OfferDirectoryDecl", "target.child.name"),
-                Error::missing_field("OfferDirectoryDecl", "target.collection.name"),
+                Error::invalid_child("OfferDirectoryDecl", "target", "netstack"),
+                Error::invalid_collection("OfferDirectoryDecl", "target", "modular"),
                 Error::invalid_child("OfferStorageDecl", "target", "netstack"),
                 Error::invalid_collection("OfferStorageDecl", "target", "modular"),
-                Error::missing_field("OfferStorageDecl", "target.child.name"),
-                Error::missing_field("OfferStorageDecl", "target.collection.name"),
             ])),
         },
 
