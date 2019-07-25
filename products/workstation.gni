@@ -12,11 +12,13 @@ base_package_labels += [
   "//src/experiences/bin/term",
 ]
 
-cache_package_labels += [ "//src/experiences/bin/simple_browser" ]
-
-universe_package_labels += [
+cache_package_labels += [
+  "//src/experiences/bin/simple_browser",
   "//src/media/audio/audio",
   "//src/media/audio/audio_core",
+]
+
+universe_package_labels += [
   "//peridot/packages/prod:cloud_provider_firestore",
   "//src/modular/bundles:tools",
 ]
