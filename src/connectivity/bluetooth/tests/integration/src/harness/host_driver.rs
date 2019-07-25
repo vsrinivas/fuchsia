@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    failure::{err_msg, Error, ResultExt},
     fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice},
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fuchsia_async as fasync,
@@ -39,37 +39,6 @@ fn apply_delta(base: AdapterState, delta: AdapterState) -> AdapterState {
         discoverable: delta.discoverable.or(base.discoverable),
         discovering: delta.discovering.or(base.discovering),
         local_service_uuids: delta.local_service_uuids.or(base.local_service_uuids),
-    }
-}
-
-pub fn expect_eq<T>(expected: &T, actual: &T) -> Result<(), Error>
-where
-    T: std::fmt::Debug + std::cmp::PartialEq,
-{
-    if *expected == *actual {
-        Ok(())
-    } else {
-        Err(BtError::new(&format!("failed - expected '{:#?}', found: '{:#?}'", expected, actual))
-            .into())
-    }
-}
-
-macro_rules! expect_eq {
-    ($expected:expr, $actual:expr) => {
-        expect_eq(&$expected, &$actual)
-    };
-}
-
-macro_rules! expect_true {
-    ($condition:expr) => {
-        if $condition{
-            Ok(())
-        } else {
-            Err(fuchsia_bluetooth::error::Error::new(&format!(
-                "condition is not true: {}",
-                stringify!($condition)
-            )).into())
-        } as Result<(), Error>
     }
 }
 

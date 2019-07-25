@@ -11,9 +11,12 @@ use {
     },
 };
 
-use crate::harness::host_driver::{
-    expect_adapter_state, expect_eq, expect_host_peer, expect_no_peer, expect_remote_device,
-    HostDriverHarness,
+use crate::harness::{
+    expect::expect_eq,
+    host_driver::{
+        expect_adapter_state, expect_host_peer, expect_no_peer, expect_remote_device,
+        HostDriverHarness,
+    },
 };
 
 // TODO(BT-229): Currently these tests rely on fakes that are hard-coded in the fake

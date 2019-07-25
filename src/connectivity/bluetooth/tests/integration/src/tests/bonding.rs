@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    failure::{err_msg, Error},
     fidl_fuchsia_bluetooth::Status,
     fidl_fuchsia_bluetooth_control::{
         AddressType, BondingData, LeData, Ltk, RemoteKey, SecurityProperties, TechnologyType,
@@ -12,8 +12,9 @@ use {
     futures::TryFutureExt,
 };
 
-use crate::harness::host_driver::{
-    expect_eq, expect_host_peer, expect_remote_device, HostDriverHarness,
+use crate::harness::{
+    expect::expect_eq,
+    host_driver::{expect_host_peer, expect_remote_device, HostDriverHarness},
 };
 
 // TODO(armansito|xow): Add tests for BR/EDR and dual mode bond data.

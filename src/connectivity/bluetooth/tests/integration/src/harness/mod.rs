@@ -8,11 +8,12 @@ use {
     futures::Future,
 };
 
-pub mod control;
-
 #[macro_use]
-pub mod host_driver;
+pub mod expect;
 
+// Test harnesses
+pub mod control;
+pub mod host_driver;
 pub mod low_energy_central;
 
 pub mod profile;
