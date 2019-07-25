@@ -76,6 +76,7 @@ executable("bin") {
   testonly = true
 
   sources = [
+    "core_tests.cc",
     "enclosed_guest.cc",
     "enclosed_guest.h",
     "fake_scenic.cc",
@@ -86,9 +87,12 @@ executable("bin") {
     "mock_netstack.h",
     "periodic_logger.cc",
     "periodic_logger.h",
+    "virtio_balloon_tests.cc",
     "virtio_block_tests.cc",
+    "virtio_console_tests.cc",
     "virtio_gpu_tests.cc",
     "virtio_net_tests.cc",
+    "virtio_rng_tests.cc",
     "virtio_vsock_tests.cc",
   ]
 

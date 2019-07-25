@@ -123,6 +123,19 @@ class EnclosedGuest {
   bool ready_ = false;
 };
 
+template <typename EnclosedGuestImpl>
+class SingleCpuEnclosedGuest : public EnclosedGuestImpl {
+  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
+    zx_status_t status = EnclosedGuestImpl::LaunchInfo(launch_info);
+    if (status != ZX_OK) {
+      return status;
+    }
+    launch_info->args.push_back("--virtio-gpu=false");
+    launch_info->args.push_back("--cpus=1");
+    return ZX_OK;
+  }
+};
+
 class ZirconEnclosedGuest : public EnclosedGuest {
  public:
   std::vector<std::string> GetTestUtilCommand(const std::string& util,
@@ -176,5 +189,10 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
   std::unique_ptr<vm_tools::Maitred::Stub> maitred_;
   fuchsia::virtualization::HostVsockEndpointPtr vsock_;
 };
+
+// Termina guests should be added here once they're stable in CQ.
+using AllGuestTypes =
+    ::testing::Types<ZirconEnclosedGuest, SingleCpuEnclosedGuest<ZirconEnclosedGuest>,
+                     DebianEnclosedGuest, SingleCpuEnclosedGuest<DebianEnclosedGuest>>;
 
 #endif  // SRC_VIRTUALIZATION_TESTS_ENCLOSED_GUEST_H_
