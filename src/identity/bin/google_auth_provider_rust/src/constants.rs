@@ -24,9 +24,7 @@ lazy_static! {
         // specifically display name, profile url, and profile image.
         "profile",
         // Used by components outside this repository.
-        "https://www.googleapis.com/auth/assistant",
-        // Used by components outside this repository.
-        "https://www.googleapis.com/auth/youtube.readonly"
+        "https://www.googleapis.com/auth/assistant"
     ].join(" ");
     /// URL to redirect to during authorization flow.
     pub static ref REDIRECT_URI: Url =

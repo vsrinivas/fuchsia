@@ -36,7 +36,5 @@ constexpr auto kScopes = {
     // specifically display name, profile url, and profile image.
     "profile",
     // Used by components outside this repository.
-    "https://www.googleapis.com/auth/assistant",
-    // Used by components outside this repository.
-    "https://www.googleapis.com/auth/youtube.readonly"};
+    "https://www.googleapis.com/auth/assistant"};
 }  // namespace google_auth_provider
