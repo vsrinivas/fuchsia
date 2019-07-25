@@ -1,0 +1,10 @@
+{
+    "crashpad_database" : {
+        "path": "/tmp/crashes",
+        "max_size_in_kb": 10240
+    },
+    "crash_server": {
+        "enable_upload": false
+    },
+    "feedback_data_collection_timeout_in_milliseconds": 10000
+}

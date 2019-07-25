@@ -3,31 +3,51 @@
 
 import("//build/config.gni")
 import("//build/package.gni")
-import("//build/package/component.gni")
 
-package("crashpad_agent") {
-  deps = [
-    ":main",
-  ]
-  binaries = [
-    {
-      name = "crashpad_agent"
-    },
-  ]
+# We use a template to keep the real and fake packages in sync.
+template("crashpad_agent_package") {
+  package(target_name) {
+    binaries = [
+      {
+        name = "crashpad_agent"
+      },
+    ]
 
-  meta = [
-    {
-      path = rebase_path("meta/crashpad_agent.cmx")
-      dest = "crashpad_agent.cmx"
-    },
-  ]
+    meta = [
+      {
+        path = rebase_path("meta/crashpad_agent.cmx")
+        dest = "crashpad_agent.cmx"
+      },
+    ]
 
-  resources = [
-    {
-      path = "configs/default.json"
-      dest = "default_config.json"
-    },
-  ]
+    resources = [
+      {
+        path = "configs/default.json"
+        dest = "default_config.json"
+      },
+    ]
+
+    deps = [
+      ":main",
+    ]
+  }
+
+  # Suppress unused variable warnings as the invoker is expected to be empty.
+  not_needed(invoker, "*")
+}
+
+# The real package.
+crashpad_agent_package("crashpad_agent") {
+}
+
+# A fake package for integration test purposes where we want a valid override config_data() that
+# only affects the fake package.
+crashpad_agent_package("fake_crashpad_agent_valid_override_config") {
+}
+
+# A fake package for integration test purposes where we want an invalid override config_data() that
+# only affects the fake package.
+crashpad_agent_package("fake_crashpad_agent_invalid_override_config") {
 }
 
 executable("main") {
