@@ -155,7 +155,6 @@ static constexpr const char* bootsvc_services[] = {
     fuchsia_boot_FactoryItems_Name,
     fuchsia_boot_Items_Name,
     fuchsia_boot_Log_Name,
-    fuchsia_boot_RootJob_Name,
     fuchsia_boot_RootResource_Name,
     nullptr,
 };

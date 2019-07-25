@@ -1,14 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include <fuchsia/boot/c/fidl.h>
+
 #include <gtest/gtest.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
-#include <lib/fdio/directory.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/test/test_settings.h>
@@ -35,23 +34,6 @@ TEST(Circular, FillBuffer) { RunAndVerify("data/circular.tspec"); }
 TEST(Streaming, FillBuffer) { RunAndVerify("data/streaming.tspec"); }
 
 TEST(NestedTestEnvironment, Test) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "unable to create channel";
-  }
-
-  status = fdio_service_connect("/svc/fuchsia.boot.RootJob", remote.release());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "unable to open fuchsia.boot.RootJob channel";
-  }
-
-  zx_handle_t root_job;
-  zx_status_t fidl_status = fuchsia_boot_RootJobGet(local.get(), &root_job);
-  if (fidl_status != ZX_OK) {
-    FXL_LOG(ERROR) << "unable to get root job " << fidl_status;
-  }
-
   ASSERT_TRUE(RunTspec(g_context.get(), "data/nested_environment_test.tspec",
                        kOutputFilePath));
 }

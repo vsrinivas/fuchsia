@@ -7,14 +7,14 @@
             "deprecated-shell"
         ],
         "services": [
-            "fuchsia.boot.RootJob",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.net.SocketProvider",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
             "fuchsia.sys.ComponentController",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysinfo.Device"
         ]
     }
 }

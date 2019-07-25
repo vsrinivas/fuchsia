@@ -3,11 +3,13 @@
         "binary": "bin/system_monitor_harvester"
     },
     "sandbox": {
+        "dev": [
+            "misc/sysinfo"
+        ],
         "features": [
             "deprecated-shell"
         ],
         "services": [
-            "fuchsia.boot.RootJob",
             "fuchsia.boot.RootResource",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",

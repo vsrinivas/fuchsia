@@ -23,7 +23,6 @@ namespace {
 std::vector<std::string> RootRealmServices() {
   return std::vector<std::string>{
       fuchsia::boot::FactoryItems::Name_,
-      fuchsia::boot::RootJob::Name_,
       fuchsia::boot::RootResource::Name_,
       fuchsia::device::NameProvider::Name_,
       fuchsia::device::manager::Administrator::Name_,

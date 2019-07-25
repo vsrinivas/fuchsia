@@ -63,7 +63,7 @@ rustc_binary("root_job_test_runner") {
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
-    "//zircon/public/fidl/fuchsia-boot:fuchsia-boot-rustc",
+    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo-rustc",
   ]
 }
 
@@ -122,8 +122,6 @@ executable("static_pie_test_util") {
 }
 
 test_package("process_builder_tests") {
-  rootjob_svc = "//build"
-
   deps = [
     ":process_builder_test",
     ":root_job_test_runner",

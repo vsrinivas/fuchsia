@@ -27,7 +27,6 @@ constexpr char kInjectedServices[] = "injected-services";
 constexpr char kSystemServices[] = "system-services";
 
 const std::unordered_set<std::string> kAllowedSystemServices = {
-    fuchsia::boot::RootJob::Name_,
     fuchsia::boot::RootResource::Name_,
     fuchsia::device::NameProvider::Name_,
     fuchsia::net::Connectivity::Name_,

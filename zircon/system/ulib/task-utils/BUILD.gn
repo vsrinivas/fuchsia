@@ -14,7 +14,7 @@ library("task-utils") {
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
-    "$zx/system/fidl/fuchsia-boot:c",
+    "$zx/system/fidl/fuchsia-sysinfo:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

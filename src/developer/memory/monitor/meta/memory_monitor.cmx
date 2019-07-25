@@ -3,11 +3,13 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "dev": [
+            "misc/sysinfo"
+        ],
         "features": [
             "isolated-cache-storage"
         ],
         "services": [
-            "fuchsia.boot.RootJob",
             "fuchsia.boot.RootResource",
             "fuchsia.tracing.provider.Registry"
         ]

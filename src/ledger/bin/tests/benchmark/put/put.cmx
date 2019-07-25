@@ -3,11 +3,13 @@
         "binary": "bin/ledger_benchmark_put"
     },
     "sandbox": {
+        "dev": [
+            "misc/sysinfo"
+        ],
         "features": [
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.boot.RootJob",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.sys.Launcher"
         ]

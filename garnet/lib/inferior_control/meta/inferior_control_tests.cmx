@@ -1,17 +1,12 @@
 {
-  "facets": {
-    "fuchsia.test": {
-      "system-services": [
-        "fuchsia.boot.RootJob"
-      ]
-    }
-  },
   "program": {
     "binary": "test/inferior_control_tests"
   },
   "sandbox": {
+    "dev": [
+      "misc"
+    ],
     "services": [
-      "fuchsia.boot.RootJob",
       "fuchsia.process.Launcher",
       "fuchsia.process.Resolver"
     ],

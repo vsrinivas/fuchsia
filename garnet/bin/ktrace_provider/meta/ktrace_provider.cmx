@@ -4,7 +4,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.boot.RootJob",
             "fuchsia.tracing.provider.Registry"
         ],
         "dev": [ "misc" ]

@@ -2,7 +2,6 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.boot.RootJob",
                 "fuchsia.boot.RootResource"
             ]
         }
@@ -11,11 +10,13 @@
         "binary": "test/system_monitor_harvester_test"
     },
     "sandbox": {
+        "dev": [
+            "misc/sysinfo"
+        ],
         "features": [
             "deprecated-shell"
         ],
         "services": [
-            "fuchsia.boot.RootJob",
             "fuchsia.boot.RootResource",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",

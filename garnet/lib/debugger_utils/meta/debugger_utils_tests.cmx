@@ -1,20 +1,15 @@
 {
-  "facets": {
-    "fuchsia.test": {
-      "system-services": [
-        "fuchsia.boot.RootJob"
-      ]
-    }
-  },
   "program": {
     "binary": "test/debugger_utils_tests"
   },
   "sandbox": {
+    "dev": [
+      "misc"
+    ],
     "features": [
       "deprecated-ambient-replace-as-executable"
     ],
     "services": [
-      "fuchsia.boot.RootJob",
       "fuchsia.process.Launcher",
       "fuchsia.process.Resolver"
     ]

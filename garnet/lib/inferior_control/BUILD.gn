@@ -121,8 +121,6 @@ executable("run-inferior") {
 }
 
 test_package("inferior_control_tests") {
-  rootjob_svc = "//build"
-
   deps = [
     ":run-inferior",
     ":test_helper",

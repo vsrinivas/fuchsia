@@ -54,7 +54,6 @@ config("ledger_config") {
 }
 
 package("ledger_tests") {
-  rootjob_svc = "//build"
   testonly = true
 
   deps = [
