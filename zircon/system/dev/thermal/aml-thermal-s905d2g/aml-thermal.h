@@ -41,7 +41,7 @@ public:
           opp_info_(std::move(opp_info)),
           thermal_config_(std::move(thermal_config)) {}
 
-    static zx_status_t Create(zx_device_t* device);
+    static zx_status_t Create(void* ctx, zx_device_t* device);
 
     // Ddk Hooks
     void DdkUnbind();

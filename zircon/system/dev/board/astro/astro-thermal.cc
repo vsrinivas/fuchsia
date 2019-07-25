@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -47,15 +48,6 @@ static const pbus_bti_t thermal_btis[] = {
     {
         .iommu_index = 0,
         .bti_id = BTI_THERMAL,
-    },
-};
-
-static const pbus_clk_t thermal_clk_gates[] = {
-    {
-        .clk = CLK_SYS_PLL_DIV16,
-    },
-    {
-        .clk = CLK_SYS_CPU_CLK_DIV16,
     },
 };
 
@@ -237,8 +229,6 @@ static pbus_dev_t thermal_dev = []() {
     dev.did = PDEV_DID_AMLOGIC_THERMAL;
     dev.mmio_list = thermal_mmios;
     dev.mmio_count = countof(thermal_mmios);
-    dev.clk_list = thermal_clk_gates;
-    dev.clk_count = countof(thermal_clk_gates);
     dev.irq_list = thermal_irqs;
     dev.irq_count = countof(thermal_irqs);
     dev.bti_list = thermal_btis;
@@ -247,6 +237,30 @@ static pbus_dev_t thermal_dev = []() {
     dev.metadata_count = countof(thermal_metadata);
     return dev;
 }();
+
+constexpr zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const zx_bind_inst_t clk1_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, CLK_SYS_PLL_DIV16),
+};
+static const zx_bind_inst_t clk2_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, CLK_SYS_CPU_CLK_DIV16),
+};
+static const device_component_part_t clk1_component[] = {
+    { countof(root_match), root_match },
+    { countof(clk1_match), clk1_match },
+};
+static const device_component_part_t clk2_component[] = {
+    { countof(root_match), root_match },
+    { countof(clk2_match), clk2_match },
+};
+static const device_component_t components[] = {
+    { countof(clk1_component), clk1_component },
+    { countof(clk2_component), clk2_component },
+};
 
 zx_status_t Astro::ThermalInit() {
     // Configure the GPIO to be Output & set it to alternate
@@ -267,7 +281,7 @@ zx_status_t Astro::ThermalInit() {
         return status;
     }
 
-    status = pbus_.DeviceAdd(&thermal_dev);
+    status = pbus_.CompositeDeviceAdd(&thermal_dev, components, countof(components), UINT32_MAX);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
         return status;

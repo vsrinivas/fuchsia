@@ -59,10 +59,24 @@ namespace thermal {
 zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
     zx_status_t status;
 
-    ddk::PDev pdev(parent);
+    ddk::CompositeProtocolClient composite(parent);
+    if (!composite.is_valid()) {
+        zxlogf(ERROR, "%s: ZX_PROTOCOL_COMPOSITE not available\n", __FILE__);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx_device_t* pdev_component;
+    size_t actual;
+    composite.GetComponents(&pdev_component, 1, &actual);
+    if (actual != 1) {
+        zxlogf(ERROR, "%s: could not get pdev_component\n", __FILE__);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    ddk::PDev pdev(pdev_component);
     if (!pdev.is_valid()) {
         zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
-        return ZX_ERR_NO_RESOURCES;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     pdev_device_info_t info;
@@ -102,7 +116,6 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
     }
 
     fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info;
-    size_t actual;
     status = device_get_metadata(parent, DEVICE_METADATA_THERMAL_CONFIG, &thermal_info,
                                  sizeof(thermal_info), &actual);
     if (status != ZX_OK || actual != sizeof(thermal_info)) {
@@ -125,7 +138,7 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<MtkThermal> device(new (&ac) MtkThermal(
         parent, std::move(*mmio), std::move(*pll_mmio), std::move(*pmic_mmio),
-        std::move(*infracfg_mmio), pdev, info.clk_count, thermal_info, std::move(port),
+        std::move(*infracfg_mmio), composite, pdev, thermal_info, std::move(port),
         std::move(irq), TempCalibration0::Get().ReadFrom(&(*fuse_mmio)),
         TempCalibration1::Get().ReadFrom(&(*fuse_mmio)),
         TempCalibration2::Get().ReadFrom(&(*fuse_mmio))));
@@ -149,15 +162,24 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
 }
 
 zx_status_t MtkThermal::Init() {
-    for (uint32_t i = 0; i < clk_count_; i++) {
+    auto component_count = composite_.GetComponentCount();
+
+    zx_device_t* components[component_count];
+    size_t actual;
+    composite_.GetComponents(components, component_count, &actual);
+    if (component_count != actual) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    // zeroth component is pdev
+    for (uint32_t i = 1; i < component_count; i++) {
         clock_protocol_t clock;
-        size_t actual;
-        auto status = pdev_.GetProtocol(ZX_PROTOCOL_CLOCK, i, &clock, sizeof(clock), &actual);
+        auto status = device_get_protocol(components[i], ZX_PROTOCOL_CLOCK, &clock);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: Failed to get clock %u\n", __FILE__, i);
             return status;
         }
-        
+
         status = clock_enable(&clock);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: Failed to enable clock %u\n", __FILE__, i);
@@ -626,6 +648,7 @@ static constexpr zx_driver_ops_t mtk_thermal_driver_ops = []() -> zx_driver_ops_
 }();
 
 ZIRCON_DRIVER_BEGIN(mtk_thermal, mtk_thermal_driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_THERMAL),
 ZIRCON_DRIVER_END(mtk_thermal)

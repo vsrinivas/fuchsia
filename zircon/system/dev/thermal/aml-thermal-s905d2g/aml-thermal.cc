@@ -6,6 +6,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
@@ -74,9 +75,23 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx) {
     return ZX_OK;
 }
 
-zx_status_t AmlThermal::Create(zx_device_t* device) {
-    // Get the voltage-table & opp metadata.
+zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
+    ddk::CompositeProtocolClient composite(device);
+    if (!composite.is_valid()) {
+        zxlogf(ERROR, "%s: failed to get composite protocol\n", __func__);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // zeroth component is pdev
+    zx_device_t* pdev;
     size_t actual;
+    composite.GetComponents(&pdev, 1, &actual);
+    if (actual != 1) {
+        zxlogf(ERROR, "%s: failed to get pdev component\n", __func__);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // Get the voltage-table & opp metadata.
     aml_opp_info_t opp_info;
     zx_status_t status = device_get_metadata(device, DEVICE_METADATA_PRIVATE, &opp_info,
                                              sizeof(opp_info_), &actual);
@@ -101,7 +116,7 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
     }
 
     // Initialize Temperature Sensor.
-    status = tsensor->InitSensor(device, thermal_config);
+    status = tsensor->InitSensor(pdev, thermal_config);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-thermal: Could not initialize Temperature Sensor: %d\n", status);
         return status;
@@ -114,7 +129,7 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
     }
 
     // Initialize Temperature Sensor.
-    status = voltage_regulator->Init(device, &opp_info);
+    status = voltage_regulator->Init(pdev, &opp_info);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-thermal: Could not initialize Voltage Regulator: %d\n", status);
         return status;
@@ -231,21 +246,18 @@ void AmlThermal::DdkRelease() {
     delete this;
 }
 
-zx_status_t aml_thermal_bind(void* ctx, zx_device_t* device) {
-    return thermal::AmlThermal::Create(device);
-}
-
 static constexpr zx_driver_ops_t driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
-    ops.bind = aml_thermal_bind;
+    ops.bind = AmlThermal::Create;
     return ops;
 }();
 
 } // namespace thermal
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_thermal, thermal::driver_ops, "aml-thermal", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(aml_thermal, thermal::driver_ops, "aml-thermal", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL),

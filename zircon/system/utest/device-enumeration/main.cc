@@ -166,7 +166,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
         "wifi/broadcom-wlanphy",
         "tcs3400-light/tcs-3400/hid-device-000",
         "sys/platform/05:03:11/clocks",
-        "sys/platform/05:03:a/thermal",
+        "aml-thermal/thermal",
         "AstroAudio/astro-audio-out",
         "sys/platform/05:03:13/astro-audio-in",
         //"sys/platform/05:05:3/aml-uart/serial/bt-transport-uart/bcm-hci",
@@ -214,7 +214,7 @@ TEST_F(DeviceEnumerationTest, CleoTest) {
         "mt8167-buttons/hid-buttons",
         "sys/platform/0d:00:14/mt-usb/usb-peripheral/function-000/cdc-eth-function/ethernet",
         "touch/focaltouch HidDevice/hid-device-000",
-        "sys/platform/0d:00:9/mtk-thermal",
+        "thermal/mtk-thermal",
         "mt8167-i2c",
     };
 
@@ -228,7 +228,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
         "sys/platform/05:00:14/clocks",
         "sys/platform/05:00:2/aml-i2c",
         "sys/platform/05:00:10/aml-canvas",
-        "sys/platform/05:03:a/thermal",
+        "aml-thermal/thermal",
         "sys/platform/00:00:1e/dw-dsi",
         "display/astro-display/display-controller",
         "sys/platform/05:00:18/aml-usb-phy-v2",

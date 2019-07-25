@@ -6,6 +6,7 @@
 
 #include <threads.h>
 
+#include <ddktl/protocol/composite.h>
 #include <lib/device-protocol/platform-device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -46,13 +47,14 @@ protected:
     // Visible for testing.
     MtkThermal(zx_device_t* parent, ddk::MmioBuffer mmio, ddk::MmioBuffer pll_mmio,
                ddk::MmioBuffer pmic_mmio, ddk::MmioBuffer infracfg_mmio,
-               const ddk::PDevProtocolClient& pdev, uint32_t clk_count,
+               const ddk::CompositeProtocolClient& composite,
+               const ddk::PDevProtocolClient& pdev,
                const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_info, zx::port port,
                zx::interrupt irq, TempCalibration0 cal0_fuse, TempCalibration1 cal1_fuse,
                TempCalibration2 cal2_fuse)
         : DeviceType(parent), mmio_(std::move(mmio)), pll_mmio_(std::move(pll_mmio)),
-          pmic_mmio_(std::move(pmic_mmio)), infracfg_mmio_(std::move(infracfg_mmio)), pdev_(pdev),
-          clk_count_(clk_count), thermal_info_(thermal_info), port_(std::move(port)),
+          pmic_mmio_(std::move(pmic_mmio)), infracfg_mmio_(std::move(infracfg_mmio)),
+          composite_(composite), pdev_(pdev), thermal_info_(thermal_info), port_(std::move(port)),
           irq_(std::move(irq)), cal0_fuse_(cal0_fuse), cal1_fuse_(cal1_fuse),
           cal2_fuse_(cal2_fuse) {}
 
@@ -114,8 +116,8 @@ private:
 
     int Thread();
 
+    ddk::CompositeProtocolClient composite_;
     ddk::PDevProtocolClient pdev_;
-    const uint32_t clk_count_;
     const fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info_;
     uint16_t current_op_idx_ = 0;
     zx::port port_;

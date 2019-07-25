@@ -6,7 +6,6 @@
 
 #include <ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
-#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/clock.h>
 #include <hwreg/mmio.h>
 #include <lib/zx/bti.h>
@@ -39,9 +38,6 @@ private:
     zx_status_t ConfigureSysPLL(uint32_t new_rate);
     zx_status_t ConfigureFixedPLL(uint32_t new_rate);
 
-    ddk::PDev pdev_;
-    // Initialize platform stuff.
-    zx_status_t InitPdev(zx_device_t* parent);
     // Protocols.
     ddk::ClockProtocolClient clks_[kClockCount];
     // MMIOS.

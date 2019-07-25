@@ -6,6 +6,8 @@
 #include "aml-fclk.h"
 #include "hiu-registers.h"
 #include <ddk/debug.h>
+#include <ddktl/protocol/composite.h>
+#include <lib/device-protocol/pdev.h>
 #include <unistd.h>
 
 namespace thermal {
@@ -30,18 +32,33 @@ constexpr uint32_t kSysPll = 1;
 
 } // namespace
 
-zx_status_t AmlCpuFrequency::InitPdev(zx_device_t* parent) {
-    pdev_ = ddk::PDev(parent);
-    if (!pdev_.is_valid()) {
-        zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol\n");
-        return ZX_ERR_NO_RESOURCES;
+
+zx_status_t AmlCpuFrequency::Init(zx_device_t* parent) {
+    ddk::CompositeProtocolClient composite(parent);
+    if (!composite.is_valid()) {
+        zxlogf(ERROR, "aml-cpufreq: failed to get composite protocol\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // zeroth component is pdev
+    zx_device_t* components[kClockCount + 1];
+    size_t actual;
+    composite.GetComponents(components, fbl::count_of(components), &actual);
+    if (actual != fbl::count_of(components)) {
+        zxlogf(ERROR, "aml-cpufreq: failed to get components\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    ddk::PDev pdev(components[0]);
+    if (!pdev.is_valid()) {
+        zxlogf(ERROR, "aml-cpufreq: failed to get pdev protocol\n");
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Get the clock protocols
     for (unsigned i = 0; i < kClockCount; i++) {
         clock_protocol_t clock;
-        size_t actual;
-        auto status = pdev_.GetProtocol(ZX_PROTOCOL_CLOCK, i, &clock, sizeof(clock), &actual);
+        auto status = device_get_protocol(components[i + 1], ZX_PROTOCOL_CLOCK, &clock);
         if (status != ZX_OK) {
             zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol\n");
             return status;
@@ -50,25 +67,16 @@ zx_status_t AmlCpuFrequency::InitPdev(zx_device_t* parent) {
     }
 
     // Initialized the MMIOs
-    zx_status_t status = pdev_.MapMmio(kHiuMmio, &hiu_mmio_);
+    zx_status_t status = pdev.MapMmio(kHiuMmio, &hiu_mmio_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-cpufreq: could not map periph mmio: %d\n", status);
         return status;
     }
 
     // Get BTI handle.
-    status = pdev_.GetBti(0, &bti_);
+    status = pdev.GetBti(0, &bti_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-cpufreq: could not get BTI handle: %d\n", status);
-        return status;
-    }
-
-    return ZX_OK;
-}
-
-zx_status_t AmlCpuFrequency::Init(zx_device_t* parent) {
-    zx_status_t status = InitPdev(parent);
-    if (status != ZX_OK) {
         return status;
     }
 
