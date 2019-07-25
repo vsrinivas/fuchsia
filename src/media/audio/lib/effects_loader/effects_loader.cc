@@ -50,9 +50,9 @@ void EffectsLoader::ClearExports() {
 //
 // Virtual, can be overridden by children (test fixtures)
 void* EffectsLoader::OpenLoadableModuleBinary() {
-  auto module = dlopen("audiofx.so", RTLD_LAZY | RTLD_GLOBAL);
+  auto module = dlopen(lib_name_, RTLD_LAZY | RTLD_GLOBAL);
   if (module == nullptr) {
-    FXL_LOG(ERROR) << "audiofx.so did not load";
+    FXL_LOG(ERROR) << "module '" << lib_name_ << "' did not load";
   }
   return module;
 }

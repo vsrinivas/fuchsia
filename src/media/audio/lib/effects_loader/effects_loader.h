@@ -24,7 +24,9 @@ namespace media::audio {
 //
 class EffectsLoader {
  public:
-  EffectsLoader() = default;
+  EffectsLoader(const char* lib_name) : lib_name_(lib_name) {}
+  EffectsLoader() : EffectsLoader("audiofx.so") {}
+
   ~EffectsLoader() { (void)UnloadLibrary(); }
 
   zx_status_t LoadLibrary();
@@ -60,6 +62,7 @@ class EffectsLoader {
   bool TryLoad(void* lib, const char* export_name, void** export_func_ptr);
   void ClearExports();
 
+  const char* lib_name_;
   void* fx_lib_ = nullptr;
   uint32_t num_fx_ = 0;
 

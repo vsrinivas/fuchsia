@@ -24,7 +24,43 @@ source_set("effects_loader") {
   ]
 }
 
+executable("test") {
+  testonly = true
+  output_name = "effects_loader_unittests"
+
+  sources = [
+    "effects_loader_unittest.cc",
+  ]
+
+  deps = [
+    ":effects_loader",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+unittest_package("effects_loader_unittests") {
+  deps = [
+    ":test",
+    "//src/media/audio/effects/passthrough:audiofx",
+  ]
+
+  loadable_modules = [
+    {
+      name = "audiofx.so"
+    },
+  ]
+
+  tests = [
+    {
+      name = "effects_loader_unittests"
+      environments = basic_envs
+    },
+  ]
+}
+
 group("tests") {
   testonly = true
-  deps = []
+  deps = [
+    ":effects_loader_unittests",
+  ]
 }
