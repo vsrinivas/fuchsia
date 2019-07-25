@@ -18,6 +18,7 @@ source_set("iwlwifi_sim_trans_ss") {
   testonly = true
 
   sources = [
+    "sim-mvm.cc",
     "trans-sim.cc",
   ]
 

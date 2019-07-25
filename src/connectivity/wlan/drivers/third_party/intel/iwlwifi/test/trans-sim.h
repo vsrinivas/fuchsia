@@ -18,13 +18,14 @@
 // clang-format on
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-mvm.h"
 
 namespace wlan {
 namespace testing {
 
-class TransportSim : public SimulatedFirmware {
+class TransportSim : public SimMvm {
  public:
-  TransportSim(SimulatedEnvironment* env) : SimulatedFirmware(env) {}
+  TransportSim(SimulatedEnvironment* env) : SimMvm(env) {}
   ~TransportSim() {}
 
   // This function must be called before starting using other functions.
