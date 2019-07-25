@@ -8,6 +8,7 @@ fidl("fuchsia.pkg") {
   sources = [
     "cache.fidl",
     "common.fidl",
+    "font_resolver.fidl",
     "repo.fidl",
     "resolver.fidl",
     "system_blob_admin.fidl",
