@@ -50,6 +50,8 @@ TEST(ContiguousPooled, Full) {
     for (uint32_t i = 0; i < kVmoCount; ++i) {
         zx::vmo vmo;
         EXPECT_OK(allocator.Allocate(kVmoSize, &vmo));
+        EXPECT_OK(vmo.get_property(ZX_PROP_NAME, name, sizeof(name)));
+        EXPECT_EQ(0u, strcmp("sysmem-contig", name));
         vmos.push_back(std::move(vmo));
     }
 

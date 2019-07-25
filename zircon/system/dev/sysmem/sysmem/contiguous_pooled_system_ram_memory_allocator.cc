@@ -83,6 +83,11 @@ zx_status_t ContiguousPooledSystemRamMemoryAllocator::Allocate(uint64_t size, zx
         return status;
     }
 
+    // If you see a sysmem-contig VMO you should know that it doesn't actually
+    // take up any space, because the same memory is backed by contiguous_vmo_.
+    const char* kSysmemContig = "sysmem-contig";
+    result_vmo.set_property(ZX_PROP_NAME, kSysmemContig, strlen(kSysmemContig));
+
     // Regardless of CPU or RAM domain, if we use the CPU to access the RAM we
     // want to use the CPU cache.  The default for physical VMOs is non-cached
     // so this is required because we're using zx_vmo_create_physical() above.
