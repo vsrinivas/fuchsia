@@ -70,9 +70,6 @@ protocol Api {
     /// Acquire the current time.
     clock_get(zx.clock clock_id) -> (zx.status status, zx.time out);
 
-    /// Acquire the current time.
-    clock_get_new(zx.clock clock_id) -> (zx.status status, zx.time out);
-
     /// Acquire the current monotonic time.
     clock_get_monotonic() -> (zx.time time);
 

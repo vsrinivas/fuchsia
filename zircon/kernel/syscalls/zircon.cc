@@ -65,7 +65,7 @@ zx_status_t sys_nanosleep(zx_time_t deadline) {
 // update pvclock too.
 ktl::atomic<int64_t> utc_offset;
 
-static zx_status_t clock_get(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time) {
+zx_status_t sys_clock_get(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time) {
   zx_time_t time;
   switch (clock_id) {
     case ZX_CLOCK_MONOTONIC:
@@ -82,14 +82,6 @@ static zx_status_t clock_get(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_ti
   }
 
   return out_time.copy_to_user(time);
-}
-
-zx_status_t sys_clock_get(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time) {
-  return clock_get(clock_id, out_time);
-}
-
-zx_status_t sys_clock_get_new(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time) {
-  return clock_get(clock_id, out_time);
 }
 
 zx_time_t sys_clock_get_monotonic() { return current_time(); }

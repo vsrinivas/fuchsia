@@ -31,8 +31,6 @@ toc:
   path: /fuchsia-src/zircon/syscalls/clock_get
 - title: "zx_clock_get_monotonic"
   path: /fuchsia-src/zircon/syscalls/clock_get_monotonic
-- title: "zx_clock_get_new"
-  path: /fuchsia-src/zircon/syscalls/clock_get_new
 - title: "zx_cprng_add_entropy"
   path: /fuchsia-src/zircon/syscalls/cprng_add_entropy
 - title: "zx_cprng_draw"
