@@ -8,8 +8,6 @@ executable("cloud_provider") {
   output_name = "cloud_provider_validation_tests"
 
   sources = [
-    "convert.cc",
-    "convert.h",
     "device_set_test.cc",
     "page_cloud_test.cc",
     "types.h",
@@ -19,6 +17,7 @@ executable("cloud_provider") {
 
   deps = [
     "//garnet/public/lib/fsl",
+    "//peridot/lib/convert",
     "//src/lib/uuid",
   ]
 

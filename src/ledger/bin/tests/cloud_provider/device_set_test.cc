@@ -5,7 +5,7 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <gtest/gtest.h>
 
-#include "src/ledger/bin/tests/cloud_provider/convert.h"
+#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/tests/cloud_provider/types.h"
 #include "src/ledger/bin/tests/cloud_provider/validation_test.h"
 #include "src/lib/fxl/logging.h"
@@ -59,7 +59,7 @@ TEST_F(DeviceSetTest, CheckMissingFingerprint) {
   ASSERT_TRUE(GetDeviceSet(&device_set));
 
   Status status = Status::INTERNAL_ERROR;
-  ASSERT_EQ(device_set->CheckFingerprint(ToArray("bazinga"), &status), ZX_OK);
+  ASSERT_EQ(device_set->CheckFingerprint(convert::ToArray("bazinga"), &status), ZX_OK);
   EXPECT_EQ(status, Status::NOT_FOUND);
 }
 
@@ -68,10 +68,10 @@ TEST_F(DeviceSetTest, SetAndCheckFingerprint) {
   ASSERT_TRUE(GetDeviceSet(&device_set));
 
   Status status = Status::INTERNAL_ERROR;
-  ASSERT_EQ(device_set->SetFingerprint(ToArray("bazinga"), &status), ZX_OK);
+  ASSERT_EQ(device_set->SetFingerprint(convert::ToArray("bazinga"), &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);
 
-  ASSERT_EQ(device_set->CheckFingerprint(ToArray("bazinga"), &status), ZX_OK);
+  ASSERT_EQ(device_set->CheckFingerprint(convert::ToArray("bazinga"), &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);
 }
 
@@ -82,7 +82,8 @@ TEST_F(DeviceSetTest, WatchMisingFingerprint) {
   fidl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
-  ASSERT_EQ(device_set->SetWatcher(ToArray("bazinga"), std::move(watcher), &status), ZX_OK);
+  ASSERT_EQ(device_set->SetWatcher(convert::ToArray("bazinga"), std::move(watcher), &status),
+            ZX_OK);
   EXPECT_EQ(status, Status::NOT_FOUND);
 }
 
@@ -91,13 +92,14 @@ TEST_F(DeviceSetTest, SetAndWatchFingerprint) {
   ASSERT_TRUE(GetDeviceSet(&device_set));
 
   Status status = Status::INTERNAL_ERROR;
-  EXPECT_EQ(device_set->SetFingerprint(ToArray("bazinga"), &status), ZX_OK);
+  EXPECT_EQ(device_set->SetFingerprint(convert::ToArray("bazinga"), &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);
 
   fidl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
-  ASSERT_EQ(device_set->SetWatcher(ToArray("bazinga"), std::move(watcher), &status), ZX_OK);
+  ASSERT_EQ(device_set->SetWatcher(convert::ToArray("bazinga"), std::move(watcher), &status),
+            ZX_OK);
   EXPECT_EQ(status, Status::OK);
 }
 
@@ -106,13 +108,14 @@ TEST_F(DeviceSetTest, EraseWhileWatching) {
   ASSERT_TRUE(GetDeviceSet(&device_set));
 
   Status status = Status::INTERNAL_ERROR;
-  ASSERT_EQ(device_set->SetFingerprint(ToArray("bazinga"), &status), ZX_OK);
+  ASSERT_EQ(device_set->SetFingerprint(convert::ToArray("bazinga"), &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);
 
   fidl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
-  ASSERT_EQ(device_set->SetWatcher(ToArray("bazinga"), std::move(watcher), &status), ZX_OK);
+  ASSERT_EQ(device_set->SetWatcher(convert::ToArray("bazinga"), std::move(watcher), &status),
+            ZX_OK);
   EXPECT_EQ(status, Status::OK);
 
   EXPECT_EQ(on_cloud_erased_calls_, 0);

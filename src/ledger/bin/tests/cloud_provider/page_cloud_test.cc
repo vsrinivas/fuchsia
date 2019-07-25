@@ -8,7 +8,7 @@
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
 
-#include "src/ledger/bin/tests/cloud_provider/convert.h"
+#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/tests/cloud_provider/types.h"
 #include "src/ledger/bin/tests/cloud_provider/validation_test.h"
 #include "src/ledger/lib/commit_pack/commit_pack.h"
@@ -28,16 +28,16 @@ namespace {
 
     if (entry.data != data) {
       return ::testing::AssertionFailure()
-             << "The commit of the expected id: 0x" << ToHex(id) << " (" << id << ") "
-             << " was found but its data doesn't match - expected: 0x" << ToHex(data)
-             << " but found: " << ToHex(entry.data);
+             << "The commit of the expected id: 0x" << convert::ToHex(id) << " (" << id << ") "
+             << " was found but its data doesn't match - expected: 0x" << convert::ToHex(data)
+             << " but found: " << convert::ToHex(entry.data);
     }
 
     return ::testing::AssertionSuccess();
   }
 
   return ::testing::AssertionFailure()
-         << "The commit of the id: " << ToHex(id) << " (" << id << ") "
+         << "The commit of the id: " << convert::ToHex(id) << " (" << id << ") "
          << " is missing.";
 }
 
@@ -47,8 +47,7 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
   ~PageCloudTest() override {}
 
  protected:
-  ::testing::AssertionResult GetPageCloud(fidl::VectorPtr<uint8_t> app_id,
-                                          fidl::VectorPtr<uint8_t> page_id,
+  ::testing::AssertionResult GetPageCloud(std::vector<uint8_t> app_id, std::vector<uint8_t> page_id,
                                           PageCloudSyncPtr* page_cloud) {
     *page_cloud = PageCloudSyncPtr();
     Status status = Status::INTERNAL_ERROR;
@@ -117,12 +116,12 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
 
 TEST_F(PageCloudTest, GetPageCloud) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
 }
 
 TEST_F(PageCloudTest, GetNoCommits) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
 
   std::unique_ptr<cloud_provider::CommitPack> commit_pack;
   std::unique_ptr<PositionToken> token;
@@ -138,7 +137,7 @@ TEST_F(PageCloudTest, GetNoCommits) {
 
 TEST_F(PageCloudTest, AddAndGetCommits) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
 
   std::vector<CommitPackEntry> entries{{"id0", "data0"}, {"id1", "data1"}};
   CommitPack commit_pack;
@@ -161,7 +160,7 @@ TEST_F(PageCloudTest, AddAndGetCommits) {
 
 TEST_F(PageCloudTest, GetCommitsByPositionToken) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
 
   // Add two commits.
   std::vector<CommitPackEntry> entries{{"id0", "data0"}, {"id1", "data1"}};
@@ -196,7 +195,7 @@ TEST_F(PageCloudTest, GetCommitsByPositionToken) {
 
 TEST_F(PageCloudTest, AddAndGetObjects) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
 
   fsl::SizedVmo data;
   ASSERT_TRUE(fsl::VmoFromString("bazinga!", &data));
@@ -207,11 +206,12 @@ TEST_F(PageCloudTest, AddAndGetObjects) {
   // TODO(ppi): use a fixed ID here once the cloud provider implementations
   // support erasing objects.
   const std::string id = uuid::Generate();
-  ASSERT_EQ(page_cloud->AddObject(ToArray(id), std::move(data).ToTransport(), {}, &status), ZX_OK);
+  ASSERT_EQ(page_cloud->AddObject(convert::ToArray(id), std::move(data).ToTransport(), {}, &status),
+            ZX_OK);
   EXPECT_EQ(status, Status::OK);
 
   ::fuchsia::mem::BufferPtr buffer_ptr;
-  ASSERT_EQ(page_cloud->GetObject(ToArray(id), &status, &buffer_ptr), ZX_OK);
+  ASSERT_EQ(page_cloud->GetObject(convert::ToArray(id), &status, &buffer_ptr), ZX_OK);
   EXPECT_EQ(status, Status::OK);
   std::string read_data;
   ASSERT_TRUE(fsl::StringFromVmo(*buffer_ptr, &read_data));
@@ -220,25 +220,27 @@ TEST_F(PageCloudTest, AddAndGetObjects) {
 
 TEST_F(PageCloudTest, AddSameObjectTwice) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
 
   fsl::SizedVmo data;
   ASSERT_TRUE(fsl::VmoFromString("bazinga!", &data));
   Status status = Status::INTERNAL_ERROR;
   const std::string id = "some id";
-  ASSERT_EQ(page_cloud->AddObject(ToArray(id), std::move(data).ToTransport(), {}, &status), ZX_OK);
+  ASSERT_EQ(page_cloud->AddObject(convert::ToArray(id), std::move(data).ToTransport(), {}, &status),
+            ZX_OK);
   EXPECT_EQ(status, Status::OK);
   // Adding the same object again must succeed as per cloud provider contract.
   fsl::SizedVmo more_data;
   ASSERT_TRUE(fsl::VmoFromString("bazinga!", &more_data));
-  ASSERT_EQ(page_cloud->AddObject(ToArray(id), std::move(more_data).ToTransport(), {}, &status),
-            ZX_OK);
+  ASSERT_EQ(
+      page_cloud->AddObject(convert::ToArray(id), std::move(more_data).ToTransport(), {}, &status),
+      ZX_OK);
   EXPECT_EQ(status, Status::OK);
 }
 
 TEST_F(PageCloudTest, WatchAndReceiveCommits) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
   Status status = Status::INTERNAL_ERROR;
   fidl::Binding<PageCloudWatcher> binding(this);
   PageCloudWatcherPtr watcher;
@@ -268,7 +270,7 @@ TEST_F(PageCloudTest, WatchAndReceiveCommits) {
 // registered.
 TEST_F(PageCloudTest, WatchWithBacklog) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
   Status status = Status::INTERNAL_ERROR;
 
   std::vector<CommitPackEntry> entries{{"id0", "data0"}, {"id1", "data1"}};
@@ -293,7 +295,7 @@ TEST_F(PageCloudTest, WatchWithBacklog) {
 
 TEST_F(PageCloudTest, WatchWithPositionToken) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
 
   // Add two commits.
   std::vector<CommitPackEntry> entries{{"id0", "data0"}, {"id1", "data1"}};
@@ -340,7 +342,7 @@ TEST_F(PageCloudTest, WatchWithPositionToken) {
 
 TEST_F(PageCloudTest, WatchWithPositionTokenBatch) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
 
   // Add two commits.
   std::vector<CommitPackEntry> entries{{"id0", "data0"}, {"id1", "data1"}};
