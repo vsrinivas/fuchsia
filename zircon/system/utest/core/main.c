@@ -113,8 +113,8 @@ int isatty(int fd) {
 // TODO(mcgrathr): When unittest is gone, the zxtest library main will work
 // fine here and this can be removed.
 int main(int argc, char** argv) {
-    const bool ut_ok = unittest_run_all_tests(argc, argv);
     int zxtest_return_code = RUN_ALL_TESTS(argc, argv);
+    const bool ut_ok = unittest_run_all_tests(argc, argv);
     if (ut_ok && zxtest_return_code == 0) {
         // TODO(mcgrathr): The zircon.py recipe embeds this magic string.  When
         // that's no longer used this can be removed.  It's now redundant with

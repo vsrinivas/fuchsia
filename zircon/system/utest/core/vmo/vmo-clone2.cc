@@ -27,7 +27,7 @@ namespace {
 // Those samples can be polluted by any COW faults taken by this program itself
 // for touching its own data pages.  So avoid the pollution by preemptively
 // faulting in all the static data pages beforehand.
-class KmemStatsFixture : public zxtest::Test {
+class VmoClone2TestCase : public zxtest::Test {
 public:
     static void SetUpTestCase() {
         if (get_root_resource) {
@@ -110,7 +110,7 @@ private:
     }
 };
 
-zx::unowned_resource KmemStatsFixture::root_resource_;
+zx::unowned_resource VmoClone2TestCase::root_resource_;
 
 void VmoWrite(const zx::vmo& vmo, uint32_t data, uint32_t offset = 0) {
     zx_status_t status = vmo.write(static_cast<void*>(&data), offset, sizeof(data));
@@ -224,7 +224,7 @@ void CallPermutations(T fn, uint32_t count) {
 }
 
 // Checks the correctness of various zx_info_vmo_t properties.
-TEST(VmoClone2TestCase, Info) {
+TEST_F(VmoClone2TestCase, Info) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
 
@@ -255,7 +255,7 @@ TEST(VmoClone2TestCase, Info) {
 }
 
 // Tests that reading from a clone gets the correct data.
-TEST(VmoClone2TestCase, Read) {
+TEST_F(VmoClone2TestCase, Read) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
 
@@ -287,11 +287,11 @@ void VmoWriteTestHelper(bool clone_write) {
     ASSERT_NO_FATAL_FAILURES(VmoCheck(clone, clone_write ? kNewData : kOriginalData));
 }
 
-TEST(VmoClone2TestCase, CloneVmoWrite) {
+TEST_F(VmoClone2TestCase, CloneVmoWrite) {
     ASSERT_NO_FATAL_FAILURES(VmoWriteTestHelper(true));
 }
 
-TEST(VmoClone2TestCase, ParentVmoWrite) {
+TEST_F(VmoClone2TestCase, ParentVmoWrite) {
     ASSERT_NO_FATAL_FAILURES(VmoWriteTestHelper(false));
 }
 
@@ -319,11 +319,11 @@ void VmarWriteTestHelper(bool clone_write) {
     ASSERT_EQ(*clone_mapping.ptr(), clone_write ? kNewData : kOriginalData);
 }
 
-TEST(VmoClone2TestCase, CloneVmarWrite) {
+TEST_F(VmoClone2TestCase, CloneVmarWrite) {
     ASSERT_NO_FATAL_FAILURES(VmarWriteTestHelper(true));
 }
 
-TEST(VmoClone2TestCase, ParentVmarWrite) {
+TEST_F(VmoClone2TestCase, ParentVmarWrite) {
     ASSERT_NO_FATAL_FAILURES(VmarWriteTestHelper(false));
 }
 
@@ -343,18 +343,18 @@ void CloseTestHelper(bool close_orig) {
     ASSERT_NO_FATAL_FAILURES(VmoCheck(close_orig ? clone : vmo, kOriginalData));
 }
 
-TEST(VmoClone2TestCase, CloseOriginal) {
+TEST_F(VmoClone2TestCase, CloseOriginal) {
     constexpr bool kCloseOriginal = true;
     ASSERT_NO_FATAL_FAILURES(CloseTestHelper(kCloseOriginal));
 }
 
-TEST(VmoClone2TestCase, CloseClone) {
+TEST_F(VmoClone2TestCase, CloseClone) {
     constexpr bool kCloseClone = false;
     ASSERT_NO_FATAL_FAILURES(CloseTestHelper(kCloseClone));
 }
 
 // Basic memory accounting test that checks vmo memory attribution.
-TEST(VmoClone2TestCase, ObjMemAccounting) {
+TEST_F(VmoClone2TestCase, ObjMemAccounting) {
     // Create a vmo, write to both pages, and check the committed stats.
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(2 * ZX_PAGE_SIZE, 0, &vmo));
@@ -387,8 +387,6 @@ TEST(VmoClone2TestCase, ObjMemAccounting) {
     ASSERT_EQ(VmoCommittedBytes(vmo), 2 * ZX_PAGE_SIZE);
     ASSERT_EQ(VmoCommittedBytes(clone), 2 * ZX_PAGE_SIZE);
 }
-
-using VmoClone2TestCase = KmemStatsFixture;
 
 // Basic memory accounting test that total memory consumption through kmem.
 TEST_F(VmoClone2TestCase, KmemAccounting) {
@@ -770,7 +768,7 @@ TEST_F(VmoClone2TestCase, SmallClone) {
 }
 
 // Tests that a small clone properly interrupts access into the parent.
-TEST(VmoClone2TestCase, SmallCloneChild) {
+TEST_F(VmoClone2TestCase, SmallCloneChild) {
     zx::vmo vmo;
     ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(3, &vmo));
 
@@ -832,7 +830,7 @@ TEST_F(VmoClone2TestCase, SmallClones) {
 // closing the original VMO. This tests two cases - resetting the original vmo
 // before writing to the clones and resetting the original vmo after writing to
 // the clones.
-struct VmoCloneDisjointClonesTests : public KmemStatsFixture {
+struct VmoCloneDisjointClonesTests : public VmoClone2TestCase {
     static void DisjointClonesTest(bool early_close) {
         const uint64_t original = KmemVmoMemUsage();
 
@@ -959,7 +957,7 @@ TEST_F(VmoClone2TestCase, DisjointCloneTest2) {
 // Tests a case where a clone is written to and then a series of subsequent clones
 // are created with various offsets and sizes. This test is constructed to catch issues
 // due to partial COW releases in the current implementation.
-TEST(VmoClone2TestCase, DisjointCloneProgressive) {
+TEST_F(VmoClone2TestCase, DisjointCloneProgressive) {
     zx::vmo vmo, main_clone, clone1, clone2, clone3, clone4;
 
     ASSERT_NO_FATAL_FAILURES(InitPageTaggedVmo(6, &vmo));
@@ -1014,7 +1012,7 @@ enum class ResizeTarget {
 };
 
 // Tests that resizing a (clone|cloned) vmo frees unnecessary pages.
-class VmoCloneResizeTests : public KmemStatsFixture {
+class VmoCloneResizeTests : public VmoClone2TestCase {
  protected:
     static void ResizeTest(Contiguity contiguity, ResizeTarget target) {
         bool contiguous = contiguity == Contiguity::Contig;
@@ -1277,7 +1275,7 @@ TEST_F(VmoClone2TestCase, ResizeMultipleProgressive) {
 }
 
 // Tests the basic operation of the ZX_VMO_ZERO_CHILDREN signal.
-TEST(VmoClone2TestCase, Children) {
+TEST_F(VmoClone2TestCase, Children) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
 
@@ -1326,19 +1324,19 @@ void ManyChildrenTestHelper(bool reverse_close) {
     ASSERT_OK(vmo.wait_one(ZX_VMO_ZERO_CHILDREN, zx::time::infinite_past(), &o));
 }
 
-TEST(VmoClone2TestCase, ManyChildren) {
+TEST_F(VmoClone2TestCase, ManyChildren) {
     bool kForwardClose = false;
     ASSERT_NO_FATAL_FAILURES(ManyChildrenTestHelper(kForwardClose));
 }
 
-TEST(VmoClone2TestCase, ManyChildrenRevClose) {
+TEST_F(VmoClone2TestCase, ManyChildrenRevClose) {
     bool kReverseClose = true;
     ASSERT_NO_FATAL_FAILURES(ManyChildrenTestHelper(kReverseClose));
 }
 
 // Creates a collection of clones and writes to their mappings in every permutation order
 // to make sure that no order results in a bad read.
-TEST(VmoClone2TestCase, ManyCloneMapping) {
+TEST_F(VmoClone2TestCase, ManyCloneMapping) {
     constexpr uint32_t kNumElts = 4;
 
     auto test_fn = [](uint32_t perm[]) -> void {
@@ -1379,7 +1377,7 @@ TEST(VmoClone2TestCase, ManyCloneMapping) {
 }
 
 // Tests that a chain of clones where some have offsets works.
-TEST(VmoClone2TestCase, ManyCloneOffset) {
+TEST_F(VmoClone2TestCase, ManyCloneOffset) {
     zx::vmo vmo;
     zx::vmo clone1;
     zx::vmo clone2;
@@ -1442,7 +1440,7 @@ TEST_F(VmoClone2TestCase, ManyCloneMappingOffset) {
 
 // Tests the correctness and memory consumption of a chain of progressive clones, and
 // ensures that memory is properly discarded by closing/resizing the vmos.
-struct ProgressiveCloneDiscardTests : public KmemStatsFixture {
+struct ProgressiveCloneDiscardTests : public VmoClone2TestCase {
     static void ProgressiveCloneDiscardTest(bool close) {
         const uint64_t original = KmemVmoMemUsage();
 
@@ -1725,7 +1723,7 @@ TEST_F(VmoClone2TestCase, NoPhysical) {
 }
 
 // Tests that clones based on pager vmos can't be created.
-TEST(VmoClone2TestCase, NoPager) {
+TEST_F(VmoClone2TestCase, NoPager) {
     zx::pager pager;
     ASSERT_OK(zx::pager::create(0, &pager));
 
@@ -1746,7 +1744,7 @@ TEST(VmoClone2TestCase, NoPager) {
 }
 
 // Tests that clones of uncached memory can't be created.
-TEST(VmoClone2TestCase, Uncached) {
+TEST_F(VmoClone2TestCase, Uncached) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
 
