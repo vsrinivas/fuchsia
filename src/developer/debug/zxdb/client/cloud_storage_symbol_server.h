@@ -31,10 +31,7 @@ class CloudStorageSymbolServer : public SymbolServer {
 
   // Initialize the class. We want the constructor to do this, but the test mock might need to be
   // manipulated first, so we break this out into a separate function.
-  void DoInit() {
-    ChangeState(SymbolServer::State::kAuth);
-    LoadCachedAuth();
-  }
+  void DoInit() { LoadCachedAuth(); }
 
   // General dispatch from the result of a Curl transaction. Handles the error cases and then
   // returns true if no error occurred.

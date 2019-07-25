@@ -322,6 +322,10 @@ std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id,
 
   downloads_[{build_id, file_type}] = download;
 
+  if (servers_initializing_) {
+    suspended_downloads_.push_back(download);
+  }
+
   return download;
 }
 
@@ -656,15 +660,44 @@ void SystemImpl::InjectSymbolServerForTesting(std::unique_ptr<SymbolServer> serv
   AddSymbolServer(symbol_servers_.back().get());
 }
 
+void SystemImpl::ServerStartedInitializing() { servers_initializing_++; }
+
+void SystemImpl::ServerFinishedInitializing() {
+  FXL_DCHECK(servers_initializing_ > 0);
+
+  if (!--servers_initializing_) {
+    suspended_downloads_.clear();
+  }
+}
+
 void SystemImpl::AddSymbolServer(SymbolServer* server) {
   for (auto& observer : observers()) {
     observer.DidCreateSymbolServer(server);
   }
 
+  bool initializing = false;
+
+  if (server->state() == SymbolServer::State::kInitializing ||
+      server->state() == SymbolServer::State::kBusy) {
+    initializing = true;
+    ServerStartedInitializing();
+  }
+
   server->set_state_change_callback(
-      [weak_this = weak_factory_.GetWeakPtr()](SymbolServer* server, SymbolServer::State state) {
-        if (weak_this && state == SymbolServer::State::kReady)
+      [weak_this = weak_factory_.GetWeakPtr(), initializing](
+          SymbolServer* server, SymbolServer::State state) mutable {
+        if (!weak_this) {
+          return;
+        }
+
+        if (state == SymbolServer::State::kReady)
           weak_this->OnSymbolServerBecomesReady(server);
+
+        if (initializing && state != SymbolServer::State::kBusy &&
+            state != SymbolServer::State::kInitializing) {
+          initializing = false;
+          weak_this->ServerFinishedInitializing();
+        }
       });
 
   if (server->state() == SymbolServer::State::kReady) {

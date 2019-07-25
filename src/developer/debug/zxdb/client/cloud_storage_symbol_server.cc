@@ -265,13 +265,14 @@ void CloudStorageSymbolServer::AuthRefresh() {
 }
 
 void CloudStorageSymbolServer::LoadCachedAuth() {
-  if (state() != SymbolServer::State::kAuth) {
+  if (state() != SymbolServer::State::kAuth && state() != SymbolServer::State::kInitializing) {
     return;
   }
 
   FILE* fp = GetGoogleApiAuthCache("rb");
 
   if (!fp) {
+    ChangeState(SymbolServer::State::kAuth);
     return;
   }
 
@@ -281,6 +282,7 @@ void CloudStorageSymbolServer::LoadCachedAuth() {
   fclose(fp);
 
   if (!success) {
+    ChangeState(SymbolServer::State::kAuth);
     return;
   }
 
