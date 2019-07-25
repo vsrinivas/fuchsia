@@ -38,4 +38,4 @@ are located in the `tests/` directory.
 
 [log_listener]: ../log_listener/README.md
 [sysmgr]: ../sysmgr/README.md
-[fidl-file]: //zircon/system/fidl/fuchsia-logger/logger.fidl
+[fidl-file]: /zircon/system/fidl/fuchsia-logger/logger.fidl

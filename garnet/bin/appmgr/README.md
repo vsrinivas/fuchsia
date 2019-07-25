@@ -21,7 +21,7 @@ invocation.
 ## Running
 
 Appmgr is run on all non-bringup Fuchsia builds. It can be interacted with via
-the [`fuchsia.sys` FIDL apis](//sdk/fidl/fuchsia.sys).
+the [`fuchsia.sys` FIDL apis](/sdk/fidl/fuchsia.sys).
 
 ## Testing
 

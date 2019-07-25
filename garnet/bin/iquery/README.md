@@ -28,5 +28,5 @@ The entrypoint is located in `main.cc`, with the rest of the implementation
 living in top-level `.cc` and `.h` files. Tests are located in the `testing/`
 directory.
 
-[inspect]: //docs/development/inspect/README.md
-[iquery]: //docs/development/inspect/iquery.md
+[inspect]: /docs/development/inspect/README.md
+[iquery]: /docs/development/inspect/iquery.md
