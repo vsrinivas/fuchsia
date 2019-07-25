@@ -19,7 +19,7 @@ guest_packages = [
 group("tests") {
   testonly = true
   deps = [
-    ":bin",
+    ":guest_integration_tests_bin",
     ":guest_integration_tests",
     ":guest_integration_tests_utils",
     ":guest_unit_tests",
@@ -33,13 +33,19 @@ group("tests") {
   data_deps = guest_packages
 }
 
+source_set("logger") {
+  visibility = [ ":*" ]
+  sources = [
+    "logger.cc",
+    "logger.h",
+  ]
+}
+
 source_set("guest_console") {
   visibility = [ ":*" ]
   sources = [
     "guest_console.cc",
     "guest_console.h",
-    "logger.cc",
-    "logger.h",
     "socket.cc",
     "socket.h",
   ]
@@ -52,6 +58,7 @@ source_set("guest_console") {
     "//zircon/public/lib/fbl",
   ]
   public_deps = [
+    ":logger",
     "//zircon/public/lib/zx",
   ]
 }
@@ -70,23 +77,70 @@ executable("unit_tests") {
   ]
 }
 
-executable("bin") {
+source_set("test_main") {
+  testonly = true
+  visibility = [ ":*" ]
+  sources = [
+    "test_main.cc",
+  ]
+  deps = [
+    ":logger",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("lib") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [
+    "enclosed_guest.cc",
+    "enclosed_guest.h",
+    "fake_scenic.cc",
+    "fake_scenic.h",
+    "guest_test.h",
+    "mock_netstack.cc",
+    "mock_netstack.h",
+    "periodic_logger.cc",
+    "periodic_logger.h",
+  ]
+
+  deps = [
+    ":guest_console",
+    "//garnet/public/lib/fostr",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
+    "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl",
+    "//src/lib/inet",
+    "//src/virtualization/bin/vmm/device",
+    "//src/virtualization/lib/vsh:client",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+  public_deps = [
+    "//garnet/public/lib/async_promise",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.netstack",
+    "//src/virtualization/lib/grpc",
+    "//src/virtualization/packages/biscotti_guest/third_party/protos:vm_cc_proto",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gmock",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("guest_integration_tests_bin") {
   visibility = [ ":*" ]
   output_name = "guest_integration_tests"
   testonly = true
 
   sources = [
     "core_tests.cc",
-    "enclosed_guest.cc",
-    "enclosed_guest.h",
-    "fake_scenic.cc",
-    "fake_scenic.h",
-    "guest_test.h",
-    "main.cc",
-    "mock_netstack.cc",
-    "mock_netstack.h",
-    "periodic_logger.cc",
-    "periodic_logger.h",
     "virtio_balloon_tests.cc",
     "virtio_block_tests.cc",
     "virtio_console_tests.cc",
@@ -103,14 +157,9 @@ executable("bin") {
   }
 
   deps = [
-    ":guest_console",
-    "//garnet/public/lib/async_promise",
-    "//garnet/public/lib/fostr",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
-    "//garnet/public/lib/svc/cpp",
+    ":lib",
+    ":test_main",
     "//sdk/fidl/fuchsia.netstack",
-    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
@@ -118,12 +167,8 @@ executable("bin") {
     "//src/lib/inet",
     "//src/virtualization/bin/vmm/device",
     "//src/virtualization/bin/vmm/device:qcow_test_data",
-    "//src/virtualization/lib/grpc",
-    "//src/virtualization/lib/vsh:client",
-    "//src/virtualization/packages/biscotti_guest/third_party/protos:vm_cc_proto",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
   ]
 }
 
@@ -144,7 +189,7 @@ _linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
 
 test_package("guest_integration_tests") {
   deps = [
-    ":bin",
+    ":guest_integration_tests_bin",
     _linux_tests_label,
   ]
 
@@ -211,6 +256,56 @@ package("guest_integration_tests_utils") {
     },
     {
       name = "virtio_vsock_test_util"
+    },
+  ]
+}
+
+# This should be merged into |guest_integration_tests| once the termina guest is stable in CQ.
+executable("termina_integration_tests_bin") {
+  visibility = [ ":*" ]
+  output_name = "termina_integration_tests"
+  testonly = true
+
+  sources = [
+    "virtio_wl_tests.cc",
+  ]
+
+  deps = [
+    ":lib",
+    ":test_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+group("termina") {
+  testonly = true
+  deps = guest_packages
+  deps += [
+    ":termina_integration_tests",
+  ]
+}
+
+test_package("termina_integration_tests") {
+  deps = [
+    ":termina_integration_tests_bin",
+    _linux_tests_label,
+  ]
+
+  resources = [
+    {
+      path = get_label_info(_linux_tests_label, "target_out_dir") +
+             "/debian/tests.img"
+      dest = "linux_tests.img"
+    },
+  ]
+
+  tests = [
+    {
+      name = "termina_integration_tests"
+      environments = [
+        nuc_env,
+        vim2_env,
+      ]
     },
   ]
 }
