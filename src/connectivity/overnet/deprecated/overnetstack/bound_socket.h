@@ -81,12 +81,14 @@ class BoundSocket {
   BoundWait wait_send_{{{ASYNC_STATE_INIT},
                         &BoundSocket::SendReady,
                         zx_socket_.get(),
-                        ZX_SOCKET_WRITABLE},
+                        ZX_SOCKET_WRITABLE,
+                        0},
                        this};
   BoundWait wait_recv_{{{ASYNC_STATE_INIT},
                         &BoundSocket::RecvReady,
                         zx_socket_.get(),
-                        ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED},
+                        ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+                        0},
                        this};
 };
 

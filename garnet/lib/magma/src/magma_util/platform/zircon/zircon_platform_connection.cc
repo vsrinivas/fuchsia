@@ -24,6 +24,7 @@ class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu:
       this->handler = AsyncWaitHandlerStatic;
       this->object = object;
       this->trigger = trigger;
+      this->options = 0;
       this->connection = connection;
     }
     ZirconPlatformConnection* connection;

@@ -98,12 +98,14 @@ class BoundChannel {
   BoundWait wait_send_{{{ASYNC_STATE_INIT},
                         &BoundChannel::SendReady,
                         zx_channel_.get(),
-                        ZX_CHANNEL_WRITABLE},
+                        ZX_CHANNEL_WRITABLE,
+                        0},
                        this};
   BoundWait wait_recv_{{{ASYNC_STATE_INIT},
                         &BoundChannel::RecvReady,
                         zx_channel_.get(),
-                        ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED},
+                        ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                        0},
                        this};
 };
 

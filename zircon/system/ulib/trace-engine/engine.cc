@@ -424,7 +424,8 @@ EXPORT_NO_DDK zx_status_t trace_engine_start(trace_start_mode_t start_mode) {
         .handler = &handle_event,
         .object = g_event.get(),
         .trigger = (SIGNAL_ALL_OBSERVERS_STARTED |
-                    SIGNAL_CONTEXT_RELEASED)};
+                    SIGNAL_CONTEXT_RELEASED),
+        .options = 0};
     zx_status_t status = async_begin_wait(g_dispatcher, &g_event_wait);
     if (status != ZX_OK) {
         return status;

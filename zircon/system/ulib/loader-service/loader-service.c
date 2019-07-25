@@ -406,6 +406,7 @@ zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
     session_state->wait.handler = loader_service_handler;
     session_state->wait.object = h;
     session_state->wait.trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    session_state->wait.options = 0;
     session_state->svc = svc;
 
     status = async_begin_wait(svc->dispatcher, &session_state->wait);

@@ -37,6 +37,10 @@ struct async_wait {
 
     // The set of signals to wait for.
     zx_signals_t trigger;
+
+    // Wait options, see zx_object_wait_async().
+    // Not yet functional, will replace async_begin_wait_with_options() soon.
+    uint32_t options;
 };
 
 // Begins asynchronously waiting for an object to receive one or more signals

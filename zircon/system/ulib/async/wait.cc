@@ -11,7 +11,7 @@
 namespace async {
 
 WaitBase::WaitBase(zx_handle_t object, zx_signals_t trigger, async_wait_handler_t* handler)
-    : wait_{{ASYNC_STATE_INIT}, handler, object, trigger} {}
+    : wait_{{ASYNC_STATE_INIT}, handler, object, trigger, 0} {}
 
 WaitBase::~WaitBase() {
     if (dispatcher_) {

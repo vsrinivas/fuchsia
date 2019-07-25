@@ -22,7 +22,8 @@ SimpleBinding::SimpleBinding(async_dispatcher_t* dispatcher,
           .state = ASYNC_STATE_INIT,
           .handler = &MessageHandler,
           .object = channel.release(),
-          .trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED
+          .trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+          .options = 0,
       }),
     dispatcher_(dispatcher), interface_(impl), dispatch_fn_(dispatch_fn) {
 }

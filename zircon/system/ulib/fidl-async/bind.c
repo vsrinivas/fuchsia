@@ -110,6 +110,7 @@ zx_status_t fidl_bind(async_dispatcher_t* dispatcher, zx_handle_t channel,
     binding->wait.handler = fidl_message_handler;
     binding->wait.object = channel;
     binding->wait.trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    binding->wait.options = 0;
     binding->dispatch = dispatch;
     binding->dispatcher = dispatcher;
     binding->ctx = ctx;

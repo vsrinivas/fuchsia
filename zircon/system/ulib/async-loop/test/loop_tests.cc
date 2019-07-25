@@ -32,8 +32,8 @@ namespace {
 
 class TestWait : public async_wait_t {
 public:
-    TestWait(zx_handle_t object, zx_signals_t trigger)
-        : async_wait_t{{ASYNC_STATE_INIT}, &TestWait::CallHandler, object, trigger} {
+    TestWait(zx_handle_t object, zx_signals_t trigger, uint32_t options = 0)
+        : async_wait_t{{ASYNC_STATE_INIT}, &TestWait::CallHandler, object, trigger, options} {
     }
 
     virtual ~TestWait() = default;
@@ -650,6 +650,32 @@ bool wait_timestamp_test() {
         EXPECT_NE(0u, wait2.last_signal->timestamp);
         EXPECT_TRUE(before <= zx::time(wait2.last_signal->timestamp));
         EXPECT_TRUE(after >= zx::time(wait2.last_signal->timestamp));
+    }
+
+    END_TEST;
+}
+
+// async_wait_t.options should be ignored right now.
+// TODO(ZX-4740): remove this test once we've implemented the options field.
+bool wait_options_noop_test() {
+    BEGIN_TEST;
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+
+    {
+        zx::event event;
+        EXPECT_EQ(ZX_OK, zx::event::create(0u, &event));
+
+        TestWait wait(event.get(), ZX_USER_SIGNAL_1, ZX_WAIT_ASYNC_TIMESTAMP);
+        EXPECT_EQ(nullptr, wait.last_signal);
+        EXPECT_EQ(ZX_OK, wait.Begin(loop.dispatcher()));
+        EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_1));
+        EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+        EXPECT_NE(nullptr, wait.last_signal);
+
+        // If the options were taken into effect, using ZX_WAIT_ASYNC_TIMESTAMP
+        // above would have resulted in a non-zero value here.
+        EXPECT_EQ(0u, wait.last_signal->timestamp);
     }
 
     END_TEST;
@@ -1479,6 +1505,7 @@ RUN_TEST(quit_test)
 RUN_TEST(time_test)
 RUN_TEST(wait_test)
 RUN_TEST(wait_timestamp_test)
+RUN_TEST(wait_options_noop_test)
 RUN_TEST(wait_timestamp_integration_test)
 RUN_TEST(wait_unwaitable_handle_test)
 RUN_TEST(wait_shutdown_test)

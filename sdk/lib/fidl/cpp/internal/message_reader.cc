@@ -70,7 +70,7 @@ class Canary {
 static_assert(std::is_standard_layout<MessageReader>::value, "We need offsetof to work");
 
 MessageReader::MessageReader(MessageHandler* message_handler)
-    : wait_{{ASYNC_STATE_INIT}, &MessageReader::CallHandler, ZX_HANDLE_INVALID, kSignals},
+    : wait_{{ASYNC_STATE_INIT}, &MessageReader::CallHandler, ZX_HANDLE_INVALID, kSignals, 0},
       dispatcher_(nullptr),
       should_stop_(nullptr),
       destroyed_(nullptr),

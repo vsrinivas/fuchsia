@@ -5,5 +5,5 @@
   "pkg/async/include/lib/async/task.h": "09de0813606612add87dba337d589e0e",
   "pkg/async/include/lib/async/time.h": "723bb92cac91253e408b2ff0f68dd964",
   "pkg/async/include/lib/async/trap.h": "d2439e552cfbf742db08428a6480a654",
-  "pkg/async/include/lib/async/wait.h": "5030591ced0a024033fcc08988eef7e5"
+  "pkg/async/include/lib/async/wait.h": "604e1a94eaf68babd50c61667ff43c95"
 }
