@@ -13,6 +13,10 @@
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 
+extern "C" {
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+}
+
 namespace wlan {
 namespace testing {
 
@@ -20,6 +24,8 @@ class SimMvm : public SimulatedFirmware {
  public:
   SimMvm(SimulatedEnvironment* env) : SimulatedFirmware(env) {}
   ~SimMvm() {}
+
+  zx_status_t SendCmd(struct iwl_host_cmd* cmd) { return ZX_OK; }
 };
 
 }  // namespace testing

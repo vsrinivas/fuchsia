@@ -22,8 +22,9 @@ class IwlPhyDbTest : public ::testing::Test {
   ~IwlPhyDbTest() {}
 };
 
-// Expect the iwl_phy_db_send_all_channel_groups() returns ZX_OK tight after init before there is
-// no data set yet. This is to address the bug we fixed in fxr/304097.
+// Expect the iwl_phy_db_send_all_channel_groups() returns ZX_OK right after init before there is
+// no data set yet. This is a regression test to catch a bug involving underflow on the channel
+// argument to iwl_phy_db_send_all_channel_groups().
 TEST_F(IwlPhyDbTest, TestSendAllChannelGroupsAfterInit) {
   struct iwl_phy_db* phy_db = iwl_phy_db_init(nullptr);
   EXPECT_NE(nullptr, phy_db);

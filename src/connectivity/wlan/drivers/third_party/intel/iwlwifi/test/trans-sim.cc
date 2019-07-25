@@ -11,6 +11,10 @@
 // This file also calls device_add() to register 'wlanphy_impl_protocol_ops_t'
 // so that we can simulate the MLME (the user of this softmac driver) to test
 // the iface functions.
+//
+// After iwl_trans_transport_sim_alloc() is called, memory containing iwl_trans +
+// trans_sim_priv is returned. To access the simulated-transportation-specific
+// variable, use IWL_TRANS_GET_TRANS_SIM(trans) to get it.
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/trans-sim.h"
 
@@ -32,6 +36,17 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
 
+using wlan::testing::SimMvm;
+
+// The struct to store the internal state of the simulated firmware.
+struct trans_sim_priv {
+  SimMvm* fw;
+};
+
+static struct trans_sim_priv* IWL_TRANS_GET_TRANS_SIM(struct iwl_trans* trans) {
+  return (struct trans_sim_priv*)trans->trans_specific;
+}
+
 static zx_status_t iwl_trans_sim_start_hw(struct iwl_trans* iwl_trans, bool low_power) {
   return ZX_OK;
 }
@@ -48,7 +63,7 @@ static void iwl_trans_sim_fw_alive(struct iwl_trans* trans, uint32_t scd_addr) {
 static void iwl_trans_sim_stop_device(struct iwl_trans* trans, bool low_power) {}
 
 static zx_status_t iwl_trans_sim_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
-  return ZX_OK;  // Temporarily returns OK to pass the unit test.
+  return IWL_TRANS_GET_TRANS_SIM(trans)->fw->SendCmd(cmd);
 }
 
 static zx_status_t iwl_trans_sim_tx(struct iwl_trans* trans, struct sk_buff* skb,
@@ -166,13 +181,14 @@ static struct iwl_trans_ops trans_ops_trans_sim = {
 #endif  // NEEDS_PORTING
 };
 
-// The struct to store the internal state of the simulated firmware.
-struct iwl_trans_trans_sim {
-  uint8_t dummy;
-};
+// iwl_trans_alloc() will allocate memory containing iwl_trans + trans_sim_priv.
+static struct iwl_trans* iwl_trans_transport_sim_alloc(const struct iwl_cfg* cfg, SimMvm* fw) {
+  struct iwl_trans* iwl_trans =
+      iwl_trans_alloc(sizeof(struct trans_sim_priv), cfg, &trans_ops_trans_sim);
 
-static struct iwl_trans* iwl_trans_transport_sim_alloc(const struct iwl_cfg* cfg) {
-  return iwl_trans_alloc(sizeof(struct iwl_trans_trans_sim), cfg, &trans_ops_trans_sim);
+  IWL_TRANS_GET_TRANS_SIM(iwl_trans)->fw = fw;
+
+  return iwl_trans;
 }
 
 static void transport_sim_unbind(void* ctx) {
@@ -200,9 +216,9 @@ static wlanphy_impl_protocol_ops_t wlanphy_ops = {
     .destroy_iface = NULL,
 };
 
-static zx_status_t transport_sim_bind(void* ctx, zx_device_t* dev) {
+static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev) {
   const struct iwl_cfg* cfg = &iwl7265_2ac_cfg;
-  struct iwl_trans* iwl_trans = iwl_trans_transport_sim_alloc(cfg);
+  struct iwl_trans* iwl_trans = iwl_trans_transport_sim_alloc(cfg, fw);
   zx_status_t status;
 
   if (!iwl_trans) {
@@ -269,10 +285,7 @@ free_iwl_trans:
 namespace wlan {
 namespace testing {
 
-zx_status_t TransportSim::Init() {
-  // 'ctx' is not used in the simulated firmware yet.
-  return transport_sim_bind(nullptr, fake_ddk::kFakeParent);
-}
+zx_status_t TransportSim::Init() { return transport_sim_bind(this, fake_ddk::kFakeParent); }
 
 }  // namespace testing
 }  // namespace wlan
