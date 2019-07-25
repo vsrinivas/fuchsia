@@ -167,6 +167,30 @@ test("x86-lid-test") {
   ]
 }
 
+test("x86-pwrsrc-test") {
+  output_name = "x86-pwrsrc-test"
+  test_group = "ddk"
+  sources = [
+    "acpi-dev/dev-pwrsrc-test.c",
+  ]
+  configs += [ ":config" ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.acpi",
+    "$zx/system/banjo/ddk.protocol.hidbus",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.scpi",
+    "$zx/system/banjo/ddk.protocol.sysmem",
+    "$zx/system/fidl/fuchsia-hardware-power:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/hid",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
+    "$zx/third_party/lib/acpica",
+  ]
+}
+
 test("x86-board-test") {
   test_group = "ddk"
   sources = [

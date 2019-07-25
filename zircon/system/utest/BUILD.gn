@@ -260,6 +260,7 @@ if (current_cpu != "") {
         "$zx/system/dev/board/x86:x86-battery-test",
         "$zx/system/dev/board/x86:x86-board-test",
         "$zx/system/dev/board/x86:x86-lid-test",
+        "$zx/system/dev/board/x86:x86-pwrsrc-test",
         "x86-umip",
       ]
     }
