@@ -34,13 +34,23 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_PHY_DB_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_PHY_DB_H_
 
-// This file muse be included before all header files.
+// This file muse be included before all header files. TODO(WLAN-1215): fix this issue.
 // clang-format off
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
 // clang-format on
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+
+// This should be static, but is exported for unittest.
+enum iwl_phy_db_section_type {
+  IWL_PHY_DB_CFG = 1,
+  IWL_PHY_DB_CALIB_NCH,
+  IWL_PHY_DB_UNUSED,
+  IWL_PHY_DB_CALIB_CHG_PAPD,
+  IWL_PHY_DB_CALIB_CHG_TXP,
+  IWL_PHY_DB_MAX,
+};
 
 struct iwl_phy_db* iwl_phy_db_init(struct iwl_trans* trans);
 
@@ -52,6 +62,11 @@ int iwl_phy_db_set_section(struct iwl_phy_db* phy_db, struct iwl_rx_packet* pkt)
 int iwl_phy_db_get_section_data(struct iwl_phy_db* phy_db, uint32_t type, uint8_t** data,
                                 uint16_t* size, uint16_t ch_id);
 #endif
+
+// This should be static, but is exported for unittest.
+zx_status_t iwl_phy_db_send_all_channel_groups(struct iwl_phy_db* phy_db,
+                                               enum iwl_phy_db_section_type type,
+                                               int max_ch_groups);
 
 zx_status_t iwl_send_phy_db_data(struct iwl_phy_db* phy_db);
 

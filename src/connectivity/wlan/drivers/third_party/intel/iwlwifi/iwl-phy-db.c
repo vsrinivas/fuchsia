@@ -67,15 +67,6 @@ struct iwl_phy_db {
   struct iwl_trans* trans;
 };
 
-enum iwl_phy_db_section_type {
-  IWL_PHY_DB_CFG = 1,
-  IWL_PHY_DB_CALIB_NCH,
-  IWL_PHY_DB_UNUSED,
-  IWL_PHY_DB_CALIB_CHG_PAPD,
-  IWL_PHY_DB_CALIB_CHG_TXP,
-  IWL_PHY_DB_MAX
-};
-
 #define PHY_DB_CMD 0x6c
 
 /* for parsing of tx power channel group data that comes from the firmware*/
@@ -167,7 +158,8 @@ void iwl_phy_db_free(struct iwl_phy_db* phy_db) {
   kfree(phy_db);
 }
 
-int iwl_phy_db_set_section(struct iwl_phy_db* phy_db, struct iwl_rx_packet* pkt) {
+// Used to parse the notification packet from the firmware, then populate to mvm->phy_db.
+zx_status_t iwl_phy_db_set_section(struct iwl_phy_db* phy_db, struct iwl_rx_packet* pkt) {
 #if 0  // NEEDS_PORTING
     struct iwl_calib_res_notif_phy_db* phy_db_notif = (struct iwl_calib_res_notif_phy_db*)pkt->data;
     enum iwl_phy_db_section_type type = le16_to_cpu(phy_db_notif->type);
@@ -343,15 +335,14 @@ static zx_status_t iwl_send_phy_db_cmd(struct iwl_phy_db* phy_db, uint16_t type,
   return iwl_trans_send_cmd(phy_db->trans, &cmd);
 }
 
-static zx_status_t iwl_phy_db_send_all_channel_groups(struct iwl_phy_db* phy_db,
-                                                      enum iwl_phy_db_section_type type,
-                                                      uint8_t max_ch_groups) {
-  uint16_t i;
-  int err;
+zx_status_t iwl_phy_db_send_all_channel_groups(struct iwl_phy_db* phy_db,
+                                               enum iwl_phy_db_section_type type,
+                                               int max_ch_groups) {
+  zx_status_t err;
   struct iwl_phy_db_entry* entry;
 
   /* Send all the  channel specific groups to operational fw */
-  for (i = 0; i < max_ch_groups; i++) {
+  for (int i = 0; i < max_ch_groups; i++) {
     entry = iwl_phy_db_get_section(phy_db, type, i);
     if (!entry) {
       return ZX_ERR_INVALID_ARGS;
@@ -363,7 +354,7 @@ static zx_status_t iwl_phy_db_send_all_channel_groups(struct iwl_phy_db* phy_db,
 
     /* Send the requested PHY DB section */
     err = iwl_send_phy_db_cmd(phy_db, type, entry->size, entry->data);
-    if (err) {
+    if (err != ZX_OK) {
       IWL_ERR(phy_db->trans, "Can't SEND phy_db section %d (%d), err %d\n", type, i, err);
       return err;
     }
@@ -383,39 +374,39 @@ zx_status_t iwl_send_phy_db_data(struct iwl_phy_db* phy_db) {
 
   /* Send PHY DB CFG section */
   err = iwl_phy_db_get_section_data(phy_db, IWL_PHY_DB_CFG, &data, &size, 0);
-  if (err) {
+  if (err != ZX_OK) {
     IWL_ERR(phy_db->trans, "Cannot get Phy DB cfg section\n");
     return err;
   }
 
   err = iwl_send_phy_db_cmd(phy_db, IWL_PHY_DB_CFG, size, data);
-  if (err) {
+  if (err != ZX_OK) {
     IWL_ERR(phy_db->trans, "Cannot send HCMD of  Phy DB cfg section\n");
     return err;
   }
 
   err = iwl_phy_db_get_section_data(phy_db, IWL_PHY_DB_CALIB_NCH, &data, &size, 0);
-  if (err) {
+  if (err != ZX_OK) {
     IWL_ERR(phy_db->trans, "Cannot get Phy DB non specific channel section\n");
     return err;
   }
 
   err = iwl_send_phy_db_cmd(phy_db, IWL_PHY_DB_CALIB_NCH, size, data);
-  if (err) {
+  if (err != ZX_OK) {
     IWL_ERR(phy_db->trans, "Cannot send HCMD of Phy DB non specific channel section\n");
     return err;
   }
 
   /* Send all the TXP channel specific data */
   err = iwl_phy_db_send_all_channel_groups(phy_db, IWL_PHY_DB_CALIB_CHG_PAPD, phy_db->n_group_papd);
-  if (err) {
+  if (err != ZX_OK) {
     IWL_ERR(phy_db->trans, "Cannot send channel specific PAPD groups\n");
     return err;
   }
 
   /* Send all the TXP channel specific data */
   err = iwl_phy_db_send_all_channel_groups(phy_db, IWL_PHY_DB_CALIB_CHG_TXP, phy_db->n_group_txp);
-  if (err) {
+  if (err != ZX_OK) {
     IWL_ERR(phy_db->trans, "Cannot send channel specific TX power groups\n");
     return err;
   }
