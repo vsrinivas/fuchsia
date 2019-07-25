@@ -81,6 +81,7 @@ enum class KeyPriority {
 
 // The identifier of an object. This contains the digest of the object, as well as the information
 // needed to hide its name and encrypt its content, and a token to track live object identifiers.
+class ObjectIdentifierFactory;
 class ObjectIdentifier {
  public:
   // A token that ensures that the associated object remains available as long as the token object
@@ -92,6 +93,9 @@ class ObjectIdentifier {
     virtual ~Token() = 0;
     Token(const Token&) = delete;
     Token& operator=(const Token&) = delete;
+
+    // The factory that emitted this token, or nullptr if the factory has been destructed.
+    virtual ObjectIdentifierFactory* factory() const = 0;
   };
 
   // Constructs an empty, untracked object identifier.
@@ -114,6 +118,9 @@ class ObjectIdentifier {
   uint32_t key_index() const { return key_index_; }
   uint32_t deletion_scope_id() const { return deletion_scope_id_; }
   const ObjectDigest& object_digest() const { return object_digest_; }
+  // Returns the factory that currently tracks this object identifier. Returns nullptr if untracked,
+  // either because the factory expired or because the identifier was never tracked.
+  ObjectIdentifierFactory* factory() const { return token_ ? token_->factory() : nullptr; }
 
  private:
   friend bool operator==(const ObjectIdentifier&, const ObjectIdentifier&);
@@ -135,8 +142,7 @@ class ObjectIdentifierFactory {
  public:
   // Creates an object identifier.
   // This function must called only from the thread that created this |ObjectIdentifierFactory|.
-  // Destruction of the returned identifier must happen on the same thread too, and happen before
-  // the |ObjectIdentifierFactory| instance is destroyed.
+  // Destruction of the returned identifier must happen on the same thread too.
   virtual ObjectIdentifier MakeObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id,
                                                 ObjectDigest object_digest) = 0;
 };

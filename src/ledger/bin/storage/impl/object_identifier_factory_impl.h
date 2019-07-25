@@ -8,8 +8,11 @@
 #include <map>
 #include <memory>
 
+#include "lib/fit/function.h"
+#include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/synchronization/dispatcher_checker.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
 
 namespace storage {
@@ -46,6 +49,9 @@ class ObjectIdentifierFactoryImpl : public ObjectIdentifierFactory {
   // To check for multithreaded accesses.
   fxl::ThreadChecker thread_checker_;
   ledger::DispatcherChecker dispatcher_checker_;
+
+  // Must be the last member variable.
+  fxl::WeakPtrFactory<ObjectIdentifierFactoryImpl> weak_factory_;
 };
 
 }  // namespace storage

@@ -9,6 +9,7 @@
 
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace storage {
 namespace {
@@ -29,13 +30,16 @@ std::string TokenCountsToString(
 class ObjectIdentifierFactoryImpl::TokenImpl : public ObjectIdentifier::Token {
  public:
   explicit TokenImpl(
-      ObjectIdentifierFactoryImpl* tracker,
+      fxl::WeakPtr<ObjectIdentifierFactoryImpl> tracker,
       std::map<ObjectDigest, std::weak_ptr<ObjectIdentifier::Token>>::iterator map_entry)
-      : tracker_(tracker), map_entry_(map_entry) {
-    FXL_VLOG(1) << "ObjectIdentifier: start tracking " << map_entry_->first;
-  }
+      : tracker_(std::move(tracker)), map_entry_(map_entry) {}
 
   ~TokenImpl() override {
+    if (!tracker_) {
+      FXL_VLOG(1) << "ObjectIdentifier: stop tracking an object after the factory was destructed";
+      return;
+    }
+
     FXL_VLOG(1) << "ObjectIdentifier: stop tracking " << map_entry_->first;
     FXL_DCHECK(tracker_->thread_checker_.IsCreationThreadCurrent());
     FXL_DCHECK(tracker_->dispatcher_checker_.IsCreationDispatcherCurrent());
@@ -44,15 +48,20 @@ class ObjectIdentifierFactoryImpl::TokenImpl : public ObjectIdentifier::Token {
     tracker_->tokens_.erase(map_entry_);
   }
 
+  ObjectIdentifierFactory* factory() const override { return tracker_.get(); }
+
  private:
-  ObjectIdentifierFactoryImpl* tracker_;
+  fxl::WeakPtr<ObjectIdentifierFactoryImpl> tracker_;
   std::map<ObjectDigest, std::weak_ptr<ObjectIdentifier::Token>>::iterator map_entry_;
 };
 
-ObjectIdentifierFactoryImpl::ObjectIdentifierFactoryImpl() = default;
+ObjectIdentifierFactoryImpl::ObjectIdentifierFactoryImpl() : weak_factory_(this) {}
 
 ObjectIdentifierFactoryImpl::~ObjectIdentifierFactoryImpl() {
-  FXL_DCHECK(tokens_.empty()) << TokenCountsToString(tokens_);
+  if (!tokens_.empty()) {
+    FXL_VLOG(1) << "Destructing ObjectIdentifierFactory with remaining live tokens: "
+                << TokenCountsToString(tokens_);
+  }
 }
 
 std::shared_ptr<ObjectIdentifier::Token> ObjectIdentifierFactoryImpl::GetToken(
@@ -65,7 +74,8 @@ std::shared_ptr<ObjectIdentifier::Token> ObjectIdentifierFactoryImpl::GetToken(
     FXL_DCHECK(!it->second.expired());
     return it->second.lock();
   }
-  auto token = std::make_shared<TokenImpl>(this, it);
+  FXL_VLOG(1) << "ObjectIdentifier: start tracking " << it->first;
+  auto token = std::make_shared<TokenImpl>(weak_factory_.GetWeakPtr(), it);
   it->second = token;
   FXL_DCHECK(it->second.use_count() == 1);
   return token;

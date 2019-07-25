@@ -12,6 +12,9 @@ namespace fake {
 class FakeObjectIdentifierFactory::TokenImpl : public ObjectIdentifier::Token {
  public:
   ~TokenImpl() override = default;
+  // This is not really correct (we should return a pointer to the factory) but will not matter in
+  // practice for tests.
+  ObjectIdentifierFactory* factory() const override { return nullptr; }
 };
 
 FakeObjectIdentifierFactory::FakeObjectIdentifierFactory() = default;

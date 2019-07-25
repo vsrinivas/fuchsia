@@ -77,5 +77,24 @@ TEST_F(ObjectIdentifierFactoryImplTest, CountsAndCleansUp) {
   EXPECT_EQ(factory.size(), 0);
 }
 
+TEST_F(ObjectIdentifierFactoryImplTest, ObjectOutlivingFactory) {
+  const ObjectDigest digest = RandomObjectDigest(environment_.random());
+  ObjectIdentifier identifier;
+
+  {
+    ObjectIdentifierFactoryImpl factory;
+    EXPECT_EQ(factory.count(digest), 0);
+    EXPECT_EQ(factory.size(), 0);
+
+    identifier = factory.MakeObjectIdentifier(0u, 0u, digest);
+    EXPECT_EQ(factory.count(digest), 1);
+    EXPECT_EQ(factory.size(), 1);
+    EXPECT_EQ(identifier.factory(), &factory);
+  }
+
+  // When the factory is destroyed, the identifier stops being tracked.
+  EXPECT_EQ(identifier.factory(), nullptr);
+}
+
 }  // namespace
 }  // namespace storage
