@@ -50,28 +50,6 @@ in the index.
    chunk, in bytes.
  * 64 bit length of referenced chunk, in bytes.
 
-## Hash chunk (Type 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00)
-
-The hash chunk is optional.
-
- * 32 bit hash algorithm identifier.
-    - Must be 1.
-    - Identifies "SHA-256".
- * Hash data.
-    - 32 bit length of hash.
-      - Must be 32.
-    - Octets of hash.
-      - The result of hashing the contents of archive from the start of the
-        archive until the end of the last chunk listed in the index with the
-        “octets of hash” replaced with zeros.
-      - Note: The hash includes all the chunks in the index but does not include
-        any of the content chunks, which are not in the index. If you wish to
-        check the integrity of the content chunks, include a directory hash
-        chunk.
-
-Note: We might want to replace this hash algorithm with the one we use in
-blobfs.
-
 ## Directory chunk (Type "DIR-----")
 
 The directory chunk is required.  Entries in the directory chunk must have
@@ -96,19 +74,6 @@ empty directories.
       bytes.
     - 64 bit length of the data, in bytes.
  * 64 bits of zeros, reserved for future use.
-
-## Directory hash chunk (Type “DIRHASH-”)
-
-The directory hash chunk is optional.
-
- * 32 bit hash algorithm identifier.
-    - Must be 1.
-    - Identifies "SHA-256".
- * 32 bit length of each hash.
-    - Must be 32.
- * Concatenated octets of hashes
-    - Each entry is the hash of the data in the content chunk associated with
-      the corresponding entry in the directory table.
 
 ## Directory names chunk (Type "DIRNAMES")
 

@@ -61,7 +61,6 @@ const MAGIC_INDEX_VALUE: [u8; 8] = [0xc8, 0xbf, 0x0b, 0x48, 0xad, 0xab, 0xc5, 0x
 
 type ChunkType = u64;
 
-const DIR_HASH_CHUNK: ChunkType = 0x2d_48_53_41_48_52_49_44; // "DIRHASH-"
 const DIR_CHUNK: ChunkType = 0x2d_2d_2d_2d_2d_52_49_44; // "DIR-----"
 const DIR_NAMES_CHUNK: ChunkType = 0x53_45_4d_41_4e_52_49_44; // "DIRNAMES"
 
@@ -273,7 +272,6 @@ where
             }
 
             match entry.chunk_type {
-                DIR_HASH_CHUNK => {}
                 DIR_NAMES_CHUNK => {
                     dir_name_index = Some(entry);
                 }

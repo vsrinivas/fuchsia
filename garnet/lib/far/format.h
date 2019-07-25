@@ -14,9 +14,6 @@ constexpr uint64_t kMagicLength = 8u;
 constexpr uint64_t kDirType = 0x2d2d2d2d2d524944;
 constexpr uint64_t kDirnamesType = 0x53454d414e524944;
 
-constexpr uint32_t kHashAlgorithm = 1;
-constexpr uint32_t kHashLength = 32;
-
 struct IndexChunk {
   uint64_t magic = kMagic;
   uint64_t length = 0;
@@ -29,12 +26,6 @@ struct IndexEntry {
   uint64_t length = 0;
 };
 
-struct HashChunk {
-  uint32_t algorithm = kHashAlgorithm;
-  uint32_t hash_length = kHashLength;
-  uint8_t hash_data[kHashLength] = {};
-};
-
 struct DirectoryTableEntry {
   uint32_t name_offset = 0;
   uint16_t name_length = 0;
@@ -42,12 +33,6 @@ struct DirectoryTableEntry {
   uint64_t data_offset = 0;
   uint64_t data_length = 0;
   uint64_t reserved1 = 0;
-};
-
-struct DirectoryHashChunk {
-  uint32_t algorithm = kHashAlgorithm;
-  uint32_t hash_length = kHashLength;
-  // Hashes
 };
 
 }  // namespace archive

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Package far implements Fuchsia archive operations. At this time the optional
-// hash chunks are not written, and only archive writing is supported. The
-// specification for the archive format can be found in
+// Package far implements Fuchsia archive operations. At this time only
+// archive writing is supported. The specification for the archive format
+// can be found in
 // https://fuchsia.googlesource.com/fuchsia/+/master/docs/archive_format.md.
 package far
 
@@ -38,8 +38,6 @@ const (
 
 // Various chunk types
 const (
-	HashChunk     ChunkType = 0                  // 0
-	DirHashChunk  ChunkType = 0x2d48534148524944 // "DIRHASH-"
 	DirChunk      ChunkType = 0x2d2d2d2d2d524944 // "DIR-----"
 	DirNamesChunk ChunkType = 0x53454d414e524944 // "DIRNAMES"
 )
