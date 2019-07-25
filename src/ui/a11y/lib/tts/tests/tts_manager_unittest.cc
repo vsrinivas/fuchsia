@@ -276,7 +276,7 @@ TEST_F(TtsManagerTest, LogsEngineTest) {
   speaker->Speak([](auto) {});
   RunLoopUntilIdle();
   EXPECT_TRUE(
-      LogContains(log_output.str(), "Received a Speak.  Dispatching the following utterances:"));
+      LogContains(log_output.str(), "Received a Speak. Dispatching the following utterances:"));
   EXPECT_TRUE(LogContains(log_output.str(), "  - hello world"));
 
   speaker->Cancel([]() {});
