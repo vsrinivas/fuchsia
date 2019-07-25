@@ -94,11 +94,6 @@ class BlockDevice : public BlockDeviceType,
   void UpdateStats(bool success, zx::ticks start_tick, block_op_t* op);
 
  private:
-  static int ServerThread(void* arg);
-  zx_status_t GetFifos(zx_handle_t* out_buf, size_t out_len, size_t* out_actual);
-  zx_status_t AttachVmo(const void* in_buf, size_t in_len, vmoid_t* out_buf, size_t out_len,
-                        size_t* out_actual);
-  zx_status_t Rebind();
   zx_status_t DoIo(void* buf, size_t buf_len, zx_off_t off, bool write);
 
   zx_status_t FidlBlockGetInfo(fidl_txn_t* txn);
@@ -205,48 +200,13 @@ class BlockDevice : public BlockDeviceType,
   bool enable_stats_ TA_GUARDED(stat_lock_) = true;
   BlockDeviceMetrics stats_ TA_GUARDED(stat_lock_) = {};
 
-  // To maintian stats related to time taken by a command or its success/failure, we need to
+  // To maintain stats related to time taken by a command or its success/failure, we need to
   // intercept command completion with a callback routine. This might introduce cpu
   // overhead.
   // TODO(auradkar): We should be able to turn on/off stats at run-time.
   //                 Create fidl interface to control how stats are maintained.
   bool completion_status_stats_ = true;
 };
-
-zx_status_t BlockDevice::GetFifos(zx_handle_t* out_buf, size_t out_len, size_t* out_actual) {
-  if (out_len < sizeof(zx_handle_t)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  zx::fifo fifo;
-  zx_status_t status = server_manager_.StartServer(&self_protocol_, &fifo);
-  if (status != ZX_OK) {
-    return status;
-  }
-  *out_buf = fifo.release();
-  *out_actual = sizeof(zx_handle_t);
-  return ZX_OK;
-}
-
-zx_status_t BlockDevice::AttachVmo(const void* in_buf, size_t in_len, vmoid_t* out_buf,
-                                   size_t out_len, size_t* out_actual) {
-  if ((in_len < sizeof(zx_handle_t)) || (out_len < sizeof(vmoid_t))) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  zx::vmo vmo(*reinterpret_cast<const zx_handle_t*>(in_buf));
-  zx_status_t status =
-      server_manager_.AttachVmo(std::move(vmo), reinterpret_cast<vmoid_t*>(out_buf));
-  if (status != ZX_OK) {
-    return status;
-  }
-  *out_actual = sizeof(vmoid_t);
-  return ZX_OK;
-}
-
-zx_status_t BlockDevice::Rebind() {
-  // remove our existing children, ask to bind new children
-  return device_rebind(zxdev());
-}
 
 zx_status_t BlockDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
   switch (proto_id) {
@@ -518,7 +478,7 @@ zx_status_t BlockDevice::FidlBlockCloseFifo(fidl_txn_t* txn) {
 }
 
 zx_status_t BlockDevice::FidlBlockRebindDevice(fidl_txn_t* txn) {
-  return fuchsia_hardware_block_BlockRebindDevice_reply(txn, Rebind());
+  return fuchsia_hardware_block_BlockRebindDevice_reply(txn, device_rebind(zxdev()));
 }
 
 zx_status_t BlockDevice::FidlPartitionGetTypeGuid(fidl_txn_t* txn) {
