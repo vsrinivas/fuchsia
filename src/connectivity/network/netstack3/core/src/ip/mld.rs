@@ -16,7 +16,7 @@ use std::time::Duration;
 use failure::Fail;
 use log::{debug, error};
 use net_types::ip::AddrSubnet;
-use net_types::MulticastAddr;
+use net_types::{LinkLocalAddress, MulticastAddr};
 use packet::serialize::Serializer;
 use packet::InnerPacketBuilder;
 use rand::Rng;
@@ -418,8 +418,8 @@ mod tests {
         device: DeviceId,
         resp_time: Duration,
     ) {
-        let my_addr = MY_MAC.to_ipv6_link_local();
-        let router_addr = ROUTER_MAC.to_ipv6_link_local();
+        let my_addr = MY_MAC.to_ipv6_link_local().get();
+        let router_addr = ROUTER_MAC.to_ipv6_link_local().get();
         let buffer = Mldv1MessageBuilder::<MulticastListenerQuery>::new_with_max_resp_delay(
             GROUP_ADDR,
             resp_time.try_into().unwrap(),
@@ -437,8 +437,8 @@ mod tests {
     }
 
     fn receive_mld_report(ctx: &mut Context<DummyEventDispatcher>, device: DeviceId) {
-        let my_addr = MY_MAC.to_ipv6_link_local();
-        let router_addr = ROUTER_MAC.to_ipv6_link_local();
+        let my_addr = MY_MAC.to_ipv6_link_local().get();
+        let router_addr = ROUTER_MAC.to_ipv6_link_local().get();
         let buffer = Mldv1MessageBuilder::<MulticastListenerReport>::new(
             MulticastAddr::new(GROUP_ADDR).unwrap(),
         )
@@ -460,7 +460,7 @@ mod tests {
         set_ip_addr_subnet(
             &mut ctx,
             dev_id,
-            AddrSubnet::new(MY_MAC.to_ipv6_link_local(), 128).unwrap(),
+            AddrSubnet::new(MY_MAC.to_ipv6_link_local().get(), 128).unwrap(),
         );
         (ctx, dev_id)
     }

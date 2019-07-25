@@ -57,7 +57,7 @@ use std::net;
 use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
-use crate::{sealed, MulticastAddr, MulticastAddress, UnicastAddress};
+use crate::{sealed, LinkLocalAddress, MulticastAddr, MulticastAddress, UnicastAddress};
 
 // NOTE on passing by reference vs by value: Clippy advises us to pass IPv4
 // addresses by value, and IPv6 addresses by reference. For concrete types, we
@@ -185,6 +185,9 @@ pub trait Ip:
     /// The subnet of multicast addresses.
     const MULTICAST_SUBNET: Subnet<Self::Addr>;
 
+    /// The subnet of link-local addresses.
+    const LINK_LOCAL_SUBNET: Subnet<Self::Addr>;
+
     /// The address type for this IP version.
     ///
     /// [`Ipv4Addr`] for IPv4 and [`Ipv6Addr`] for IPv6.
@@ -217,6 +220,11 @@ impl Ip for Ipv4 {
         Subnet { network: Ipv4Addr::new([127, 0, 0, 0]), prefix: 8 };
     const MULTICAST_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([224, 0, 0, 0]), prefix: 4 };
+    /// Outlined in [RFC 3927 Section 2.1].
+    ///
+    /// [RFC 3927 Section 2.1]: https://tools.ietf.org/html/rfc3927#section-2.1
+    const LINK_LOCAL_SUBNET: Subnet<Ipv4Addr> =
+        Subnet { network: Ipv4Addr::new([169, 254, 0, 0]), prefix: 16 };
     type Addr = Ipv4Addr;
 }
 
@@ -264,6 +272,13 @@ impl Ip for Ipv6 {
     const MULTICAST_SUBNET: Subnet<Ipv6Addr> = Subnet {
         network: Ipv6Addr::new([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
         prefix: 8,
+    };
+    /// Defined in [RFC 4291 Section 2.5.6].
+    ///
+    /// [RFC 4291 Section 2.5.6]: https://tools.ietf.org/html/rfc4291#section-2.5.6
+    const LINK_LOCAL_SUBNET: Subnet<Ipv6Addr> = Subnet {
+        network: Ipv6Addr::new([0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        prefix: 10,
     };
     type Addr = Ipv6Addr;
 }
@@ -393,6 +408,19 @@ impl<A: IpAddress> MulticastAddress for A {
     #[inline]
     fn is_multicast(&self) -> bool {
         <A as IpAddress>::Version::MULTICAST_SUBNET.contains(self)
+    }
+}
+
+impl<A: IpAddress> LinkLocalAddress for A {
+    /// Is this address in the link-local subnet?
+    ///
+    /// `is_linklocal` returns true if `self` is in
+    /// [`A::Version::LINK_LOCAL_SUBNET`].
+    ///
+    /// [`A::Version::LINK_LOCAL_SUBNET`]: crate::ip::Ip::LINK_LOCAL_SUBNET
+    #[inline]
+    fn is_linklocal(&self) -> bool {
+        <A as IpAddress>::Version::LINK_LOCAL_SUBNET.contains(self)
     }
 }
 
@@ -566,15 +594,6 @@ impl Ipv6Addr {
                 self.0[15],
             ]))
         }
-    }
-
-    /// Checks whether `self` is a link local IPv6 address, as defined in [RFC
-    /// 4291 Section 2.5.6].
-    ///
-    /// [RFC 4291 Section 2.5.6]: https://tools.ietf.org/html/rfc4291#section-2.5.6
-    #[inline]
-    pub fn is_linklocal(&self) -> bool {
-        self.0[0] == 0xFE && self.0[1] & 0xC0 == 0x80
     }
 
     /// Checks whether `self` is a valid unicast address.

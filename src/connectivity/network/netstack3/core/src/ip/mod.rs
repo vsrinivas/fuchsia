@@ -805,7 +805,7 @@ fn deliver<D: EventDispatcher, A: IpAddress>(
         .map(AddrSubnet::into_addr_subnet)
         .map(|(addr, _): (Ipv6Addr, _)| dst_ip == addr)
         .unwrap_or(false)
-        || crate::device::get_ipv6_link_local_addr(ctx, device) == dst_ip
+        || crate::device::get_ipv6_link_local_addr(ctx, device).get() == dst_ip
         || dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS
         || MulticastAddr::new(dst_ip)
             .map(|a| crate::device::is_in_ip_multicast(ctx, device, a))
@@ -1854,7 +1854,7 @@ mod tests {
         let extra_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 100]);
         let extra_mac = Mac::new([13, 14, 15, 16, 17, 18]);
         dispatcher_builder.add_ndp_table_entry(0, extra_ip, extra_mac);
-        dispatcher_builder.add_ndp_table_entry(0, extra_mac.to_ipv6_link_local(), extra_mac);
+        dispatcher_builder.add_ndp_table_entry(0, extra_mac.to_ipv6_link_local().get(), extra_mac);
         let mut ctx = dispatcher_builder.build_with(state_builder, DummyEventDispatcher::default());
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;

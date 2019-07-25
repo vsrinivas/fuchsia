@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use log::debug;
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use net_types::{BroadcastAddress, MulticastAddr, MulticastAddress, UnicastAddress};
+use net_types::{BroadcastAddress, LinkLocalAddr, MulticastAddr, MulticastAddress, UnicastAddress};
 use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 
@@ -98,7 +98,8 @@ impl EthernetDeviceStateBuilder {
     pub(crate) fn build(self) -> EthernetDeviceState {
         let mut ipv6_multicast_groups = HashSet::new();
 
-        ipv6_multicast_groups.insert(self.mac.to_ipv6_link_local().to_solicited_node_address());
+        ipv6_multicast_groups
+            .insert(self.mac.to_ipv6_link_local().get().to_solicited_node_address());
 
         // TODO(ghanan): Perform NDP's DAD on the link local address BEFORE receiving
         //               packets destined to it.
@@ -344,7 +345,7 @@ pub(crate) fn get_ip_addr_subnet_with_tentative<D: EventDispatcher, A: IpAddress
 pub(crate) fn get_ipv6_link_local_addr<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device_id: usize,
-) -> Ipv6Addr {
+) -> LinkLocalAddr<Ipv6Addr> {
     // TODO(brunodalbo) the link local address is subject to the same collision
     //  verifications as prefix global addresses, we should keep a state machine
     //  about that check and cache the adopted address. For now, we just compose
@@ -599,7 +600,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         //  a list of IPv6 addresses.
         match state.ipv6_addr_sub {
             Some(addr_sub) => Some(addr_sub.map(|a| a.into_addr())),
-            None => Some(Tentative::new_permanent(state.mac.to_ipv6_link_local())),
+            None => Some(Tentative::new_permanent(state.mac.to_ipv6_link_local().get())),
         }
     }
 
@@ -620,7 +621,7 @@ impl ndp::NdpDevice for EthernetNdpDevice {
             }
         }
 
-        if state.mac.to_ipv6_link_local() == *address {
+        if state.mac.to_ipv6_link_local().get() == *address {
             // TODO(ghanan): perform DAD on link local address instead of assuming
             //               it is safe to assign.
             ndp::AddressState::Assigned;

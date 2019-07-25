@@ -460,7 +460,11 @@ impl DummyEventDispatcherBuilder {
 
         // even with fixed ipv4 address we can have ipv6 link local addresses
         // pre-cached.
-        builder.ndp_table_entries.push((0, cfg.remote_mac.to_ipv6_link_local(), cfg.remote_mac));
+        builder.ndp_table_entries.push((
+            0,
+            cfg.remote_mac.to_ipv6_link_local().get(),
+            cfg.remote_mac,
+        ));
 
         builder.device_routes.push((cfg.subnet.into(), 0));
         builder

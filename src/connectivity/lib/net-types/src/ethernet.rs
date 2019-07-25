@@ -9,7 +9,7 @@ use core::fmt::{self, Debug, Display, Formatter};
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::ip::{IpAddress, Ipv6Addr};
-use crate::{BroadcastAddress, MulticastAddr, MulticastAddress, UnicastAddress};
+use crate::{BroadcastAddress, LinkLocalAddr, MulticastAddr, MulticastAddress, UnicastAddress};
 
 /// A media access control (MAC) address.
 ///
@@ -87,7 +87,7 @@ impl Mac {
     ///
     /// [RFC 4291]: https://tools.ietf.org/html/rfc4291
     #[inline]
-    pub fn to_ipv6_link_local(self) -> Ipv6Addr {
+    pub fn to_ipv6_link_local(self) -> LinkLocalAddr<Ipv6Addr> {
         self.to_ipv6_link_local_with_magic(Mac::DEFAULT_EUI_MAGIC)
     }
 
@@ -101,11 +101,19 @@ impl Mac {
     /// [RFC 4291]: https://tools.ietf.org/html/rfc4291
     /// [`to_ipv6_link_local`]: crate::ethernet::Mac::to_ipv6_link_local
     #[inline]
-    pub fn to_ipv6_link_local_with_magic(self, eui_magic: [u8; 2]) -> Ipv6Addr {
+    pub fn to_ipv6_link_local_with_magic(self, eui_magic: [u8; 2]) -> LinkLocalAddr<Ipv6Addr> {
         let mut ipv6_addr = [0; 16];
         ipv6_addr[0..2].copy_from_slice(&[0xfe, 0x80]);
         ipv6_addr[8..16].copy_from_slice(&self.to_eui64_with_magic(eui_magic));
-        Ipv6Addr::new(ipv6_addr)
+
+        // We know the call to `unwrap` will not panic because we know we are
+        // passing `LinkLocalAddr::new` a valid link local address as per RFC
+        // 4291 section 2.5.6. Specifically, the first 10 bits of the generated
+        // address is `0b1111111010`.
+        //
+        // TODO(ghanan): Investigate whether this unwrap is optimized out in practice as this code
+        //               will be on the hot path.
+        LinkLocalAddr::new(Ipv6Addr::new(ipv6_addr)).unwrap()
     }
 }
 
@@ -237,7 +245,7 @@ mod tests {
     #[test]
     fn test_to_ipv6_link_local() {
         assert_eq!(
-            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_ipv6_link_local(),
+            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_ipv6_link_local().get(),
             Ipv6Addr::new([
                 0xfe, 0x80, // IPv6 link-local prefix
                 0, 0, 0, 0, 0, 0, // Padding zeroes
@@ -246,7 +254,8 @@ mod tests {
         );
         assert_eq!(
             Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56])
-                .to_ipv6_link_local_with_magic([0xfe, 0xfe]),
+                .to_ipv6_link_local_with_magic([0xfe, 0xfe])
+                .get(),
             Ipv6Addr::new([
                 0xfe, 0x80, // IPv6 link-local prefix
                 0, 0, 0, 0, 0, 0, // Padding zeroes

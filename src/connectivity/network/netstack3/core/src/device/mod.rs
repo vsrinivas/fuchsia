@@ -13,7 +13,7 @@ use std::fmt::{self, Debug, Display, Formatter};
 use log::{debug, trace};
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, IpAddress, Ipv4Addr, Ipv6Addr};
-use net_types::MulticastAddr;
+use net_types::{LinkLocalAddr, MulticastAddr};
 use packet::{BufferMut, Serializer};
 
 use crate::data_structures::{IdMap, IdMapCollectionKey};
@@ -339,7 +339,7 @@ pub(crate) fn get_mtu<D: EventDispatcher>(ctx: &mut Context<D>, device: DeviceId
 pub fn get_ipv6_link_local_addr<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device: DeviceId,
-) -> Ipv6Addr {
+) -> LinkLocalAddr<Ipv6Addr> {
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::get_ipv6_link_local_addr(ctx, device.id),
     }

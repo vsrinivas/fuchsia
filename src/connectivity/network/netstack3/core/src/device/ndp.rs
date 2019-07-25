@@ -24,7 +24,7 @@ use std::time::Duration;
 
 use log::{debug, error, trace};
 use net_types::ip::{IpAddress, Ipv6, Ipv6Addr};
-use net_types::MulticastAddress;
+use net_types::{LinkLocalAddress, MulticastAddress};
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
 use zerocopy::ByteSlice;
 
@@ -947,11 +947,11 @@ mod tests {
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
 
     fn local_ip() -> Ipv6Addr {
-        TEST_LOCAL_MAC.to_ipv6_link_local()
+        TEST_LOCAL_MAC.to_ipv6_link_local().get()
     }
 
     fn remote_ip() -> Ipv6Addr {
-        TEST_REMOTE_MAC.to_ipv6_link_local()
+        TEST_REMOTE_MAC.to_ipv6_link_local().get()
     }
 
     #[test]
@@ -1099,8 +1099,8 @@ mod tests {
         // so they will both give up using that address.
         set_logger_for_test();
         let mac = Mac::new([1, 2, 3, 4, 5, 6]);
-        let addr = AddrSubnet::new(mac.to_ipv6_link_local(), 128).unwrap();
-        let multicast_addr = mac.to_ipv6_link_local().to_solicited_node_address();
+        let addr = AddrSubnet::new(mac.to_ipv6_link_local().get(), 128).unwrap();
+        let multicast_addr = mac.to_ipv6_link_local().get().to_solicited_node_address();
         let mut local = DummyEventDispatcherBuilder::default();
         local.add_device(mac);
         let mut remote = DummyEventDispatcherBuilder::default();
@@ -1299,7 +1299,7 @@ mod tests {
         set_ip_addr_subnet(
             net.context("local"),
             device_id,
-            AddrSubnet::new(mac.to_ipv6_link_local(), 128).unwrap(),
+            AddrSubnet::new(mac.to_ipv6_link_local().get(), 128).unwrap(),
         );
         // during the first and second period, the remote host is still down.
         assert!(testutil::trigger_next_timer(net.context("local")));
@@ -1307,7 +1307,7 @@ mod tests {
         set_ip_addr_subnet(
             net.context("remote"),
             device_id,
-            AddrSubnet::new(mac.to_ipv6_link_local(), 128).unwrap(),
+            AddrSubnet::new(mac.to_ipv6_link_local().get(), 128).unwrap(),
         );
         // the local host should have sent out 3 packets while the remote one
         // should only have sent out 1.
@@ -1431,7 +1431,7 @@ mod tests {
         // Test receiving NDP RA where source ip is a link local address (should receive)
         //
 
-        let src_ip = Mac::new(src_mac).to_ipv6_link_local();
+        let src_ip = Mac::new(src_mac).to_ipv6_link_local().get();
         let mut icmpv6_packet_buf = Buf::new(Vec::new(), ..)
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
