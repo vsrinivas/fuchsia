@@ -1,0 +1,30 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Generate CIPD files to download the current QEMU package.
+
+## Usage: fx qemu-cipd-ensure
+##
+## This looks at the current jiri checkout to find the QEMU package version
+## to use.  Then it generates CIPD files that you can copy over to any
+## machine and use to get the QEMU package installed locally there.  This
+## works even if build host where you run this script and the place you use
+## the output are different OS or machine types.
+##
+## The files `qemu-cipd.ensure` and `qemu-cipd.versions` will be generated
+## in the current build directory.  Comments in `qemu-cipd.ensure` explain
+## how to use these files.  It should work on any machine connected to the
+## Internet with no prior setup.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+
+set -e
+
+fx-config-read
+
+readonly SCRIPT="$FUCHSIA_DIR/tools/devshell/contrib/lib/jiri2ensure.py"
+readonly QEMU_CIPD_NAME='fuchsia/third_party/qemu/${platform}'
+
+"$SCRIPT" "$QEMU_CIPD_NAME" "$FUCHSIA_BUILD_DIR/qemu-cipd"
