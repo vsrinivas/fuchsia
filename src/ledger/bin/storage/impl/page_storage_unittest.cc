@@ -308,6 +308,12 @@ class PageStorageTest : public ledger::TestWithEnvironment {
     return storage::RandomObjectIdentifier(environment_.random());
   }
 
+  // Returns an ObjectData built with the provided |args|.
+  template <typename... Args>
+  ObjectData MakeObject(Args&&... args) {
+    return ObjectData(std::forward<Args>(args)...);
+  }
+
   std::unique_ptr<const Commit> TryCommitFromSync() {
     ObjectIdentifier root_identifier;
     EXPECT_TRUE(GetEmptyNodeIdentifier(&root_identifier));
@@ -653,7 +659,7 @@ TEST_F(PageStorageTest, AddLocalCommitsReferences) {
   // creating two identical journals and commiting them. We then check that both
   // commits are stored as inbound references of said object.
   std::unique_ptr<const Commit> base = GetFirstHead();
-  const ObjectData data(RandomString(environment_.random(), 65536), InlineBehavior::PREVENT);
+  const ObjectData data = MakeObject(RandomString(environment_.random(), 65536), InlineBehavior::PREVENT);
   const ObjectIdentifier object_id = data.object_identifier;
   std::unique_ptr<Journal> journal = storage_->StartCommit(base->Clone());
   journal->Put("key", object_id, KeyPriority::EAGER);
@@ -826,8 +832,8 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     storage_->SetSyncDelegate(&sync);
 
     // Create a node with 2 values.
-    ObjectData lazy_value("Some data", InlineBehavior::PREVENT);
-    ObjectData eager_value("More data", InlineBehavior::PREVENT);
+    ObjectData lazy_value = MakeObject("Some data", InlineBehavior::PREVENT);
+    ObjectData eager_value = MakeObject("More data", InlineBehavior::PREVENT);
     std::vector<Entry> entries = {
         Entry{"key0", lazy_value.object_identifier, KeyPriority::LAZY},
         Entry{"key1", eager_value.object_identifier, KeyPriority::EAGER},
@@ -997,7 +1003,7 @@ TEST_F(PageStorageTest, OrderHeadCommitsByTimestampThenId) {
   std::vector<ObjectIdentifier> object_identifiers;
   object_identifiers.resize(timestamps.size());
   for (size_t i = 0; i < timestamps.size(); ++i) {
-    ObjectData value("value" + std::to_string(i), InlineBehavior::ALLOW);
+    ObjectData value = MakeObject("value" + std::to_string(i), InlineBehavior::ALLOW);
     std::vector<Entry> entries = {
         Entry{"key" + std::to_string(i), value.object_identifier, KeyPriority::EAGER}};
     std::unique_ptr<const btree::TreeNode> node;
@@ -1125,7 +1131,7 @@ TEST_F(PageStorageTest, DestroyUncommittedJournal) {
 
 TEST_F(PageStorageTest, AddObjectFromLocal) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data("Some data", InlineBehavior::PREVENT);
+    ObjectData data = MakeObject("Some data", InlineBehavior::PREVENT);
 
     bool called;
     Status status;
@@ -1148,7 +1154,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
 
 TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data("Some data");
+    ObjectData data = MakeObject("Some data");
 
     bool called;
     Status status;
@@ -1170,7 +1176,7 @@ TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
 }
 
 TEST_F(PageStorageTest, InterruptAddObjectFromLocal) {
-  ObjectData data("Some data");
+  ObjectData data = MakeObject("Some data");
 
   storage_->AddObjectFromLocal(ObjectType::BLOB, data.ToDataSource(), {},
                                [](Status returned_status, ObjectIdentifier object_identifier) {});
@@ -1195,7 +1201,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalError) {
 
 TEST_F(PageStorageTest, AddLocalPiece) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data("Some data", InlineBehavior::PREVENT);
+    ObjectData data = MakeObject("Some data", InlineBehavior::PREVENT);
     const ObjectIdentifier reference = RandomObjectIdentifier();
 
     bool called;
@@ -1221,7 +1227,7 @@ TEST_F(PageStorageTest, AddLocalPiece) {
 
 TEST_F(PageStorageTest, AddSyncPiece) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data("Some data", InlineBehavior::PREVENT);
+    ObjectData data = MakeObject("Some data", InlineBehavior::PREVENT);
     const ObjectIdentifier reference = RandomObjectIdentifier();
 
     bool called;
@@ -1247,7 +1253,7 @@ TEST_F(PageStorageTest, AddSyncPiece) {
 
 TEST_F(PageStorageTest, AddP2PPiece) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data("Some data", InlineBehavior::PREVENT);
+    ObjectData data = MakeObject("Some data", InlineBehavior::PREVENT);
 
     bool called;
     Status status;
@@ -1268,7 +1274,7 @@ TEST_F(PageStorageTest, AddP2PPiece) {
 
 TEST_F(PageStorageTest, GetObject) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data("Some data");
+    ObjectData data = MakeObject("Some data");
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
     std::unique_ptr<const Object> object =
@@ -1282,7 +1288,7 @@ TEST_F(PageStorageTest, GetObject) {
 
 TEST_F(PageStorageTest, GetObjectPart) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data("_Some data_");
+    ObjectData data = MakeObject("_Some data_");
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
     fsl::SizedVmo object_part =
@@ -1295,7 +1301,7 @@ TEST_F(PageStorageTest, GetObjectPart) {
 
 TEST_F(PageStorageTest, GetObjectPartLargeOffset) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data("_Some data_");
+    ObjectData data = MakeObject("_Some data_");
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
     fsl::SizedVmo object_part = TryGetObjectPart(data.object_identifier, data.size * 2, data.size,
@@ -1308,7 +1314,7 @@ TEST_F(PageStorageTest, GetObjectPartLargeOffset) {
 
 TEST_F(PageStorageTest, GetObjectPartLargeMaxSize) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data("_Some data_");
+    ObjectData data = MakeObject("_Some data_");
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
     fsl::SizedVmo object_part =
@@ -1321,7 +1327,7 @@ TEST_F(PageStorageTest, GetObjectPartLargeMaxSize) {
 
 TEST_F(PageStorageTest, GetObjectPartNegativeArgs) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data("_Some data_");
+    ObjectData data = MakeObject("_Some data_");
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
     fsl::SizedVmo object_part =
@@ -1337,7 +1343,7 @@ TEST_F(PageStorageTest, GetLargeObjectPart) {
   size_t offset = 6144;
   size_t size = 49152;
 
-  ObjectData data(std::move(data_str), InlineBehavior::PREVENT);
+  ObjectData data = MakeObject(std::move(data_str), InlineBehavior::PREVENT);
 
   ASSERT_EQ(GetObjectDigestInfo(data.object_identifier.object_digest()).piece_type,
             PieceType::INDEX);
@@ -1364,7 +1370,7 @@ TEST_F(PageStorageTest, GetLargeObjectPart) {
 }
 
 TEST_F(PageStorageTest, GetObjectPartFromSync) {
-  ObjectData data("_Some data_", InlineBehavior::PREVENT);
+  ObjectData data = MakeObject("_Some data_", InlineBehavior::PREVENT);
   FakeSyncDelegate sync;
   sync.AddObject(data.object_identifier, data.value);
   storage_->SetSyncDelegate(&sync);
@@ -1376,7 +1382,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSync) {
   EXPECT_EQ(convert::ToString(object_part_data), data.value.substr(1, data.size - 2));
 
   storage_->SetSyncDelegate(nullptr);
-  ObjectData other_data("_Some other data_", InlineBehavior::PREVENT);
+  ObjectData other_data = MakeObject("_Some other data_", InlineBehavior::PREVENT);
   TryGetObjectPart(other_data.object_identifier, 1, other_data.size - 2,
                    PageStorage::Location::LOCAL, Status::INTERNAL_NOT_FOUND);
   TryGetObjectPart(other_data.object_identifier, 1, other_data.size - 2,
@@ -1505,7 +1511,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncZeroBytesNotFound) {
   storage_->SetSyncDelegate(&sync);
 
   // Reading zero bytes from non-existing objects returns an error.
-  ObjectData other_data("_Some other data_", InlineBehavior::PREVENT);
+  ObjectData other_data = MakeObject("_Some other data_", InlineBehavior::PREVENT);
   TryGetObjectPart(other_data.object_identifier, 1, 0, PageStorage::Location::NETWORK,
                    Status::INTERNAL_NOT_FOUND);
 }
@@ -1592,7 +1598,7 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSyncNegativeOffset) {
 }
 
 TEST_F(PageStorageTest, GetObjectFromSync) {
-  ObjectData data("Some data", InlineBehavior::PREVENT);
+  ObjectData data = MakeObject("Some data", InlineBehavior::PREVENT);
   FakeSyncDelegate sync;
   sync.AddObject(data.object_identifier, data.value);
   storage_->SetSyncDelegate(&sync);
@@ -1608,7 +1614,7 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
   TryGetPiece(data.object_identifier);
 
   storage_->SetSyncDelegate(nullptr);
-  ObjectData other_data("Some other data", InlineBehavior::PREVENT);
+  ObjectData other_data = MakeObject("Some other data", InlineBehavior::PREVENT);
   TryGetObject(other_data.object_identifier, PageStorage::Location::LOCAL,
                Status::INTERNAL_NOT_FOUND);
   TryGetObject(other_data.object_identifier, PageStorage::Location::NETWORK, Status::NETWORK_ERROR);
@@ -1657,8 +1663,8 @@ TEST_F(PageStorageTest, FullDownloadAfterPartial) {
 }
 
 TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
-  ObjectData data("Some data", InlineBehavior::PREVENT);
-  ObjectData data2("Some data2", InlineBehavior::PREVENT);
+  ObjectData data = MakeObject("Some data", InlineBehavior::PREVENT);
+  ObjectData data2 = MakeObject("Some data2", InlineBehavior::PREVENT);
   FakeSyncDelegate sync;
   sync.AddObject(data.object_identifier, data2.value);
   storage_->SetSyncDelegate(&sync);
@@ -1670,7 +1676,7 @@ TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
 TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
   std::string data_str = RandomString(environment_.random(), 65536);
 
-  ObjectData data(std::move(data_str), ObjectType::TREE_NODE, InlineBehavior::PREVENT);
+  ObjectData data = MakeObject(std::move(data_str), ObjectType::TREE_NODE, InlineBehavior::PREVENT);
   // An identifier to another tree node pointed at by the current one.
   const ObjectIdentifier tree_reference = RandomObjectIdentifier();
   ASSERT_EQ(GetObjectDigestInfo(data.object_identifier.object_digest()).object_type,
@@ -1813,9 +1819,9 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromSync) {
 
 TEST_F(PageStorageTest, UnsyncedPieces) {
   ObjectData data_array[] = {
-      ObjectData("Some data", InlineBehavior::PREVENT),
-      ObjectData("Some more data", InlineBehavior::PREVENT),
-      ObjectData("Even more data", InlineBehavior::PREVENT),
+      MakeObject("Some data", InlineBehavior::PREVENT),
+      MakeObject("Some more data", InlineBehavior::PREVENT),
+      MakeObject("Even more data", InlineBehavior::PREVENT),
   };
   constexpr size_t size = arraysize(data_array);
   for (auto& data : data_array) {
@@ -1884,9 +1890,9 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
 
 TEST_F(PageStorageTest, PageIsSynced) {
   ObjectData data_array[] = {
-      ObjectData("Some data", InlineBehavior::PREVENT),
-      ObjectData("Some more data", InlineBehavior::PREVENT),
-      ObjectData("Even more data", InlineBehavior::PREVENT),
+      MakeObject("Some data", InlineBehavior::PREVENT),
+      MakeObject("Some more data", InlineBehavior::PREVENT),
+      MakeObject("Even more data", InlineBehavior::PREVENT),
   };
   constexpr size_t size = arraysize(data_array);
   for (auto& data : data_array) {
@@ -2020,7 +2026,7 @@ TEST_F(PageStorageTest, PageIsMarkedOnlineSyncWithPeer) {
 }
 
 TEST_F(PageStorageTest, PageIsEmpty) {
-  ObjectData value("Some value", InlineBehavior::PREVENT);
+  ObjectData value = MakeObject("Some value", InlineBehavior::PREVENT);
   bool called;
   Status status;
   bool is_empty;
@@ -2056,7 +2062,7 @@ TEST_F(PageStorageTest, PageIsEmpty) {
 }
 
 TEST_F(PageStorageTest, UntrackedObjectsSimple) {
-  ObjectData data("Some data", InlineBehavior::PREVENT);
+  ObjectData data = MakeObject("Some data", InlineBehavior::PREVENT);
 
   // The object is not yet created and its id should not be marked as untracked.
   EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, false));
@@ -2075,9 +2081,9 @@ TEST_F(PageStorageTest, UntrackedObjectsSimple) {
 
 TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   ObjectData data_array[] = {
-      ObjectData("Some data", InlineBehavior::PREVENT),
-      ObjectData("Some more data", InlineBehavior::PREVENT),
-      ObjectData("Even more data", InlineBehavior::PREVENT),
+      MakeObject("Some data", InlineBehavior::PREVENT),
+      MakeObject("Some more data", InlineBehavior::PREVENT),
+      MakeObject("Even more data", InlineBehavior::PREVENT),
   };
   for (auto& data : data_array) {
     TryAddFromLocal(data.value, data.object_identifier);
@@ -2198,7 +2204,7 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
     std::vector<ObjectIdentifier> object_identifiers;
     object_identifiers.resize(3);
     for (size_t i = 0; i < object_identifiers.size(); ++i) {
-      ObjectData value("value" + std::to_string(i), InlineBehavior::PREVENT);
+      ObjectData value = MakeObject("value" + std::to_string(i), InlineBehavior::PREVENT);
       std::vector<Entry> entries = {
           Entry{"key" + std::to_string(i), value.object_identifier, KeyPriority::EAGER}};
       std::unique_ptr<const btree::TreeNode> node;
@@ -2363,9 +2369,9 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   bool called;
   Status status;
   std::unique_ptr<const Commit> base_commit = GetFirstHead();
-  ObjectData value_1("data1", InlineBehavior::ALLOW);
-  ObjectData value_2("data2", InlineBehavior::ALLOW);
-  ObjectData value_3("data3", InlineBehavior::ALLOW);
+  ObjectData value_1 = MakeObject("data1", InlineBehavior::ALLOW);
+  ObjectData value_2 = MakeObject("data2", InlineBehavior::ALLOW);
+  ObjectData value_3 = MakeObject("data3", InlineBehavior::ALLOW);
 
   std::unique_ptr<Journal> journal1 = storage_->StartCommit(base_commit->Clone());
   journal1->Put("key", value_1.object_identifier, KeyPriority::EAGER);
