@@ -160,6 +160,19 @@ const MAX_INITIAL_RTR_ADVERTISEMENTS: u64 = 3;
 /// [RFC 4861 section 6.3.4]: https://tools.ietf.org/html/rfc4861#section-6.3.4
 const MAX_INITIAL_RTR_ADVERT_INTERVAL: Duration = Duration::from_secs(16);
 
+/// The number of final Router Advertisements sent from a device when it transitions into a
+/// non-advertising interface. The Router Lifetime field in these Router Advertisements will
+/// be set to 0 to let hosts know not to use the router as a default router.
+///
+/// See See [RFC 4861 section 6.2.5] and [RFC 4861 section 10] for more details.
+///
+/// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
+/// [RFC 4861 section 6.3.5]: https://tools.ietf.org/html/rfc4861#section-6.2.5
+// This call to `new_unchecked` is okay becase 3 is non-zero, so we will not be violating
+// `NonZeroU8`'s contract.
+const MAX_FINAL_RTR_ADVERTISEMENTS: Option<NonZeroU8> =
+    unsafe { Some(NonZeroU8::new_unchecked(3)) };
+
 /// The minimum delay for sending a Router Advertisement message in response to a Router
 /// Solicitation.
 const MIN_RA_DELAY_TIME: Duration = Duration::from_millis(1);
@@ -390,6 +403,15 @@ pub(crate) trait NdpDevice: Sized {
     /// have routing enabled; if `is_router` returns false, either `device_id` or the netstack
     /// (`ctx`) has routing disabled.
     fn is_router<D: EventDispatcher>(ctx: &Context<D>, device_id: usize) -> bool;
+
+    /// Is `device_id` an advertising interface?
+    fn is_advertising_interface<D: EventDispatcher>(ctx: &Context<D>, device_id: usize) -> bool {
+        Self::is_router(ctx, device_id)
+            && Self::get_ndp_state(ctx.state(), device_id)
+                .configs
+                .get_router_configurations()
+                .get_should_send_advertisements()
+    }
 }
 
 /// Cleans up state associated with the device.
@@ -638,12 +660,23 @@ impl Default for NdpRouterConfigurations {
 
 impl NdpRouterConfigurations {
     /// Create a new Router Advertisement from the configurations in this `NdpRouterConfigurations`.
-    fn new_router_advertisement(&self) -> RouterAdvertisement {
+    ///
+    /// `is_final_ra_batch` is used to let `new_router_advertisement` know that the new Router
+    /// Advertisement is part of a batch of final router advertisements when a device ceases to be
+    /// an advertising interface. In this case, the Router Lifetime field will be set to 0 to inform
+    /// hosts that the (ex-)router is no longer to be used as a default router.
+    fn new_router_advertisement(&self, is_final_ra_batch: bool) -> RouterAdvertisement {
+        let router_lifetime = if is_final_ra_batch {
+            0
+        } else {
+            self.get_advertised_default_lifetime().map_or(0, |x| x.get())
+        };
+
         RouterAdvertisement::new(
             self.get_advertised_current_hop_limit(),
             self.get_advertised_managed_flag(),
             self.get_advertised_other_config_flag(),
-            self.get_advertised_default_lifetime().map_or(0, |x| x.get()),
+            router_lifetime,
             self.get_advertised_reachable_time(),
             self.get_advertised_retransmit_timer(),
         )
@@ -895,8 +928,14 @@ pub(crate) struct NdpState<ND: NdpDevice, D: EventDispatcher> {
     /// assume that an IPv6 address is not currently in use.
     dad_transmits_remaining: HashMap<Ipv6Addr, u8>,
 
-    /// Number of remaining router solicitation messages to send.
+    /// Number of remaining Router Solicitation messages to send.
     router_solicitations_remaining: u8,
+
+    /// Number of remaining final Router Advertisement messages to send.
+    ///
+    /// The Router Lifetime field in these Router Advertisement message will be set to 0 to let
+    /// hosts know not to use the router as a default route.
+    final_router_advertisements_remaining: u8,
 
     /// Number of Router Advertisements sent to the IPv6 all-nodes multicast address.
     ///
@@ -961,6 +1000,7 @@ impl<ND: NdpDevice, D: EventDispatcher> NdpState<ND, D> {
             dad_transmits_remaining: HashMap::new(),
             on_link_prefixes: HashSet::new(),
             router_solicitations_remaining: 0,
+            final_router_advertisements_remaining: 0,
             all_nodes_transmited_router_advertisements: 0,
             last_router_advertisement_instant: None,
 
@@ -1322,8 +1362,14 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
             // Send the router advertisement to the IPv6 all-nodes multicast address.
             send_router_advertisement::<_, ND>(ctx, device_id, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
 
-            // Schedule the next router advertisement.
-            schedule_next_router_advertisement::<_, ND>(ctx, device_id);
+            // Schedule the next Router Advertisement if `device_id` is an advertising interface or
+            // it is sending its final Router Advertisements, as per RFC 4861 section 6.2.5.
+            if ND::is_advertising_interface(ctx, device_id)
+                || ND::get_ndp_state(ctx.state(), device_id).final_router_advertisements_remaining
+                    != 0
+            {
+                schedule_next_router_advertisement::<_, ND>(ctx, device_id);
+            }
         }
     }
 }
@@ -1362,15 +1408,16 @@ pub(crate) fn set_ndp_configurations<D: EventDispatcher, ND: NdpDevice + 'static
         //
 
         if !old_rc.get_should_send_advertisements() && new_rc.get_should_send_advertisements() {
-            // If the device is now an advertising interface, start sending router
-            // advertisements.
-            start_periodic_router_advertisements::<_, ND>(ctx, device_id);
+            // If the device is now an advertising interface, start sending Router
+            // Advertisements.
+            start_advertising_interface::<_, ND>(ctx, device_id);
         } else if old_rc.get_should_send_advertisements()
             && !new_rc.get_should_send_advertisements()
         {
-            // If the device is now not an advertising interface, stop sending router
-            // advertisements.
-            stop_periodic_router_advertisements::<_, ND>(ctx, device_id);
+            // If the device is now not an advertising interface, stop sending Router
+            // Advertisements after the final batch of Router Advertisements with Router Lifetime
+            // set to 0 (to inform hosts to not use this node as a default router).
+            stop_advertising_interface::<_, ND>(ctx, device_id);
         }
 
         //
@@ -1665,13 +1712,89 @@ impl<H> Default for NeighborTable<H> {
     }
 }
 
+/// Handle `device_id` becoming an advertising interface.
+///
+/// # Panics
+///
+/// Panics if `device_id` does not have an assigned (non-tentative) link-local address or if it is
+/// not configured to be an advertising interface.
+pub(crate) fn start_advertising_interface<D: EventDispatcher, ND: NdpDevice>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+) {
+    trace!(
+        "start_advertising_interface: making device {:?} an advertising advertising interface",
+        ND::get_device_id(device_id)
+    );
+
+    // Reset the number of final Router Advertisements to send before ending Router Advertisements.
+    ND::get_ndp_state_mut(ctx.state_mut(), device_id).final_router_advertisements_remaining = 0;
+
+    // Start sending periodic router advertisements. May panic if `device_id` does not have an
+    // assigned (non-tentative) link-local address or if it is not configured to be an advertising
+    // interface.
+    start_periodic_router_advertisements::<_, ND>(ctx, device_id);
+}
+
+/// Handle `device_id` ceasing to be an advertising interface.
+///
+/// # Panics
+///
+/// Panics if `device_id` is not operating as an advertising interface.
+pub(crate) fn stop_advertising_interface<D: EventDispatcher, ND: NdpDevice>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+) {
+    trace!(
+        "stop_advertising_interface: making device {:?} a non-advertising advertising interface",
+        ND::get_device_id(device_id)
+    );
+
+    // Not having a scheduled router advertisement implies `device_id` is already not an
+    // advertising interface.
+    assert!(ctx
+        .dispatcher()
+        .scheduled_instant(NdpTimerId::new_router_advertisement_transmit_timer_id::<ND>(device_id))
+        .is_some());
+
+    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+
+    // If `final_router_advertisements_remaining` is non-zero, that means that `device_id`
+    // already ceased to be an advertising interface, meaning it isn't an advertising interface.
+    assert_eq!(ndp_state.final_router_advertisements_remaining, 0);
+
+    if let Some(final_ras) = MAX_FINAL_RTR_ADVERTISEMENTS {
+        let final_ras = final_ras.get();
+
+        trace!(
+            "stop_advertising_interface: device {:?} is configured to send {:?} final Router Advertisements",
+            ND::get_device_id(device_id),
+            final_ras,
+        );
+
+        // Set the number of final Router Advertisements. We do not cancel the periodic Router
+        // Advertisements yet since we will use the same timers to send the final Router
+        // Advertisement.
+        ndp_state.final_router_advertisements_remaining = final_ras;
+    } else {
+        trace!(
+            "stop_advertising_interface: device {:?} is not configured to send any final Router Advertisements, stopping periodic Router Advertisement transmissions",
+            ND::get_device_id(device_id),
+        );
+
+        // Stop sending periodic Router Advertisements. Will panic if `device_id` is not currently
+        // sending periodic Router Advertisements, implying it is not an advertising interface.
+        stop_periodic_router_advertisements::<_, ND>(ctx, device_id);
+    }
+}
+
 /// Start sending periodic router advertisements.
 ///
 /// # Panics
 ///
-/// Panics if `device_id` is not operating as a router, if it is not configured to send Router
-/// Advertisements, or if it does not have an assigned (non-tentative) link-local address.
-pub(crate) fn start_periodic_router_advertisements<D: EventDispatcher, ND: NdpDevice>(
+/// Panics if `device_id` does not have an assigned (non-tentative) link-local address or if it is
+/// not configured to be an advertising interface.
+fn start_periodic_router_advertisements<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
     device_id: usize,
 ) {
@@ -1691,14 +1814,14 @@ pub(crate) fn start_periodic_router_advertisements<D: EventDispatcher, ND: NdpDe
 ///
 /// # Panics
 ///
-/// Panics if `device_id` is not currently sending periodic router advertisements.
-pub(crate) fn stop_periodic_router_advertisements<D: EventDispatcher, ND: NdpDevice>(
+/// Panics if `device_id` is not currently sending periodic Router Advertisements.
+fn stop_periodic_router_advertisements<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
     device_id: usize,
 ) {
     // Cancel the next periodic router advertisement timeout.
     //
-    // May panic if we are not currently scheduled to send a  periodic router advertisements.
+    // May panic if we are not currently scheduled to send a periodic router advertisements.
     ctx.dispatcher_mut()
         .cancel_timeout(NdpTimerId::new_router_advertisement_transmit_timer_id::<ND>(device_id))
         .unwrap();
@@ -1717,22 +1840,6 @@ pub(crate) fn schedule_next_router_advertisement<D: EventDispatcher, ND: NdpDevi
     ctx: &mut Context<D>,
     device_id: usize,
 ) {
-    assert!(ND::is_router(ctx, device_id));
-
-    // If we are attempting to send a router advertisement, we need to have a valid
-    // link-local address, as per RFC 4861 section 4.2. The call to either `unwrap` may
-    // panic if `device_id` does not have an assigned (non-tentative) link-local address,
-    // but this is documented for this method.
-    let _src_ip =
-        ND::get_link_local_addr(ctx.state(), device_id).unwrap().try_into_permanent().unwrap();
-
-    let router_configurations =
-        ND::get_ndp_state(ctx.state(), device_id).configs.get_router_configurations();
-
-    // Device MUST be configured to send router advertisements if we reach this point. If it is not
-    // configured to send router advertisements, we should not have called this method.
-    assert!(router_configurations.get_should_send_advertisements());
-
     trace!(
         "ndp::schedule_next_router_advertisement: scheduling the next router advertisement for device {:?}",
         ND::get_device_id(device_id)
@@ -1778,24 +1885,20 @@ pub(crate) fn schedule_next_router_advertisement<D: EventDispatcher, ND: NdpDevi
 /// Schedule next unsolicited Router Advertisement message at a specific instant in time.
 ///
 /// `schedule_next_router_advertisement_instant` will overwrite any existing scheduled Router
-/// Advertisement transmissions.
+/// Advertisement transmissions if `instant` is before the next scheduled Router Advertisement.
+/// If the next scheduled Router Advertisement is before `instant`,
+/// `schedule_next_router_advertisement_instant` will not update the timer.
 ///
 /// # Panics
 ///
-/// Panics if `device_id` is not operating as a router, if it is not configured to send Router
-/// Advertisements, or if it does not have an assigned (non-tentative) link-local address.
+/// Panics if `device_id` does not have an assigned (non-tentative) link-local address or if it is
+/// not either an advertising interface or sending the final Router Advertisements after ceasing to
+/// be an advertising interface.
 fn schedule_next_router_advertisement_instant<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
     device_id: usize,
     instant: D::Instant,
 ) {
-    trace!(
-        "ndp::schedule_next_router_advertisement: scheduling the next router advertisement for device {:?} at {:?}",
-        ND::get_device_id(device_id), instant
-    );
-
-    assert!(ND::is_router(ctx, device_id));
-
     // If we are attempting to send a router advertisement, we need to have a valid
     // link-local address, as per RFC 4861 section 4.2. The call to either `unwrap` may
     // panic if `device_id` does not have an assigned (non-tentative) link-local address,
@@ -1803,18 +1906,34 @@ fn schedule_next_router_advertisement_instant<D: EventDispatcher, ND: NdpDevice>
     let _our_link_local_addr =
         ND::get_link_local_addr(ctx.state(), device_id).unwrap().try_into_permanent().unwrap();
 
-    let router_configurations =
-        ND::get_ndp_state(ctx.state(), device_id).configs.get_router_configurations();
+    // Device MUST be in one of two scenarios if we are trying to schedule a Router Advertisement.
+    // 1) Is an advertising interface.
+    // 2) Sending the final Router Advertisements after ceasing to be an advertising interface.
+    let is_advertising_interface = ND::is_advertising_interface(ctx, device_id);
+    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+    let is_final_ra_batch = ndp_state.final_router_advertisements_remaining != 0;
+    assert!(is_final_ra_batch || is_advertising_interface);
 
-    // Device MUST be configured to send router advertisements if we reach this point. If it is not
-    // configured to send router advertisements, we should not have called this method.
-    assert!(router_configurations.get_should_send_advertisements());
+    let timer_id = NdpTimerId::new_router_advertisement_transmit_timer_id::<ND>(device_id);
 
-    // Schedule the timeout to send the router advertisement.
-    ctx.dispatcher_mut().schedule_timeout_instant(
-        instant,
-        NdpTimerId::new_router_advertisement_transmit_timer_id::<ND>(device_id),
-    );
+    // If no existing Router Advertisement transmission is scheduled, scheduled the timer at
+    // `instant`. If we already have a scheduled Router Advertisement, overwrite the timer if
+    // `instant` is at a time before the existing timer, `next_instant`.
+    let next_instant = ctx.dispatcher().scheduled_instant(timer_id);
+    if next_instant.map_or(true, |i| i > instant) {
+        trace!(
+            "ndp::schedule_next_router_advertisement: scheduling the next router advertisement for device {:?} at {:?}, overwriting potentially existing timer that would have fired at {:?}",
+            ND::get_device_id(device_id), instant, next_instant,
+        );
+
+        // Schedule the timeout to send the router advertisement.
+        ctx.dispatcher_mut().schedule_timeout_instant(instant, timer_id);
+    } else {
+        trace!(
+            "ndp::schedule_next_router_advertisement: the next router advertisement for device {:?} at {:?}, is before the new one at {:?}, so doing nothing",
+            ND::get_device_id(device_id), next_instant, instant,
+        );
+    }
 }
 
 /// Start soliciting routers.
@@ -2144,15 +2263,14 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
 ///
 /// # Panics
 ///
-/// Panics if `device_id` does not have an assigned (non-tentative) link-local address, if it is
-/// not operating as a router, or if it is not configured to send router advertisements.
+/// Panics if `device_id` does not have an assigned (non-tentative) link-local address or if it is
+/// not either an advertising interface or sending the final Router Advertisements after ceasing to
+/// be an advertising interface.
 fn send_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
     device_id: usize,
     dst_ip: Ipv6Addr,
 ) {
-    assert!(ND::is_router(ctx, device_id));
-
     // If we are attempting to send a router advertisement, we need to have a valid
     // link-local address, as per RFC 4861 section 4.2. The call to either `unwrap` may
     // panic if `device_id` does not have an assigned (non-tentative) link-local address,
@@ -2160,15 +2278,19 @@ fn send_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
     let src_ip =
         ND::get_link_local_addr(ctx.state(), device_id).unwrap().try_into_permanent().unwrap();
 
-    let router_configurations =
-        ND::get_ndp_state(ctx.state(), device_id).configs.get_router_configurations();
+    let is_final_ra_batch =
+        ND::get_ndp_state(ctx.state(), device_id).final_router_advertisements_remaining != 0;
 
-    // Device MUST be configured to send router advertisements if we reach this point. If it is not
-    // configured to send router advertisements, we should not have called this method.
-    assert!(router_configurations.get_should_send_advertisements());
+    // Device MUST be in one of two scenarios if we reach this point:
+    // 1) Is an advertising interface.
+    // 2) Sending the final Router Advertisements after ceasing to be an advertising interface.
+    assert!(is_final_ra_batch || ND::is_advertising_interface(ctx, device_id));
+
+    let ra_type = if is_final_ra_batch { "final batch" } else { "normal" };
 
     trace!(
-        "send_router_advertisement: sending router advertisement from {:?} (dev = {:?}) to {:?}",
+        "send_router_advertisement: sending {:?} router advertisement from {:?} (dev = {:?}) to {:?}",
+        ra_type,
         src_ip,
         ND::get_device_id(device_id),
         dst_ip
@@ -2197,7 +2319,7 @@ fn send_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
         options.push(NdpOption::PrefixInformation(&p));
     }
 
-    let message = router_configurations.new_router_advertisement();
+    let message = router_configurations.new_router_advertisement(is_final_ra_batch);
 
     let body = ndp::OptionsSerializer::<_>::new(options.iter())
         .into_serializer()
@@ -2218,9 +2340,17 @@ fn send_router_advertisement<D: EventDispatcher, ND: NdpDevice>(
 
     // Attempt to send the router advertisement message.
     if ND::send_ipv6_frame(ctx, device_id, dst_ip, body).is_ok() {
-        // Sent the frame successfully so update NDP state's `last_router_advertisement_instant`.
-        ND::get_ndp_state_mut(ctx.state_mut(), device_id).last_router_advertisement_instant =
-            Some(ctx.dispatcher().now());
+        if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS {
+            let now = ctx.dispatcher().now();
+            let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+
+            // Sent the frame successfully so update NDP state's `last_router_advertisement_instant`.
+            ndp_state.last_router_advertisement_instant = Some(now);
+
+            if is_final_ra_batch {
+                ndp_state.final_router_advertisements_remaining -= 1;
+            }
+        }
     } else {
         error!("send_router_advertisement: failed to send router advertisement")
     };
@@ -3000,12 +3130,22 @@ mod tests {
                 1
             );
             assert!(trigger_next_timer(ctx));
+            assert_eq!(
+                ctx.dispatcher().frames_sent().len(),
+                offset + usize::try_from(i).unwrap() + 1
+            );
+            validate_simple_ra(
+                &ctx.dispatcher().frames_sent()[offset + usize::try_from(i).unwrap()].1,
+                ndp_configs
+                    .get_router_configurations()
+                    .get_advertised_default_lifetime()
+                    .map_or(0, |x| x.get()),
+            );
         }
 
         // Should still have the timer set, but now the time must be between the valid interval
         let interval = ndp_configs.get_router_configurations().get_router_advertisements_interval();
         let now = ctx.dispatcher().now();
-        assert_eq!(ctx.dispatcher().frames_sent().len(), offset + 3);
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
@@ -3020,8 +3160,42 @@ mod tests {
         );
     }
 
+    /// Validate the final Router Advertisements sent by `ctx` after making a device
+    /// an advertising interface.
+    ///
+    /// By the time this method returns, `MAX_FINAL_RTR_ADVERTISEMENTS` packets will be sent.
+    fn validate_final_ras(
+        ctx: &mut Context<DummyEventDispatcher>,
+        device: DeviceId,
+        offset: usize,
+    ) {
+        let count = if let Some(x) = MAX_FINAL_RTR_ADVERTISEMENTS {
+            x.get()
+        } else {
+            return;
+        };
+
+        for i in 0..usize::from(count) {
+            assert!(trigger_next_timer(ctx));
+            assert_eq!(ctx.dispatcher().frames_sent().len(), offset + i + 1);
+            validate_simple_ra(&ctx.dispatcher().frames_sent()[offset + i].1, 0);
+        }
+
+        // Should have no more router advertisement timers.
+        assert_eq!(
+            ctx.dispatcher()
+                .timer_events()
+                .filter(|x| *x.1
+                    == NdpTimerId::new_router_advertisement_transmit_timer_id::<EthernetNdpDevice>(
+                        device.id()
+                    ))
+                .count(),
+            0
+        );
+    }
+
     /// Validate a simple Router Advertisement message (using default NDP configurations).
-    fn validate_simple_ra(buf: &[u8]) {
+    fn validate_simple_ra(buf: &[u8], lifetime: u16) {
         let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterAdvertisement, _>(
                 buf,
@@ -3037,7 +3211,7 @@ mod tests {
         assert_eq!(src_ip, TEST_LOCAL_MAC.to_ipv6_link_local().get());
         assert_eq!(dst_ip, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
         assert_eq!(code, IcmpUnusedCode);
-        assert_eq!(message, RouterAdvertisement::new(64, false, false, 1800, 0, 0));
+        assert_eq!(message, RouterAdvertisement::new(64, false, false, lifetime, 0, 0));
     }
 
     #[test]
@@ -5047,6 +5221,7 @@ mod tests {
         ndp_rc_configs.set_should_send_advertisements(true);
         ndp_configs.set_router_configurations(ndp_rc_configs);
         ndp_configs.set_max_router_solicitations(None);
+        ndp_configs.set_dup_addr_detect_transmits(None);
 
         //
         // When netstack is not configured to forward IP packets, should not send router
@@ -5101,30 +5276,21 @@ mod tests {
 
         // Setting to be a non-router should end router advertisements.
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, false);
-        assert_eq!(
-            ctx.dispatcher()
-                .timer_events()
-                .filter(|x| *x.1
-                    == NdpTimerId::new_router_advertisement_transmit_timer_id::<EthernetNdpDevice>(
-                        device.id()
-                    ))
-                .count(),
-            0
-        );
+        validate_final_ras(&mut ctx, device, 3);
+        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
 
         // Set back to a router.
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
-        // Would only have sent 3 packets, but an extra one for the router solicitation when we
-        // turned `device` into a host.
-        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 3);
+        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 6);
 
         // Setting to be a non-advertising interface should end router advertisements.
         crate::device::set_ndp_configurations(&mut ctx, device, NdpConfigurations::default());
+        validate_final_ras(&mut ctx, device, 9);
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
 
         // Set back to being an advertising interface.
         crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
-        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 6);
+        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 12);
     }
 
     #[test]
@@ -5220,9 +5386,11 @@ mod tests {
 
         // Resetting the advertising interface status should use the new updated interval.
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, false);
+        validate_final_ras(&mut ctx, device, 3);
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
-        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 3);
+        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 6);
+        let now = ctx.dispatcher().now();
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
@@ -5326,7 +5494,7 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
         assert!(trigger_next_timer(&mut ctx));
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        validate_simple_ra(&ctx.dispatcher().frames_sent()[0].1);
+        validate_simple_ra(&ctx.dispatcher().frames_sent()[0].1, 1800);
 
         //
         // Receiving a router solicitation close to the next scheduled router advertisement
@@ -5386,7 +5554,7 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         assert!(trigger_next_timer(&mut ctx));
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
-        validate_simple_ra(&ctx.dispatcher().frames_sent()[1].1);
+        validate_simple_ra(&ctx.dispatcher().frames_sent()[1].1, 1800);
 
         //
         // Receiving a router solicitation within `MIN_DELAY_BETWEEN_RAS` of sending a Router
@@ -5439,7 +5607,7 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
         assert!(trigger_next_timer(&mut ctx));
         assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
-        validate_simple_ra(&ctx.dispatcher().frames_sent()[2].1);
+        validate_simple_ra(&ctx.dispatcher().frames_sent()[2].1, 1800);
     }
 
     #[test]
@@ -5533,7 +5701,7 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
         assert!(trigger_next_timer(&mut ctx));
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        validate_simple_ra(&ctx.dispatcher().frames_sent()[0].1);
+        validate_simple_ra(&ctx.dispatcher().frames_sent()[0].1, 1800);
 
         // source should be in our neighbor cache.
         let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id());
@@ -5574,7 +5742,7 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         assert!(trigger_next_timer(&mut ctx));
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
-        validate_simple_ra(&ctx.dispatcher().frames_sent()[1].1);
+        validate_simple_ra(&ctx.dispatcher().frames_sent()[1].1, 1800);
 
         // Source's neighbor entry should be updated.
         let ndp_state = EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id());

@@ -307,7 +307,7 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device: Devic
             .get_should_send_advertisements()
         {
             match device.protocol {
-                DeviceProtocol::Ethernet => ndp::start_periodic_router_advertisements::<
+                DeviceProtocol::Ethernet => ndp::start_advertising_interface::<
                     _,
                     ethernet::EthernetNdpDevice,
                 >(ctx, device.id),
@@ -685,7 +685,7 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
                 .get_should_send_advertisements()
             {
                 match device.protocol {
-                    DeviceProtocol::Ethernet => ndp::start_periodic_router_advertisements::<
+                    DeviceProtocol::Ethernet => ndp::start_advertising_interface::<
                         _,
                         ethernet::EthernetNdpDevice,
                     >(ctx, device.id),
@@ -707,7 +707,7 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
                 .get_should_send_advertisements()
             {
                 match device.protocol {
-                    DeviceProtocol::Ethernet => ndp::stop_periodic_router_advertisements::<
+                    DeviceProtocol::Ethernet => ndp::stop_advertising_interface::<
                         _,
                         ethernet::EthernetNdpDevice,
                     >(ctx, device.id),
