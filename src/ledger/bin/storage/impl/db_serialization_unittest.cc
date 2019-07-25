@@ -58,7 +58,7 @@ TEST_F(DbSerialization, SerializationVersionControl) {
   EXPECT_EQ(UnsyncedCommitRow::GetKeyFor("commit"), "unsynced/commits/commit");
 
   // Object Status row.
-  ObjectIdentifier identifier(1u, 2u, ObjectDigest("object"));
+  ObjectIdentifier identifier(1u, 2u, ObjectDigest("object"), nullptr);
   // |ObjectIdentifier|s are serialized using FlatBuffers.
   std::string identifier_serialization =
       "\x10\0\0\0\0\0\n\0\x10\0\x4\0\b\0\f\0\n\0\0\0\x1\0\0\0\x2\0\0\0\x4\0\0\0\x6\0\0\0object\0\0"_s;

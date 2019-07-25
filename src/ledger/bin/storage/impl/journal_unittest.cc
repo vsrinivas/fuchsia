@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/callback/set_when_called.h>
+
 #include <memory>
 #include <vector>
-
-#include <lib/callback/set_when_called.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/impl/journal_impl.h"
+#include "src/ledger/bin/storage/impl/object_identifier_factory_impl.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
@@ -30,7 +31,8 @@ class JournalTest : public ledger::TestWithEnvironment {
         page_storage_(&environment_, &encryption_service_,
                       std::make_unique<storage::fake::FakeDb>(dispatcher()), "page_id",
                       CommitPruningPolicy::NEVER),
-        object_identifier_(0u, 0u, MakeObjectDigest("value")) {}
+        object_identifier_(page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(
+            0u, 0u, MakeObjectDigest("value"))) {}
 
   ~JournalTest() override {}
 
@@ -154,7 +156,9 @@ TEST_F(JournalTest, MultiplePutsDeletes) {
     }
     journal_->Delete("notfound");
 
-    ObjectIdentifier object_identifier_2(0u, 0u, MakeObjectDigest("another value"));
+    ObjectIdentifier object_identifier_2 =
+        page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(
+            0u, 0u, MakeObjectDigest("another value"));
     journal_->Put("0", object_identifier_2, KeyPriority::EAGER);
 
     std::unique_ptr<const Commit> commit;

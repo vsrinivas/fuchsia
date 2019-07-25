@@ -50,13 +50,6 @@ ObjectIdentifier::ObjectIdentifier()
     : key_index_(0), deletion_scope_id_(0), object_digest_(ObjectDigest()), token_(nullptr) {}
 
 ObjectIdentifier::ObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id,
-                                   ObjectDigest object_digest)
-    : key_index_(key_index),
-      deletion_scope_id_(deletion_scope_id),
-      object_digest_(std::move(object_digest)),
-      token_(nullptr) {}
-
-ObjectIdentifier::ObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id,
                                    ObjectDigest object_digest,
                                    std::shared_ptr<ObjectIdentifier::Token> token)
     : key_index_(key_index),

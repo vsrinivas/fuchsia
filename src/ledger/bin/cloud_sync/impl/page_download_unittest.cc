@@ -4,11 +4,6 @@
 
 #include "src/ledger/bin/cloud_sync/impl/page_download.h"
 
-#include <memory>
-#include <sstream>
-#include <utility>
-#include <vector>
-
 #include <lib/async/dispatcher.h>
 #include <lib/backoff/testing/test_backoff.h>
 #include <lib/callback/capture.h>
@@ -17,6 +12,11 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <memory>
+#include <sstream>
+#include <utility>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
@@ -41,9 +41,10 @@ cloud_provider::PositionToken MakeToken(convert::ExtendedStringView token_id) {
 
 // Creates a dummy object identifier.
 storage::ObjectIdentifier MakeObjectIdentifier() {
-  // Need not be valid (wrt. internal storage constraints) as it is only used as
-  // an opaque identifier for cloud_sync.
-  return storage::ObjectIdentifier(1u, 1u, storage::ObjectDigest("object_digest"));
+  // The returned value does not need to be valid (wrt. internal storage constraints) as it is only
+  // used as an opaque identifier for cloud_sync. It does not need to be tracked either because we
+  // use |TestPageStorage|, a fake storage that does not perform garbage collection.
+  return storage::ObjectIdentifier(1u, 1u, storage::ObjectDigest("object_digest"), nullptr);
 }
 
 constexpr zx::duration kTestBackoffInterval = zx::msec(50);

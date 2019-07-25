@@ -101,11 +101,6 @@ class ObjectIdentifier {
   // Constructs an empty, untracked object identifier.
   ObjectIdentifier();
 
-  // Constructs an untracked object identifier.
-  // DEPRECATED in favor of an explicit nullptr |token|.
-  // TODO(LE-702): remove once callers have been migrated.
-  ObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id, ObjectDigest object_digest);
-
   // Constructs an object identifier. If |token| is nullptr, the object is untracked.
   ObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id, ObjectDigest object_digest,
                    std::shared_ptr<Token> token);

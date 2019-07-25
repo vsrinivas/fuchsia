@@ -36,7 +36,7 @@ uint64_t CommitEmptyImpl::GetGeneration() const {
 
 ObjectIdentifier CommitEmptyImpl::GetRootIdentifier() const {
   FXL_NOTIMPLEMENTED();
-  return {0u, 0u, ObjectDigest()};
+  return ObjectIdentifier();
 }
 
 fxl::StringView CommitEmptyImpl::GetStorageBytes() const {
