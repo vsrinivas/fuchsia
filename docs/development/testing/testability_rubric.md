@@ -126,3 +126,8 @@ change that.
     term, such code should be refactored to use Rust or modern C++ idioms to
     reduce the chances of leaks, and automation should exist that is capable of
     automatically detecting leaks.
+*   **Gigaboot** is a UEFI bootloader in //zircon/bootloader that predates
+    testabiltiy policy. At present there is not an infrastructure available
+    to write integration tests for the UEFI code. Introducing that
+    infrastructure is tracked in ZX-4704. A testability exception is granted
+    until ZX-4704 is addressed.
