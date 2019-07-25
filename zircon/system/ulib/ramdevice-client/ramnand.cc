@@ -22,12 +22,6 @@
 
 #include <utility>
 
-namespace {
-
-constexpr char kBasePath[] = "/dev/misc/nand-ctl";
-
-} // namespace
-
 namespace ramdevice_client {
 
 zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
@@ -86,7 +80,7 @@ zx_status_t RamNand::Create(const fuchsia_hardware_nand_RamNandInfo* config,
         return ZX_ERR_INTERNAL;
     }
 
-    *out = RamNand(std::move(ram_nand), path.ToString());
+    *out = RamNand(std::move(ram_nand), path.ToString(), fbl::String(name));
     return ZX_OK;
 }
 

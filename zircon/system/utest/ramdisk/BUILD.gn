@@ -11,6 +11,7 @@ test("ramdisk") {
     "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/fidl/fuchsia-hardware-ramdisk:c",
     "$zx/system/ulib/block-client",
+    "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs",

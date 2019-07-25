@@ -28,24 +28,35 @@ constexpr uint32_t kMinBlockSize = 4;
 constexpr uint32_t kMinNumBlocks = 5;
 constexpr uint32_t kInMemoryPages = 20;
 
-fbl::unique_fd OpenBroker(const char* path) {
-    fbl::unique_fd broker;
+typedef struct {
+    fbl::unique_fd fd;
+    fbl::String filename;
+} BrokerData;
+
+fbl::unique_fd OpenBroker(const char* path, fbl::String* out_filename) {
+    BrokerData broker_data;
 
     auto callback = [](int dir_fd, int event, const char* filename, void* cookie) {
         if (event != WATCH_EVENT_ADD_FILE || strcmp(filename, "broker") != 0) {
             return ZX_OK;
         }
-        fbl::unique_fd* broker = reinterpret_cast<fbl::unique_fd*>(cookie);
-        broker->reset(openat(dir_fd, filename, O_RDWR));
+        BrokerData* broker_data = reinterpret_cast<BrokerData*>(cookie);
+        broker_data->fd.reset(openat(dir_fd, filename, O_RDWR));
+        fbl::AllocChecker ac;
+        broker_data->filename = fbl::String(filename, &ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
         return ZX_ERR_STOP;
     };
 
     fbl::unique_fd dir(open(path, O_DIRECTORY));
     if (dir) {
         zx_time_t deadline = zx_deadline_after(ZX_SEC(5));
-        fdio_watch_directory(dir.get(), callback, deadline, &broker);
+        fdio_watch_directory(dir.get(), callback, deadline, &broker_data);
     }
-    return broker;
+    *out_filename = broker_data.filename;
+    return std::move(broker_data.fd);
 }
 
 // The device under test.
@@ -54,8 +65,19 @@ public:
     NandDevice();
     ~NandDevice() {
         if (linked_) {
+            // Since WATCH_EVENT_ADD_FILE used by OpenBroker may pick up existing files,
+            // we need to make sure the (device) file has been completely removed before returning.
+            std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
+
+            fbl::unique_fd dir_fd(open(parent_->Path(), O_RDONLY));
+            ASSERT_TRUE(dir_fd);
+            ASSERT_EQ(devmgr_integration_test::DirWatcher::Create(
+                std::move(dir_fd), &watcher), ZX_OK);
+
             zx_status_t call_status;
             fuchsia_device_ControllerScheduleUnbind(channel(), &call_status);
+
+            ASSERT_EQ(watcher->WaitForRemoval(filename_, zx::sec(5)), ZX_OK);
         }
     }
 
@@ -93,6 +115,7 @@ private:
     bool ValidateNandDevice();
 
     ParentDevice* parent_ = g_parent_device_;
+    fbl::String filename_;
     fzl::FdioCaller caller_;
     uint32_t num_blocks_ = 0;
     uint32_t first_block_ = 0;
@@ -123,7 +146,7 @@ NandDevice::NandDevice() {
             return;
         }
         linked_ = true;
-        caller_.reset(OpenBroker(parent_->Path()));
+        caller_.reset(OpenBroker(parent_->Path(), &filename_));
     }
     is_valid_ = ValidateNandDevice();
 }

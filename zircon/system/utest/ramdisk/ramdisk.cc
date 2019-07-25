@@ -23,11 +23,13 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
@@ -385,6 +387,7 @@ static bool RamdiskTestFilesystem(void) {
     typedef struct watcher_args {
         const char* expected_name;
         char* blockpath;
+        fbl::String filename;
         bool found;
     } watcher_args_t;
 
@@ -414,6 +417,11 @@ static bool RamdiskTestFilesystem(void) {
                 // Found a device under /dev/class/block/XYZ with the name of the
                 // ramdisk we originally created.
                 strncat(args->blockpath, fn, sizeof(blockpath) - (strlen(args->blockpath) + 1));
+                fbl::AllocChecker ac;
+                args->filename = fbl::String(fn, &ac);
+                if (!ac.check()) {
+                    return ZX_ERR_NO_MEMORY;
+                }
                 args->found = true;
                 return ZX_ERR_STOP;
             }
@@ -424,14 +432,21 @@ static bool RamdiskTestFilesystem(void) {
     zx_time_t deadline = zx_deadline_after(ZX_SEC(3));
     ASSERT_EQ(fdio_watch_directory(dirfd(dir), cb, deadline, &args), ZX_ERR_STOP);
     ASSERT_TRUE(args.found);
-    ASSERT_EQ(closedir(dir), 0, "Could not close /dev/class/block");
 
     // Check dev block is accessible before destruction
     int devfd = open(blockpath, O_RDONLY);
     ASSERT_GE(devfd, 0, "Ramdisk is not visible in /dev/class/block");
     ASSERT_EQ(close(devfd), 0);
 
+    // Start watching for the block device removal.
+    std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
+    ASSERT_EQ(devmgr_integration_test::DirWatcher::Create(fbl::unique_fd(dirfd(dir)), &watcher),
+              ZX_OK);
+
     ASSERT_TRUE(ramdisk->Terminate());
+
+    ASSERT_EQ(watcher->WaitForRemoval(args.filename, zx::sec(5)), ZX_OK);
+
     // Now that we've unlinked the ramdisk, we should notice that it doesn't appear
     // under /dev/class/block.
     ASSERT_EQ(open(blockpath, O_RDONLY), -1, "Ramdisk is visible in /dev after destruction");

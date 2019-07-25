@@ -9,6 +9,7 @@
 
 #include <utility>
 
+#include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fzl/fdio.h>
@@ -40,6 +41,7 @@ class NandDevice {
     bool IsValid() const { return caller_ ? true : false; }
 
     const char* path() { return ram_nand_->path(); }
+    const char* filename() { return ram_nand_->filename(); }
 
   private:
 
@@ -49,12 +51,21 @@ class NandDevice {
 };
 
 TEST(RamNandCtlTest, TrivialLifetime) {
+    std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
+    fbl::unique_fd dir_fd(open(ramdevice_client::RamNand::kBasePath, O_RDONLY));
+    ASSERT_TRUE(dir_fd);
+    ASSERT_EQ(devmgr_integration_test::DirWatcher::Create(
+        std::move(dir_fd), &watcher), ZX_OK);
+
     fbl::String path;
+    fbl::String filename;
     {
         NandDevice device;
         ASSERT_TRUE(device.IsValid());
         path = fbl::String(device.path());
+        filename = fbl::String(device.filename());
     }
+    ASSERT_EQ(watcher->WaitForRemoval(filename, zx::sec(5)), ZX_OK);
 
     fbl::unique_fd found(open(path.c_str(), O_RDWR));
     ASSERT_FALSE(found);

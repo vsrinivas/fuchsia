@@ -9,6 +9,7 @@ library("devmgr-integration-test") {
   # TODO: testonly = true
   shared = true
   sources = [
+    "dir-watcher.cc",
     "file-wait.cc",
     "launcher.cc",
   ]
@@ -27,6 +28,7 @@ library("devmgr-integration-test") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async",
     "$zx/system/ulib/fs",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
