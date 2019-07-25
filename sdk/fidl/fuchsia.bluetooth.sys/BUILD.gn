@@ -7,9 +7,10 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.bluetooth.sys") {
   sources = [
     "access.fidl",
-    "bonding.fidl",
+    "bootstrap.fidl",
     "device_class.fidl",
     "host_watcher.fidl",
+    "identity.fidl",
     "pairing_delegate.fidl",
     "peer.fidl",
   ]

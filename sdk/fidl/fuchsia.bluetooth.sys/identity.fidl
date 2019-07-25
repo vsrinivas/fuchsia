@@ -109,3 +109,19 @@ table HostData {
     // TODO(BT-815): Document behavior once there is a better privacy policy when |irk| is null.
     1: LocalKey irk;
 };
+
+/// Represents the persistent configuration of a single host-subsystem instance. This is used for
+/// identity presentation (inquiry, inquiry response, and advertisement) and for bonding secrets
+/// recall (encrypting link data to peers associated with this identity).
+///
+/// Each BR/EDR BD_ADDR and Low Energy public identity address used to bond should have its own
+/// Identity instance containing corresponding peers.
+///
+/// Each Identity instance that supports LE privacy should have an Identity Resolving Key (IRK) that
+/// is consistent with that distributed to its bonded peers.
+table Identity {
+    1: HostData host;
+
+    /// All bonds that use a public identity address must contain the same local address.
+    2: vector<BondingData> bonds;
+};

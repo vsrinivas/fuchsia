@@ -1,0 +1,36 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.sys;
+
+enum BootstrapError : uint32 {
+    INVALID_HOST_IDENTITY = 1;
+};
+
+/// Protocol used to initialize persistent core Bluetooth data. This protocol populates data that
+/// determine the identity of this device as perceived by other Bluetooth devices.
+///
+/// This protocol can be obtained only before the core Bluetooth host subsystem has generated its
+/// own identity. Once initial data is committed, this capability becomes unavailable and remains
+/// unavailable even if new Bluetooth adapters are attached.
+///
+/// Due to the privacy and bonding secrets involved, as well as the capability to make this device
+/// assume the Bluetooth identity of another device, this protocol should only be exposed to
+/// privileged components that can vouchsafe the origin of the data.
+[Discoverable]
+protocol Bootstrap {
+    /// Adds identities to be added to the unpopulated Bluetooth stack.
+    ///
+    /// Repeated calls will append identities.
+    // TODO(BT-711): If necessary, paginate bonding data to allow an arbitrary number of bonds for
+    // each identity, e.g. AddBonds(adapter_id, bonds).
+    AddIdentities(vector<Identity> identities);
+
+    /// Writes all added bootstrapping data to the Bluetooth core stack. The server will close the
+    /// channel regardless of success. Returns without error if successful and the stack will be
+    /// considered initialized even if no bootstrapping data was written. Returns
+    /// INVALID_HOST_IDENTITY if any host or bonded peer data is insufficient or inconsistent, with
+    /// no effect (the client may retry by obtaining another protocol handle).
+    Commit() -> () error BootstrapError;
+};
