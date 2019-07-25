@@ -64,27 +64,18 @@ package("magma-vsl-gc") {
 }
 
 if (build_libvulkan_vsl_gc != []) {
-  config_data("magma-vsl-gc-config") {
-    sources = []
+  icd_config_data("magma-vsl-gc-config") {
+    icds = []
     foreach(entry, build_libvulkan_vsl_gc) {
       icd_name = get_label_info(entry, "name")
       filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
-      icd_data = [
-        "{",
-        "\"file_format_version\": \"1.0.0\",",
-        "\"ICD\": {",
-        "\"library_path\": \"$icd_name.so\",",
-        "\"api_version\": \"1.0.68\"",
-        "}",
-        "}",
+      icds += [
+        {
+          lib = "${icd_name}.so"
+          manifest = filename
+        },
       ]
-      write_file(filename, icd_data)
-      sources += [ rebase_path(file_name) ]
     }
-    for_pkg = "vulkan-icd"
-    outputs = [
-      "icd.d/{{source_file_part}}",
-    ]
   }
 }
 

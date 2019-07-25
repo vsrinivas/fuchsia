@@ -55,25 +55,12 @@ if (target_cpu == "x64") {
     }
   }
 
-  config_data("magma-intel-gen-config") {
-    # api_version must be present but is unused
-    icd_data = [
-      "{",
-      "\"file_format_version\": \"1.0.0\",",
-      "\"ICD\": {",
-      "\"library_path\": \"libvulkan_intel.so\",",
-      "\"api_version\": \"0.0.0\"",
-      "}",
-      "}",
-    ]
-    write_file("$target_gen_dir/vulkan/icd.d/libvulkan_intel.json", icd_data)
-
-    for_pkg = "vulkan-icd"
-    sources = [
-      rebase_path("$target_gen_dir/vulkan/icd.d/libvulkan_intel.json"),
-    ]
-    outputs = [
-      "icd.d/libvulkan_intel.json",
+  icd_config_data("magma-intel-gen-config") {
+    icds = [
+      {
+        lib = "libvulkan_intel.so"
+        manifest = "$target_gen_dir/vulkan/icd.d/libvulkan_intel.json"
+      },
     ]
   }
 

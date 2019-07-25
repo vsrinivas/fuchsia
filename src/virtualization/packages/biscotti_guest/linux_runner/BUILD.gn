@@ -77,6 +77,21 @@ source_set("lib") {
   }
 }
 
+icd_filename = "libvulkan_intel.so"
+icd_manifest = "${target_gen_dir}/magma.json"
+
+action("icd_manifest") {
+  visibility = [ ":*" ]
+  script = "//garnet/lib/magma/scripts/gen_icd_manifest.sh"
+  args = [
+    "${icd_filename}",
+    rebase_path(icd_manifest, root_build_dir),
+  ]
+  outputs = [
+    icd_manifest,
+  ]
+}
+
 action("extras") {
   visibility = [ ":*" ]
   script = "mkextras.sh"
@@ -90,6 +105,7 @@ action("extras") {
   }
 
   deps = [
+    ":icd_manifest",
     "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_unit_tests_linux(//build/toolchain:linux_x64)",
     "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(//build/toolchain:linux_x64)",
     "//third_party/mesa/src/intel/vulkan:vulkan_intel(//build/toolchain:linux_x64-shared)",
@@ -97,7 +113,8 @@ action("extras") {
 
   args = [
     rebase_path(extras_image),
-    rebase_path("${lib_path}/libvulkan_intel.so"),  # Intel Vulkan ICD
+    rebase_path("${lib_path}/${icd_filename}"),
+    rebase_path("${icd_manifest}"),
     rebase_path("${lib_path}/libvulkan.so"),  # Vulkan Loader
     rebase_path("${exe_path}/virtmagma_unit_tests_linux"),
     rebase_path("${exe_path}/virtmagma_vulkan_unit_tests"),

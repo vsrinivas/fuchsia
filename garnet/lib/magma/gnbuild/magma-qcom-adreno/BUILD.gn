@@ -38,24 +38,12 @@ package("magma-qcom-adreno") {
 }
 
 if (build_libvulkan_qcom_adreno != []) {
-  # api_version must be present but is unused
-  icd_data = [
-    "{",
-    "\"file_format_version\": \"1.0.0\",",
-    "\"ICD\": {",
-    "\"library_path\": \"libvulkan_adreno.so\",",
-    "\"api_version\": \"0.0.0\"",
-    "}",
-    "}",
-  ]
-  write_file("$target_gen_dir/vulkan/icd.d/libvulkan_adreno.json", icd_data)
-  config_data("magma-qcom-adreno-config") {
-    for_pkg = "vulkan-icd"
-    sources = [
-      rebase_path("$target_gen_dir/vulkan/icd.d/libvulkan_adreno.json"),
-    ]
-    outputs = [
-      "icd.d/{{source_file_part}}",
+  icd_config_data("magma-qcom-adreno-config") {
+    icds = [
+      {
+        lib = "libvulkan_adreno.so"
+        manifest = "$target_gen_dir/vulkan/icd.d/libvulkan_adreno.json"
+      },
     ]
   }
 }

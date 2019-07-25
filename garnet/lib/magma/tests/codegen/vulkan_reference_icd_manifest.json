@@ -1,0 +1,7 @@
+ {
+    "file_format_version": "1.0.0",
+    "ICD": {
+        "library_path": "path/to/ICD/library.so",
+        "api_version": "0.0.0"
+    }
+  }

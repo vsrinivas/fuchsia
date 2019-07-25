@@ -106,29 +106,17 @@ package("magma-arm-mali") {
 }
 
 if (have_libvulkan_mali) {
-  config_data("magma-arm-mali-config") {
-    sources = []
+  icd_config_data("magma-arm-mali-config") {
+    icds = []
     foreach(entry, icd_list) {
       icd_name = entry.name
-      filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
-      icd_data = []
-      icd_data = [
-        "{",
-        "\"file_format_version\": \"1.0.0\",",
-        "\"ICD\": {",
-        "\"library_path\": \"$icd_name.so\",",
-        "\"api_version\": \"1.0.68\"",
-        "}",
-        "}",
+      icds += [
+        {
+          lib = "${icd_name}.so"
+          manifest = "$target_gen_dir/vulkan/icd.d/${icd_name}.json"
+        },
       ]
-      write_file(filename, icd_data)
-      sources += [ rebase_path(filename) ]
     }
-
-    for_pkg = "vulkan-icd"
-    outputs = [
-      "icd.d/{{source_file_part}}",
-    ]
   }
 }
 
