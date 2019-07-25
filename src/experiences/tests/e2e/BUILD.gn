@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/test.gni")
+import("//build/testing/environments.gni")
+
+dart_test("experiences_ermine_session_shell_e2e_test") {
+  sources = [
+    "ermine_session_shell_ask_test.dart",
+  ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  args = []
+
+  if (is_debug) {
+    args += [ "--debug" ]
+  }
+
+  environments = [
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+  ]
+}
+
+group("test") {
+  testonly = true
+
+  deps = [
+    ":experiences_ermine_session_shell_e2e_test($host_toolchain)",
+  ]
+}
