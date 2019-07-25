@@ -29,6 +29,11 @@ BaseType::~BaseType() = default;
 
 const BaseType* BaseType::AsBaseType() const { return this; }
 
+// static
+bool BaseType::IsSigned(int base_type) {
+  return base_type == BaseType::kBaseTypeSigned || base_type == kBaseTypeSignedChar;
+}
+
 const std::string& BaseType::GetAssignedName() const {
   const std::string& assigned_name = Type::GetAssignedName();
   if (!assigned_name.empty())

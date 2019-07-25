@@ -20,6 +20,10 @@ class ExprValue;
 class ExprValueSource;
 class Type;
 
+void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
+                        const ExprToken& op, const ExprValue& right_value,
+                        fit::callback<void(const Err& err, ExprValue value)> cb);
+
 void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<ExprNode>& left,
                         const ExprToken& op, const fxl::RefPtr<ExprNode>& right,
                         fit::callback<void(const Err& err, ExprValue value)> cb);

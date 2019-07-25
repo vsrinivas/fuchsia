@@ -37,11 +37,20 @@ class ExprValue {
   explicit ExprValue(uint32_t value);
   explicit ExprValue(int64_t value);
   explicit ExprValue(uint64_t value);
+  explicit ExprValue(float value);
+  explicit ExprValue(double value);
 
   // Full constructor. This takes the type and stores it assuming the type
   // is good. Prefer the other version when possible unless you're sure the
   // type is not a declaration.
   ExprValue(fxl::RefPtr<Type> symbol_type, std::vector<uint8_t> data,
+            const ExprValueSource& source = ExprValueSource());
+
+  // Makes a 64-bit value of the given type. Since we often deal with 64-bit pointers and such
+  // this is a common operation. The symbol type should be 64-bit. The value and type are different
+  // here to prevent ambiguity when implicity constructing the vector in the previous constructor
+  // with {}.
+  ExprValue(uint64_t value, fxl::RefPtr<Type> symbol_type,
             const ExprValueSource& source = ExprValueSource());
 
   ~ExprValue();
@@ -84,14 +93,13 @@ class ExprValue {
   template <typename T>
   T GetAs() const;
 
-  // Gets the result as a [u]int64_t, promoting all shorter values to the
-  // longer ones. If the data size is empty or greater than 64 bits it will
-  // return an error.
+  // Gets the result as the given 64-bit value, promoting all shorter values to the longer ones. If
+  // the data size is empty or greater than 64 bits it will return an error.
   Err PromoteTo64(int64_t* output) const;
   Err PromoteTo64(uint64_t* output) const;
 
-  // Gets the result as a double. This will convert floats and doubles to
-  // doubles.
+  // Gets the result as a double. This will convert floats and doubles to doubles. It will not
+  // convert ints to floating point.
   Err PromoteToDouble(double* output) const;
 
  private:

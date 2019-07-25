@@ -31,6 +31,10 @@ ExprValue::ExprValue(int64_t value)
     : ExprValue(BaseType::kBaseTypeSigned, "int64_t", &value, sizeof(int64_t)) {}
 ExprValue::ExprValue(uint64_t value)
     : ExprValue(BaseType::kBaseTypeUnsigned, "uint64_t", &value, sizeof(uint64_t)) {}
+ExprValue::ExprValue(float value)
+    : ExprValue(BaseType::kBaseTypeFloat, "float", &value, sizeof(float)) {}
+ExprValue::ExprValue(double value)
+    : ExprValue(BaseType::kBaseTypeFloat, "double", &value, sizeof(double)) {}
 
 ExprValue::ExprValue(int base_type, const char* type_name, void* data, uint32_t data_size)
     : type_(fxl::MakeRefCounted<BaseType>(base_type, data_size, type_name)) {
@@ -40,7 +44,16 @@ ExprValue::ExprValue(int base_type, const char* type_name, void* data, uint32_t 
 
 ExprValue::ExprValue(fxl::RefPtr<Type> type, std::vector<uint8_t> data,
                      const ExprValueSource& source)
-    : type_(type), source_(source), data_(data) {}
+    : type_(std::move(type)), source_(source), data_(data) {}
+
+ExprValue::ExprValue(uint64_t value, fxl::RefPtr<Type> type, const ExprValueSource& source)
+    : type_(std::move(type)), source_(source) {
+  // Allow 0-sized types since the input type may not be concrete.
+  FXL_DCHECK(type_->byte_size() == sizeof(uint64_t) || type_->byte_size() == 0);
+
+  data_.resize(sizeof(uint64_t));
+  memcpy(&data_[0], &value, sizeof(uint64_t));
+}
 
 ExprValue::~ExprValue() = default;
 

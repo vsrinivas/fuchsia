@@ -33,6 +33,9 @@ enum class ExprTokenType : size_t {
   kGreater,      // >
   kMinus,        // - (by itself, not part of "->")
   kPlus,         // +
+  kSlash,        // /
+  kCaret,        // ^
+  kPercent,      // %
   kColonColon,   // ::
 
   // Special keywords.

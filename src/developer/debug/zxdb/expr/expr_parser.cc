@@ -60,14 +60,14 @@ constexpr int kPrecedenceAssignment = 20;             // = += -= *= -= /= %= <<=
 constexpr int kPrecedenceLogicalOr = 30;              // ||
 constexpr int kPrecedenceLogicalAnd = 40;             // &&
 constexpr int kPrecedenceBitwiseOr = 50;              // |
-//constexpr int kPrecedenceBitwiseXor = 60;           // ^
+constexpr int kPrecedenceBitwiseXor = 60;             // ^
 constexpr int kPrecedenceBitwiseAnd = 70;             // &
 constexpr int kPrecedenceEquality = 80;               // == !=
 //constexpr int kPrecedenceComparison = 90;           // < <= > >=
 //constexpr int kPrecedenceThreeWayComparison = 100;  // <=>
 //constexpr int kPrecedenceShift = 110;               // << >>
-//constexpr int kPrecedenceAddition = 120;            // + -
-//constexpr int kPrecedenceMultiplication = 130;      // * / %
+constexpr int kPrecedenceAddition = 120;              // + -
+constexpr int kPrecedenceMultiplication = 130;        // * / %
 //constexpr int kPrecedencePointerToMember = 140;     // .* ->*
 constexpr int kPrecedenceUnary = 150;                 // ++ -- +a -a ! ~ *a &a
 constexpr int kPrecedenceCallAccess = 160;            // () . -> []
@@ -86,36 +86,39 @@ struct ExprParser::DispatchInfo {
 // clang-format off
 ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     // Prefix handler              Infix handler                 Precedence for infix
-    {nullptr,                      nullptr,                      -1},                     // kInvalid
-    {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kName
-    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kInteger
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},  // kEquals
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceEquality},    // kEqualsEquals
-    {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},  // kDot
-    {nullptr,                      nullptr,                      -1},                     // kComma
-    {&ExprParser::StarPrefix,      nullptr,                      kPrecedenceUnary},       // kStar
-    {&ExprParser::AmpersandPrefix, &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseAnd},  // kAmpersand
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceLogicalAnd},  // kDoubleAnd
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseOr},   // kBitwiseOr
-    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceLogicalOr},   // kLogicalOr
-    {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},  // kArrow
-    {nullptr,                      &ExprParser::LeftSquareInfix, kPrecedenceCallAccess},  // kLeftSquare
-    {nullptr,                      nullptr,                      -1},                     // kRightSquare
-    {&ExprParser::LeftParenPrefix, &ExprParser::LeftParenInfix,  kPrecedenceCallAccess},  // kLeftParen
-    {nullptr,                      nullptr,                      -1},                     // kRightParen
-    {nullptr,                      &ExprParser::LessInfix,       kPrecedenceUnary},       // kLess
-    {nullptr,                      nullptr,                      -1},                     // kGreater
-    {&ExprParser::MinusPrefix,     nullptr,                      -1},                     // kMinus
-    {nullptr,                      nullptr,                      -1},                     // kPlus (currently unhandled)
-    {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kColonColon
-    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kTrue
-    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                     // kFalse
-    {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kConst
-    {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kVolatile
-    {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kRestrict
-    {&ExprParser::CastPrefix,      nullptr,                      -1},                     // kReinterpretCast
-    {&ExprParser::CastPrefix,      nullptr,                      -1},                     // kStaticCast
-    {&ExprParser::SizeofPrefix,    nullptr,                      -1},                     // kSizeof
+    {nullptr,                      nullptr,                      -1},                         // kInvalid
+    {&ExprParser::NamePrefix,      nullptr,                      -1},                         // kName
+    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                         // kInteger
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},      // kEquals
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceEquality},        // kEqualsEquals
+    {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},      // kDot
+    {nullptr,                      nullptr,                      -1},                         // kComma
+    {&ExprParser::StarPrefix,      &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},  // kStar
+    {&ExprParser::AmpersandPrefix, &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseAnd},      // kAmpersand
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceLogicalAnd},      // kDoubleAnd
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseOr},       // kBitwiseOr
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceLogicalOr},       // kLogicalOr
+    {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},      // kArrow
+    {nullptr,                      &ExprParser::LeftSquareInfix, kPrecedenceCallAccess},      // kLeftSquare
+    {nullptr,                      nullptr,                      -1},                         // kRightSquare
+    {&ExprParser::LeftParenPrefix, &ExprParser::LeftParenInfix,  kPrecedenceCallAccess},      // kLeftParen
+    {nullptr,                      nullptr,                      -1},                         // kRightParen
+    {nullptr,                      &ExprParser::LessInfix,       kPrecedenceUnary},           // kLess
+    {nullptr,                      nullptr,                      -1},                         // kGreater
+    {&ExprParser::MinusPrefix,     &ExprParser::BinaryOpInfix,   kPrecedenceAddition},        // kMinus
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceAddition},        // kPlus
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},  // kSlash
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseXor},      // kCaret
+    {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},  // kPercent
+    {&ExprParser::NamePrefix,      nullptr,                      -1},                         // kColonColon
+    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                         // kTrue
+    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                         // kFalse
+    {&ExprParser::NamePrefix,      nullptr,                      -1},                         // kConst
+    {&ExprParser::NamePrefix,      nullptr,                      -1},                         // kVolatile
+    {&ExprParser::NamePrefix,      nullptr,                      -1},                         // kRestrict
+    {&ExprParser::CastPrefix,      nullptr,                      -1},                         // kReinterpretCast
+    {&ExprParser::CastPrefix,      nullptr,                      -1},                         // kStaticCast
+    {&ExprParser::SizeofPrefix,    nullptr,                      -1},                         // kSizeof
 };
 // clang-format on
 

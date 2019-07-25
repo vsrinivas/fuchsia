@@ -445,8 +445,14 @@ TEST_F(ExprParserTest, BinaryOp) {
   EXPECT_EQ(
       "BINARY_OP(=)\n"
       " IDENTIFIER(\"a\")\n"
-      " LITERAL(23)\n",
-      GetParseString("a = 23"));
+      " BINARY_OP(+)\n"
+      "  LITERAL(23)\n"
+      "  BINARY_OP(*)\n"
+      "   IDENTIFIER(\"j\")\n"
+      "   BINARY_OP(+)\n"
+      "    IDENTIFIER(\"a\")\n"
+      "    LITERAL(1)\n",
+      GetParseString("a = 23 + j * (a + 1)"));
 }
 
 // Tests parsing identifier names that require lookups from the symbol system.

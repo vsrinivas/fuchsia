@@ -31,14 +31,14 @@ TEST(ExprTokenizer, InvalidChar) {
 }
 
 TEST(ExprTokenizer, Punctuation) {
-  // Char offsets: 0 12345678901234567890123456789
-  // Token #'s:      0 1 2  3 45 67 8 9  0 1 2  3
-  ExprTokenizer t("\n. * -> & () [] - :: < > == =");
+  // Char offsets: 0 123456789012345678901234567890123456
+  // Token #'s:      0 1 2  3 45 67 8 9  0 1 2  3 4 5 6 7
+  ExprTokenizer t("\n. * -> & () [] - :: < > == = % + ^ /");
 
   EXPECT_TRUE(t.Tokenize());
   EXPECT_FALSE(t.err().has_error()) << t.err().msg();
   const auto& tokens = t.tokens();
-  ASSERT_EQ(14u, tokens.size());
+  ASSERT_EQ(18u, tokens.size());
 
   EXPECT_EQ(ExprTokenType::kDot, tokens[0].type());
   EXPECT_EQ(".", tokens[0].value());
@@ -95,6 +95,22 @@ TEST(ExprTokenizer, Punctuation) {
   EXPECT_EQ(ExprTokenType::kEquals, tokens[13].type());
   EXPECT_EQ("=", tokens[13].value());
   EXPECT_EQ(28u, tokens[13].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kPercent, tokens[14].type());
+  EXPECT_EQ("%", tokens[14].value());
+  EXPECT_EQ(30u, tokens[14].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kPlus, tokens[15].type());
+  EXPECT_EQ("+", tokens[15].value());
+  EXPECT_EQ(32u, tokens[15].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kCaret, tokens[16].type());
+  EXPECT_EQ("^", tokens[16].value());
+  EXPECT_EQ(34u, tokens[16].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kSlash, tokens[17].type());
+  EXPECT_EQ("/", tokens[17].value());
+  EXPECT_EQ(36u, tokens[17].byte_offset());
 }
 
 TEST(ExprTokenizer, Integers) {
