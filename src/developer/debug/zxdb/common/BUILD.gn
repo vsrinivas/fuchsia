@@ -12,7 +12,6 @@ static_library("common") {
     "completion_callback.h",
     "err.h",
     "file_util.h",
-    "function.h",
     "host_util.h",
     "ref_ptr_to.h",
     "string_util.h",

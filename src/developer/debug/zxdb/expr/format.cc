@@ -5,7 +5,6 @@
 #include "src/developer/debug/zxdb/expr/format.h"
 
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/developer/debug/zxdb/common/function.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
@@ -444,7 +443,7 @@ void FormatPointer(FormatNode* node, const FormatOptions& options,
         "*" + node->name(),
         [ptr_value = node->value()](fxl::RefPtr<EvalContext> context,
                                     fit::callback<void(const Err& err, ExprValue value)> cb) {
-          ResolvePointer(context, ptr_value, FitCallbackToStdFunction(std::move(cb)));
+          ResolvePointer(context, ptr_value, std::move(cb));
         });
     deref_node->set_child_kind(FormatNode::kPointerExpansion);
     node->children().push_back(std::move(deref_node));
@@ -479,7 +478,7 @@ void FormatReference(FormatNode* node, const FormatOptions& options,
       std::string(),
       [ref = node->value()](fxl::RefPtr<EvalContext> context,
                             fit::callback<void(const Err& err, ExprValue value)> cb) {
-        EnsureResolveReference(context, ref, FitCallbackToStdFunction(std::move(cb)));
+        EnsureResolveReference(context, ref, std::move(cb));
       });
   deref_node->set_child_kind(FormatNode::kPointerExpansion);
   node->children().push_back(std::move(deref_node));
@@ -900,34 +899,31 @@ void FormatArrayNode(FormatNode* node, const ExprValue& value, int elt_count,
   FXL_DCHECK(elt_count >= 0);
   int print_count = std::min(static_cast<int>(options.max_array_size), elt_count);
 
-  // TODO(brettw) "FitCallbackToStdFunction(fit::callback<>" can be removed whtn ResolveArray takes
-  // a fit::callback.
   ResolveArray(eval_context, value, 0, print_count,
-               FitCallbackToStdFunction(fit::callback<void(const Err&, std::vector<ExprValue>)>(
-                   [weak_node = node->GetWeakPtr(), elt_count, cb = std::move(cb)](
-                       const Err& err, std::vector<ExprValue> items) mutable {
-                     if (!weak_node)
-                       return;
-                     FormatNode* node = weak_node.get();
+               [weak_node = node->GetWeakPtr(), elt_count, cb = std::move(cb)](
+                   const Err& err, std::vector<ExprValue> items) mutable {
+                 if (!weak_node)
+                   return;
+                 FormatNode* node = weak_node.get();
 
-                     if (err.has_error())
-                       return node->SetDescribedError(err);
+                 if (err.has_error())
+                   return node->SetDescribedError(err);
 
-                     for (size_t i = 0; i < items.size(); i++) {
-                       auto item_node = std::make_unique<FormatNode>(fxl::StringPrintf("[%zu]", i),
-                                                                     std::move(items[i]));
-                       item_node->set_child_kind(FormatNode::kArrayItem);
-                       node->children().push_back(std::move(item_node));
-                     }
+                 for (size_t i = 0; i < items.size(); i++) {
+                   auto item_node = std::make_unique<FormatNode>(fxl::StringPrintf("[%zu]", i),
+                                                                 std::move(items[i]));
+                   item_node->set_child_kind(FormatNode::kArrayItem);
+                   node->children().push_back(std::move(item_node));
+                 }
 
-                     if (static_cast<uint32_t>(elt_count) > items.size()) {
-                       // Add "..." annotation to show some things were clipped.
-                       //
-                       // TODO(brettW) We may want to put a flag on the node that it was clipped,
-                       // and also indicate the number of clipped elements.
-                       node->children().push_back(std::make_unique<FormatNode>("..."));
-                     }
-                   })));
+                 if (static_cast<uint32_t>(elt_count) > items.size()) {
+                   // Add "..." annotation to show some things were clipped.
+                   //
+                   // TODO(brettW) We may want to put a flag on the node that it was clipped,
+                   // and also indicate the number of clipped elements.
+                   node->children().push_back(std::make_unique<FormatNode>("..."));
+                 }
+               });
 }
 
 }  // namespace zxdb

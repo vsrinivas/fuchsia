@@ -14,7 +14,6 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/developer/debug/zxdb/common/function.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -64,8 +63,7 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
 
   process_->ReadMemory(
       address, size,
-      [address, size, cb = FitCallbackToStdFunction(std::move(callback))](const Err& err,
-                                                                          MemoryDump dump) {
+      [address, size, cb = std::move(callback)](const Err& err, MemoryDump dump) mutable {
         if (err.has_error()) {
           cb(err, std::vector<uint8_t>());
           return;
@@ -104,7 +102,7 @@ void ProcessSymbolDataProvider::WriteMemory(uint64_t address, std::vector<uint8_
         FROM_HERE, [cb = std::move(cb)]() mutable { cb(ProcessDestroyedErr()); });
     return;
   }
-  process_->WriteMemory(address, std::move(data), FitCallbackToStdFunction(std::move(cb)));
+  process_->WriteMemory(address, std::move(data), std::move(cb));
 }
 
 }  // namespace zxdb

@@ -14,7 +14,6 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/developer/debug/zxdb/common/function.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -112,13 +111,11 @@ std::optional<uint64_t> FrameSymbolDataProvider::GetFrameBase() {
 void FrameSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback cb) {
   if (!frame_) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE,
-        [cb = FitCallbackToStdFunction(std::move(cb))]() { cb(CallFrameDestroyedErr(), 0); });
+        FROM_HERE, [cb = std::move(cb)]() mutable { cb(CallFrameDestroyedErr(), 0); });
     return;
   }
 
-  frame_->GetBasePointerAsync(
-      [cb = FitCallbackToStdFunction(std::move(cb))](uint64_t value) { cb(Err(), value); });
+  frame_->GetBasePointerAsync([cb = std::move(cb)](uint64_t value) mutable { cb(Err(), value); });
 }
 
 uint64_t FrameSymbolDataProvider::GetCanonicalFrameAddress() const {
