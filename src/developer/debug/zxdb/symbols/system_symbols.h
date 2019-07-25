@@ -25,6 +25,13 @@ class ModuleSymbols;
 // "Impl" split.
 class SystemSymbols {
  public:
+  // What kind of downloading should be attempted for missing symbols.
+  enum DownloadType {
+    kNone,
+    kSymbols,
+    kBinary,
+  };
+
   // A reference-counted holder for the ModuleSymbols object. This object
   // will notify the owning SystemSymbols object when all references have
   // been destroyed.
@@ -80,7 +87,8 @@ class SystemSymbols {
   //
   // If download is set to true, downloads will be kicked off for any missing
   // debug files.
-  Err GetModule(const std::string& build_id, fxl::RefPtr<ModuleRef>* module, bool download = true);
+  Err GetModule(const std::string& build_id, fxl::RefPtr<ModuleRef>* module,
+                DownloadType download_type = kSymbols);
 
  private:
   friend ModuleRef;

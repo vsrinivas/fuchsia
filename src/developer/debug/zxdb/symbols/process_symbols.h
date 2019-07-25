@@ -65,7 +65,7 @@ class ProcessSymbols {
 
   // Try to load the symbols for a given build ID again, presumably because we
   // have downloaded them and now expect the index to hit.
-  void RetryLoadBuildID(const std::string& build_id);
+  void RetryLoadBuildID(const std::string& build_id, DebugSymbolFileType file_type);
 
   // Appends the ModuleSymbols implementation to the current list (unlike
   // SetModules which does a replacement). This is typically used to populate

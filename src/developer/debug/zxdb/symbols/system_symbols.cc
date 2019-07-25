@@ -7,6 +7,7 @@
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/common/host_util.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols_impl.h"
+#include "src/lib/elflib/elflib.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -72,7 +73,7 @@ fxl::RefPtr<SystemSymbols::ModuleRef> SystemSymbols::InjectModuleForTesting(
 }
 
 Err SystemSymbols::GetModule(const std::string& build_id, fxl::RefPtr<ModuleRef>* module,
-                             bool download) {
+                             SystemSymbols::DownloadType download_type) {
   auto found_existing = modules_.find(build_id);
   if (found_existing != modules_.end()) {
     *module = fxl::RefPtr<ModuleRef>(found_existing->second);
@@ -80,16 +81,20 @@ Err SystemSymbols::GetModule(const std::string& build_id, fxl::RefPtr<ModuleRef>
   }
 
   std::string file_name = build_id_index_.FileForBuildID(build_id, DebugSymbolFileType::kDebugInfo);
-  if (file_name.empty() && download && download_handler_) {
+  std::string binary_file_name =
+      build_id_index_.FileForBuildID(build_id, DebugSymbolFileType::kBinary);
+
+  if (file_name.empty() && download_type == SystemSymbols::DownloadType::kSymbols &&
+      download_handler_) {
     *module = nullptr;
     download_handler_->RequestDownload(build_id, DebugSymbolFileType::kDebugInfo, false);
   }
 
-  std::string binary_file_name =
-      build_id_index_.FileForBuildID(build_id, DebugSymbolFileType::kBinary);
-
-  if (binary_file_name.empty() && download && download_handler_) {
-    download_handler_->RequestDownload(build_id, DebugSymbolFileType::kBinary, false);
+  if (auto debug = elflib::ElfLib::Create(file_name)) {
+    if (!debug->ProbeHasProgramBits() && binary_file_name.empty() &&
+        download_type == SystemSymbols::DownloadType::kBinary && download_handler_) {
+      download_handler_->RequestDownload(build_id, DebugSymbolFileType::kBinary, false);
+    }
   }
 
   if (file_name.empty()) {

@@ -98,7 +98,7 @@ TEST_F(SymbolServerTest, DownloadTypes) {
   process->GetSymbols()->SetModules({module});
 
   EXPECT_FALSE(saw_weird_module);
-  EXPECT_TRUE(saw_binary_request);
+  EXPECT_FALSE(saw_binary_request);
   EXPECT_TRUE(saw_symbol_request);
 }
 

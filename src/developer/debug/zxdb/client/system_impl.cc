@@ -306,7 +306,7 @@ std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id,
 
           for (const auto& target : weak_this->targets_) {
             if (auto process = target->process()) {
-              process->GetSymbols()->RetryLoadBuildID(build_id);
+              process->GetSymbols()->RetryLoadBuildID(build_id, file_type);
             }
           }
         } else {

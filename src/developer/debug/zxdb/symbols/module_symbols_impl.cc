@@ -118,8 +118,10 @@ ModuleSymbolStatus ModuleSymbolsImpl::GetStatus() const {
 
 Err ModuleSymbolsImpl::Load() {
   TIME_BLOCK() << "Loading " << binary_name_ << " (" << name_ << ").";
-  if (auto elf = elflib::ElfLib::Create(binary_name_)) {
-    if (auto debug = elflib::ElfLib::Create(name_)) {
+  if (auto debug = elflib::ElfLib::Create(name_)) {
+    if (debug->ProbeHasProgramBits()) {
+      plt_locations_ = debug->GetPLTOffsets();
+    } else if (auto elf = elflib::ElfLib::Create(binary_name_)) {
       if (elf->SetDebugData(std::move(debug))) {
         plt_locations_ = elf->GetPLTOffsets();
       }
@@ -467,6 +469,16 @@ void ModuleSymbolsImpl::ResolveLineInputLocationForFile(const SymbolContext& sym
   }
 }
 
-bool ModuleSymbolsImpl::HasBinary() const { return !binary_name_.empty(); }
+bool ModuleSymbolsImpl::HasBinary() const {
+  if (!binary_name_.empty()) {
+    return true;
+  }
+
+  if (auto debug = elflib::ElfLib::Create(name_)) {
+    return debug->ProbeHasProgramBits();
+  }
+
+  return false;
+}
 
 }  // namespace zxdb
