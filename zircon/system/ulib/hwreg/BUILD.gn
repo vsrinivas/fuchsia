@@ -33,3 +33,25 @@ library("hwreg") {
     "$zx/system/ulib/fbl:headers",
   ]
 }
+
+library("hwreg-i2c") {
+  sdk = "source"
+  sdk_headers = [
+    "hwreg/bitfields.h",
+    "hwreg/internal.h",
+    "hwreg/i2c.h",
+  ]
+  kernel = true
+  static = true
+  sources = [
+    "printers.cc",
+  ]
+
+  public_deps = [
+    # <hwreg/i2c.h> has #include <lib/device-protocol/i2c.h>.
+    "$zx/system/dev/lib/device-protocol-i2c:headers",
+
+    # <hwreg/internal.h> has #include <fbl/algorithm.h>.
+    "$zx/system/ulib/fbl:headers",
+  ]
+}

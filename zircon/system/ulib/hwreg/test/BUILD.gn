@@ -6,6 +6,7 @@ group("test") {
   testonly = true
   deps = [
     ":libhwreg",
+    ":libhwreg-i2c",
   ]
 }
 
@@ -19,7 +20,26 @@ test("libhwreg") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/hwreg:hwreg",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("libhwreg-i2c") {
+  sources = [
+    "i2c-hwreg-test.cc",
+  ]
+  deps = [
+    "$zx/system/dev/lib/mock-i2c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/hwreg:hwreg-i2c",
+    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
