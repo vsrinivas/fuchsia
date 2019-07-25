@@ -7,3 +7,5 @@ session shell ends up being displayed in the embedded view.
 
 This verifies the correctness of view embedding across Voila -> Sessionmgr ->
 test shell, allowing us to catch breakages such as LE-746.
+
+This test is for the workstation product.
