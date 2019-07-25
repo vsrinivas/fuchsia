@@ -90,6 +90,7 @@ pub struct AudioEncoderHashTest {
     /// with a decoder before using their digest in tests.
     pub output_file: Option<&'static str>,
     pub input_format: PcmFormat,
+    pub output_packet_count: usize,
     pub expected_digest: ExpectedDigest,
 }
 
@@ -103,7 +104,9 @@ impl AudioEncoderTestCase {
     async fn test_hashes(self) -> Result<()> {
         let mut cases = vec![];
         let easy_framelength = self.input_framelength;
-        for hash_test in self.hash_tests {
+        for (hash_test, stream_lifetime_ordinal) in
+            self.hash_tests.into_iter().zip(OrdinalPattern::Odd.into_iter())
+        {
             let settings = self.settings.clone();
             let pcm_audio = PcmAudio::create_saw_wave(hash_test.input_format, TEST_PCM_FRAME_COUNT);
             let stream = Rc::new(PcmAudioStream {
@@ -116,10 +119,18 @@ impl AudioEncoderTestCase {
             cases.push(TestCase {
                 name: "Audio encoder hash test",
                 stream,
-                validators: vec![Rc::new(BytesValidator {
-                    output_file: hash_test.output_file,
-                    expected_digest: hash_test.expected_digest,
-                })],
+                validators: vec![
+                    Rc::new(TerminatesWithValidator {
+                        expected_terminal_output: Output::Eos { stream_lifetime_ordinal },
+                    }),
+                    Rc::new(OutputPacketCountValidator {
+                        expected_output_packet_count: hash_test.output_packet_count,
+                    }),
+                    Rc::new(BytesValidator {
+                        output_file: hash_test.output_file,
+                        expected_digest: hash_test.expected_digest,
+                    }),
+                ],
                 stream_options: Some(StreamOptions {
                     queue_format_details: false,
                     ..StreamOptions::default()

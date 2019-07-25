@@ -33,5 +33,6 @@ executable("codec_runner_sw_aac") {
     "//garnet/lib/media/codec_impl",
     "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.mediacodec",
+    "//zircon/public/lib/fit",
   ]
 }
