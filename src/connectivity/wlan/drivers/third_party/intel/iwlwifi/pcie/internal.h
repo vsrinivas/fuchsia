@@ -36,12 +36,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
 
+#include <lib/sync/completion.h>
 #include <threads.h>
+#include <zircon/listnode.h>
 
+#include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/pci.h>
-#include <lib/sync/completion.h>
-#include <zircon/listnode.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
@@ -77,15 +78,13 @@ struct iwl_host_cmd;
 
 /**
  * struct iwl_rx_mem_buffer
- * @page_dma: bus address of rxb page
- * @page: driver's pointer to the rxb page
+ * @io_buf: driver's handle to the rxb memory
  * @invalid: rxb is in driver ownership - not owned by HW
  * @vid: index of this rxb in the global table
  * @size: size used from the buffer
  */
 struct iwl_rx_mem_buffer {
-  dma_addr_t page_dma;
-  struct page* page;
+  io_buffer_t io_buf;
   uint16_t vid;
   bool invalid;
   list_node_t list;
@@ -155,12 +154,11 @@ struct iwl_rx_completion_desc {
 /**
  * struct iwl_rxq - Rx queue
  * @id: queue index
- * @bd: driver's pointer to buffer of receive buffer descriptors (rbd).
+ * @descriptors: IO buffer of receive buffer descriptors (rbd).
  *  Address size is 32 bit in pre-9000 devices and 64 bit in 9000 devices.
  *  In 22560 devices it is a pointer to a list of iwl_rx_transfer_desc's
- * @bd_dma: bus address of buffer of receive buffer descriptors (rbd)
- * @ubd: driver's pointer to buffer of used receive buffer descriptors (rbd)
- * @ubd_dma: physical address of buffer of used receive buffer descriptors (rbd)
+ * @used_bd: driver's pointer to buffer of used receive buffer descriptors (rbd)
+ * @used_bd_dma: physical address of buffer of used receive buffer descriptors (rbd)
  * @tr_tail: driver's pointer to the transmission ring tail buffer
  * @tr_tail_dma: physical address of the buffer for the transmission ring tail
  * @cr_tail: driver's pointer to the completion ring tail buffer
@@ -182,18 +180,24 @@ struct iwl_rx_completion_desc {
  */
 struct iwl_rxq {
   int id;
-  void* bd;
-  dma_addr_t bd_dma;
+  io_buffer_t descriptors;
+
+#if 0   // NEEDS_PORTING
+  //  These fields are only used for multi-rx queue devices.
   union {
     void* used_bd;
     __le32* bd_32;
     struct iwl_rx_completion_desc* cd;
   };
   dma_addr_t used_bd_dma;
+
+  // These fields are only used for 22560 devices and newer.
   __le16* tr_tail;
   dma_addr_t tr_tail_dma;
   __le16* cr_tail;
   dma_addr_t cr_tail_dma;
+#endif  // NEEDS_PORTING
+
   uint32_t read;
   uint32_t write;
   uint32_t free_count;
@@ -203,8 +207,7 @@ struct iwl_rxq {
   list_node_t rx_free;
   list_node_t rx_used;
   bool need_update;
-  void* rb_stts;
-  dma_addr_t rb_stts_dma;
+  io_buffer_t rb_status;
   mtx_t lock;
   struct napi_struct napi;
   struct iwl_rx_mem_buffer* queue[RX_QUEUE_SIZE];
@@ -223,8 +226,8 @@ struct iwl_rxq {
  * @rx_alloc: work struct for background calls
  */
 struct iwl_rb_allocator {
-  atomic_int req_pending;
-  atomic_int req_ready;
+  atomic_t req_pending;
+  atomic_t req_ready;
   list_node_t rbd_allocated;
   list_node_t rbd_empty;
   mtx_t lock;
@@ -252,19 +255,17 @@ static inline int iwl_queue_inc_wrap(struct iwl_trans* trans, int index) {
  * iwl_get_closed_rb_stts - get closed rb stts from different structs
  * @rxq - the rxq to get the rb stts from
  */
-#if 0   // NEEDS_PORTING
-static inline __le16 iwl_get_closed_rb_stts(struct iwl_trans* trans, struct iwl_rxq* rxq) {
-    if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) {
-        __le16* rb_stts = rxq->rb_stts;
+static inline __le16 iwl_get_closed_rb_status(struct iwl_trans* trans, struct iwl_rxq* rxq) {
+  if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) {
+    __le16* rb_status = (__le16*)io_buffer_virt(&rxq->rb_status);
 
-        return READ_ONCE(*rb_stts);
-    } else {
-        struct iwl_rb_status* rb_stts = rxq->rb_stts;
+    return READ_ONCE(*rb_status);
+  } else {
+    struct iwl_rb_status* rb_status = (struct iwl_rb_status*)io_buffer_virt(&rxq->rb_status);
 
-        return READ_ONCE(rb_stts->closed_rb_num);
-    }
+    return READ_ONCE(rb_status->closed_rb_num);
+  }
 }
-#endif  // NEEDS_PORTING
 
 /**
  * iwl_queue_dec_wrap - decrement queue index, wrap back to end
@@ -646,8 +647,7 @@ void iwl_trans_pcie_free(struct iwl_trans* trans);
 /*****************************************************
  * RX
  ******************************************************/
-int _iwl_pcie_rx_init(struct iwl_trans* trans);
-int iwl_pcie_rx_init(struct iwl_trans* trans);
+zx_status_t iwl_pcie_rx_init(struct iwl_trans* trans);
 int iwl_pcie_gen2_rx_init(struct iwl_trans* trans);
 #if 0   // NEEDS_PORTING
 irqreturn_t iwl_pcie_msix_isr(int irq, void* data);
@@ -657,13 +657,7 @@ irqreturn_t iwl_pcie_irq_rx_msix_handler(int irq, void* dev_id);
 #endif  // NEEDS_PORTING
 int iwl_pcie_rx_stop(struct iwl_trans* trans);
 void iwl_pcie_rx_free(struct iwl_trans* trans);
-void iwl_pcie_free_rbs_pool(struct iwl_trans* trans);
-void iwl_pcie_rx_init_rxb_lists(struct iwl_rxq* rxq);
 int iwl_pcie_dummy_napi_poll(struct napi_struct* napi, int budget);
-#if 0   // NEEDS_PORTING
-void iwl_pcie_rxq_alloc_rbs(struct iwl_trans* trans, gfp_t priority, struct iwl_rxq* rxq);
-#endif  // NEEDS_PORTING
-int iwl_pcie_rx_alloc(struct iwl_trans* trans);
 
 /*****************************************************
  * ICT - interrupt handling

@@ -99,6 +99,7 @@ executable("pcie_test") {
   defines = testing_defines
   deps = [
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:pcie",
+    "//zircon/public/lib/fake-bti",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zxtest",
   ]

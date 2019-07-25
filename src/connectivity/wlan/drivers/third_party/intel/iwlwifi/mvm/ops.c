@@ -1203,7 +1203,6 @@ static void iwl_mvm_rx_common(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb
 
     entry->rxb._page = rxb_steal_page(rxb);
     entry->rxb._offset = rxb->_offset;
-    entry->rxb._rx_page_order = rxb->_rx_page_order;
     entry->fn = rx_h->fn;
     entry->context = rx_h->context;
     mtx_lock(&mvm->async_handlers_lock);

@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/compiler.h>
+#include <zircon/listnode.h>
 #include <zircon/types.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/ieee80211.h"
@@ -46,6 +47,7 @@ typedef char* acpi_string;
 #define le32_to_cpu(x) (x)
 #define le32_to_cpup(x) (*x)
 #define le16_to_cpu(x) (x)
+#define cpu_to_le64(x) (x)
 #define cpu_to_le32(x) (x)
 #define cpu_to_le16(x) (x)
 
@@ -78,8 +80,8 @@ typedef char* acpi_string;
 #define ARRAY_SIZE(x) (countof(x))
 
 // NEEDS_PORTING
-#define WARN(x, y, z) \
-  do {                \
+#define WARN(x, y, z...) \
+  do {                   \
   } while (0)
 #define WARN_ON(x) (!!(x))
 #define WARN_ON_ONCE(x) (!!(x))
@@ -118,6 +120,8 @@ typedef char* acpi_string;
 #define rcu_read_unlock() \
   do {                    \
   } while (0);
+
+#define DMA_BIT_MASK(n) (((n) >= 64) ? ~0ULL : ((1ULL << (n)) - 1))
 
 // NEEDS_PORTING: Below structures are only referenced in function prototype.
 //                Doesn't need a dummy byte.
@@ -267,5 +271,13 @@ static inline void* page_address(const struct page* page) { return page->virtual
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define min_t(type, a, b) MIN((type)(a), (type)(b))
+
+static inline void list_splice_after_tail(list_node_t* splice_from, list_node_t* pos) {
+  if (list_is_empty(pos)) {
+    list_move(splice_from, pos);
+  } else {
+    list_splice_after(splice_from, list_peek_tail(pos));
+  }
+}
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_

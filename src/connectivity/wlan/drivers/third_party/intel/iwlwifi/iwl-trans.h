@@ -36,6 +36,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TRANS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TRANS_H_
 
+#include <ddk/io-buffer.h>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
@@ -236,16 +238,13 @@ static inline void iwl_free_resp(struct iwl_host_cmd* cmd) {
 
 struct iwl_rx_cmd_buffer {
   struct page* _page;
+  io_buffer_t _io_buf;
   int _offset;
   bool _page_stolen;
-  uint32_t _rx_page_order;
-  unsigned int truesize;
   uint8_t status;
 };
 
-static inline void* rxb_addr(struct iwl_rx_cmd_buffer* r) {
-  return (void*)((unsigned long)page_address(r->_page) + r->_offset);
-}
+static inline void* rxb_addr(struct iwl_rx_cmd_buffer* r) { return io_buffer_virt(&r->_io_buf); }
 
 static inline int rxb_offset(struct iwl_rx_cmd_buffer* r) { return r->_offset; }
 
