@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/forced_fdr_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

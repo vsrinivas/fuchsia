@@ -5,7 +5,8 @@
     "sandbox": {
         "features": [
             "config-data",
-            "deprecated-misc-storage"
+            "deprecated-misc-storage",
+            "isolated-persistent-storage"
         ],
         "pkgfs": [
             "ctl"
@@ -15,7 +16,9 @@
             "fuchsia.logger.LogSink",
             "fuchsia.pkg.PackageResolver",
             "fuchsia.pkg.rewrite.Engine",
-            "fuchsia.sys.Launcher"
+            "fuchsia.recovery.FactoryReset",
+            "fuchsia.sys.Launcher",
+            "fuchsia.update.Info"
         ],
         "system": [
             "meta"

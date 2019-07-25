@@ -21,6 +21,7 @@ use crate::poller::run_periodic_update_check;
 use crate::update_service::{RealUpdateManager, RealUpdateService};
 use failure::{Error, ResultExt};
 use fidl_fuchsia_update::{InfoRequestStream, ManagerRequestStream};
+use forced_fdr::perform_fdr_if_necessary;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{fx_log_err, fx_log_warn};
@@ -66,7 +67,7 @@ async fn main() -> Result<(), Error> {
 
     let cron_fut = run_periodic_update_check(update_manager.clone(), &config);
 
-    await!(future::join3(channel_fut, fidl_fut, cron_fut));
+    await!(future::join4(channel_fut, fidl_fut, cron_fut, perform_fdr_if_necessary()));
 
     Ok(())
 }
