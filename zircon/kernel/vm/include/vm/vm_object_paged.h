@@ -302,8 +302,13 @@ class VmObjectPaged final : public VmObject {
   //
   // This function recursively invokes itself for regions of the parent vmo which are
   // not accessible by the sibling vmo.
-  // TODO(ZX-757): Carefully constructed clone chains can blow the stack.
   void ReleaseCowParentPagesLocked(uint64_t start, uint64_t end, list_node_t* free_list)
+      // Walking the clone tree confuses analysis
+      TA_NO_THREAD_SAFETY_ANALYSIS;
+
+  // Helper function for ReleaseCowParentPagesLocked that processes pages which are visible
+  // to both children as well as updates parent_(offset_)limit_.
+  void ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t end, list_node_t* free_list)
       // Calling into the parents confuses analysis
       TA_NO_THREAD_SAFETY_ANALYSIS;
 
@@ -378,11 +383,14 @@ class VmObjectPaged final : public VmObject {
   uint64_t original_parent_user_id_ TA_GUARDED(lock_) = 0;
 
   // Flag used for walking back up clone tree without recursion. See ::CloneCowPageLocked.
-  enum class StackDir {
+  enum class StackDir : bool {
     Left,
     Right,
   };
-  StackDir page_stack_flag_ TA_GUARDED(lock_);
+  struct {
+    uint64_t scratch : 63;
+    StackDir dir_flag : 1;
+  } stack_ TA_GUARDED(lock_);
 
   // This value is used when determining against which user-visible vmo a hidden vmo's
   // pages should be attributed. It serves as a tie-breaker for pages that are accessible by

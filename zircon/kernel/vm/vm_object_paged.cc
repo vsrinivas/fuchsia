@@ -1102,7 +1102,7 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
   // can stop at any point.
   //
   // To set this up, walk from the leaf to |page_owner|, and keep track of the
-  // path via |page_stack_flag_|.
+  // path via |stack_.dir_flag|.
   VmObjectPaged* cur = this;
   do {
     VmObjectPaged* next = VmObjectPaged::AsVmObjectPaged(cur->parent_);
@@ -1110,8 +1110,8 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
     // somehow don't find |page_owner| in the ancestor chain.
     DEBUG_ASSERT(next);
 
-    next->page_stack_flag_ = &next->left_child_locked() == cur ? StackDir::Left : StackDir::Right;
-    if (next->page_stack_flag_ == StackDir::Right) {
+    next->stack_.dir_flag = &next->left_child_locked() == cur ? StackDir::Left : StackDir::Right;
+    if (next->stack_.dir_flag == StackDir::Right) {
       DEBUG_ASSERT(&next->right_child_locked() == cur);
     }
     cur = next;
@@ -1136,8 +1136,8 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
     VmObjectPaged* target_page_owner = cur;
     uint64_t target_page_offset = cur_offset;
 
-    cur = cur->page_stack_flag_ == StackDir::Left ? &cur->left_child_locked()
-                                                  : &cur->right_child_locked();
+    cur = cur->stack_.dir_flag == StackDir::Left ? &cur->left_child_locked()
+                                                 : &cur->right_child_locked();
     cur_offset -= cur->parent_offset_;
 
     if (target_page_owner->IsUniAccessibleLocked(target_page, target_page_offset)) {
@@ -1148,9 +1148,9 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
       // some tracking state got corrupted or a page in the subtree we're trying to
       // migrate to got improperly migrated/freed. If we did this migration, then the
       // opposite subtree would lose access to this page.
-      DEBUG_ASSERT(!(target_page_owner->page_stack_flag_ == StackDir::Left &&
+      DEBUG_ASSERT(!(target_page_owner->stack_.dir_flag == StackDir::Left &&
                      target_page->object.cow_left_split));
-      DEBUG_ASSERT(!(target_page_owner->page_stack_flag_ == StackDir::Right &&
+      DEBUG_ASSERT(!(target_page_owner->stack_.dir_flag == StackDir::Right &&
                      target_page->object.cow_right_split));
 
       target_page->object.cow_left_split = 0;
@@ -1169,7 +1169,7 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
       }
 
       // We're going to cover target_page with cover_page, so set appropriate split bit.
-      if (target_page_owner->page_stack_flag_ == StackDir::Left) {
+      if (target_page_owner->stack_.dir_flag == StackDir::Left) {
         target_page->object.cow_left_split = 1;
         DEBUG_ASSERT(target_page->object.cow_right_split == 0);
       } else {
@@ -1198,10 +1198,10 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
         // In this case, cur is a hidden vmo and has no direct mappings. Also, its
         // descendents along the page stack will be dealt with by subsequent iterations
         // of this loop. That means that any mappings that need to be touched now are
-        // owned by the children on the opposite side of page_stack_flag_.
+        // owned by the children on the opposite side of stack_.dir_flag.
         DEBUG_ASSERT(cur->mapping_list_len_ == 0);
-        VmObjectPaged& other = cur->page_stack_flag_ == StackDir::Left ? cur->right_child_locked()
-                                                                       : cur->left_child_locked();
+        VmObjectPaged& other = cur->stack_.dir_flag == StackDir::Left ? cur->right_child_locked()
+                                                                      : cur->left_child_locked();
         other.RangeChangeUpdateFromParentLocked(cur_offset, PAGE_SIZE);
       } else {
         // In this case, cur is the last vmo being changed, so update its whole subtree.
@@ -1283,8 +1283,8 @@ void VmObjectPaged::ContiguousCowFixupLocked(VmObjectPaged* page_owner, uint64_t
           if (found) {
             cur->RangeChangeUpdateLocked(cur_offset, PAGE_SIZE);
           } else {
-            cur = cur->page_stack_flag_ == StackDir::Left ? &cur->left_child_locked()
-                                                          : &cur->right_child_locked();
+            cur = cur->stack_.dir_flag == StackDir::Left ? &cur->left_child_locked()
+                                                         : &cur->right_child_locked();
             cur_offset = cur_offset - cur->parent_offset_;
 
             DEBUG_ASSERT(cur->is_contiguous());
@@ -1818,21 +1818,9 @@ bool VmObjectPaged::AnyPagesPinnedLocked(uint64_t offset, size_t len) {
   return found_pinned;
 }
 
-void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end,
-                                                list_node_t* free_list) {
-  start = fbl::max(start, parent_start_limit_);
-  end = fbl::min(end, parent_limit_);
-  if (start >= end) {
-    return;
-  }
-
-  if (!parent_ || !parent_->is_hidden() || parent_start_limit_ == parent_limit_) {
-    return;
-  }
-  auto parent = VmObjectPaged::AsVmObjectPaged(parent_);
-  bool left = this == &parent->left_child_locked();
-  auto& other = left ? parent->right_child_locked() : parent->left_child_locked();
-
+// Helper function which processes the region visible by both children.
+void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t end,
+                                                      list_node_t* free_list) {
   // Compute the range in the parent that cur no longer will be able to see.
   uint64_t parent_range_start, parent_range_end;
   bool overflow = add_overflow(start, parent_offset_, &parent_range_start);
@@ -1842,7 +1830,11 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end,
   bool skip_split_bits;
   if (parent_limit_ == end) {
     parent_limit_ = start;
-    parent_start_limit_ = fbl::min(parent_limit_, parent_start_limit_);
+    if (parent_limit_ <= parent_start_limit_) {
+      // Setting both to zero is cleaner and makes some asserts easier.
+      parent_start_limit_ = 0;
+      parent_limit_ = 0;
+    }
     skip_split_bits = true;
   } else if (start == parent_start_limit_) {
     parent_start_limit_ = end;
@@ -1866,42 +1858,12 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end,
     skip_split_bits = false;
   }
 
-  // Drop any pages in the parent which are outside of the other child's accessibility, and
-  // recursively release COW pages in ancestor vmos in those inaccessible regions.
-  //
-  // There are two newly inaccessible regions to consider here - the region before what the
-  // sibling can access and the region after what it can access. We first free the 'head'
-  // region and calculate |tail_start| to determine where the 'tail' region starts. Then
-  // we can free the 'tail' region.
-  //
-  // Note that |update_limit| can only be recursively passed into the second call since we
-  // don't want the parent's parent_limit_ to be updated if the sibling can still access
-  // the pages.
-  uint64_t tail_start;
-  if (other.parent_start_limit_ != other.parent_limit_) {
-    if (parent_range_start < other.parent_offset_ + other.parent_start_limit_) {
-      uint64_t head_end =
-          fbl::min(other.parent_offset_ + other.parent_start_limit_, parent_range_end);
-      parent->page_list_.RemovePages(parent_range_start, head_end, free_list);
-      parent->ReleaseCowParentPagesLocked(parent_range_start, head_end, free_list);
-    }
-    tail_start = fbl::max(other.parent_offset_ + other.parent_limit_, parent_range_start);
-  } else {
-    // If the sibling can't access anything in the parent, the whole region
-    // we're operating on is the 'tail' region.
-    tail_start = parent_range_start;
-  }
-  if (tail_start < parent_range_end) {
-    parent->page_list_.RemovePages(tail_start, parent_range_end, free_list);
-    parent->ReleaseCowParentPagesLocked(tail_start, parent_range_end, free_list);
-  }
-
-  // Any pages left were accesible by both children. Free any pages that were already split
-  // into the other child. For pages that haven't been split into the other child, we need to
-  // ensure they're univisible. We don't need to recurse on this range because the visibility of
-  // parent's ancestor pages in this range isn't changing.
+  // Free any pages that were already split into the other child. For pages that haven't been split
+  // into the other child, we need to ensure they're univisible.
+  auto parent = VmObjectPaged::AsVmObjectPaged(parent_);
   parent->page_list_.RemovePages(
-      [skip_split_bits, left](vm_page_t*& page, auto offset) -> bool {
+      [skip_split_bits, left = this == &parent->left_child_locked()](vm_page_t*& page,
+                                                                     auto offset) -> bool {
         // Simply checking if the page is resident in |this|->page_list_ is insufficient, as the
         // page split into this vmo could have been migrated anywhere into is children. To avoid
         // having to search its entire child subtree, we need to track into which subtree
@@ -1926,6 +1888,113 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end,
         return false;
       },
       parent_range_start, parent_range_end, free_list);
+}
+
+void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t root_end,
+                                                list_node_t* free_list) {
+  // This function releases |root}'s references to any ancestor vmo's COW pages.
+  //
+  // To do so, we divide |root|'s parent into three (possibly 0-length) regions: the region
+  // which |root| sees but before what the sibling can see, the region where both |root|
+  // and its sibling can see, and the region |root| can see but after what the sibling can
+  // see. Processing the 2nd region only requires touching the direct parent, since the sibling
+  // can see ancestor pages in the region. However, processing the 1st and 3rd regions requires
+  // recursively releasing |root|'s parent's ancestor pages, since those pages are no longer
+  // visible through |root|'s parent.
+  //
+  // This function processes region 1 (incl. recursively processing the parent), then region 2,
+  // then region 3 (incl. recursively processing the parent). To facilitate coming back up the
+  // tree, the end offset of the range being processed is stashed in the vmobject. The start
+  // offset can be easily recovered as it corresponds to the end value of the recursive region.
+  auto cur = this;
+  uint64_t cur_start = root_start;
+  uint64_t cur_end = root_end;
+
+  do {
+    uint64_t start = fbl::max(cur_start, cur->parent_start_limit_);
+    uint64_t end = fbl::min(cur_end, cur->parent_limit_);
+
+    // First check to see if the given range in cur even refers to ancestor pages.
+    if (start < end && cur->parent_ && cur->parent_start_limit_ != cur->parent_limit_) {
+      DEBUG_ASSERT(cur->parent_->is_hidden());
+
+      auto parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+      bool left = cur == &parent->left_child_locked();
+      auto& other = left ? parent->right_child_locked() : parent->left_child_locked();
+
+      // Compute the range in the parent that cur no longer will be able to see.
+      uint64_t parent_range_start, parent_range_end;
+      bool overflow = add_overflow(start, cur->parent_offset_, &parent_range_start);
+      bool overflow2 = add_overflow(end, cur->parent_offset_, &parent_range_end);
+      DEBUG_ASSERT(!overflow && !overflow2);  // vmo creation should have failed.
+
+      uint64_t tail_start;
+      if (other.parent_start_limit_ != other.parent_limit_) {
+        if (parent_range_start < other.parent_offset_ + other.parent_start_limit_) {
+          // If there is a region being freed before what the sibling can see,
+          // then walk down into the parent. Note that when we come back up the
+          // tree to process this vmo, we won't fall into this branch since the
+          // start offset will be set to head_end.
+          uint64_t head_end =
+              fbl::min(other.parent_offset_ + other.parent_start_limit_, parent_range_end);
+          parent->page_list_.RemovePages(parent_range_start, head_end, free_list);
+
+          if (start == cur->parent_start_limit_) {
+            cur->parent_start_limit_ = head_end;
+          }
+
+          DEBUG_ASSERT((cur_end & 1) == 0); // cur_end is page aligned
+          uint64_t scratch = cur_end >> 1; // gcc is finicky about setting bitfields
+          cur->stack_.scratch =  scratch & (~0ul >> 1);
+          parent->stack_.dir_flag =
+              &parent->left_child_locked() == cur ? StackDir::Left : StackDir::Right;
+
+          cur_start = parent_range_start;
+          cur_end = head_end;
+          cur = parent;
+          continue;
+        }
+        // Calculate the start of the region which this vmo can see but the sibling can't.
+        tail_start = fbl::max(other.parent_offset_ + other.parent_limit_, parent_range_start);
+      } else {
+        // If the sibling can't access anything in the parent, the whole region
+        // we're operating on is the 'tail' region.
+        tail_start = parent_range_start;
+      }
+
+      cur->ReleaseCowParentPagesLockedHelper(start, cur_end, free_list);
+
+      if (tail_start < parent_range_end) {
+        // If the tail region is non-empty, recurse into the parent. Note that
+        // we do put this vmo back on the stack, which makes it simpler to walk back
+        // up the tree.
+        parent->page_list_.RemovePages(tail_start, parent_range_end, free_list);
+
+        DEBUG_ASSERT((cur_end & 1) == 0); // cur_end is page aligned
+        uint64_t scratch = cur_end >> 1; // gcc is finicky about setting bitfields
+        cur->stack_.scratch = scratch & (~0ul >> 1);
+        parent->stack_.dir_flag =
+            &parent->left_child_locked() == cur ? StackDir::Left : StackDir::Right;
+
+        cur_start = tail_start;
+        cur_end = parent_range_end;
+        cur = parent;
+        continue;
+      }
+    }
+
+    if (cur == this) {
+      cur = nullptr;
+    } else {
+      cur_start = cur_end;
+      cur = cur->stack_.dir_flag == StackDir::Left ? &cur->left_child_locked()
+                                                   : &cur->right_child_locked();
+      cur_start -= cur->parent_offset_;
+      cur_end = cur->stack_.scratch << 1;
+    }
+  } while (cur != nullptr);
+
+  DEBUG_ASSERT(cur_end == root_end);
 }
 
 zx_status_t VmObjectPaged::Resize(uint64_t s) {
