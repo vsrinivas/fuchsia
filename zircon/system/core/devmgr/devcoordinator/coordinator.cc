@@ -648,6 +648,8 @@ void Coordinator::ScheduleDevhostRequestedUnbindChildren(const fbl::RefPtr<Devic
 // or process exit, which means we should remove all other
 // devices that share the devhost at the same time
 zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool forced) {
+  dev->inc_num_removal_attempts();
+
   if (dev->state() == Device::State::kDead) {
     // This should not happen
     log(ERROR, "devcoordinator: cannot remove dev %p name='%s' twice!\n", dev.get(),

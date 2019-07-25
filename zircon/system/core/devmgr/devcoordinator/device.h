@@ -422,6 +422,9 @@ class Device : public fbl::RefCounted<Device>,
   void set_state(Device::State state) { state_ = state; }
   State state() const { return state_; }
 
+  void inc_num_removal_attempts() { num_removal_attempts_++; }
+  size_t num_removal_attempts() const { return num_removal_attempts_; }
+
   enum class TestStateMachine {
     kTestNotStarted = 1,
     kTestUnbindSent,
@@ -546,6 +549,9 @@ class Device : public fbl::RefCounted<Device>,
   // closed by the driver, signalling the end of the tests. We don't print log messages until the
   // entire test is finished to avoid interleaving output from multiple drivers.
   async::WaitMethod<Device, &Device::HandleTestOutput> test_wait_{this};
+
+  // This lets us check for unexpected removals and is for testing use only.
+  size_t num_removal_attempts_ = 0;
 };
 
 }  // namespace devmgr

@@ -458,6 +458,10 @@ zx_status_t Device::HandleRead() {
         llcpp::fuchsia::device::manager::Coordinator::TryDispatch(this, &fidl_msg, &txn);
     auto status = txn.Status();
     if (dispatched) {
+      if (status == ZX_OK && state_ == Device::State::kDead) {
+        // We have removed the device. Signal that we are done with this channel.
+        return ZX_ERR_STOP;
+      }
       return status;
     }
   }

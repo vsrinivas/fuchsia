@@ -1133,6 +1133,28 @@ TEST_F(UnbindTestCase, UnbindSysDevice) {
   loop()->RunUntilIdle();
 }
 
+TEST_F(UnbindTestCase, NumRemovals) {
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "child", 0 /* protocol id */, "", &child_index));
+
+  auto* child_device = device(child_index);
+
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(child_device->device));
+  loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(
+      CheckUnbindReceivedAndReply(child_device->remote, false /* expect_unbind */));
+  loop()->RunUntilIdle();
+
+  // Make sure the coordinator device does not detect the devhost's channel closing,
+  // otherwise it will try to remove an already dead device and we will get a log error.
+  child_device->remote.reset();
+  loop()->RunUntilIdle();
+
+  ASSERT_EQ(child_device->device->num_removal_attempts(), 1);
+}
+
 TEST_F(UnbindTestCase, AddDuringParentUnbind) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
