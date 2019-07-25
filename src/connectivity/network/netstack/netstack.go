@@ -90,9 +90,10 @@ type Netstack struct {
 
 // Each ifState tracks the state of a network interface.
 type ifState struct {
-	ns    *Netstack
-	eth   link.Controller
-	nicid tcpip.NICID
+	ns       *Netstack
+	eth      link.Controller
+	nicid    tcpip.NICID
+	filepath string
 	// features can include any value that's valid in fuchsia.hardware.ethernet.Info.features.
 	features uint32
 	mu       struct {
@@ -598,7 +599,7 @@ func (ns *Netstack) getDeviceName() string {
 func (ns *Netstack) addLoopback() error {
 	ifs, err := ns.addEndpoint(func(tcpip.NICID) string {
 		return "lo"
-	}, stack.FindLinkEndpoint(loopback.New()), link.NewLoopbackController(), false, defaultInterfaceMetric, ethernet.InfoFeatureLoopback)
+	}, stack.FindLinkEndpoint(loopback.New()), link.NewLoopbackController(), false, defaultInterfaceMetric, ethernet.InfoFeatureLoopback, "[none]")
 	if err != nil {
 		return err
 	}
@@ -655,7 +656,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 	b := bridge.New(links)
 	return ns.addEndpoint(func(nicid tcpip.NICID) string {
 		return fmt.Sprintf("br%d", nicid)
-	}, b, b, false, defaultInterfaceMetric, 0)
+	}, b, b, false, defaultInterfaceMetric, 0, "[none]")
 }
 
 func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.Device) (*ifState, error) {
@@ -669,7 +670,7 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 			return fmt.Sprintf("eth%d", nicid)
 		}
 		return config.Name
-	}, eth.NewLinkEndpoint(client), client, true, routes.Metric(config.Metric), client.Info.Features)
+	}, eth.NewLinkEndpoint(client), client, true, routes.Metric(config.Metric), client.Info.Features, config.Filepath)
 }
 
 func (ns *Netstack) addEndpoint(
@@ -679,10 +680,12 @@ func (ns *Netstack) addEndpoint(
 	doFilter bool,
 	metric routes.Metric,
 	features uint32,
+	filepath string,
 ) (*ifState, error) {
 	ifs := &ifState{
 		ns:       ns,
 		eth:      controller,
+		filepath: filepath,
 		features: features,
 	}
 	createFn := ns.mu.stack.CreateNamedNIC

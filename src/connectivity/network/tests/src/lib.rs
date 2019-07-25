@@ -153,6 +153,7 @@ async fn add_ethernet_device() -> Result {
                 name,
                 &mut fidl_fuchsia_netstack::InterfaceConfig {
                     name: name.to_string(),
+                    filepath: "/fake/filepath/for_test".to_string(),
                     metric: 0,
                     ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
                 },

@@ -29,7 +29,8 @@ fn test_display_interfaceinfo() {
         name: "eth0".to_owned(),
         properties: fidl_fuchsia_net_stack::InterfaceProperties {
             name: "eth0".to_owned(),
-            path: "/all/the/way/home".to_owned(),
+            topopath: "/all/the/way/home".to_owned(),
+            filepath: "/dev/class/ethernet001".to_owned(),
             mac: Some(Box::new(fidl_fuchsia_hardware_ethernet::MacAddress {
                 octets: [0, 1, 2, 255, 254, 253],
             })),
@@ -58,7 +59,8 @@ fn test_display_interfaceinfo() {
         &format!("{}", info),
         r#"eth0
   name       : eth0
-  path       : /all/the/way/home
+  topopath   : /all/the/way/home
+  filepath   : /dev/class/ethernet001
   mac        : 00:01:02:ff:fe:fd
   mtu        : 1500
   features   : SYNTHETIC

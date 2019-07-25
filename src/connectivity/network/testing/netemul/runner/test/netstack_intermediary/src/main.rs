@@ -61,6 +61,7 @@ async fn run_mock_guest() -> Result<(), Error> {
     let ip_addr_config = IpAddressConfig::Dhcp(true);
     let mut cfg = InterfaceConfig {
         name: "eth-test".to_string(),
+        filepath: "[TBD]".to_string(),
         ip_address_config: ip_addr_config,
         metric: DEFAULT_METRIC,
     };

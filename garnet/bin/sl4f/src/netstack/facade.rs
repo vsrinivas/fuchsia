@@ -27,7 +27,7 @@ impl NetstackFacade {
     pub async fn list_interfaces(&self) -> Result<Value, Error> {
         // TODO(eyalsoha): Include more than just the paths.
         let interface_list = await!(self.stack.list_interfaces())?;
-        let names = interface_list.into_iter().map(|x| x.properties.path).collect::<Vec<_>>();
+        let names = interface_list.into_iter().map(|x| x.properties.topopath).collect::<Vec<_>>();
         Ok(to_value(names)?)
     }
 }

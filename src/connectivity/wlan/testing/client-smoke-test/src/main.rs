@@ -355,11 +355,11 @@ async fn get_ip_addrs_for_wlan_iface<'a>(
     let mut wlan_iface_ip_addrs = Vec::new();
 
     for net_iface in net_iface_response.iter_mut() {
-        if net_iface.properties.path.is_empty() {
+        if net_iface.properties.topopath.is_empty() {
             continue;
         }
         // trim off any leading '@'s
-        let net_path = net_iface.properties.path.trim_start_matches('@').to_string();
+        let net_path = net_iface.properties.topopath.trim_start_matches('@').to_string();
         if net_path.starts_with(&iface_path) {
             // now get the ip addrs
             wlan_iface_ip_addrs.append(&mut net_iface.properties.addresses);

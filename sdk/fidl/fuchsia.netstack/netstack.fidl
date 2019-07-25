@@ -46,6 +46,11 @@ struct NetInterfaceStats {
 
 struct InterfaceConfig {
     string name;
+
+    /// An unstable file path corresponding to the interface. Used in watching the creation
+    /// and destruction of the interface, or in accessing the interface using netdump.
+    string filepath;
+
     uint32 metric;
     /// Deprecated; to configure a network interface, use SetDhcpClientStatus
     /// and SetInterfaceAddress instead.

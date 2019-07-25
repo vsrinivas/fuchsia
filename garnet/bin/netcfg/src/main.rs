@@ -172,12 +172,12 @@ fn main() -> Result<(), failure::Error> {
             match event {
                 fuchsia_vfs_watcher::WatchEvent::ADD_FILE
                 | fuchsia_vfs_watcher::WatchEvent::EXISTING => {
-                    let filename = path::Path::new(ETHDIR).join(filename);
-                    let device = fs::File::open(&filename)
-                        .with_context(|_| format!("could not open {}", filename.display()))?;
+                    let filepath = path::Path::new(ETHDIR).join(filename);
+                    let device = fs::File::open(&filepath)
+                        .with_context(|_| format!("could not open {}", filepath.display()))?;
                     let topological_path =
                         fdio::device_get_topo_path(&device).with_context(|_| {
-                            format!("fdio::device_get_topo_path({})", filename.display())
+                            format!("fdio::device_get_topo_path({})", filepath.display())
                         })?;
                     let device = device.as_raw_fd();
                     let mut client = 0;
@@ -188,7 +188,7 @@ fn main() -> Result<(), failure::Error> {
                     .with_context(|_| {
                         format!(
                             "fuchsia_zircon::sys::fdio_get_service_handle({})",
-                            filename.display()
+                            filepath.display()
                         )
                     })?;
                     // Safe because we checked the return status above.
@@ -240,6 +240,7 @@ fn main() -> Result<(), failure::Error> {
                                 &topological_path,
                                 metric,
                                 &default_config_rules,
+                                &filepath,
                             );
                             let nic_id = await!(netstack.add_ethernet_device(
                                 &topological_path,
@@ -251,7 +252,7 @@ fn main() -> Result<(), failure::Error> {
                             .with_context(|_| {
                                 format!(
                                     "fidl_netstack::Netstack::add_ethernet_device({})",
-                                    filename.display()
+                                    filepath.display()
                                 )
                             })?;
 

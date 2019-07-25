@@ -625,7 +625,7 @@ async fn test_list_interfaces() {
     // check that what we served over FIDL is correct:
     for ifc in ifs.iter() {
         let props = if_props.remove(&ifc.id).unwrap();
-        assert_eq!(&ifc.properties.path, "fake_topo_path");
+        assert_eq!(&ifc.properties.topopath, "fake_topo_path");
         assert_eq!(ifc.properties.mac.as_ref().unwrap().as_ref(), &props.mac);
         assert_eq!(ifc.properties.mtu, props.mtu);
         // TODO(brunodalbo) also test addresses and interface status once
@@ -653,7 +653,7 @@ async fn test_get_interface_info() {
         .unwrap()
         .0
         .expect("Get interface info");
-    assert_eq!(&if_info.properties.path, "fake_topo_path");
+    assert_eq!(&if_info.properties.topopath, "fake_topo_path");
     assert_eq!(if_info.properties.mac.as_ref().unwrap().as_ref(), &ep_info.mac);
     assert_eq!(if_info.properties.mtu, ep_info.mtu);
     // TODO(brunodalbo) also test addresses and interface status once

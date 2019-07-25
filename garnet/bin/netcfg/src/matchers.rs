@@ -11,12 +11,14 @@ pub fn config_for_device(
     topological_path: &str,
     metric: u32,
     rules: &Vec<InterfaceSpec>,
+    filepath: &std::path::PathBuf,
 ) -> fidl_fuchsia_netstack::InterfaceConfig {
     rules.iter().filter_map(|spec| matches_info(&spec, &topological_path, device_info)).fold(
         fidl_fuchsia_netstack::InterfaceConfig {
-            ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
             name: name,
+            filepath: filepath.display().to_string(),
             metric: metric,
+            ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
         },
         |seed, opt| match opt {
             ConfigOption::IpConfig(value) => fidl_fuchsia_netstack::InterfaceConfig {
@@ -212,6 +214,7 @@ mod tests {
                     ),
                 },
             ],
+            &std::path::PathBuf::from("filepath"),
         );
 
         assert_eq!(

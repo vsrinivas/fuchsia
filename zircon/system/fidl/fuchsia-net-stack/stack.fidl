@@ -58,7 +58,11 @@ struct InterfaceProperties {
 
     /// The topological path to the device, representing a stable identifier for the interface
     /// hardware.
-    string path;
+    string topopath;
+
+    /// An unstable file path corresponding to the interface. Used in watching the creation
+    /// and destruction of the interface, or in accessing the interface using netdump.
+    string filepath;
 
     /// The MAC address of the interface, if available.
     fuchsia.hardware.ethernet.MacAddress? mac;

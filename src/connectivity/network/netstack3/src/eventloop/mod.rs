@@ -485,7 +485,8 @@ impl EventLoop {
                 id: device.id(),
                 properties: InterfaceProperties {
                     name: "[TBD]".to_owned(), // TODO(porce): Follow up to populate the name
-                    path: device.path().clone(),
+                    topopath: device.path().clone(),
+                    filepath: "[TBD]".to_owned(), // TODO(porce): Follow up to populate
                     mac: if let Ok(info) = &info { Some(Box::new(info.mac.into())) } else { None },
                     mtu: if let Ok(info) = &info { info.mtu } else { 0 },
                     features: if let Ok(info) = &info { info.features.bits() } else { 0 },
@@ -521,7 +522,8 @@ impl EventLoop {
             id: device.id(),
             properties: InterfaceProperties {
                 name: "[TBD]".to_owned(), // TODO(porce): Follow up to populate the name
-                path: device.path().clone(),
+                topopath: device.path().clone(),
+                filepath: "[TBD]".to_owned(), // TODO(porce): Follow up to populate
                 mac: Some(Box::new(info.mac.into())),
                 mtu: info.mtu,
                 features: info.features.bits(),

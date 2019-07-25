@@ -77,6 +77,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     );
     let mut cfg = InterfaceConfig {
         name: if_name.to_string(),
+        filepath: format!("/vdev/{}", opt.endpoint).to_string(),
         metric: DEFAULT_METRIC,
         ip_address_config: IGNORED_IP_ADDRESS_CONFIG,
     };

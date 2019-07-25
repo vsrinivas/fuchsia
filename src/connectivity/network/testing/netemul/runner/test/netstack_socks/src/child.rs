@@ -99,6 +99,7 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
 
     let mut cfg = InterfaceConfig {
         name: if_name.to_string(),
+        filepath: "[TBD]".to_string(),
         metric: DEFAULT_METRIC,
         ip_address_config: IGNORED_IP_ADDRESS_CONFIG,
     };

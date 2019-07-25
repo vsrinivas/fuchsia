@@ -57,18 +57,19 @@ func getInterfaceInfo(ifs *ifState, addresses []tcpip.ProtocolAddress, subnets [
 	}
 
 	var mac *ethernet.MacAddress
-	var path string
+	var topopath string
 	if eth := ifs.eth; eth != nil {
 		mac = &ethernet.MacAddress{}
 		copy(mac.Octets[:], ifs.endpoint.LinkAddress())
-		path = eth.Path()
+		topopath = eth.Path()
 	}
 
 	return stack.InterfaceInfo{
 		Id: uint64(ifs.nicid),
 		Properties: stack.InterfaceProperties{
 			Name:                 ifs.ns.nameLocked(ifs.nicid),
-			Path:                 path,
+			Topopath:             topopath,
+			Filepath:             ifs.filepath,
 			Mac:                  mac,
 			Mtu:                  uint32(ifs.endpoint.MTU()),
 			AdministrativeStatus: administrativeStatus,

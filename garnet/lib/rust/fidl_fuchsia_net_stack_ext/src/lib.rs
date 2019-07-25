@@ -120,7 +120,8 @@ impl std::fmt::Display for PhysicalStatus {
 
 pub struct InterfaceProperties {
     name: String,
-    path: String,
+    topopath: String,
+    filepath: String,
     mac: Option<fidl_fuchsia_hardware_ethernet_ext::MacAddress>,
     mtu: u32,
     features: fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures,
@@ -133,7 +134,8 @@ impl From<fidl::InterfaceProperties> for InterfaceProperties {
     fn from(
         fidl::InterfaceProperties {
             name,
-            path,
+            topopath,
+            filepath,
             mac,
             mtu,
             features,
@@ -148,7 +150,17 @@ impl From<fidl::InterfaceProperties> for InterfaceProperties {
         let administrative_status = AdministrativeStatus::from(administrative_status);
         let physical_status = PhysicalStatus::from(physical_status);
         let addresses = addresses.into_iter().map(Into::into).collect();
-        Self { name, path, mac, mtu, features, administrative_status, physical_status, addresses }
+        Self {
+            name,
+            topopath,
+            filepath,
+            mac,
+            mtu,
+            features,
+            administrative_status,
+            physical_status,
+            addresses,
+        }
     }
 }
 
@@ -156,7 +168,8 @@ impl std::fmt::Display for InterfaceProperties {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         let InterfaceProperties {
             name,
-            path,
+            topopath,
+            filepath,
             mac,
             mtu,
             features,
@@ -165,7 +178,8 @@ impl std::fmt::Display for InterfaceProperties {
             addresses,
         } = self;
         write!(f, "  {:10} : {}\n", "name", name)?;
-        write!(f, "  {:10} : {}\n", "path", path)?;
+        write!(f, "  {:10} : {}\n", "topopath", topopath)?;
+        write!(f, "  {:10} : {}\n", "filepath", filepath)?;
         if let Some(mac) = mac {
             write!(f, "  {:10} : {}\n", "mac", mac)?;
         } else {
@@ -213,7 +227,8 @@ fn test_display_interfaceinfo() {
                 id: 1,
                 properties: InterfaceProperties {
                     name: "eth000".to_owned(),
-                    path: "/all/the/way/home".to_owned(),
+                    topopath: "/all/the/way/home".to_owned(),
+                    filepath: "/dev/class/ethernet/123".to_owned(),
                     mac: Some(fidl_fuchsia_hardware_ethernet_ext::MacAddress {
                         octets: [0, 1, 2, 255, 254, 253]
                     }),
@@ -240,7 +255,8 @@ fn test_display_interfaceinfo() {
         ),
         r#"Network interface ID 1
   name       : eth000
-  path       : /all/the/way/home
+  topopath   : /all/the/way/home
+  filepath   : /dev/class/ethernet/123
   mac        : 00:01:02:ff:fe:fd
   mtu        : 1500
   features   : WLAN | SYNTHETIC | LOOPBACK
