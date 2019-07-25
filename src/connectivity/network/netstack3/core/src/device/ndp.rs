@@ -18,14 +18,16 @@
 //!
 //! [RFC 4861]: https://tools.ietf.org/html/rfc4861
 
-use std::collections::HashMap;
-use std::num::NonZeroUsize;
+use std::collections::{HashMap, HashSet};
+use std::fmt::Debug;
+use std::num::NonZeroU8;
 use std::time::Duration;
 
 use log::{debug, error, trace};
 use net_types::ip::{IpAddress, Ipv6, Ipv6Addr};
-use net_types::{LinkLocalAddress, MulticastAddress};
+use net_types::{LinkLocalAddr, MulticastAddress};
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
+use rand::{thread_rng, Rng};
 use zerocopy::ByteSlice;
 
 use crate::device::ethernet::EthernetNdpDevice;
@@ -37,6 +39,26 @@ use crate::wire::icmp::ndp::{
 use crate::wire::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode, Icmpv6Packet};
 use crate::wire::ipv6::Ipv6PacketBuilder;
 use crate::{Context, EventDispatcher, StackState, TimerId, TimerIdInner};
+
+/// The number of NS messages to be sent to perform DAD
+/// [RFC 4862 section 5.1]
+///
+/// [RFC 4862 section 5.1]: https://tools.ietf.org/html/rfc4862#section-5.1
+pub(crate) const DUP_ADDR_DETECT_TRANSMITS: u8 = 1;
+
+//
+// Node Constants
+//
+
+/// The default value for the default hop limit to be used when sending IP
+/// packets.
+const HOP_LIMIT_DEFAULT: u8 = 64;
+
+/// The default value for *BaseReachableTime* as defined in
+/// [RFC 4861 section 10].
+///
+/// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
+const REACHABLE_TIME_DEFAULT: Duration = Duration::from_secs(30);
 
 /// The default value for *RetransTimer* as defined in
 /// [RFC 4861 section 10].
@@ -50,14 +72,43 @@ const RETRANS_TIMER_DEFAULT: Duration = Duration::from_secs(1);
 /// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
 const MAX_MULTICAST_SOLICIT: usize = 3;
 
-/// The number of NS messages to be sent to perform DAD
-/// [RFC 4862 section 5.1]
+//
+// Host Constants
+//
+
+/// Maximum number of Router Solicitation messages that may be sent
+/// when attempting to discover routers. Each message sent must be
+/// seperated by at least `RTR_SOLICITATION_INTERVAL` as defined in
+/// [RFC 4861 section 10].
 ///
-/// [RFC 4862 section 5.1]: https://tools.ietf.org/html/rfc4862#section-5.1
-pub(crate) const DUP_ADDR_DETECT_TRANSMITS: usize = 1;
+/// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
+pub(crate) const MAX_RTR_SOLICITATIONS: u8 = 3;
+
+/// Minimum duration between router solicitation messages as defined in
+/// [RFC 4861 section 10].
+///
+/// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
+const RTR_SOLICITATION_INTERVAL: Duration = Duration::from_secs(4);
+
+/// Amount of time to wait after sending `MAX_RTR_SOLICITATIONS` Router
+/// Solicitation messages before determining that there are no routers on
+/// the link for the purpose of IPv6 Stateless Address Autoconfiguration
+/// if no Router Advertisement messages have been received as defined in
+/// [RFC 4861 section 10].
+///
+/// This parameter is also used when a host sends its initial Router
+/// Solicitation message, as per [RFC 4861 section 6.3.7]. Before a node
+/// sends an initial solicitation, it SHOULD delay the transmission for
+/// a random amount of time between 0 and `MAX_RTR_SOLICITATION_DELAY`.
+/// This serves to alleviate congestion when many hosts start up on a
+/// link at the same time.
+///
+/// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
+/// [RFC 4861 section 6.3.7]: https://tools.ietf.org/html/rfc4861#section-6.3.7
+const MAX_RTR_SOLICITATION_DELAY: Duration = Duration::from_secs(1);
 
 /// A link layer address that can be discovered using NDP.
-pub(crate) trait LinkLayerAddress: Copy + Clone {
+pub(crate) trait LinkLayerAddress: Copy + Clone + Debug {
     /// The length, in bytes, expected for the `LinkLayerAddress`
     const BYTES_LENGTH: usize;
 
@@ -217,12 +268,12 @@ pub struct NdpConfigurations {
     /// A value of `None` means DAD will not be performed on the interface.
     ///
     /// [RFC 4862 section 5.1]: https://tools.ietf.org/html/rfc4862#section-5.1
-    dup_addr_detect_transmits: Option<NonZeroUsize>,
+    dup_addr_detect_transmits: Option<NonZeroU8>,
 }
 
 impl Default for NdpConfigurations {
     fn default() -> Self {
-        Self { dup_addr_detect_transmits: NonZeroUsize::new(DUP_ADDR_DETECT_TRANSMITS) }
+        Self { dup_addr_detect_transmits: NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS) }
     }
 }
 
@@ -230,7 +281,7 @@ impl NdpConfigurations {
     /// Set the value for NDP's DUP_ADDR_DETECT_TRANSMITS parameter.
     ///
     /// A value of `None` means DAD wil not be performed on the interface.
-    pub(crate) fn set_dup_addr_detect_transmits(&mut self, v: Option<NonZeroUsize>) {
+    pub(crate) fn set_dup_addr_detect_transmits(&mut self, v: Option<NonZeroU8>) {
         self.dup_addr_detect_transmits = v;
     }
 }
@@ -241,22 +292,178 @@ impl NdpConfigurations {
 /// Each device will contain an `NdpState` object to keep track of discovery
 /// operations.
 pub(crate) struct NdpState<D: NdpDevice> {
+    //
+    // NDP operation data structures.
+    //
+    /// List of neighbors.
     neighbors: NeighborTable<D::LinkAddress>,
-    dad_transmits_remaining: HashMap<Ipv6Addr, usize>,
+
+    /// List of default routers, indexed by their link-local address.
+    default_routers: HashSet<LinkLocalAddr<Ipv6Addr>>,
+
+    /// Number of Neighbor Solicitation messages left to send before we can
+    /// assume that an IPv6 address is not currently in use.
+    dad_transmits_remaining: HashMap<Ipv6Addr, u8>,
+
+    //
+    // Interace parameters learned from Router Advertisements.
+    //
+    // See RFC 4861 section 6.3.2.
+    //
+    /// A base value used for computing the random `reachable_time` value.
+    ///
+    /// Default: `REACHABLE_TIME_DEFAULT`.
+    ///
+    /// See BaseReachableTime in [RFC 4861 section 6.3.2] for more details.
+    ///
+    /// [RFC 4861 section 6.3.2]: https://tools.ietf.org/html/rfc4861#section-6.3.2
+    base_reachable_time: Duration,
+
+    /// The time a neighbor is considered reachable after receiving a
+    /// reachability confirmation.
+    ///
+    /// This value should be uniformly distributed between MIN_RANDOM_FACTOR (0.5)
+    /// and MAX_RANDOM_FACTOR (1.5) times `base_reachable_time` milliseconds. A new
+    /// random should be calculated when `base_reachable_time` changes (due to Router
+    /// Advertisements) or at least every few hours even if no Router Advertisements
+    /// are received.
+    ///
+    /// See ReachableTime in [RFC 4861 section 6.3.2] for more details.
+    ///
+    /// [RFC 4861 section 6.3.2]: https://tools.ietf.org/html/rfc4861#section-6.3.2
+    reachable_time: Duration,
+
+    /// The time between retransmissions of Neighbor Solicitation messages to
+    /// a neighbor when resolving the address or when probing the reachability
+    /// of a neighbor.
+    ///
+    /// Default: `RETRANS_TIMER_DEFAULT`.
+    ///
+    /// See RetransTimer in [RFC 4861 section 6.3.2] for more details.
+    ///
+    /// [RFC 4861 section 6.3.2]: https://tools.ietf.org/html/rfc4861#section-6.3.2
+    retrans_timer: Duration,
+
+    //
+    // NDP configurations.
+    //
+    /// NDP Configurations.
     configs: NdpConfigurations,
 }
 
 impl<D: NdpDevice> NdpState<D> {
     pub(crate) fn new(configs: NdpConfigurations) -> Self {
-        Self {
+        let mut ret = Self {
             neighbors: NeighborTable::default(),
+            default_routers: HashSet::new(),
             dad_transmits_remaining: HashMap::new(),
+
+            base_reachable_time: REACHABLE_TIME_DEFAULT,
+            reachable_time: REACHABLE_TIME_DEFAULT,
+            retrans_timer: RETRANS_TIMER_DEFAULT,
             configs,
-        }
+        };
+
+        // Calculate an actually random `reachable_time` value instead of using
+        // a constant.
+        ret.recalculate_reachable_time();
+
+        ret
     }
 
-    pub(crate) fn set_dad_transmits(&mut self, new_dad_transmits: Option<NonZeroUsize>) {
-        self.configs.dup_addr_detect_transmits = new_dad_transmits;
+    //
+    // NDP operation data structure helpers.
+    //
+
+    /// Do we know about the default router identified by `ip`?
+    fn has_default_router(&mut self, ip: &LinkLocalAddr<Ipv6Addr>) -> bool {
+        self.default_routers.contains(&ip)
+    }
+
+    /// Adds a new router to our list of default routers.
+    fn add_default_router(&mut self, ip: LinkLocalAddr<Ipv6Addr>) {
+        // Router must not already exist if we are adding it.
+        assert!(self.default_routers.insert(ip));
+    }
+
+    /// Removes a router from our list of default routers.
+    fn remove_default_router(&mut self, ip: &LinkLocalAddr<Ipv6Addr>) {
+        // Router must exist if we are removing it.
+        assert!(self.default_routers.remove(&ip));
+    }
+
+    /// Handle the invalidation of a default router.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the router has not yet been discovered.
+    fn invalidate_default_router(&mut self, ip: LinkLocalAddr<Ipv6Addr>) {
+        // As per RFC 4861 section 6.3.5:
+        // Whenever the Lifetime of an entry in the Default Router List expires,
+        // that entry is discarded.  When removing a router from the Default
+        // Router list, the node MUST update the Destination Cache in such a way
+        // that all entries using the router perform next-hop determination
+        // again rather than continue sending traffic to the (deleted) router.
+
+        self.remove_default_router(&ip);
+    }
+
+    //
+    // Interace parameters learned from Router Advertisements.
+    //
+
+    /// Set the base value used for computing the random `reachable_time` value.
+    ///
+    /// This method will also recalculate the `reachable_time` if the new base value
+    /// is different from the current value. If the new base value is the same as
+    /// the current value, `set_base_reachable_time` does nothing.
+    pub(crate) fn set_base_reachable_time(&mut self, v: Duration) {
+        assert_ne!(Duration::new(0, 0), v);
+
+        if self.base_reachable_time == v {
+            return;
+        }
+
+        self.base_reachable_time = v;
+
+        self.recalculate_reachable_time();
+    }
+
+    /// Recalculate `reachable_time`.
+    ///
+    /// The new `reachable_time` will be a random value between a factor of
+    /// MIN_RANDOM_FACTOR and MAX_RANDOM_FACTOR, as per [RFC 4861 section 6.3.2].
+    ///
+    /// [RFC 4861 section 6.3.2]: https://tools.ietf.org/html/rfc4861#section-6.3.2
+    pub(crate) fn recalculate_reachable_time(&mut self) -> Duration {
+        let base = self.base_reachable_time;
+        let half = base / 2;
+        let reachable_time = half + thread_rng().gen_range(Duration::new(0, 0), base);
+
+        // Random value must between a factor of MIN_RANDOM_FACTOR (0.5) and
+        // MAX_RANDOM_FACTOR (1.5), as per RFC 4861 section 6.3.2.
+        assert!((reachable_time >= half) && (reachable_time <= (base + half)));
+
+        self.reachable_time = reachable_time;
+        reachable_time
+    }
+
+    /// Set the time between retransmissions of Neighbor Solicitation messages to
+    /// a neighbor when resolving the address or when probing the reachability of
+    /// a neighbor.
+    pub(crate) fn set_retrans_timer(&mut self, v: Duration) {
+        assert_ne!(Duration::new(0, 0), v);
+
+        self.retrans_timer = v;
+    }
+
+    //
+    // NDP Configurations.
+    //
+
+    /// Set the number of Neighbor Solicitation messages to send when performing DAD.
+    pub(crate) fn set_dad_transmits(&mut self, v: Option<NonZeroU8>) {
+        self.configs.set_dup_addr_detect_transmits(v);
     }
 }
 
@@ -275,6 +482,11 @@ pub(crate) enum InnerNdpTimerId {
     /// This is used to resend Duplicate Address Detection Neighbor Solicitation
     /// messages if `DUP_ADDR_DETECTION_TRANSMITS` is greater than one.
     DadNsTransmit { addr: Ipv6Addr },
+    /// Timer to send Router Solicitation messages.
+    RouterSolicitationTransmit,
+    /// Timer to invalidate a router.
+    /// `ip` is the identifying IP of the router.
+    RouterInvalidation { ip: LinkLocalAddr<Ipv6Addr> },
     // TODO: The RFC suggests that we SHOULD make a random delay to
     // join the solicitation group. When we support MLD, we probably
     // want one for that.
@@ -301,6 +513,25 @@ impl NdpTimerId {
         NdpTimerId {
             device_id: ND::get_device_id(device_id),
             inner: InnerNdpTimerId::DadNsTransmit { addr: tentative_addr },
+        }
+        .into()
+    }
+
+    pub(crate) fn new_router_solicitation_timer_id<ND: NdpDevice>(device_id: usize) -> TimerId {
+        NdpTimerId {
+            device_id: ND::get_device_id(device_id),
+            inner: InnerNdpTimerId::RouterSolicitationTransmit,
+        }
+        .into()
+    }
+
+    pub(crate) fn new_router_invalidation_timer_id<ND: NdpDevice>(
+        device_id: usize,
+        ip: LinkLocalAddr<Ipv6Addr>,
+    ) -> TimerId {
+        NdpTimerId {
+            device_id: ND::get_device_id(device_id),
+            inner: InnerNdpTimerId::RouterInvalidation { ip },
         }
         .into()
     }
@@ -336,13 +567,16 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
             match ndp_state.neighbors.get_neighbor_state_mut(&neighbor_addr) {
                 Some(NeighborState {
                     link_address: LinkAddressResolutionValue::Waiting { ref mut transmit_counter },
+                    ..
                 }) => {
                     if *transmit_counter < MAX_MULTICAST_SOLICIT {
+                        let retrans_timer = ndp_state.retrans_timer;
+
                         // Increase the transmit counter and send the solicitation again
                         *transmit_counter += 1;
                         send_neighbor_solicitation::<_, ND>(ctx, device_id, neighbor_addr);
                         ctx.dispatcher.schedule_timeout(
-                            RETRANS_TIMER_DEFAULT,
+                            retrans_timer,
                             NdpTimerId::new_link_address_resolution_timer_id::<ND>(
                                 device_id,
                                 neighbor_addr,
@@ -384,6 +618,22 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
                 do_duplicate_address_detection::<D, ND>(ctx, device_id, addr, remaining);
             }
         }
+        // TODO(ghanan): Handle sending a new Router Solicitation message after timeout.
+        InnerNdpTimerId::RouterSolicitationTransmit => {
+            // This is not a DoS vector because we do not yet create timers to send
+            // router solicitations.
+            unimplemented!("NdpTimerId::RouterSolicitationTransmit unimplemented")
+        }
+        InnerNdpTimerId::RouterInvalidation { ip } => {
+            // Invalidate the router.
+            //
+            // The call to `invalidate_default_router` may panic if `ip` does not reference a
+            // known default router, but we will only reach here if we received an NDP Router
+            // Advertisement from a router with a valid lifetime > 0, at which point this timeout.
+            // would have been set. Givem this, we know that `invalidate_default_router` will not
+            // panic.
+            ND::get_ndp_state(ctx.state_mut(), device_id).invalidate_default_router(ip)
+        }
     }
 }
 
@@ -411,6 +661,8 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
             link_address: LinkAddressResolutionValue::Known { address }, ..
         }) => Some(*address),
         None => {
+            let retrans_timer = ndpstate.retrans_timer;
+
             // if we're not already waiting for a neighbor solicitation
             // response, mark it as waiting and send a neighbor solicitation,
             // also setting the transmission count to 1.
@@ -419,7 +671,7 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
             // also schedule a timer to retransmit in case we don't get
             // neighbor advertisements back.
             ctx.dispatcher.schedule_timeout(
-                RETRANS_TIMER_DEFAULT,
+                retrans_timer,
                 NdpTimerId::new_link_address_resolution_timer_id::<ND>(device_id, lookup_addr),
             );
             None
@@ -442,11 +694,12 @@ pub(crate) fn insert_neighbor<D: EventDispatcher, ND: NdpDevice>(
 /// like link address resolution and reachability information, for example.
 struct NeighborState<H> {
     link_address: LinkAddressResolutionValue<H>,
+    is_router: bool,
 }
 
 impl<H> NeighborState<H> {
     fn new() -> Self {
-        Self { link_address: LinkAddressResolutionValue::Unknown }
+        Self { link_address: LinkAddressResolutionValue::Unknown, is_router: false }
     }
 }
 
@@ -554,7 +807,7 @@ fn do_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
     device_id: usize,
     tentative_addr: Ipv6Addr,
-    remaining: usize,
+    remaining: u8,
 ) {
     trace!("do_duplicate_address_detection: tentative_addr {:?}", tentative_addr);
 
@@ -570,12 +823,13 @@ fn do_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
         NeighborSolicitation::new(tentative_addr),
         &[NdpOption::SourceLinkLayerAddress(src_ll.bytes())],
     );
-    ND::get_ndp_state(ctx.state_mut(), device_id)
-        .dad_transmits_remaining
-        .insert(tentative_addr, remaining - 1);
+    let ndp_state = ND::get_ndp_state(ctx.state_mut(), device_id);
+    ndp_state.dad_transmits_remaining.insert(tentative_addr, remaining - 1);
+
     // Uses same RETRANS_TIMER definition per RFC 4862 section-5.1
+    let retrans_timer = ndp_state.retrans_timer;
     ctx.dispatcher_mut().schedule_timeout(
-        RETRANS_TIMER_DEFAULT,
+        retrans_timer,
         NdpTimerId::new_dad_ns_transmission_timer_id::<ND>(device_id, tentative_addr),
     );
 }
@@ -758,22 +1012,156 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
             log_unimplemented!((), "NDP Router Solicitation not implemented")
         }
         Icmpv6Packet::RouterAdvertisement(p) => {
-            trace!("receive_ndp_packet_inner: Received NDP RA");
+            trace!("receive_ndp_packet_inner: Received NDP RA from router: {:?}", src_ip);
 
-            if !src_ip.is_linklocal() {
+            let src_ip = if let Some(src_ip) = LinkLocalAddr::new(src_ip) {
+                src_ip
+            } else {
                 // Nodes MUST silently discard any received Router Advertisement message
                 // where the IP source address is not a link-local address as routers must
                 // use their link-local address as the source for Router Advertisements so
                 // hosts can uniquely identify routers, as per RFC 4861 section 6.1.2.
                 trace!("receive_ndp_packet_inner: source is not a link-local address, discarding NDP RA");
                 return;
-            }
+            };
 
             // TODO(ghanan): Make sure IP's hop limit is set to 255 as per RFC 4861 section 6.1.2.
 
             increment_counter!(ctx, "ndp::rx_router_advertisement");
 
-            log_unimplemented!((), "NDP Router Advertisement not implemented")
+            if is_router::<_, Ipv6>(ctx) {
+                // TODO(ghanan): Handle receiving Router Advertisements when this node is a router.
+                trace!("receive_ndp_packet_inner: received NDP RA as a router, discarding NDP RA");
+                return;
+            }
+
+            let (state, dispatcher) = ctx.state_and_dispatcher();
+            let ndp_state = ND::get_ndp_state(state, device_id);
+            let ra = p.message();
+
+            let timer_id = NdpTimerId::new_router_invalidation_timer_id::<ND>(device_id, src_ip);
+
+            if ra.router_lifetime() == 0 {
+                if ndp_state.has_default_router(&src_ip) {
+                    trace!("receive_ndp_packet_inner: NDP RA has zero-valued router lifetime, invaliding router: {:?}", src_ip);
+
+                    // As per RFC 4861 section 6.3.4, immediately timeout the entry as specified in
+                    // RFC 4861 section 6.3.5.
+
+                    assert!(dispatcher.cancel_timeout(timer_id).is_some());
+
+                    // `invalidate_default_router` may panic if `src_ip` does not reference a known
+                    // default router, but we will only reach here if the router is already in our
+                    // list of default routers, so we know `invalidate_default_router` will not
+                    // panic.
+                    ndp_state.invalidate_default_router(src_ip);
+                } else {
+                    trace!("receive_ndp_packet_inner: NDP RA has zero-valued router lifetime, but the router {:?} is unknown so doing nothing", src_ip);
+                }
+
+            // As per RFC 4861 section 4.2, a zero-valued router lifetime only indicates the
+            // router is not to be used as a default router and is only applied to its
+            // usefulness as a default router; it does not apply to the other information
+            // contained in this message's fields or options. Given this, we continue as normal.
+            } else {
+                if ndp_state.has_default_router(&src_ip) {
+                    trace!(
+                        "receive_ndp_packet_inner: NDP RA from an already known router: {:?}",
+                        src_ip
+                    );
+                } else {
+                    trace!("receive_ndp_packet_inner: NDP RA from a new router: {:?}", src_ip);
+
+                    // TODO(ghanan): Make the number of default routers we store configurable?
+                    ndp_state.add_default_router(src_ip);
+                };
+
+                // As per RFC 4861 section 4.2, the router livetime is in units of seconds.
+                let timer_duration = Duration::from_secs(ra.router_lifetime().into());
+
+                trace!("receive_ndp_packet_inner: NDP RA: updating invalidation timer to {:?} for router: {:?}", timer_duration, src_ip);
+                // Reset invalidation timeout.
+                dispatcher.schedule_timeout(timer_duration, timer_id);
+            }
+
+            // As per RFC 4861 section 6.3.4:
+            // If the received Reachable Time value is non-zero, the host SHOULD set
+            // its BaseReachableTime variable to the received value.  If the new
+            // value differs from the previous value, the host SHOULD re-compute a
+            // new random ReachableTime value.
+            //
+            // TODO(ghanan): Make the updating of this field from the RA message configurable
+            //               since the RFC does not say we MUST update the field.
+            //
+            // TODO(ghanan): In most cases, the advertised Reachable Time value will be the same
+            //               in consecutive Router Advertisements, and a host's BaseReachableTime
+            //               rarely changes.  In such cases, an implementation SHOULD ensure that
+            //               a new random value gets re-computed at least once every few hours.
+            if ra.reachable_time() != 0 {
+                let base_reachable_time = Duration::from_millis(ra.reachable_time().into());
+
+                trace!("receive_ndp_packet_inner: NDP RA: updating base_reachable_time to {:?} for router: {:?}", base_reachable_time, src_ip);
+
+                // As per RFC 4861 section 4.2, the reachable time field is the time in
+                // milliseconds.
+                ndp_state.set_base_reachable_time(base_reachable_time);
+            }
+
+            // As per RFC 4861 section 6.3.4:
+            // The RetransTimer variable SHOULD be copied from the Retrans Timer
+            // field, if the received value is non-zero.
+            //
+            // TODO(ghanan): Make the updating of this field from the RA message configurable
+            //               since the RFC does not say we MUST update the field.
+            if ra.retransmit_timer() != 0 {
+                let retransmit_timer = Duration::from_millis(ra.retransmit_timer().into());
+
+                trace!("receive_ndp_packet_inner: NDP RA: updating retrans_timer to {:?} for router: {:?}", retransmit_timer, src_ip);
+
+                // As per RFC 4861 section 4.2, the retransmit timer field is the time in
+                // milliseconds.
+                ndp_state.set_retrans_timer(retransmit_timer);
+            }
+
+            // TODO(ghanan): Handle CurHopLimit changes.
+
+            for option in p.body().iter() {
+                match option {
+                    // As per RFC 4861 section 6.3.4, if a Neighbor Cache entry is created
+                    // for the router, its reachability state MUST be set to STALE as
+                    // specified in Section 7.3.3.  If a cache entry already exists and is
+                    // updated with a different link-layer address, the reachability state
+                    // MUST also be set to STALE.
+                    //
+                    // TODO(ghanan): Mark NDP state as STALE as per the RFC once we implement
+                    //               the RFC compliant states.
+                    NdpOption::SourceLinkLayerAddress(a) => {
+                        let link_addr =
+                            ND::LinkAddress::from_bytes(&a[..ND::LinkAddress::BYTES_LENGTH]);
+
+                        trace!("receive_ndp_packet_inner: setting link address for router {:?} to {:?}", src_ip, link_addr);
+
+                        ndp_state.neighbors.set_link_address(src_ip.get(), link_addr);
+                    }
+                    // TODO(ghanan): Actually handle the MTU option.
+                    NdpOption::MTU { .. } => log_unimplemented!(
+                        (),
+                        "receive_ndp_packet_inner: NDP RA's MTU option is unimplemented"
+                    ),
+                    // TODO(ghanan): Actually handle the prefix option.
+                    NdpOption::PrefixInformation(_) => log_unimplemented!(
+                        (),
+                        "receive_ndp_packet_inner: NDP RA's prefix option is implemented"
+                    ),
+                    _ => {}
+                }
+            }
+
+            // If the router exists in our router table, make sure it is marked as a router as
+            // per RFC 4861 section 6.3.4.
+            if let Some(state) = ndp_state.neighbors.get_neighbor_state_mut(&src_ip) {
+                state.is_router = true;
+            }
         }
         Icmpv6Packet::NeighborSolicitation(p) => {
             trace!("receive_ndp_packet_inner: Received NDP NS");
@@ -866,7 +1254,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                     // advertisement, as we're not interested in communicating
                     // with it.
                 }
-                Some(NeighborState { link_address }) if link_address.is_waiting() => {
+                Some(NeighborState { link_address, .. }) if link_address.is_waiting() => {
                     if let Some(address) = get_target_link_layer_option::<ND, _>(p.body()) {
                         *link_address = LinkAddressResolutionValue::Known { address };
                         // Cancel the resolution timeout.
@@ -936,8 +1324,8 @@ mod tests {
     };
     use crate::ip::IPV6_MIN_MTU;
     use crate::testutil::{
-        self, get_counter_val, get_dummy_config, set_logger_for_test, DummyEventDispatcher,
-        DummyEventDispatcherBuilder, DummyNetwork,
+        self, get_counter_val, get_dummy_config, set_logger_for_test, trigger_next_timer,
+        DummyEventDispatcher, DummyEventDispatcherBuilder, DummyNetwork,
     };
     use crate::wire::icmp::ndp::{OptionsSerializer, RouterAdvertisement, RouterSolicitation};
     use crate::wire::icmp::{IcmpEchoRequest, IcmpParseArgs, Icmpv6Packet};
@@ -952,6 +1340,33 @@ mod tests {
 
     fn remote_ip() -> Ipv6Addr {
         TEST_REMOTE_MAC.to_ipv6_link_local().get()
+    }
+
+    fn router_advertisement_message(
+        src_ip: Ipv6Addr,
+        dst_ip: Ipv6Addr,
+        current_hop_limit: u8,
+        configuration_mo: u8,
+        router_lifetime: u16,
+        reachable_time: u32,
+        retransmit_timer: u32,
+    ) -> Buf<Vec<u8>> {
+        Buf::new(Vec::new(), ..)
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                src_ip,
+                dst_ip,
+                IcmpUnusedCode,
+                RouterAdvertisement::new(
+                    current_hop_limit,
+                    configuration_mo,
+                    router_lifetime,
+                    reachable_time,
+                    retransmit_timer,
+                ),
+            ))
+            .serialize_vec_outer()
+            .unwrap()
+            .into_inner()
     }
 
     #[test]
@@ -1260,7 +1675,7 @@ mod tests {
         let mut ctx = Context::with_default_state(DummyEventDispatcher::default());
         let dev_id = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         EthernetNdpDevice::get_ndp_state(&mut ctx.state_mut(), dev_id.id())
-            .set_dad_transmits(NonZeroUsize::new(3));
+            .set_dad_transmits(NonZeroU8::new(3));
         set_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip(), 128).unwrap());
         for i in 0..3 {
             testutil::trigger_next_timer(&mut ctx);
@@ -1292,9 +1707,9 @@ mod tests {
         );
 
         EthernetNdpDevice::get_ndp_state(&mut net.context("local").state_mut(), device_id.id())
-            .set_dad_transmits(NonZeroUsize::new(3));
+            .set_dad_transmits(NonZeroU8::new(3));
         EthernetNdpDevice::get_ndp_state(&mut net.context("remote").state_mut(), device_id.id())
-            .set_dad_transmits(NonZeroUsize::new(3));
+            .set_dad_transmits(NonZeroU8::new(3));
 
         set_ip_addr_subnet(
             net.context("local"),
@@ -1331,6 +1746,7 @@ mod tests {
         let config = get_dummy_config::<Ipv6Addr>();
         let src_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 10]);
         let src_mac = [10, 11, 12, 13, 14, 15];
+        let options = vec![NdpOption::SourceLinkLayerAddress(&src_mac[..])];
 
         //
         // Test receiving NDP RS when not a router (should not receive)
@@ -1339,7 +1755,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build::<DummyEventDispatcher>();
         let device = Some(DeviceId::new_ethernet(0));
-        let options = vec![NdpOption::SourceLinkLayerAddress(&src_mac[..])];
+
         let mut icmpv6_packet_buf = OptionsSerializer::new(options.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
@@ -1412,15 +1828,8 @@ mod tests {
         // Test receiving NDP RA where source ip is not a link local address (should not receive)
         //
 
-        let mut icmpv6_packet_buf = Buf::new(Vec::new(), ..)
-            .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-                src_ip,
-                config.local_ip,
-                IcmpUnusedCode,
-                RouterAdvertisement::new(1, 2, 3, 4, 5),
-            ))
-            .serialize_vec_outer()
-            .unwrap();
+        let mut icmpv6_packet_buf =
+            router_advertisement_message(src_ip, config.local_ip, 1, 2, 3, 4, 5);
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
@@ -1432,9 +1841,219 @@ mod tests {
         //
 
         let src_ip = Mac::new(src_mac).to_ipv6_link_local().get();
-        let mut icmpv6_packet_buf = Buf::new(Vec::new(), ..)
+        let mut icmpv6_packet_buf =
+            router_advertisement_message(src_ip, config.local_ip, 1, 2, 3, 4, 5);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, device, src_ip, config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
+    }
+
+    #[test]
+    fn test_receiving_router_advertisement_fixed_message() {
+        let config = get_dummy_config::<Ipv6Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
+            .build::<DummyEventDispatcher>();
+        let device = Some(DeviceId::new_ethernet(0));
+        let device_id = device.map(|x| x.id()).unwrap();
+        let src_ip = config.remote_mac.to_ipv6_link_local();
+
+        //
+        // Receive a router advertisement for a brand new router with a valid lifetime.
+        //
+
+        let mut icmpv6_packet_buf =
+            router_advertisement_message(src_ip.get(), config.local_ip, 1, 2, 3, 4, 5);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .unwrap();
+        assert!(!EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id)
+            .has_default_router(&src_ip));
+        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        // We should have the new router in our list with our NDP parameters updated.
+        assert!(ndp_state.has_default_router(&src_ip));
+        let base = Duration::from_millis(4);
+        let min_reachable = base / 2;
+        let max_reachable = min_reachable * 3;
+        assert_eq!(ndp_state.base_reachable_time, base);
+        assert!(
+            ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
+        );
+        assert_eq!(ndp_state.retrans_timer, Duration::from_millis(5));
+
+        //
+        // Receive a new router advertisement for the same router with a valid lifetime.
+        //
+
+        let mut icmpv6_packet_buf =
+            router_advertisement_message(src_ip.get(), config.local_ip, 7, 8, 9, 10, 11);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        assert!(ndp_state.has_default_router(&src_ip));
+        let base = Duration::from_millis(10);
+        let min_reachable = base / 2;
+        let max_reachable = min_reachable * 3;
+        let reachable_time = ndp_state.reachable_time;
+        assert_eq!(ndp_state.base_reachable_time, base);
+        assert!(
+            ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
+        );
+        assert_eq!(ndp_state.retrans_timer, Duration::from_millis(11));
+
+        //
+        // Receive a new router advertisement for the same router with a valid lifetime and
+        // zero valued parameters.
+        //
+
+        // Zero value for Reachable Time should not update base_reachable_time, or reachable_time.
+        // Other non zero values should update.
+        let mut icmpv6_packet_buf =
+            router_advertisement_message(src_ip.get(), config.local_ip, 13, 14, 15, 0, 17);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 3);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        assert!(ndp_state.has_default_router(&src_ip));
+        // Should be the same value as before.
+        assert_eq!(ndp_state.base_reachable_time, base);
+        // Should be the same randomly calculated value as before.
+        assert_eq!(ndp_state.reachable_time, reachable_time);
+        // Should update to new value.
+        assert_eq!(ndp_state.retrans_timer, Duration::from_millis(17));
+
+        // Zero value for Retransmit Time should not update our retrans_time.
+        // Other non zero values should update.
+        let mut icmpv6_packet_buf =
+            router_advertisement_message(src_ip.get(), config.local_ip, 19, 20, 21, 22, 0);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 4);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        assert!(ndp_state.has_default_router(&src_ip));
+        // Should update to new value.
+        let base = Duration::from_millis(22);
+        let min_reachable = base / 2;
+        let max_reachable = min_reachable * 3;
+        assert_eq!(ndp_state.base_reachable_time, base);
+        assert!(
+            ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
+        );
+        // Should be the same value as before.
+        assert_eq!(ndp_state.retrans_timer, Duration::from_millis(17));
+
+        //
+        // Receive new router advertisement with 0 router lifetime, but new parameters.
+        //
+
+        let mut icmpv6_packet_buf =
+            router_advertisement_message(src_ip.get(), config.local_ip, 25, 16, 0, 28, 29);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 5);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        // Router should no longer be in our list.
+        assert!(!ndp_state.has_default_router(&src_ip));
+        let base = Duration::from_millis(28);
+        let min_reachable = base / 2;
+        let max_reachable = min_reachable * 3;
+        let reachable_time = ndp_state.reachable_time;
+        assert_eq!(ndp_state.base_reachable_time, base);
+        assert!(
+            ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
+        );
+        assert_eq!(ndp_state.retrans_timer, Duration::from_millis(29));
+
+        // Router invalidation timeout must have been cleared since we invalided with the
+        // received router advertisement with lifetime 0.
+        assert!(!trigger_next_timer(&mut ctx));
+
+        //
+        // Receive new router advertisement with non-0 router lifetime, but let it get invalidated
+        //
+
+        let mut icmpv6_packet_buf =
+            router_advertisement_message(src_ip.get(), config.local_ip, 31, 32, 33, 34, 35);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 6);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        // Router should be re-added.
+        assert!(ndp_state.has_default_router(&src_ip));
+        let base = Duration::from_millis(34);
+        let min_reachable = base / 2;
+        let max_reachable = min_reachable * 3;
+        let reachable_time = ndp_state.reachable_time;
+        assert_eq!(ndp_state.base_reachable_time, base);
+        assert!(
+            ndp_state.reachable_time >= min_reachable && ndp_state.reachable_time <= max_reachable
+        );
+        assert_eq!(ndp_state.retrans_timer, Duration::from_millis(35));
+
+        // Invaldate the router by triggering the timeout.
+        assert!(trigger_next_timer(&mut ctx));
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        assert!(!ndp_state.has_default_router(&src_ip));
+
+        // No more timers.
+        assert!(!trigger_next_timer(&mut ctx));
+    }
+
+    #[test]
+    fn test_receiving_router_advertisement_source_link_layer_option() {
+        let config = get_dummy_config::<Ipv6Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
+            .build::<DummyEventDispatcher>();
+        let device = Some(DeviceId::new_ethernet(0));
+        let device_id = device.map(|x| x.id()).unwrap();
+        let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
+        let src_ip = src_mac.to_ipv6_link_local();
+        let src_mac_bytes = src_mac.bytes();
+        let options = vec![NdpOption::SourceLinkLayerAddress(&src_mac_bytes[..])];
+
+        //
+        // First receive a Router Advertisement without the source link layer and
+        // make sure no new neighbor gets added.
+        //
+
+        let mut icmpv6_packet_buf =
+            router_advertisement_message(src_ip.get(), config.local_ip, 1, 2, 3, 4, 5);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .unwrap();
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        assert!(!ndp_state.has_default_router(&src_ip));
+        assert!(ndp_state.neighbors.get_neighbor_state(&src_ip).is_none());
+        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        // We should have the new router in our list with our NDP parameters updated.
+        assert!(ndp_state.has_default_router(&src_ip));
+        // Should still not have a neighbor added.
+        assert!(ndp_state.neighbors.get_neighbor_state(&src_ip).is_none());
+
+        //
+        // Receive a new RA but with the source link layer option
+        //
+
+        let mut icmpv6_packet_buf = OptionsSerializer::new(options.iter())
+            .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-                src_ip,
+                src_ip.get(),
                 config.local_ip,
                 IcmpUnusedCode,
                 RouterAdvertisement::new(1, 2, 3, 4, 5),
@@ -1442,9 +2061,14 @@ mod tests {
             .serialize_vec_outer()
             .unwrap();
         let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
             .unwrap();
-        receive_ndp_packet(&mut ctx, device, src_ip, config.local_ip, icmpv6_packet);
-        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
+        receive_ndp_packet(&mut ctx, device, src_ip.get(), config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        assert!(ndp_state.has_default_router(&src_ip));
+        let neighbor = ndp_state.neighbors.get_neighbor_state(&src_ip).unwrap();
+        assert_eq!(neighbor.link_address, LinkAddressResolutionValue::Known { address: src_mac });
+        assert!(neighbor.is_router);
     }
 }

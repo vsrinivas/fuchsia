@@ -40,6 +40,8 @@ mod testutil;
 mod transport;
 mod wire;
 
+use log::trace;
+
 pub use crate::data_structures::{IdMapCollection, IdMapCollectionKey};
 pub use crate::device::{get_ip_addr_subnet, receive_frame, DeviceId, DeviceLayerEventDispatcher};
 pub use crate::error::NetstackError;
@@ -219,6 +221,8 @@ enum TimerIdInner {
 
 /// Handle a generic timer event.
 pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TimerId) {
+    trace!("handle_timeout: dispatching timerid: {:?}", id);
+
     match id {
         TimerId(TimerIdInner::DeviceLayer(x)) => {
             device::handle_timeout(ctx, x);

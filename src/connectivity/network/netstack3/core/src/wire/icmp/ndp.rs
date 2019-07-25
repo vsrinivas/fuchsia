@@ -66,6 +66,11 @@ impl RouterAdvertisement {
             retransmit_timer: U32::new(retransmit_timer),
         }
     }
+
+    pub(crate) fn current_hop_limit(&self) -> u8 {
+        self.current_hop_limit
+    }
+
     pub(crate) fn router_lifetime(&self) -> u16 {
         self.router_lifetime.get()
     }
