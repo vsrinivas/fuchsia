@@ -41,7 +41,7 @@ use crate::ip::reassembly::{
     FragmentProcessingState, IpLayerFragmentCache,
 };
 use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
-use crate::wire::ipv4::Ipv4PacketBuilder;
+use crate::wire::ipv4::{Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions};
 use crate::{BufferDispatcher, Context, EventDispatcher, TimerId, TimerIdInner};
 use icmp::{
     send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, should_send_icmpv4_error,
@@ -1099,10 +1099,16 @@ pub(crate) fn send_igmp_packet<B: BufferMut, D: BufferDispatcher<B>, S>(
 where
     S: Serializer<Buffer = B>,
 {
-    let mut builder = Ipv4PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Igmp);
-    // TODO: IGMP packets need RouterAlert option, we should add this
-    // option once we can serialize options in Ipv4 packets.
-    let body = body.encapsulate(builder);
+    let ipv4 = Ipv4PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Igmp);
+    let with_options = match Ipv4PacketBuilderWithOptions::new(
+        ipv4,
+        &[Ipv4Option { copied: true, data: crate::ip::Ipv4OptionData::RouterAlert { data: 0 } }],
+    ) {
+        None => return Err(body),
+        Some(builder) => builder,
+    };
+
+    let body = body.encapsulate(with_options);
     crate::device::send_ip_frame(ctx, device, dst_ip, body).map_err(|ser| ser.into_inner())
 }
 

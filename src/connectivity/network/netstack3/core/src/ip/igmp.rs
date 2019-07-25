@@ -556,9 +556,11 @@ mod tests {
         (ctx, dev_id)
     }
 
-    fn ensure_ttl(ctx: &mut Context<DummyEventDispatcher>) {
+    fn ensure_ttl_ihl_rtr(ctx: &mut Context<DummyEventDispatcher>) {
         for (_, frame) in ctx.dispatcher.frames_sent() {
             assert_eq!(frame[22], 1); // TTL,
+            assert_eq!(&frame[34..38], &[148, 4, 0, 0]); // RTR
+            assert_eq!(frame[14], 0x46); // IHL
         }
     }
 
@@ -606,7 +608,7 @@ mod tests {
         for (_, frame) in ctx.dispatcher.frames_sent() {
             assert_eq!(frame[0..6], mac[..]);
         }
-        ensure_ttl(&mut ctx);
+        ensure_ttl_ihl_rtr(&mut ctx);
     }
 
     #[test]
@@ -647,7 +649,7 @@ mod tests {
         // the last frame being sent should be a V1 report.
         let (_, frame) = ctx.dispatcher.frames_sent().last().unwrap();
         // 34 and 0x12 are hacky but they can quickly tell it is a V1 report.
-        assert_eq!(frame[34], 0x12);
+        assert_eq!(frame[38], 0x12);
 
         assert!(testutil::trigger_next_timer(&mut ctx));
         // After the second timer, we should reset our flag for v1 routers.
@@ -667,8 +669,8 @@ mod tests {
         assert!(testutil::trigger_next_timer(&mut ctx));
         assert_eq!(ctx.dispatcher.frames_sent().len(), 3);
         // Now we should get V2 report
-        assert_eq!(ctx.dispatcher.frames_sent().last().unwrap().1[34], 0x16);
-        ensure_ttl(&mut ctx);
+        assert_eq!(ctx.dispatcher.frames_sent().last().unwrap().1[38], 0x16);
+        ensure_ttl_ihl_rtr(&mut ctx);
     }
 
     // TODO(zeling): add this test back once we can have a reliable and
@@ -694,8 +696,8 @@ mod tests {
         assert!(ctx.dispatcher.now() - start <= duration);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
         // make sure it is a V2 report
-        assert_eq!(ctx.dispatcher.frames_sent().last().unwrap().1[34], 0x16);
-        ensure_ttl(&mut ctx);
+        assert_eq!(ctx.dispatcher.frames_sent().last().unwrap().1[38], 0x16);
+        ensure_ttl_ihl_rtr(&mut ctx);
     }
 
     #[test]
@@ -715,13 +717,13 @@ mod tests {
         let leave_frame = &ctx.dispatcher.frames_sent().last().unwrap().1;
 
         // make sure it is a leave message
-        assert_eq!(leave_frame[34], 0x17);
+        assert_eq!(leave_frame[38], 0x17);
         // and the destination is ALL-ROUTERS (224.0.0.2)
         assert_eq!(leave_frame[30], 224);
         assert_eq!(leave_frame[31], 0);
         assert_eq!(leave_frame[32], 0);
         assert_eq!(leave_frame[33], 2);
-        ensure_ttl(&mut ctx);
+        ensure_ttl_ihl_rtr(&mut ctx);
     }
 
     #[test]
@@ -737,7 +739,7 @@ mod tests {
         assert!(igmp_leave_group(&mut ctx, dev_id, MulticastAddr::new(GROUP_ADDR).unwrap()).is_ok());
         // A leave message is not sent
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
-        ensure_ttl(&mut ctx);
+        ensure_ttl_ihl_rtr(&mut ctx);
     }
 
     #[test]
@@ -758,6 +760,6 @@ mod tests {
         assert!(trigger_next_timer(&mut ctx));
         // Two new reports should be sent
         assert_eq!(ctx.dispatcher.frames_sent().len(), 6);
-        ensure_ttl(&mut ctx);
+        ensure_ttl_ihl_rtr(&mut ctx);
     }
 }

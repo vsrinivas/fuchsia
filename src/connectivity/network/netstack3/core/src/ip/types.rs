@@ -312,6 +312,7 @@ impl IpPacketBuilder<Ipv6> for Ipv6PacketBuilder {
 ///
 /// [Wikipedia]: https://en.wikipedia.org/wiki/IPv4#Options [RFC 791]:
 /// https://tools.ietf.org/html/rfc791#page-15
+#[derive(PartialEq, Eq, Debug)]
 pub(crate) struct Ipv4Option<'a> {
     /// Whether this option needs to be copied into all fragments of a
     /// fragmented packet.
@@ -325,6 +326,7 @@ pub(crate) struct Ipv4Option<'a> {
 /// `Ipv4OptionData` represents the variable-length data field of an IPv4 header
 /// option.
 #[allow(missing_docs)]
+#[derive(PartialEq, Eq, Debug)]
 pub(crate) enum Ipv4OptionData<'a> {
     // The maximum header length is 60 bytes, and the fixed-length header is 20
     // bytes, so there are 40 bytes for the options. That leaves a maximum
@@ -336,7 +338,18 @@ pub(crate) enum Ipv4OptionData<'a> {
     //  forwarding.
     //
     //  `data`'s length is in the range [0, 38].
-    Unrecognized { kind: u8, len: u8, data: &'a [u8] },
+    Unrecognized {
+        kind: u8,
+        len: u8,
+        data: &'a [u8],
+    },
+    /// Used to tell routers to inspect the packet.
+    ///
+    /// Used by IGMP host messages per [RFC 2236 section 2].
+    /// [RFC 2236 section 2]: https://tools.ietf.org/html/rfc2236#section-2
+    RouterAlert {
+        data: u16,
+    },
 }
 
 #[cfg(test)]

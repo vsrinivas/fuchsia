@@ -481,3 +481,45 @@ pub(crate) mod mld_router_done {
     pub(crate) const DST_IP: Ipv6Addr =
         Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
 }
+
+pub(crate) mod igmpv2_membership {
+    use net_types::ip::Ipv4Addr;
+
+    // Copied and modified from https://www.cloudshark.org/captures/7d789d000734
+    pub(crate) mod report {
+        use super::*;
+
+        pub(crate) const IP_PACKET_BYTES: &[u8] = &[
+            0x46, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x72, 0xc8, 0xc0, 0xa8,
+            0x01, 0x65, 0xef, 0x01, 0x01, 0x01, 0x94, 0x04, 0x00, 0x00, 0x16, 0x00, 0xf9, 0xfc,
+            0xef, 0x01, 0x01, 0x01,
+        ];
+        pub(crate) const SOURCE: Ipv4Addr = Ipv4Addr::new([192, 168, 1, 101]);
+        pub(crate) const MULTICAST: Ipv4Addr = Ipv4Addr::new([239, 1, 1, 1]);
+    }
+
+    pub(crate) mod query {
+        use super::*;
+
+        pub(crate) const IP_PACKET_BYTES: &[u8] = &[
+            0x46, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x73, 0x2c, 0xc0, 0xa8,
+            0x01, 0x01, 0xef, 0x01, 0x01, 0x01, 0x94, 0x04, 0x00, 0x00, 0x11, 0x0a, 0xfe, 0xf2,
+            0xef, 0x01, 0x01, 0x01,
+        ];
+        pub(crate) const SOURCE: Ipv4Addr = Ipv4Addr::new([192, 168, 1, 1]);
+        pub(crate) const MULTICAST: Ipv4Addr = Ipv4Addr::new([239, 1, 1, 1]);
+    }
+
+    pub(crate) mod leave {
+        use super::*;
+
+        pub(crate) const IP_PACKET_BYTES: &[u8] = &[
+            0x46, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x82, 0xc7, 0xc0, 0xa8,
+            0x01, 0x66, 0xe0, 0x00, 0x00, 0x02, 0x94, 0x04, 0x00, 0x00, 0x17, 0x00, 0xf8, 0xfc,
+            0xef, 0x01, 0x01, 0x01,
+        ];
+        pub(crate) const SOURCE: Ipv4Addr = Ipv4Addr::new([192, 168, 1, 102]);
+        pub(crate) const DESTINATION: Ipv4Addr = Ipv4Addr::new([224, 0, 0, 2]);
+        pub(crate) const MULTICAST: Ipv4Addr = Ipv4Addr::new([239, 1, 1, 1]);
+    }
+}

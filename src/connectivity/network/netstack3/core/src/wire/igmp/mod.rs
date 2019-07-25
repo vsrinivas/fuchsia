@@ -342,3 +342,127 @@ pub(crate) fn peek_message_type<MessageType: TryFrom<u8>>(
     })?;
     Ok((msg_type, long_message))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ip::{IpProto, Ipv4Option, Ipv4OptionData};
+    use crate::packet::{ParseBuffer, Serializer};
+    use crate::wire::igmp::messages::*;
+    use crate::wire::ipv4::{
+        Ipv4Header, Ipv4Packet, Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions,
+    };
+    use std::fmt::Debug;
+
+    fn serialize_to_bytes<B: ByteSlice + Debug, M: MessageType<B, VariableBody = ()> + Debug>(
+        igmp: &IgmpMessage<B, M>,
+        src_ip: Ipv4Addr,
+        dst_ip: Ipv4Addr,
+    ) -> Vec<u8> {
+        let mut ipv4 = Ipv4PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Igmp);
+        let mut with_options = Ipv4PacketBuilderWithOptions::new(
+            ipv4,
+            &[Ipv4Option { copied: true, data: Ipv4OptionData::RouterAlert { data: 0 } }],
+        )
+        .unwrap();
+
+        igmp.builder()
+            .into_serializer()
+            .encapsulate(with_options)
+            .serialize_vec_outer()
+            .unwrap()
+            .as_ref()
+            .to_vec()
+    }
+
+    fn test_parse_and_serialize<
+        M: for<'a> MessageType<&'a [u8], VariableBody = ()> + Debug,
+        F: for<'a> FnOnce(&Ipv4Packet<&'a [u8]>),
+        G: for<'a> FnOnce(&IgmpMessage<&'a [u8], M>),
+    >(
+        mut pkt: &[u8],
+        check_ip: F,
+        check_igmp: G,
+    ) {
+        let orig_req = &pkt[..];
+
+        let ip = pkt.parse_with::<_, Ipv4Packet<_>>(()).unwrap();
+        let src_ip = ip.src_ip();
+        let dst_ip = ip.dst_ip();
+        check_ip(&ip);
+        let mut req: &[u8] = pkt;
+        let igmp = req.parse_with::<_, IgmpMessage<_, M>>(()).unwrap();
+        check_igmp(&igmp);
+
+        let data = serialize_to_bytes(&igmp, src_ip, dst_ip);
+        assert_eq!(&data[..], orig_req);
+    }
+
+    // The following tests are basically still testing serialization and
+    // parsing of IGMP messages. Besides IGMP messages themselves, the
+    // following tests also test whether the RTRALRT option in the enclosing
+    // IPv4 packet can be parsed/serialized correctly.
+
+    #[test]
+    fn test_parse_and_serialize_igmpv2_report_with_options() {
+        use crate::wire::testdata::igmpv2_membership::report::*;
+        test_parse_and_serialize::<IgmpMembershipReportV2, _, _>(
+            IP_PACKET_BYTES,
+            |ip| {
+                assert_eq!(ip.ttl(), 1);
+                assert_eq!(ip.iter_options().count(), 1);
+                let option = ip.iter_options().nth(0).unwrap();
+                assert!(option.copied);
+                assert_eq!(option.data, Ipv4OptionData::RouterAlert { data: 0 });
+                assert_eq!(ip.header_len(), 24);
+                assert_eq!(ip.src_ip(), SOURCE);
+                assert_eq!(ip.dst_ip(), MULTICAST);
+            },
+            |igmp| {
+                assert_eq!(*igmp.header, MULTICAST);
+            },
+        )
+    }
+
+    #[test]
+    fn test_parse_and_serialize_igmpv2_query_with_options() {
+        use crate::wire::testdata::igmpv2_membership::query::*;
+        test_parse_and_serialize::<IgmpMembershipQueryV2, _, _>(
+            IP_PACKET_BYTES,
+            |ip| {
+                assert_eq!(ip.ttl(), 1);
+                assert_eq!(ip.iter_options().count(), 1);
+                let option = ip.iter_options().nth(0).unwrap();
+                assert!(option.copied);
+                assert_eq!(option.data, Ipv4OptionData::RouterAlert { data: 0 });
+                assert_eq!(ip.header_len(), 24);
+                assert_eq!(ip.src_ip(), SOURCE);
+                assert_eq!(ip.dst_ip(), MULTICAST);
+            },
+            |igmp| {
+                assert_eq!(*igmp.header, MULTICAST);
+            },
+        )
+    }
+
+    #[test]
+    fn test_parse_and_serialize_igmpv2_leave_with_options() {
+        use crate::wire::testdata::igmpv2_membership::leave::*;
+        test_parse_and_serialize::<IgmpLeaveGroup, _, _>(
+            IP_PACKET_BYTES,
+            |ip| {
+                assert_eq!(ip.ttl(), 1);
+                assert_eq!(ip.iter_options().count(), 1);
+                let option = ip.iter_options().nth(0).unwrap();
+                assert!(option.copied);
+                assert_eq!(option.data, Ipv4OptionData::RouterAlert { data: 0 });
+                assert_eq!(ip.header_len(), 24);
+                assert_eq!(ip.src_ip(), SOURCE);
+                assert_eq!(ip.dst_ip(), DESTINATION);
+            },
+            |igmp| {
+                assert_eq!(*igmp.header, MULTICAST);
+            },
+        )
+    }
+}

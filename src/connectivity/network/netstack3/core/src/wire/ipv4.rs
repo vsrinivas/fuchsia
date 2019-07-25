@@ -4,6 +4,7 @@
 
 //! Parsing and serialization of IPv4 packets.
 
+use std::convert::TryFrom;
 use std::fmt::{self, Debug, Formatter};
 use std::ops::Range;
 
@@ -19,7 +20,7 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 use crate::error::{IpParseError, IpParseResult, ParseError};
 use crate::ip::reassembly::FragmentablePacket;
 use crate::ip::{IpProto, Ipv4Option};
-use crate::wire::records::options::{Options, OptionsRaw};
+use crate::wire::records::options::OptionsRaw;
 use crate::wire::U16;
 use crate::wire::{FromRaw, MaybeParsed};
 
@@ -32,6 +33,9 @@ pub(crate) const IPV4_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
 
 /// The maximum length of an IPv4 header.
 pub(crate) const IPV4_MAX_HDR_LEN: usize = 60;
+
+/// The maximum length for options in an IPv4 header.
+pub(crate) const MAX_OPTIONS_LEN: usize = IPV4_MAX_HDR_LEN - HDR_PREFIX_LEN;
 
 /// The range of bytes within an IPv4 header buffer that the
 /// total length field uses.
@@ -157,7 +161,7 @@ pub(crate) trait Ipv4Header {
 /// valid.
 pub(crate) struct Ipv4Packet<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
-    options: Options<B, Ipv4OptionsImpl>,
+    options: Options<B>,
     body: B,
 }
 
@@ -229,6 +233,15 @@ impl<B: ByteSlice> FromRaw<Ipv4PacketRaw<B>, ()> for Ipv4Packet<B> {
     }
 }
 
+fn compute_header_checksum(hdr_prefix: &[u8], options: &[u8]) -> u16 {
+    let mut c = Checksum::new();
+    // the header checksum is at bytes 10 and 11
+    c.add_bytes(&hdr_prefix[..IPV4_CHECKSUM_BYTE_RANGE.start]);
+    c.add_bytes(&hdr_prefix[IPV4_CHECKSUM_BYTE_RANGE.end..]);
+    c.add_bytes(options);
+    c.checksum()
+}
+
 impl<B: ByteSlice> Ipv4Packet<B> {
     /// Iterate over the IPv4 header options.
     pub(crate) fn iter_options<'a>(&'a self) -> impl 'a + Iterator<Item = Ipv4Option> {
@@ -237,12 +250,7 @@ impl<B: ByteSlice> Ipv4Packet<B> {
 
     // Compute the header checksum, skipping the checksum field itself.
     fn compute_header_checksum(&self) -> u16 {
-        let mut c = Checksum::new();
-        // the header checksum is at bytes 10 and 11
-        c.add_bytes(&self.hdr_prefix.bytes()[..IPV4_CHECKSUM_BYTE_RANGE.start]);
-        c.add_bytes(&self.hdr_prefix.bytes()[IPV4_CHECKSUM_BYTE_RANGE.end..]);
-        c.add_bytes(self.options.bytes());
-        c.checksum()
+        compute_header_checksum(self.hdr_prefix.bytes(), self.options.bytes())
     }
 
     /// The packet body.
@@ -251,7 +259,7 @@ impl<B: ByteSlice> Ipv4Packet<B> {
     }
 
     /// The size of the header prefix and options.
-    fn header_len(&self) -> usize {
+    pub(crate) fn header_len(&self) -> usize {
         self.hdr_prefix.bytes().len() + self.options.bytes().len()
     }
 
@@ -408,6 +416,67 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4PacketRaw<B> {
     }
 }
 
+pub(crate) type Options<B> = crate::wire::records::options::Options<B, Ipv4OptionsImpl>;
+pub(crate) type OptionsSerializer<'a, I> =
+    crate::wire::records::options::OptionsSerializer<'a, Ipv4OptionsImpl, Ipv4Option<'a>, I>;
+
+/// A PacketBuilder for Ipv4 Packets but with options.
+#[derive(Debug)]
+pub(crate) struct Ipv4PacketBuilderWithOptions<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> {
+    prefix_builder: Ipv4PacketBuilder,
+    options: OptionsSerializer<'a, I>,
+}
+
+impl<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> Ipv4PacketBuilderWithOptions<'a, I> {
+    pub(crate) fn new<T: IntoIterator<Item = &'a Ipv4Option<'a>, IntoIter = I>>(
+        prefix_builder: Ipv4PacketBuilder,
+        options: T,
+    ) -> Option<Ipv4PacketBuilderWithOptions<'a, I>> {
+        let options = OptionsSerializer::new(options.into_iter());
+        // The maximum header length for IPv4 packet is 60 bytes, minus the fixed 40 bytes,
+        // we only have 40 bytes for options.
+        if options.records_bytes_len() > MAX_OPTIONS_LEN {
+            return None;
+        }
+        Some(Ipv4PacketBuilderWithOptions { prefix_builder, options })
+    }
+
+    fn aligned_options_len(&self) -> usize {
+        let raw_len = self.options.records_bytes_len();
+        // align to the next 4-byte boundary.
+        next_multiple_of_four(raw_len)
+    }
+}
+
+fn next_multiple_of_four(x: usize) -> usize {
+    (x + 3) & !3
+}
+
+impl<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> PacketBuilder
+    for Ipv4PacketBuilderWithOptions<'a, I>
+{
+    fn constraints(&self) -> PacketConstraints {
+        let header_len = IPV4_MIN_HDR_LEN + self.aligned_options_len();
+        assert_eq!(header_len % 4, 0);
+        PacketConstraints::new(header_len, 0, 0, (1 << 16) - 1 - header_len)
+    }
+
+    fn serialize(&self, buffer: &mut SerializeBuffer) {
+        let (mut header, body, _) = buffer.parts();
+        // implements BufferViewMut, giving us take_obj_xxx_zero methods
+        let mut header = &mut header;
+
+        // SECURITY: Use _zero constructor to ensure we zero memory to prevent
+        // leaking information from packets previously stored in this buffer.
+        let mut hdr_prefix =
+            header.take_obj_front_zero::<HeaderPrefix>().expect("too few bytes for IPv4 header");
+        let opt_len = self.aligned_options_len();
+        let options = header.take_back_zero(opt_len).expect("too few bytes for Ipv4 options");
+        self.options.serialize_records(options);
+        self.prefix_builder.assemble(&mut hdr_prefix, options, body.len());
+    }
+}
+
 /// A builder for IPv4 packets.
 #[derive(Debug)]
 pub(crate) struct Ipv4PacketBuilder {
@@ -497,6 +566,41 @@ impl Ipv4PacketBuilder {
     }
 }
 
+impl Ipv4PacketBuilder {
+    /// Fill in the `HeaderPrefix` part according to the given `options` and `body`.
+    fn assemble<B: ByteSliceMut>(
+        &self,
+        hdr_prefix: &mut LayoutVerified<B, HeaderPrefix>,
+        options: &[u8],
+        body_len: usize,
+    ) {
+        let header_len = hdr_prefix.bytes().len() + options.len();
+        let total_len = header_len + body_len;
+        assert_eq!(header_len % 4, 0);
+        let ihl: u8 = u8::try_from(header_len / 4).expect("Header too large");
+        hdr_prefix.version_ihl = (4u8 << 4) | ihl;
+        hdr_prefix.dscp_ecn = (self.dscp << 2) | self.ecn;
+        // The caller promises to supply a body whose length does not exceed
+        // max_body_len. Doing this as a debug_assert (rather than an assert) is
+        // fine because, with debug assertions disabled, we'll just write an
+        // incorrect header value, which is acceptable if the caller has
+        // violated their contract.
+        debug_assert!(total_len <= std::u16::MAX as usize);
+        hdr_prefix.total_len = U16::new(total_len as u16);
+        hdr_prefix.id = U16::new(self.id);
+        NetworkEndian::write_u16(
+            &mut hdr_prefix.flags_frag_off,
+            ((u16::from(self.flags)) << 13) | self.frag_off,
+        );
+        hdr_prefix.ttl = self.ttl;
+        hdr_prefix.proto = self.proto;
+        hdr_prefix.src_ip = self.src_ip;
+        hdr_prefix.dst_ip = self.dst_ip;
+        let checksum = compute_header_checksum(hdr_prefix.bytes(), options);
+        hdr_prefix.hdr_checksum = U16::new(checksum);
+    }
+}
+
 impl PacketBuilder for Ipv4PacketBuilder {
     fn constraints(&self) -> PacketConstraints {
         PacketConstraints::new(IPV4_MIN_HDR_LEN, 0, 0, (1 << 16) - 1 - IPV4_MIN_HDR_LEN)
@@ -509,35 +613,9 @@ impl PacketBuilder for Ipv4PacketBuilder {
 
         // SECURITY: Use _zero constructor to ensure we zero memory to prevent
         // leaking information from packets previously stored in this buffer.
-        let hdr_prefix =
+        let mut hdr_prefix =
             header.take_obj_front_zero::<HeaderPrefix>().expect("too few bytes for IPv4 header");
-        // create a 0-byte slice for the options since we don't support
-        // serializing options yet (NET-955)
-        let options =
-            Options::parse(&mut [][..]).expect("parsing an empty options slice should not fail");
-        let mut packet = Ipv4Packet { hdr_prefix, options, body };
-
-        packet.hdr_prefix.version_ihl = (4u8 << 4) | 5;
-        packet.hdr_prefix.dscp_ecn = (self.dscp << 2) | self.ecn;
-        // The caller promises to supply a body whose length does not exceed
-        // max_body_len. Doing this as a debug_assert (rather than an assert) is
-        // fine because, with debug assertions disabled, we'll just write an
-        // incorrect header value, which is acceptable if the caller has
-        // violated their contract.
-        debug_assert!(packet.total_packet_len() <= std::u16::MAX as usize);
-        let total_len = packet.total_packet_len() as u16;
-        packet.hdr_prefix.total_len = U16::new(total_len);
-        packet.hdr_prefix.id = U16::new(self.id);
-        NetworkEndian::write_u16(
-            &mut packet.hdr_prefix.flags_frag_off,
-            ((u16::from(self.flags)) << 13) | self.frag_off,
-        );
-        packet.hdr_prefix.ttl = self.ttl;
-        packet.hdr_prefix.proto = self.proto;
-        packet.hdr_prefix.src_ip = self.src_ip;
-        packet.hdr_prefix.dst_ip = self.dst_ip;
-        let checksum = packet.compute_header_checksum();
-        packet.hdr_prefix.hdr_checksum = U16::new(checksum);
+        self.assemble(&mut hdr_prefix, &[][..], body.len());
     }
 }
 
@@ -545,13 +623,19 @@ impl PacketBuilder for Ipv4PacketBuilder {
 const DF_FLAG_OFFSET: u32 = 1;
 const MF_FLAG_OFFSET: u32 = 0;
 
-mod options {
+pub(crate) mod options {
+    use byteorder::{ByteOrder, NetworkEndian, WriteBytesExt};
+
     use crate::ip::{Ipv4Option, Ipv4OptionData};
-    use crate::wire::records::options::{OptionsImpl, OptionsImplLayout};
+    use crate::wire::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;
+    const OPTION_KIND_RTRALRT: u8 = 148;
 
+    const OPTION_RTRALRT_LEN: usize = 2;
+
+    #[derive(Debug)]
     pub(crate) struct Ipv4OptionsImpl;
 
     impl OptionsImplLayout for Ipv4OptionsImpl {
@@ -566,6 +650,18 @@ mod options {
             match kind {
                 self::OPTION_KIND_EOL | self::OPTION_KIND_NOP => {
                     unreachable!("wire::records::options::Options promises to handle EOL and NOP")
+                }
+                self::OPTION_KIND_RTRALRT => {
+                    if data.len() == OPTION_RTRALRT_LEN {
+                        Ok(Some(Ipv4Option {
+                            copied,
+                            data: Ipv4OptionData::RouterAlert {
+                                data: NetworkEndian::read_u16(data),
+                            },
+                        }))
+                    } else {
+                        Err(())
+                    }
                 }
                 kind => {
                     if data.len() > 38 {
@@ -582,6 +678,61 @@ mod options {
                     }
                 }
             }
+        }
+    }
+
+    impl<'a> OptionsSerializerImpl<'a> for Ipv4OptionsImpl {
+        type Option = Ipv4Option<'a>;
+
+        fn get_option_length(option: &Self::Option) -> usize {
+            match option.data {
+                Ipv4OptionData::RouterAlert { .. } => OPTION_RTRALRT_LEN,
+                Ipv4OptionData::Unrecognized { len, .. } => len as usize,
+            }
+        }
+
+        fn get_option_kind(option: &Self::Option) -> u8 {
+            let number = match option.data {
+                Ipv4OptionData::RouterAlert { .. } => OPTION_KIND_RTRALRT,
+                Ipv4OptionData::Unrecognized { kind, .. } => kind,
+            };
+            number | ((option.copied as u8) << 7)
+        }
+
+        fn serialize(mut buffer: &mut [u8], option: &Self::Option) {
+            match option.data {
+                Ipv4OptionData::Unrecognized { data, .. } => buffer.copy_from_slice(data),
+                Ipv4OptionData::RouterAlert { data } => {
+                    buffer.write_u16::<NetworkEndian>(data).unwrap()
+                }
+            };
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+        use crate::wire::records::options::Options;
+        use crate::wire::records::RecordsSerializerImpl;
+
+        #[test]
+        fn test_serialize_router_alert() {
+            let mut buffer = [0u8; 4];
+            let option = Ipv4Option { copied: true, data: Ipv4OptionData::RouterAlert { data: 0 } };
+            <Ipv4OptionsImpl as RecordsSerializerImpl>::serialize(&mut buffer, &option);
+            assert_eq!(buffer[0], 148);
+            assert_eq!(buffer[1], 4);
+            assert_eq!(buffer[2], 0);
+            assert_eq!(buffer[3], 0);
+        }
+
+        #[test]
+        fn test_parse_router_alert() {
+            let mut buffer: Vec<u8> = vec![148, 4, 0, 0];
+            let options = Options::<_, Ipv4OptionsImpl>::parse(buffer.as_mut()).unwrap();
+            let rtralt = options.iter().nth(0).unwrap();
+            assert!(rtralt.copied);
+            assert_eq!(rtralt.data, Ipv4OptionData::RouterAlert { data: 0 });
         }
     }
 }
@@ -872,5 +1023,19 @@ mod tests {
         let bytes = &hdr_prefix_to_bytes(hdr_prefix);
         let mut buf = &bytes[0..10];
         assert!(buf.parse::<Ipv4PacketRaw<_>>().is_err());
+    }
+
+    #[test]
+    fn test_next_multiple_of_four() {
+        for x in 0usize..=(std::u16::MAX - 3) as usize {
+            let y = next_multiple_of_four(x);
+            assert_eq!(y % 4, 0);
+            assert!(y >= x);
+            if x % 4 == 0 {
+                assert_eq!(x, y);
+            } else {
+                assert_eq!(x + (4 - x % 4), y);
+            }
+        }
     }
 }

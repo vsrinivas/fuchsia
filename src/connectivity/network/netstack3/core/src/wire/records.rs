@@ -423,7 +423,7 @@ where
 
     /// Returns the total length, in bytes, of the serialized records contained
     /// within the `RecordsSerializer`.
-    fn records_bytes_len(&self) -> usize {
+    pub(crate) fn records_bytes_len(&self) -> usize {
         self.records.clone().map(|r| S::record_length(r)).sum()
     }
 
@@ -435,7 +435,7 @@ where
     /// `serialize_records` expects that `buffer` has enough bytes to serialize
     /// the contained records (as obtained from `records_bytes_len`, otherwise
     /// it's considered a violation of the API contract and the call will panic.
-    fn serialize_records(&self, buffer: &mut [u8]) {
+    pub(crate) fn serialize_records(&self, buffer: &mut [u8]) {
         let mut b = &mut &mut buffer[..];
         for r in self.records.clone() {
             // SECURITY: Take a zeroed buffer from b to prevent leaking
