@@ -16,6 +16,14 @@ group("all") {
   ]
 }
 
+group("termina_guest") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/prod:guest_runner",
+    "//src/virtualization/packages/termina_guest",
+  ]
+}
+
 group("network_settings_server") {
   testonly = true
   public_deps = [

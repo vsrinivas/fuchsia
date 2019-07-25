@@ -19,27 +19,22 @@ static constexpr char kVirtioRngUtil[] = "virtio_rng_test_util";
 static constexpr size_t kVirtioConsoleMessageCount = 100;
 static constexpr size_t kVirtioBalloonPageCount = 256;
 
-class SingleCpuZirconEnclosedGuest : public ZirconEnclosedGuest {
+template <typename EnclosedGuestImpl>
+class SingleCpuEnclosedGuest : public EnclosedGuestImpl {
   zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
-    launch_info->url = kZirconGuestUrl;
-    launch_info->args.push_back("--virtio-gpu=false");
-    launch_info->args.push_back("--cpus=1");
-    launch_info->args.push_back("--cmdline-add=kernel.serial=none");
-    return ZX_OK;
-  }
-};
-
-class SingleCpuDebianEnclosedGuest : public DebianEnclosedGuest {
-  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
-    launch_info->url = kDebianGuestUrl;
+    zx_status_t status = EnclosedGuestImpl::LaunchInfo(launch_info);
+    if (status != ZX_OK) {
+      return status;
+    }
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
     return ZX_OK;
   }
 };
 
-using GuestTypes = ::testing::Types<ZirconEnclosedGuest, SingleCpuZirconEnclosedGuest,
-                                    DebianEnclosedGuest, SingleCpuDebianEnclosedGuest>;
+using GuestTypes =
+    ::testing::Types<ZirconEnclosedGuest, SingleCpuEnclosedGuest<ZirconEnclosedGuest>,
+                     DebianEnclosedGuest, SingleCpuEnclosedGuest<DebianEnclosedGuest>>;
 TYPED_TEST_SUITE(GuestTest, GuestTypes);
 
 TYPED_TEST(GuestTest, LaunchGuest) {

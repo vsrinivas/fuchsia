@@ -182,7 +182,6 @@ template("guest_prebuilt") {
   assert(defined(invoker.source), "")
   assert(defined(invoker.output), "")
   action(target_name) {
-    visibility = [ ":*" ]
     script = "//src/virtualization/packages/check_image.sh"
 
     # If the input file exists, we want to copy it to the output.

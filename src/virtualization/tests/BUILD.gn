@@ -12,6 +12,7 @@ guest_packages = [
   "//garnet/packages/prod:guest_runner",
   "//src/virtualization/bin/guest_manager",
   "//src/virtualization/packages/debian_guest",
+  "//src/virtualization/packages/termina_guest",
   "//src/virtualization/packages/zircon_guest",
 ]
 
@@ -99,6 +100,7 @@ executable("bin") {
 
   deps = [
     ":guest_console",
+    "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
@@ -112,6 +114,9 @@ executable("bin") {
     "//src/lib/inet",
     "//src/virtualization/bin/vmm/device",
     "//src/virtualization/bin/vmm/device:qcow_test_data",
+    "//src/virtualization/lib/grpc",
+    "//src/virtualization/lib/vsh:client",
+    "//src/virtualization/packages/biscotti_guest/third_party/protos:vm_cc_proto",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
@@ -131,9 +136,20 @@ unittest_package("guest_unit_tests") {
   ]
 }
 
+_linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
+
 test_package("guest_integration_tests") {
   deps = [
     ":bin",
+    _linux_tests_label,
+  ]
+
+  resources = [
+    {
+      path = get_label_info(_linux_tests_label, "target_out_dir") +
+             "/debian/tests.img"
+      dest = "linux_tests.img"
+    },
   ]
 
   # Integration tests rely on launching Debian, Zircon and the guest_manager.
