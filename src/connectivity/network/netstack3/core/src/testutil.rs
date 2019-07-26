@@ -862,6 +862,9 @@ impl DummyEventDispatcher {
 
     /// Get an ordered list of all scheduled timer events
     pub(crate) fn timer_events(&self) -> impl Iterator<Item = (&'_ DummyInstant, &'_ TimerId)> {
+        // TODO(joshlf): `iter` doesn't actually guarantee an ordering, so this
+        // is a bug. We plan on removing this soon once we migrate to using the
+        // utilities in the `context` module, so this is left as-is.
         self.timer_events.iter().map(|t| (&t.0, &t.1))
     }
 
