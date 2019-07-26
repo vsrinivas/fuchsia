@@ -41,7 +41,12 @@ type FailsToDecode struct {
 // - `[]interface{}` for slices of values
 type Value interface{}
 
+type Field struct {
+	Name  string
+	Value Value
+}
+
 type Object struct {
 	Name   string
-	Fields map[string]Value
+	Fields []Field
 }

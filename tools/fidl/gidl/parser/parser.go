@@ -369,10 +369,7 @@ func (p *Parser) parseObject(name string) (interface{}, error) {
 		if tok, ok := p.consumeToken(tComma); !ok {
 			return nil, p.failExpectedToken(tComma, tok)
 		}
-		if obj.Fields == nil {
-			obj.Fields = make(map[string]ir.Value)
-		}
-		obj.Fields[tokFieldName.value] = val
+		obj.Fields = append(obj.Fields, ir.Field{Name: tokFieldName.value, Value: val})
 	}
 	if tok, ok := p.consumeToken(tRacco); !ok {
 		return nil, p.failExpectedToken(tRacco, tok)

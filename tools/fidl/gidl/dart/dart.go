@@ -113,19 +113,19 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 
 func onObject(value gidlir.Object, decl gidlmixer.Declaration) string {
 	var args []string
-	for key, field := range value.Fields {
-		fieldDecl, _ := decl.ForKey(key)
-		val := visit(field, fieldDecl)
-		args = append(args, fmt.Sprintf("%s: %s", snakeCaseToLowerCamelCase(key), val))
+	for _, field := range value.Fields {
+		fieldDecl, _ := decl.ForKey(field.Name)
+		val := visit(field.Value, fieldDecl)
+		args = append(args, fmt.Sprintf("%s: %s", snakeCaseToLowerCamelCase(field.Name), val))
 	}
 	return fmt.Sprintf("%s(%s)", value.Name, strings.Join(args, ", "))
 }
 
 func onUnion(value gidlir.Object, decl gidlmixer.Declaration) string {
-	for key, field := range value.Fields {
-		fieldDecl, _ := decl.ForKey(key)
-		val := visit(field, fieldDecl)
-		return fmt.Sprintf("%s.with%s(%s)", value.Name, strings.Title(key), val)
+	for _, field := range value.Fields {
+		fieldDecl, _ := decl.ForKey(field.Name)
+		val := visit(field.Value, fieldDecl)
+		return fmt.Sprintf("%s.with%s(%s)", value.Name, strings.Title(field.Name), val)
 	}
 	panic("unions must have a value set")
 }

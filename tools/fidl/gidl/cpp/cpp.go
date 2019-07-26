@@ -188,13 +188,13 @@ func (b *cppValueBuilder) onObject(value gidlir.Object, decl gidlmixer.Declarati
 			"conformance::%s %s;\n", value.Name, containerVar))
 	}
 
-	for key, field := range value.Fields {
+	for _, field := range value.Fields {
 		b.Builder.WriteString("\n")
 
-		fieldDecl, _ := decl.ForKey(key)
+		fieldDecl, _ := decl.ForKey(field.Name)
 
-		b.onObjectField(decl, key, func() {
-			gidlmixer.Visit(b, field, fieldDecl)
+		b.onObjectField(decl, field.Name, func() {
+			gidlmixer.Visit(b, field.Value, fieldDecl)
 		})
 
 		accessor := "."
@@ -205,10 +205,10 @@ func (b *cppValueBuilder) onObject(value gidlir.Object, decl gidlmixer.Declarati
 		switch decl.(type) {
 		case *gidlmixer.StructDecl:
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s%s%s = std::move(%s);\n", containerVar, accessor, key, b.lastVar))
+				"%s%s%s = std::move(%s);\n", containerVar, accessor, field.Name, b.lastVar))
 		default:
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s%sset_%s(std::move(%s));\n", containerVar, accessor, key, b.lastVar))
+				"%s%sset_%s(std::move(%s));\n", containerVar, accessor, field.Name, b.lastVar))
 		}
 	}
 	b.lastVar = containerVar

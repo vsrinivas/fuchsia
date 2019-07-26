@@ -32,8 +32,11 @@ func TestParseValue(t *testing.T) {
 		},
 		`SomeObject { the_field: 5, }`: ir.Object{
 			Name: "SomeObject",
-			Fields: map[string]ir.Value{
-				"the_field": uint64(5),
+			Fields: []ir.Field{
+				{
+					Name:  "the_field",
+					Value: uint64(5),
+				},
 			},
 		},
 		`SomeObject {
@@ -43,12 +46,21 @@ func TestParseValue(t *testing.T) {
 			},
 		}`: ir.Object{
 			Name: "SomeObject",
-			Fields: map[string]ir.Value{
-				"the_field": ir.Object{
-					Name: "SomeNestedObject",
-					Fields: map[string]ir.Value{
-						"foo": uint64(5),
-						"bar": uint64(7),
+			Fields: []ir.Field{
+				{
+					Name: "the_field",
+					Value: ir.Object{
+						Name: "SomeNestedObject",
+						Fields: []ir.Field{
+							{
+								Name:  "foo",
+								Value: uint64(5),
+							},
+							{
+								Name:  "bar",
+								Value: uint64(7),
+							},
+						},
 					},
 				},
 			},
@@ -115,8 +127,11 @@ func TestParseSuccessCase(t *testing.T) {
 			Name: "OneStringOfMaxLengthFive-empty",
 			Value: ir.Object{
 				Name: "OneStringOfMaxLengthFive",
-				Fields: map[string]ir.Value{
-					"first": "four",
+				Fields: []ir.Field{
+					{
+						Name:  "first",
+						Value: "four",
+					},
 				},
 			},
 			Bytes: []byte{
@@ -150,8 +165,11 @@ func TestParseFailsToEncodeCase(t *testing.T) {
 			Name: "OneStringOfMaxLengthFive-too-long",
 			Value: ir.Object{
 				Name: "OneStringOfMaxLengthFive",
-				Fields: map[string]ir.Value{
-					"the_string": "bonjour",
+				Fields: []ir.Field{
+					{
+						Name:  "the_string",
+						Value: "bonjour",
+					},
 				},
 			},
 			Err: "FIDL_STRING_TOO_LONG",

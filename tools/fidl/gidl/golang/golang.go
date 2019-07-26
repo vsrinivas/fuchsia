@@ -135,21 +135,21 @@ func (b *goValueBuilder) onObject(value gidlir.Object, decl gidlmixer.Declaratio
 	containerVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
 		"var %s conformance.%s\n", containerVar, value.Name))
-	for key, field := range value.Fields {
-		fieldDecl, _ := decl.ForKey(key)
-		gidlmixer.Visit(b, field, fieldDecl)
+	for _, field := range value.Fields {
+		fieldDecl, _ := decl.ForKey(field.Name)
+		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 
 		switch structDecl := decl.(type) {
 		case *gidlmixer.StructDecl:
-			if structDecl.IsKeyNullable(key) {
+			if structDecl.IsKeyNullable(field.Name) {
 				fieldVar = "&" + fieldVar
 			}
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s.%s = %s\n", containerVar, fidlcommon.ToUpperCamelCase(key), fieldVar))
+				"%s.%s = %s\n", containerVar, fidlcommon.ToUpperCamelCase(field.Name), fieldVar))
 		default:
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s.Set%s(%s)\n", containerVar, fidlcommon.ToUpperCamelCase(key), fieldVar))
+				"%s.Set%s(%s)\n", containerVar, fidlcommon.ToUpperCamelCase(field.Name), fieldVar))
 		}
 	}
 	b.lastVar = containerVar

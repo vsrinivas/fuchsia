@@ -205,11 +205,11 @@ func (decl *StructDecl) conforms(value interface{}) error {
 	default:
 		return fmt.Errorf("expecting string, found %T (%v)", value, value)
 	case gidlir.Object:
-		for key, field := range value.Fields {
-			if fieldDecl, ok := decl.ForKey(key); !ok {
-				return fmt.Errorf("field %s: unknown", key)
-			} else if err := fieldDecl.conforms(field); err != nil {
-				return fmt.Errorf("field %s: %s", key, err)
+		for _, field := range value.Fields {
+			if fieldDecl, ok := decl.ForKey(field.Name); !ok {
+				return fmt.Errorf("field %s: unknown", field.Name)
+			} else if err := fieldDecl.conforms(field.Value); err != nil {
+				return fmt.Errorf("field %s: %s", field.Name, err)
 			}
 		}
 		return nil
@@ -237,11 +237,11 @@ func (decl *TableDecl) conforms(untypedValue interface{}) error {
 	default:
 		return fmt.Errorf("expecting object, found %T (%v)", untypedValue, untypedValue)
 	case gidlir.Object:
-		for key, field := range value.Fields {
-			if fieldDecl, ok := decl.ForKey(key); !ok {
-				return fmt.Errorf("field %s: unknown", key)
-			} else if err := fieldDecl.conforms(field); err != nil {
-				return fmt.Errorf("field %s: %s", key, err)
+		for _, field := range value.Fields {
+			if fieldDecl, ok := decl.ForKey(field.Name); !ok {
+				return fmt.Errorf("field %s: unknown", field.Name)
+			} else if err := fieldDecl.conforms(field.Value); err != nil {
+				return fmt.Errorf("field %s: %s", field.Name, err)
 			}
 		}
 		return nil
@@ -272,11 +272,11 @@ func (decl XUnionDecl) conforms(untypedValue interface{}) error {
 		if num := len(value.Fields); num != 1 {
 			return fmt.Errorf("must have one field, found %d", num)
 		}
-		for key, field := range value.Fields {
-			if fieldDecl, ok := decl.ForKey(key); !ok {
-				return fmt.Errorf("field %s: unknown", key)
-			} else if err := fieldDecl.conforms(field); err != nil {
-				return fmt.Errorf("field %s: %s", key, err)
+		for _, field := range value.Fields {
+			if fieldDecl, ok := decl.ForKey(field.Name); !ok {
+				return fmt.Errorf("field %s: unknown", field.Name)
+			} else if err := fieldDecl.conforms(field.Value); err != nil {
+				return fmt.Errorf("field %s: %s", field.Name, err)
 			}
 		}
 		return nil
@@ -307,11 +307,11 @@ func (decl UnionDecl) conforms(untypedValue interface{}) error {
 		if num := len(value.Fields); num != 1 {
 			return fmt.Errorf("must have one field, found %d", num)
 		}
-		for key, field := range value.Fields {
-			if fieldDecl, ok := decl.ForKey(key); !ok {
-				return fmt.Errorf("field %s: unknown", key)
-			} else if err := fieldDecl.conforms(field); err != nil {
-				return fmt.Errorf("field %s: %s", key, err)
+		for _, field := range value.Fields {
+			if fieldDecl, ok := decl.ForKey(field.Name); !ok {
+				return fmt.Errorf("field %s: unknown", field.Name)
+			} else if err := fieldDecl.conforms(field.Value); err != nil {
+				return fmt.Errorf("field %s: %s", field.Name, err)
 			}
 		}
 		return nil
