@@ -9,6 +9,10 @@
 
 #include <inttypes.h>
 
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/string.h>
@@ -34,21 +38,8 @@ enum LaunchStatus {
 
 // Represents a single dumpfile element.
 struct DumpFile {
-  fbl::String name;  // Name of the dumpfile.
-  fbl::String file;  // File name for the content.
-};
-
-// Represents data published through data sink.
-struct DataSink : public fbl::SinglyLinkedListable<std::unique_ptr<DataSink>> {
-  fbl::String name;             // Name of the data sink.
-  fbl::Vector<DumpFile> files;  // All the sink dumpfiles.
-
-  explicit DataSink(fbl::String name) : name(name) {}
-
-  // Runtimes may publish more than one file with the same data sink name. We use hash table
-  // that's mapping data sink name to the list of file names to store these efficiently.
-  fbl::String GetKey() const { return name; }
-  static size_t GetHash(fbl::String key) { return fnv1a64str(key.c_str()); }
+  std::string name; // Name of the dumpfile.
+  std::string file; // File name for the content.
 };
 
 // Represents the result of a single test run.
@@ -56,8 +47,7 @@ struct Result {
   fbl::String name;
   LaunchStatus launch_status;
   int64_t return_code;  // Only valid if launch_status == SUCCESS or FAILED_NONZERO_RETURN_CODE.
-  using HashTable = fbl::HashTable<fbl::String, std::unique_ptr<DataSink>>;
-  HashTable data_sinks;  // Mapping from data sink name to list of files.
+  std::unordered_map<std::string, std::vector<DumpFile>> data_sinks; // Mapping from data sink name to list of files.
   int64_t duration_milliseconds;
 
   // Constructor really only needed until we have C++14, which will allow call-sites to use

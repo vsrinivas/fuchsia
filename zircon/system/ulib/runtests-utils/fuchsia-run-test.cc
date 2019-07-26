@@ -267,9 +267,7 @@ void ProcessDataSinkDump(debugdata::DataSinkDump& data, fbl::unique_fd& data_sin
     snprintf(name, sizeof(name), "unnamed.%" PRIu64, info.koid);
   }
 
-  Result::HashTable::iterator it;
-  result->data_sinks.insert_or_find(std::make_unique<DataSink>(data.sink_name), &it);
-  it->files.push_back(DumpFile{name, dump_file});
+  result->data_sinks[data.sink_name].push_back(DumpFile{name, dump_file.c_str()});
 }
 
 // To avoid creating a separate service thread for each test, we have a global

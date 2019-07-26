@@ -145,9 +145,9 @@ int WriteSummaryJSON(const fbl::Vector<std::unique_ptr<Result>>& results,
         if (sink_count != 0) {
           fprintf(summary_json, ",\n");
         }
-        fprintf(summary_json, "        \"%s\": [\n", sink.name.c_str());
+        fprintf(summary_json, "        \"%s\": [\n", sink.first.c_str());
         int file_count = 0;
-        for (const auto& file : sink.files) {
+        for (const auto& file : sink.second) {
           if (file_count != 0) {
             fprintf(summary_json, ",\n");
           }
