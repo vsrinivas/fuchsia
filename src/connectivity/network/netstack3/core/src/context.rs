@@ -183,8 +183,11 @@ pub(crate) trait CounterContext {
 pub(crate) mod testutil {
     use std::collections::{BinaryHeap, HashMap};
     use std::fmt::{self, Debug, Formatter};
+    use std::hash::Hash;
     use std::ops;
     use std::time::Duration;
+
+    use packet::Buf;
 
     use super::*;
     use crate::Instant;
@@ -566,6 +569,327 @@ pub(crate) mod testutil {
     impl<S, Id, Meta> AsMut<DummyCounterContext> for DummyContext<S, Id, Meta> {
         fn as_mut(&mut self) -> &mut DummyCounterContext {
             &mut self.counters
+        }
+    }
+
+    #[derive(Debug)]
+    struct PendingFrameData<ContextId, DeviceId, Meta> {
+        dst_context: ContextId,
+        dst_device: DeviceId,
+        meta: Meta,
+        frame: Vec<u8>,
+    }
+
+    type PendingFrame<ContextId, DeviceId, Meta> =
+        InstantAndData<PendingFrameData<ContextId, DeviceId, Meta>>;
+
+    /// A dummy network, composed of many `DummyContext`s.
+    ///
+    /// Provides a utility to have many contexts keyed by `ContextId` that can
+    /// exchange frames.
+    pub(crate) struct DummyNetwork<ContextId, S, TimerId, DeviceId, SendMeta, RecvMeta, Links>
+    where
+        Links: DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId, DeviceId>,
+    {
+        contexts: HashMap<ContextId, DummyContext<S, TimerId, SendMeta>>,
+        current_time: DummyInstant,
+        pending_frames: BinaryHeap<PendingFrame<ContextId, DeviceId, RecvMeta>>,
+        links: Links,
+    }
+
+    /// A set of links in a `DummyNetwork`.
+    ///
+    /// A `DummyNetworkLinks` represents the set of links in a `DummyNetwork`.
+    /// It exposes the link information by providing the ability to map from a
+    /// frame's sending metadata - including its context, local state, and
+    /// `SendMeta` - to the appropriate context ID, device ID, receive metadata,
+    /// and latency that represent the receiver.
+    pub(crate) trait DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId, DeviceId> {
+        fn map_link(
+            &self,
+            ctx: ContextId,
+            state: &S,
+            meta: SendMeta,
+        ) -> (ContextId, DeviceId, RecvMeta, Option<Duration>);
+    }
+
+    impl<
+            S,
+            SendMeta,
+            RecvMeta,
+            ContextId,
+            DeviceId,
+            F: Fn(ContextId, &S, SendMeta) -> (ContextId, DeviceId, RecvMeta, Option<Duration>),
+        > DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId, DeviceId> for F
+    {
+        fn map_link(
+            &self,
+            ctx: ContextId,
+            state: &S,
+            meta: SendMeta,
+        ) -> (ContextId, DeviceId, RecvMeta, Option<Duration>) {
+            (self)(ctx, state, meta)
+        }
+    }
+
+    /// The result of a single step in a `DummyNetwork`
+    #[derive(Debug)]
+    pub(crate) struct StepResult {
+        time_delta: Duration,
+        timers_fired: usize,
+        frames_sent: usize,
+    }
+
+    impl StepResult {
+        fn new(time_delta: Duration, timers_fired: usize, frames_sent: usize) -> Self {
+            Self { time_delta, timers_fired, frames_sent }
+        }
+
+        fn new_idle() -> Self {
+            Self::new(Duration::from_millis(0), 0, 0)
+        }
+
+        /// Returns the time jump in the last step.
+        pub(crate) fn time_delta(&self) -> Duration {
+            self.time_delta
+        }
+
+        /// Returns `true` if the last step did not perform any operations.
+        pub(crate) fn is_idle(&self) -> bool {
+            return self.timers_fired == 0 && self.frames_sent == 0;
+        }
+
+        /// Returns the number of frames dispatched to their destinations in the
+        /// last step.
+        pub(crate) fn frames_sent(&self) -> usize {
+            self.frames_sent
+        }
+
+        /// Returns the number of timers fired in the last step.
+        pub(crate) fn timers_fired(&self) -> usize {
+            self.timers_fired
+        }
+    }
+
+    /// Error type that marks that one of the `run_until` family of functions
+    /// reached a maximum number of iterations.
+    #[derive(Debug)]
+    pub(crate) struct LoopLimitReachedError;
+
+    impl<ContextId, S, TimerId, DeviceId, SendMeta, RecvMeta, Links>
+        DummyNetwork<ContextId, S, TimerId, DeviceId, SendMeta, RecvMeta, Links>
+    where
+        ContextId: Eq + Hash + Copy + Debug,
+        TimerId: Copy,
+        Links: DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId, DeviceId>,
+    {
+        /// Creates a new `DummyNetwork`.
+        ///
+        /// Creates a new `DummyNetwork` with the collection of `DummyContext`s
+        /// in `contexts`. `Context`s are named by type parameter `ContextId`.
+        ///
+        /// # Panics
+        ///
+        /// Calls to `new` will panic if given a `DummyContext` with timer
+        /// events. `DummyContext`s given to `DummyNetwork` **must not** have
+        /// any timer events already attached to them, because `DummyNetwork`
+        /// maintains all the internal timers in dispatchers in sync to enable
+        /// synchronous simulation steps.
+        pub(crate) fn new<
+            I: IntoIterator<Item = (ContextId, DummyContext<S, TimerId, SendMeta>)>,
+        >(
+            contexts: I,
+            links: Links,
+        ) -> Self {
+            let mut ret = Self {
+                contexts: contexts.into_iter().collect(),
+                current_time: DummyInstant::default(),
+                pending_frames: BinaryHeap::new(),
+                links,
+            };
+
+            // We can't guarantee that all contexts are safely running their timers
+            // together if we receive a context with any timers already set.
+            assert!(
+                !ret.contexts.iter().any(|(n, ctx)| { !ctx.timers.timers.is_empty() }),
+                "can't start network with contexts that already have timers set"
+            );
+
+            // synchronize all dispatchers' current time to the same value:
+            for (_, ctx) in ret.contexts.iter_mut() {
+                ctx.timers.instant.time = ret.current_time;
+            }
+
+            ret
+        }
+
+        /// Retrieves a `DummyContext` named `context`.
+        pub(crate) fn context<K: Into<ContextId>>(
+            &mut self,
+            context: K,
+        ) -> &mut DummyContext<S, TimerId, SendMeta> {
+            self.contexts.get_mut(&context.into()).unwrap()
+        }
+
+        /// Performs a single step in network simulation.
+        ///
+        /// `step` performs a single logical step in the collection of
+        /// `Context`s held by this `DummyNetwork`. A single step consists of
+        /// the following operations:
+        ///
+        /// - All pending frames, kept in each `DummyContext`, are mapped to
+        ///   their destination context/device pairs and moved to an internal
+        ///   collection of pending frames.
+        /// - The collection of pending timers and scheduled frames is inspected
+        ///   and a simulation time step is retrieved, which will cause a next
+        ///   event to trigger. The simulation time is updated to the new time.
+        /// - All scheduled frames whose deadline is less than or equal to the
+        ///   new simulation time are sent to their destinations, handled using
+        ///   the `FH` type parameter.
+        /// - All timer events whose deadline is less than or equal to the new
+        ///   simulation time are fired, handled using the `TH` type parameter.
+        ///
+        /// If any new events are created during the operation of frames or
+        /// timers, they **will not** be taken into account in the current
+        /// `step`. That is, `step` collects all the pending events before
+        /// dispatching them, ensuring that an infinite loop can't be created as
+        /// a side effect of calling `step`.
+        ///
+        /// The return value of `step` indicates which of the operations were
+        /// performed.
+        ///
+        /// # Panics
+        ///
+        /// If `DummyNetwork` was set up with a bad `links`, calls to `step` may
+        /// panic when trying to route frames to their context/device
+        /// destinations.
+        pub(crate) fn step<
+            FH: FrameHandler<DummyContext<S, TimerId, SendMeta>, DeviceId, RecvMeta, Buf<Vec<u8>>>,
+            TH: TimerHandler<DummyContext<S, TimerId, SendMeta>, TimerId>,
+        >(
+            &mut self,
+        ) -> StepResult {
+            self.collect_frames();
+
+            let next_step = if let Some(t) = self.next_step() {
+                t
+            } else {
+                return StepResult::new_idle();
+            };
+
+            // This assertion holds the contract that `next_step` does not
+            // return a time in the past.
+            assert!(next_step >= self.current_time);
+            let mut ret = StepResult::new(next_step.duration_since(self.current_time), 0, 0);
+            // Move time forward:
+            self.current_time = next_step;
+            for (_, ctx) in self.contexts.iter_mut() {
+                ctx.timers.instant.time = next_step;
+            }
+
+            // Dispatch all pending frames:
+            while let Some(InstantAndData(t, _)) = self.pending_frames.peek() {
+                // TODO(brunodalbo): Remove this break once let_chains is
+                // stable.
+                if *t > self.current_time {
+                    break;
+                }
+                // We can unwrap because we just peeked.
+                let mut frame = self.pending_frames.pop().unwrap().1;
+                FH::handle_frame(
+                    self.context(frame.dst_context),
+                    frame.dst_device,
+                    frame.meta,
+                    Buf::new(frame.frame, ..),
+                );
+                ret.frames_sent += 1;
+            }
+
+            // Dispatch all pending timers.
+            for (n, ctx) in self.contexts.iter_mut() {
+                // We have to collect the timers before dispatching them, to
+                // avoid an infinite loop in case handle_timer schedules another
+                // timer for the same or older DummyInstant.
+                let mut timers = Vec::<TimerId>::new();
+                while let Some(InstantAndData(t, id)) = ctx.timers.timers.peek() {
+                    // TODO(brunodalbo): remove this break once let_chains is stable
+                    if *t > ctx.now() {
+                        break;
+                    }
+                    timers.push(*id);
+                    ctx.timers.timers.pop();
+                }
+
+                for t in timers {
+                    TH::handle_timer(ctx, t);
+                    ret.timers_fired += 1;
+                }
+            }
+
+            ret
+        }
+
+        /// Collects all queued frames.
+        ///
+        /// Collects all pending frames and schedules them for delivery to the
+        /// destination context/device based on the result of `links`. The
+        /// collected frames are queued for dispatching in the `DummyNetwork`,
+        /// ordered by their scheduled delivery time given by the latency result
+        /// provided by `links`.
+        fn collect_frames(&mut self) {
+            let all_frames: Vec<(ContextId, Vec<(SendMeta, Vec<u8>)>)> = self
+                .contexts
+                .iter_mut()
+                .filter_map(|(n, ctx)| {
+                    if ctx.frames.frames.is_empty() {
+                        None
+                    } else {
+                        Some((n.clone(), ctx.frames.frames.drain(..).collect()))
+                    }
+                })
+                .collect();
+
+            for (src_context, frames) in all_frames.into_iter() {
+                for (send_meta, mut frame) in frames.into_iter() {
+                    let (dst_context, dst_device, recv_meta, latency) = self.links.map_link(
+                        src_context,
+                        self.contexts.get(&src_context).unwrap().get_ref(),
+                        send_meta,
+                    );
+                    self.pending_frames.push(PendingFrame::new(
+                        self.current_time + latency.unwrap_or(Duration::from_millis(0)),
+                        PendingFrameData { frame, dst_context, dst_device, meta: recv_meta },
+                    ));
+                }
+            }
+        }
+
+        /// Calculates the next `DummyInstant` when events are available.
+        ///
+        /// Returns the smallest `DummyInstant` greater than or equal to the
+        /// current time for which an event is available. If no events are
+        /// available, returns `None`.
+        fn next_step(&self) -> Option<DummyInstant> {
+            // get earliest timer in all contexts
+            let next_timer = self
+                .contexts
+                .iter()
+                .filter_map(|(n, ctx)| match ctx.timers.timers.peek() {
+                    Some(tmr) => Some(tmr.0),
+                    None => None,
+                })
+                .min();
+            /// get the instant for the next packet
+            let next_packet_due = self.pending_frames.peek().map(|t| t.0);
+
+            // Return the earliest of them both, and protect against returning a
+            // time in the past.
+            match next_timer {
+                Some(t) if next_packet_due.is_some() => Some(t).min(next_packet_due),
+                Some(t) => Some(t),
+                None => next_packet_due,
+            }
+            .map(|t| t.max(self.current_time))
         }
     }
 
