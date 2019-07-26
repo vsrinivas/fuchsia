@@ -23,6 +23,9 @@ declare_args() {
   #   SHA512_RSA4096
   #   SHA512_RSA8192
   avb_algorithm = "SHA512_RSA4096"
+
+  # Partition name from where image will be verified
+  zvb_partition_name = "zircon"
 }
 
 # Template for producing VBMETA image for AVB
@@ -115,7 +118,7 @@ template("vbmeta") {
       "--image",
       rebase_path(inputs[0], root_build_dir),
       "--partition_name",
-      "zircon",
+      zvb_partition_name,
       "--do_not_append_vbmeta_image",
       "--output_vbmeta_image",
       rebase_path(outputs[0], root_build_dir),
