@@ -278,3 +278,12 @@ async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Erro
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn hello_world() {
+        println!("Hello world");
+    }
+}

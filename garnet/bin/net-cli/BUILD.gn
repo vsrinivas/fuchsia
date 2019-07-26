@@ -4,6 +4,8 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "net_cli"
@@ -38,6 +40,20 @@ package("net-cli") {
     {
       name = "net_cli"
       shell = true
+    },
+  ]
+}
+
+test_package("net-cli-tests") {
+  deps = [
+    ":bin_test",
+  ]
+
+  tests = [
+    {
+      name = "net_cli_bin_test"
+      dest = "net_cli_bin_test"
+      environments = [ qemu_env ]
     },
   ]
 }
