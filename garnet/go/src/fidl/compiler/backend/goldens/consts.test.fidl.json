@@ -203,9 +203,130 @@
           "expression": "1.41421358"
         }
       }
+    },
+    {
+      "name": "test.name/enumVal",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 17,
+        "column": 16
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "test.name/EnumType",
+        "nullable": false
+      },
+      "value": {
+        "kind": "identifier",
+        "identifier": "test.name/EnumType.VALUE"
+      }
+    },
+    {
+      "name": "test.name/enumPrimitiveVal",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 18,
+        "column": 13
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "int32"
+      },
+      "value": {
+        "kind": "identifier",
+        "identifier": "test.name/EnumType.VALUE"
+      }
+    },
+    {
+      "name": "test.name/bitsVal",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 24,
+        "column": 16
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "test.name/BitsType",
+        "nullable": false
+      },
+      "value": {
+        "kind": "identifier",
+        "identifier": "test.name/BitsType.VALUE"
+      }
+    },
+    {
+      "name": "test.name/bitsPrimitiveVal",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 25,
+        "column": 13
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "int32"
+      },
+      "value": {
+        "kind": "identifier",
+        "identifier": "test.name/BitsType.VALUE"
+      }
     }
   ],
-  "enum_declarations": [],
+  "enum_declarations": [
+    {
+      "name": "test.name/EnumType",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 14,
+        "column": 6
+      },
+      "type": "int32",
+      "members": [
+        {
+          "name": "VALUE",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+            "line": 15,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "test.name/BitsType",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 21,
+        "column": 6
+      },
+      "type": "int32",
+      "members": [
+        {
+          "name": "VALUE",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+            "line": 22,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "0x00000001"
+            }
+          }
+        }
+      ]
+    }
+  ],
   "interface_declarations": [],
   "service_declarations": [],
   "struct_declarations": [],
@@ -219,9 +340,15 @@
     "test.name/OFFSET",
     "test.name/MIN_TEMP",
     "test.name/FUCHSIA",
+    "test.name/EnumType",
+    "test.name/enumVal",
+    "test.name/enumPrimitiveVal",
     "test.name/ENABLED_FLAG",
     "test.name/DIAMOND",
     "test.name/CONVERSION_FACTOR",
+    "test.name/BitsType",
+    "test.name/bitsVal",
+    "test.name/bitsPrimitiveVal",
     "test.name/ANSWER_IN_BINARY",
     "test.name/ANSWER"
   ],
@@ -235,6 +362,12 @@
     "test.name/FUCHSIA": "const",
     "test.name/USERNAME": "const",
     "test.name/MIN_TEMP": "const",
-    "test.name/CONVERSION_FACTOR": "const"
+    "test.name/CONVERSION_FACTOR": "const",
+    "test.name/enumVal": "const",
+    "test.name/enumPrimitiveVal": "const",
+    "test.name/bitsVal": "const",
+    "test.name/bitsPrimitiveVal": "const",
+    "test.name/EnumType": "enum",
+    "test.name/BitsType": "enum"
   }
 }

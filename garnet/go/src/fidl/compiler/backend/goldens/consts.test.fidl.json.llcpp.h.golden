@@ -18,6 +18,16 @@ namespace llcpp {
 namespace test {
 namespace name {
 
+enum class EnumType : int32_t {
+  VALUE = 1u,
+};
+
+
+enum class BitsType : int32_t {
+  VALUE = 1u,
+};
+
+
 
 extern const char USERNAME[];
 
@@ -29,11 +39,19 @@ constexpr float MIN_TEMP = -273.15;
 
 constexpr uint64_t FUCHSIA = 4054509061583223046u;
 
+constexpr EnumType enumVal = EnumType::VALUE;
+
+constexpr int32_t enumPrimitiveVal = EnumType::VALUE;
+
 constexpr bool ENABLED_FLAG = true;
 
 constexpr uint64_t DIAMOND = 1746410393481133080u;
 
 constexpr double CONVERSION_FACTOR = 1.41421;
+
+constexpr BitsType bitsVal = BitsType::VALUE;
+
+constexpr int32_t bitsPrimitiveVal = BitsType::VALUE;
 
 constexpr uint16_t ANSWER_IN_BINARY = 42u;
 

@@ -10,3 +10,16 @@ const uint64 FUCHSIA = 4054509061583223046;
 const string USERNAME = "\"squeenze\"";
 const float32 MIN_TEMP = -273.15;
 const float64 CONVERSION_FACTOR = 1.41421358;
+
+enum EnumType : int32 {
+    VALUE = 1;
+};
+const EnumType enumVal = EnumType.VALUE;
+const int32 enumPrimitiveVal = EnumType.VALUE;
+
+
+enum BitsType : int32 {
+    VALUE = 0x00000001;
+};
+const BitsType bitsVal = BitsType.VALUE;
+const int32 bitsPrimitiveVal = BitsType.VALUE;

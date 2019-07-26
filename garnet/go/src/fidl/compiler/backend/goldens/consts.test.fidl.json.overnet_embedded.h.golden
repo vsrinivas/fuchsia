@@ -10,6 +10,26 @@ namespace test {
 namespace name {
 namespace embedded {
 
+enum class EnumType : int32_t {
+  VALUE = 1u,
+};
+
+inline zx_status_t Clone(::test::name::embedded::EnumType value,
+                         ::test::name::embedded::EnumType* result) {
+  *result = value;
+  return ZX_OK;
+}
+
+enum class BitsType : int32_t {
+  VALUE = 1u,
+};
+
+inline zx_status_t Clone(::test::name::embedded::BitsType value,
+                         ::test::name::embedded::BitsType* result) {
+  *result = value;
+  return ZX_OK;
+}
+
 
 extern const char USERNAME[];
 
@@ -21,11 +41,19 @@ constexpr float MIN_TEMP = -273.15;
 
 constexpr uint64_t FUCHSIA = 4054509061583223046u;
 
+constexpr EnumType enumVal = EnumType::VALUE;
+
+constexpr int32_t enumPrimitiveVal = EnumType::VALUE;
+
 constexpr bool ENABLED_FLAG = true;
 
 constexpr uint64_t DIAMOND = 1746410393481133080u;
 
 constexpr double CONVERSION_FACTOR = 1.41421;
+
+constexpr BitsType bitsVal = BitsType::VALUE;
+
+constexpr int32_t bitsPrimitiveVal = BitsType::VALUE;
 
 constexpr uint16_t ANSWER_IN_BINARY = 42u;
 
@@ -35,4 +63,40 @@ constexpr uint16_t ANSWER = 42u;
 }  // namespace name
 }  // namespace test
 namespace fidl {
-}  // namespace fidl
+
+template <>
+struct CodingTraits<::test::name::embedded::EnumType> {
+  static constexpr size_t encoded_size = sizeof(::test::name::embedded::EnumType);
+  static void Encode(::overnet::internal::Encoder* encoder, ::test::name::embedded::EnumType* value, size_t offset) {
+    int32_t underlying = static_cast<int32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(::overnet::internal::Decoder* decoder, ::test::name::embedded::EnumType* value, size_t offset) {
+    int32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::test::name::embedded::EnumType>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::test::name::embedded::EnumType value,
+                         ::test::name::embedded::EnumType* result) {
+  return ::test::name::embedded::Clone(value, result);
+}
+template <>
+struct CodingTraits<::test::name::embedded::BitsType> {
+  static constexpr size_t encoded_size = sizeof(::test::name::embedded::BitsType);
+  static void Encode(::overnet::internal::Encoder* encoder, ::test::name::embedded::BitsType* value, size_t offset) {
+    int32_t underlying = static_cast<int32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(::overnet::internal::Decoder* decoder, ::test::name::embedded::BitsType* value, size_t offset) {
+    int32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::test::name::embedded::BitsType>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::test::name::embedded::BitsType value,
+                         ::test::name::embedded::BitsType* result) {
+  return ::test::name::embedded::Clone(value, result);
+}}  // namespace fidl

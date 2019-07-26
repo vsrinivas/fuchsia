@@ -612,19 +612,23 @@ func (_ *compiler) compileIdentifier(id types.Identifier, export bool, ext strin
 
 func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier, export bool, ext string) string {
 	ci := types.ParseCompoundIdentifier(eci)
+	var name string
 	if export {
-		ci.Name = types.Identifier(common.ToUpperCamelCase(string(ci.Name)))
+		name = common.ToUpperCamelCase(string(ci.Name))
 	} else {
-		ci.Name = types.Identifier(common.ToLowerCamelCase(string(ci.Name)))
+		name = common.ToLowerCamelCase(string(ci.Name))
 	}
 	pkg := compileLibraryIdentifier(ci.Library)
-	strs := []string{}
+	var strs []string
 	if c.inExternalLibrary(ci) {
 		pkgAlias := c.libraryDeps[pkg]
 		strs = append(strs, pkgAlias)
 		c.usedLibraryDeps[pkg] = pkgAlias
 	}
-	strs = append(strs, changeIfReserved(ci.Name, ext))
+	strs = append(strs, changeIfReserved(types.Identifier(name), ext))
+	if ci.Member != "" {
+		strs = append(strs, string(ci.Member))
+	}
 	return strings.Join(strs, ".")
 }
 
@@ -646,7 +650,8 @@ func (_ *compiler) compileLiteral(val types.Literal) string {
 
 func (c *compiler) compileConstant(val types.Constant) string {
 	switch val.Kind {
-	// TODO(mknyszek): Support identifiers.
+	case types.IdentifierConstant:
+		return c.compileCompoundIdentifier(val.Identifier, true, "")
 	case types.LiteralConstant:
 		return c.compileLiteral(val.Literal)
 	default:

@@ -437,6 +437,9 @@ func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) strin
 	}
 	str := changeIfReserved(val.Name)
 	strs = append(strs, str)
+	if val.Member != "" {
+		strs = append(strs, string(val.Member))
+	}
 	return strings.Join(strs, "::")
 }
 

@@ -407,23 +407,6 @@ const string? c = "";
   END_TEST;
 }
 
-bool BadConstTestEnum() {
-  BEGIN_TEST;
-
-  TestLibrary library(R"FIDL(
-library example;
-
-enum MyEnum : int32 { A = 5; };
-const MyEnum c = "";
-)FIDL");
-  ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
-  ASSERT_GE(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "invalid constant type example/MyEnum");
-
-  END_TEST;
-}
-
 bool BadConstTestArray() {
   BEGIN_TEST;
 
@@ -500,6 +483,35 @@ const uint32 c = MyBits.A;
   END_TEST;
 }
 
+
+bool GoodEnumTypedConstEnumMemberReference() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+enum MyEnum : int32 { A = 5; };
+const MyEnum c = MyEnum.A;
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  END_TEST;
+}
+
+bool GoodEnumTypedConstBitsMemberReference() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+bits MyBits : uint32 { A = 0x00000001; };
+const MyBits c = MyBits.A;
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(consts_tests)
@@ -536,12 +548,13 @@ RUN_TEST(GoodConstTestUsing)
 RUN_TEST(BadConstTestUsingWithInconvertibleValue)
 
 RUN_TEST(BadConstTestNullableString)
-RUN_TEST(BadConstTestEnum)
 RUN_TEST(BadConstTestArray)
 RUN_TEST(BadConstTestVector)
 RUN_TEST(BadConstTestHandleOfThread)
 
 RUN_TEST(GoodConstEnumMemberReference)
 RUN_TEST(GoodConstBitsMemberReference)
+RUN_TEST(GoodEnumTypedConstEnumMemberReference)
+RUN_TEST(GoodEnumTypedConstBitsMemberReference)
 
 END_TEST_CASE(consts_tests)

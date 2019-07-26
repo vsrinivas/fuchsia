@@ -16,6 +16,34 @@ const (
 	Username string = "\"squeenze\""
 	MinTemp float32 = -273.15
 	ConversionFactor float64 = 1.41421
+	EnumVal EnumType = EnumType.VALUE
+	EnumPrimitiveVal int32 = EnumType.VALUE
+	BitsVal BitsType = BitsType.VALUE
+	BitsPrimitiveVal int32 = BitsType.VALUE
 )
 
 
+
+type EnumType int32
+const (
+	EnumTypeValue EnumType = 1
+)
+func (x EnumType) String() string {
+	switch x {
+	case 1:
+		return "Value"
+	}
+	return "Unknown"
+}
+
+type BitsType int32
+const (
+	BitsTypeValue BitsType = 1
+)
+func (x BitsType) String() string {
+	switch x {
+	case 1:
+		return "Value"
+	}
+	return "Unknown"
+}

@@ -2144,6 +2144,34 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
     }
   }
 
+  auto constant_kind = [](const types::PrimitiveSubtype primitive_subtype) {
+    switch (primitive_subtype) {
+      case types::PrimitiveSubtype::kBool:
+        return ConstantValue::Kind::kBool;
+      case types::PrimitiveSubtype::kInt8:
+        return ConstantValue::Kind::kInt8;
+      case types::PrimitiveSubtype::kInt16:
+        return ConstantValue::Kind::kInt16;
+      case types::PrimitiveSubtype::kInt32:
+        return ConstantValue::Kind::kInt32;
+      case types::PrimitiveSubtype::kInt64:
+        return ConstantValue::Kind::kInt64;
+      case types::PrimitiveSubtype::kUint8:
+        return ConstantValue::Kind::kUint8;
+      case types::PrimitiveSubtype::kUint16:
+        return ConstantValue::Kind::kUint16;
+      case types::PrimitiveSubtype::kUint32:
+        return ConstantValue::Kind::kUint32;
+      case types::PrimitiveSubtype::kUint64:
+        return ConstantValue::Kind::kUint64;
+      case types::PrimitiveSubtype::kFloat32:
+        return ConstantValue::Kind::kFloat32;
+      case types::PrimitiveSubtype::kFloat64:
+        return ConstantValue::Kind::kFloat64;
+    }
+    assert(false && "Compiler bug: unhandled primitive subtype");
+  };
+
   std::unique_ptr<ConstantValue> resolved_val;
   switch (type->kind) {
     case Type::Kind::kString: {
@@ -2156,57 +2184,36 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
     }
     case Type::Kind::kPrimitive: {
       auto primitive_type = static_cast<const PrimitiveType*>(type);
-      switch (primitive_type->subtype) {
-        case types::PrimitiveSubtype::kBool:
-          if (!const_val->Convert(ConstantValue::Kind::kBool, &resolved_val))
-            goto fail_cannot_convert;
+      if (!const_val->Convert(constant_kind(primitive_type->subtype), &resolved_val))
+        goto fail_cannot_convert;
+      break;
+    }
+    case Type::Kind::kIdentifier: {
+      auto identifier_type = static_cast<const IdentifierType*>(type);
+      const PrimitiveType* primitive_type;
+      switch (identifier_type->type_decl->kind) {
+        case Decl::Kind::kEnum:{
+          auto enum_decl = static_cast<const Enum*>(identifier_type->type_decl);
+          assert(enum_decl->subtype_ctor->type->kind == Type::Kind::kPrimitive);
+          primitive_type = static_cast<const PrimitiveType*>(enum_decl->subtype_ctor->type);
           break;
-        case types::PrimitiveSubtype::kInt8:
-          if (!const_val->Convert(ConstantValue::Kind::kInt8, &resolved_val))
-            goto fail_cannot_convert;
+        }
+        case Decl::Kind::kBits:{
+          auto bits_decl = static_cast<const Bits*>(identifier_type->type_decl);
+          assert(bits_decl->subtype_ctor->type->kind == Type::Kind::kPrimitive);
+          primitive_type = static_cast<const PrimitiveType*>(bits_decl->subtype_ctor->type);
           break;
-        case types::PrimitiveSubtype::kInt16:
-          if (!const_val->Convert(ConstantValue::Kind::kInt16, &resolved_val))
-            goto fail_cannot_convert;
-          break;
-        case types::PrimitiveSubtype::kInt32:
-          if (!const_val->Convert(ConstantValue::Kind::kInt32, &resolved_val))
-            goto fail_cannot_convert;
-          break;
-        case types::PrimitiveSubtype::kInt64:
-          if (!const_val->Convert(ConstantValue::Kind::kInt64, &resolved_val))
-            goto fail_cannot_convert;
-          break;
-        case types::PrimitiveSubtype::kUint8:
-          if (!const_val->Convert(ConstantValue::Kind::kUint8, &resolved_val))
-            goto fail_cannot_convert;
-          break;
-        case types::PrimitiveSubtype::kUint16:
-          if (!const_val->Convert(ConstantValue::Kind::kUint16, &resolved_val))
-            goto fail_cannot_convert;
-          break;
-        case types::PrimitiveSubtype::kUint32:
-          if (!const_val->Convert(ConstantValue::Kind::kUint32, &resolved_val))
-            goto fail_cannot_convert;
-          break;
-        case types::PrimitiveSubtype::kUint64:
-          if (!const_val->Convert(ConstantValue::Kind::kUint64, &resolved_val))
-            goto fail_cannot_convert;
-          break;
-        case types::PrimitiveSubtype::kFloat32:
-          if (!const_val->Convert(ConstantValue::Kind::kFloat32, &resolved_val))
-            goto fail_cannot_convert;
-          break;
-        case types::PrimitiveSubtype::kFloat64:
-          if (!const_val->Convert(ConstantValue::Kind::kFloat64, &resolved_val))
-            goto fail_cannot_convert;
-          break;
+        }
+        default: {
+          assert(false && "Compiler bug: identifier not of const-able type.");
+        }
       }
+      if (!const_val->Convert(constant_kind(primitive_type->subtype), &resolved_val))
+        goto fail_cannot_convert;
       break;
     }
     default: {
-      assert(false &&
-             "Compiler bug: const-able type not handled during identifier constant resolution!");
+          assert(false && "Compiler bug: identifier not of const-able type.");
     }
   }
 
@@ -2369,6 +2376,16 @@ bool Library::TypeCanBeConst(const Type* type) {
       return type->nullability != types::Nullability::kNullable;
     case flat::Type::Kind::kPrimitive:
       return true;
+    case flat::Type::Kind::kIdentifier: {
+      auto identifier_type = static_cast<const IdentifierType*>(type);
+      switch (identifier_type->type_decl->kind) {
+        case Decl::Kind::kEnum:
+        case Decl::Kind::kBits:
+          return true;
+        default:
+          return false;
+      }
+    }
     default:
       return false;
   }  // switch
