@@ -1,6 +1,4 @@
 disabled_for_asan = [
   # OV-5
   "/pkgfs/packages/overnet_tests/0/test/overnet_unittests",
-  # MF-490
-  "/pkgfs/packages/modular_integration_tests/0/test/login_override_test",
 ]
