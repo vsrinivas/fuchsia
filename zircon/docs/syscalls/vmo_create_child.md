@@ -36,8 +36,8 @@ behave the same way the parent does, except that any write operation on the clon
 will bring in a copy of the page at the offset the write occurred. The new page in
 the cloned vmo is now a copy and may diverge from the parent. Any reads from
 ranges outside of the parent vmo's size will contain zeros, and writes will
-allocate new zero filled pages.  See the NOTES section below for details on
-VMO syscall interactions with clones.
+allocate new zero filled pages. A vmo which has pinned regions cannot be cloned. See
+the NOTES section below for details on VMO syscall interactions with clones.
 
 - **ZX_VMO_CHILD_SLICE** - Create a slice that has direct read/write access into
 a section of the parent. All operations on the slice vmo behave as if they were
@@ -117,6 +117,9 @@ or the offset is not page aligned.
 **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
 There is no good way for userspace to handle this (unlikely) error.
 In a future build this error will no longer occur.
+
+**ERR_BAD_STATE**  A COW child could not be created because the vmo has some
+pinned pages.
 
 ## SEE ALSO
 

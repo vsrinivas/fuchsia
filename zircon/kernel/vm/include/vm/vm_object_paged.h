@@ -401,6 +401,11 @@ class VmObjectPaged final : public VmObject {
   // of their non-hidden descendants).
   uint64_t page_attribution_user_id_ TA_GUARDED(lock_) = 0;
 
+  // Counts the total number of pages pinned by ::Pin. If one page is pinned n times, it
+  // contributes n to this count. However, this does not include pages pinned when creating
+  // a contiguous vmo.
+  uint64_t pinned_page_count_ TA_GUARDED(lock_) = 0;
+
   // The page source, if any.
   const fbl::RefPtr<PageSource> page_source_;
 

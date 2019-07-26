@@ -1707,6 +1707,85 @@ TEST_F(VmoClone2TestCase, ContiguousVmoPartialClone) {
     ASSERT_NO_FATAL_FAILURES(CheckContigState<3>(bti, vmos[0]));
 }
 
+TEST_F(VmoClone2TestCase, PinBeforeCreateFailure) {
+    if (!RootResource()) {
+        printf("Root resource not available, skipping\n");
+        return;
+    }
+
+    zx::iommu iommu;
+    zx::bti bti;
+    zx_iommu_desc_dummy_t desc;
+    ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY,
+                              &desc, sizeof(desc), &iommu));
+    ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+
+    zx::pmt pmt;
+    zx_paddr_t addr;
+    zx_status_t status = bti.pin(ZX_BTI_PERM_READ, vmo, 0, ZX_PAGE_SIZE, &addr, 1, &pmt);
+    ASSERT_OK(status, "pin failed");
+
+    // Fail to clone if pages are pinned.
+    zx::vmo clone;
+    EXPECT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, ZX_PAGE_SIZE, &clone),
+              ZX_ERR_BAD_STATE);
+    pmt.unpin();
+
+    // Clone successfully after pages are unpinned.
+    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, ZX_PAGE_SIZE, &clone));
+}
+
+TEST_F(VmoClone2TestCase, PinClonePages) {
+    if (!RootResource()) {
+        printf("Root resource not available, skipping\n");
+        return;
+    }
+
+    zx::iommu iommu;
+    zx::bti bti;
+    zx_iommu_desc_dummy_t desc;
+    ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY,
+                              &desc, sizeof(desc), &iommu));
+    ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+
+    VmoWrite(vmo, 1);
+
+    zx::vmo clone;
+    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, ZX_PAGE_SIZE, &clone));
+
+    zx::pmt pmt;
+    zx_paddr_t addr;
+    ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, clone, 0, ZX_PAGE_SIZE, &addr, 1, &pmt));
+
+    auto unpin = fbl::MakeAutoCall([&pmt]() { pmt.unpin(); });
+
+    // Write directly to the pinned page (as if we were hardware).
+    zx::vmo pseudo_hardware;
+    ASSERT_OK(zx::vmo::create_physical(RootResource(), addr, ZX_PAGE_SIZE, &pseudo_hardware));
+
+    Mapping m;
+    m.Init(pseudo_hardware, ZX_PAGE_SIZE);
+    ASSERT_OK(zx_cache_flush(m.ptr(), sizeof(*m.ptr()),
+                             ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+
+    ASSERT_EQ(*m.ptr(), 1);
+
+    // Writes should show up in the clone.
+    *m.ptr() = 2;
+    ASSERT_OK(zx_cache_flush(m.ptr(), sizeof(*m.ptr()),
+                             ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+    ASSERT_NO_FATAL_FAILURES(VmoCheck(clone, 2));
+
+    // The 'hardware' write shouldn't have affected the original vmo.
+    ASSERT_NO_FATAL_FAILURES(VmoCheck(vmo, 1));
+}
+
 // Tests that clones based on physical vmos can't be created.
 TEST_F(VmoClone2TestCase, NoPhysical) {
     if (!RootResource()) {

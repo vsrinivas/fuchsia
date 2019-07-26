@@ -525,6 +525,13 @@ zx_status_t VmObjectPaged::CreateCowClone(Resizability resizable, CloneType type
         return ZX_ERR_NOT_SUPPORTED;
       }
 
+      // If this is non-zero, that means that there are pages which hardware can
+      // touch, so the vmo can't be safely cloned.
+      // TODO: consider immediately forking these pages.
+      if (pinned_page_count_) {
+        return ZX_ERR_BAD_STATE;
+      }
+
       uint32_t options = kHidden;
       if (is_contiguous()) {
         options |= kContiguous;
@@ -1745,9 +1752,14 @@ zx_status_t VmObjectPaged::PinLocked(uint64_t offset, uint64_t len) {
       end_page_offset);
 
   if (status != ZX_OK) {
+    pinned_page_count_ += (pin_range_end - start_page_offset) / PAGE_SIZE;
     UnpinLocked(start_page_offset, pin_range_end - start_page_offset);
     return status;
   }
+
+  // Pinning every page in the largest vmo possible as many times as possible can't overflow
+  static_assert(VmObjectPaged::MAX_SIZE / PAGE_SIZE < UINT64_MAX / VM_PAGE_OBJECT_MAX_PIN_COUNT);
+  pinned_page_count_ += (end_page_offset - start_page_offset) / PAGE_SIZE;
 
   return ZX_OK;
 }
@@ -1791,6 +1803,11 @@ void VmObjectPaged::UnpinLocked(uint64_t offset, uint64_t len) {
       [](uint64_t gap_start, uint64_t gap_end) { return ZX_ERR_NOT_FOUND; }, start_page_offset,
       end_page_offset);
   ASSERT_MSG(status == ZX_OK, "Tried to unpin an uncommitted page");
+
+  bool overflow = sub_overflow(
+      pinned_page_count_, (end_page_offset - start_page_offset) / PAGE_SIZE, &pinned_page_count_);
+  ASSERT(!overflow);
+
   return;
 }
 
@@ -1799,6 +1816,10 @@ bool VmObjectPaged::AnyPagesPinnedLocked(uint64_t offset, size_t len) {
   DEBUG_ASSERT(lock_.lock().IsHeld());
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+
+  if (pinned_page_count_ == 0) {
+    return is_contiguous();
+  }
 
   const uint64_t start_page_offset = offset;
   const uint64_t end_page_offset = offset + len;
