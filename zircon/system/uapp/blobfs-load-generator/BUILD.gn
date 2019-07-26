@@ -2,13 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
+executable("blobfs-load-generator") {
   testonly = true
-
+  sources = [
+    "main.cc",
+  ]
   deps = [
-    "//tools/bindc:tests",
-    "//tools/blackout:tests",
-    "//tools/fidlcat:fidlcat_host_tests($host_toolchain)",
-    "//tools/fidlcat:fidlcat_tests",
+    "$zx/system/ulib/digest",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/fs-test-utils",
   ]
 }

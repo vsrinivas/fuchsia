@@ -633,6 +633,21 @@
             "package_name": "quote"
         },
         {
+            "crate_name": "rand",
+            "crate_type": "lib",
+            "package_name": "rand"
+        },
+        {
+            "crate_name": "rand_core",
+            "crate_type": "lib",
+            "package_name": "rand_core"
+        },
+        {
+            "crate_name": "rand_os",
+            "crate_type": "lib",
+            "package_name": "rand_os"
+        },
+        {
             "crate_name": "rayon",
             "crate_type": "lib",
             "package_name": "rayon"

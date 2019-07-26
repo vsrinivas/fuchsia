@@ -14,6 +14,7 @@ group("uapp") {
     "biotime",
     "blktest",
     "blobfs",
+    "blobfs-load-generator",
     "channel-perf",
     "clock",
     "clock:clkctl",

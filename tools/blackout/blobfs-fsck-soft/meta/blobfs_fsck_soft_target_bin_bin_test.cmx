@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/blobfs_fsck_soft_target_bin_bin_test"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/ramctl"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

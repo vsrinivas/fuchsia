@@ -2,13 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("all") {
+  testonly = true
+  public_deps = [
+    "//tools/blackout/blobfs-fsck-soft",
+  ]
+}
+
 group("tests") {
   testonly = true
-
-  deps = [
-    "//tools/bindc:tests",
-    "//tools/blackout:tests",
-    "//tools/fidlcat:fidlcat_host_tests($host_toolchain)",
-    "//tools/fidlcat:fidlcat_tests",
+  public_deps = [
+    "blobfs-fsck-soft:tests",
   ]
 }
