@@ -35,6 +35,9 @@ lazy_static! {
     /// URL for OAuth token exchange requests.
     pub static ref OAUTH_URI: Url =
         Url::parse("https://www.googleapis.com/oauth2/v4/token").unwrap();
+    /// URL for OAuth token revocation requests.
+    pub static ref OAUTH_REVOCATION_URI: Url =
+        Url::parse("https://accounts.google.com/o/oauth2/revoke").unwrap();
     /// URL for OpenID user info requests.
     pub static ref USER_INFO_URI: Url =
         Url::parse("https://www.googleapis.com/oauth2/v3/userinfo").unwrap();

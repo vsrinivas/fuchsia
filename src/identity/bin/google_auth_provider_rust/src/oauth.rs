@@ -5,7 +5,7 @@
 //! This module contains methods for creating OAuth requests and interpreting
 //! responses.
 
-use crate::constants::{FUCHSIA_CLIENT_ID, OAUTH_URI, REDIRECT_URI};
+use crate::constants::{FUCHSIA_CLIENT_ID, OAUTH_REVOCATION_URI, OAUTH_URI, REDIRECT_URI};
 use crate::error::{AuthProviderError, ResultExt};
 use crate::http::{HttpRequest, HttpRequestBuilder};
 
@@ -83,6 +83,18 @@ pub fn build_request_with_refresh_token(
         .finish()
 }
 
+/// Construct an Oauth token revocation request.  `credential` may be either
+/// an access token or refresh token.
+pub fn build_revocation_request(credential: String) -> AuthProviderResult<HttpRequest> {
+    let request_body =
+        form_urlencoded::Serializer::new(String::new()).append_pair("token", &credential).finish();
+
+    HttpRequestBuilder::new(OAUTH_REVOCATION_URI.as_str(), "POST")
+        .with_header("content-type", "application/x-www-form-urlencoded")
+        .set_body(&request_body)
+        .finish()
+}
+
 /// Parses a response for an OAuth access token request when both a refresh token
 /// and access token are expected in the response.
 pub fn parse_response_with_refresh_token(
@@ -134,6 +146,23 @@ pub fn parse_response_without_refresh_token(
                 }
             };
             Err(AuthProviderError::new(status))
+        }
+        _ => Err(AuthProviderError::new(AuthProviderStatus::OauthServerError)),
+    }
+}
+
+/// Parses a response for an Oauth revocation request.
+pub fn parse_revocation_response(
+    response_body: Option<String>,
+    status: StatusCode,
+) -> AuthProviderResult<()> {
+    match (response_body.as_ref(), status) {
+        (_, StatusCode::OK) => Ok(()),
+        (Some(response), status) if status.is_client_error() => {
+            let response = from_str::<OAuthErrorResponse>(&response)
+                .auth_provider_status(AuthProviderStatus::OauthServerError)?;
+            warn!("Got unexpected error code during token revocation: {}", response.error);
+            Err(AuthProviderError::new(AuthProviderStatus::OauthServerError))
         }
         _ => Err(AuthProviderError::new(AuthProviderStatus::OauthServerError)),
     }
@@ -245,6 +274,23 @@ mod test {
         // Malformed response
         let response = "{\"a malformed response\"}".to_string();
         let result = parse_response_without_refresh_token(Some(response), StatusCode::OK);
+        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+    }
+
+    #[test]
+    fn test_parse_revocation_response_success() {
+        assert!(parse_revocation_response(None, StatusCode::OK).is_ok());
+    }
+
+    #[test]
+    fn test_parse_revocation_response_failures() {
+        // Server side error
+        let result = parse_revocation_response(None, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+
+        // Malformed response
+        let response = "bad response".to_string();
+        let result = parse_revocation_response(Some(response), StatusCode::BAD_REQUEST);
         assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
     }
 

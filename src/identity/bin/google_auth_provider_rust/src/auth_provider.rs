@@ -6,8 +6,9 @@ use crate::constants::{AUTHORIZE_URI, DEFAULT_SCOPES, FUCHSIA_CLIENT_ID, REDIREC
 use crate::error::{AuthProviderError, ResultExt};
 use crate::http::HttpClient;
 use crate::oauth::{
-    build_request_with_auth_code, build_request_with_refresh_token, parse_auth_code_from_redirect,
-    parse_response_with_refresh_token, parse_response_without_refresh_token, AccessToken, AuthCode,
+    build_request_with_auth_code, build_request_with_refresh_token, build_revocation_request,
+    parse_auth_code_from_redirect, parse_response_with_refresh_token,
+    parse_response_without_refresh_token, parse_revocation_response, AccessToken, AuthCode,
     RefreshToken,
 };
 use crate::openid::{build_user_info_request, parse_user_info_response};
@@ -196,10 +197,15 @@ where
     /// `AuthProvider` interface.
     async fn revoke_app_or_persistent_credential(
         &self,
-        _credential: String,
+        credential: String,
     ) -> AuthProviderResult<()> {
-        // TODO(satsukiu): implement
-        Err(AuthProviderError::new(AuthProviderStatus::InternalError))
+        if credential.is_empty() {
+            return Err(AuthProviderError::new(AuthProviderStatus::BadRequest));
+        }
+
+        let request = build_revocation_request(credential)?;
+        let (response_body, status) = await!(self.http_client.request(request))?;
+        parse_revocation_response(response_body, status)
     }
 
     /// Implementation of `GetPersistentCredentialFromAttestationJWT` method
@@ -822,10 +828,38 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_revoke_app_or_persistent_credential() -> Result<(), Error> {
-        let auth_provider = get_auth_provider_proxy(None, None);
+    async fn test_revoke_app_or_persistent_credential_success() -> Result<(), Error> {
+        let mock_http = TestHttpClient::with_response(None, StatusCode::OK);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
         let result = await!(auth_provider.revoke_app_or_persistent_credential("credential"))?;
-        assert_eq!(result, AuthProviderStatus::InternalError);
+        assert_eq!(result, AuthProviderStatus::Ok);
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_revoke_app_or_persistent_credential_failures() -> Result<(), Error> {
+        // Empty credential
+        let auth_provider = get_auth_provider_proxy(None, None);
+        let result = await!(auth_provider.revoke_app_or_persistent_credential(""))?;
+        assert_eq!(result, AuthProviderStatus::BadRequest);
+
+        // Error response
+        let http_response = "bad response";
+        let mock_http = TestHttpClient::with_response(Some(http_response), StatusCode::BAD_REQUEST);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
+        assert_eq!(
+            await!(auth_provider.revoke_app_or_persistent_credential("credential"))?,
+            AuthProviderStatus::OauthServerError
+        );
+
+        // Network error
+        let mock_http = TestHttpClient::with_error(AuthProviderStatus::NetworkError);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
+        assert_eq!(
+            await!(auth_provider.revoke_app_or_persistent_credential("credential"))?,
+            AuthProviderStatus::NetworkError
+        );
+
         Ok(())
     }
 }
