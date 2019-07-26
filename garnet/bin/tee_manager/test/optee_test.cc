@@ -538,5 +538,22 @@ TEST_F(OpteeTest, SeekWriteReadFile) {
   EXPECT_EQ(read_contents, kNewFileContents);
 }
 
+TEST_F(OpteeTest, OpenNonexistentFile) {
+  // Open file with expectation of failure via TEEC_ERROR_ITEM_NOT_FOUND
+  TEEC_Operation op = {};
+  std::string nonexistent_file_name = GetFileName() + "definitely_non-existent";
+  op.paramTypes =
+      TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_VALUE_INOUT, TEEC_VALUE_INPUT, TEEC_NONE);
+  op.params[0].tmpref.buffer = static_cast<void*>(nonexistent_file_name.data());
+  op.params[0].tmpref.size = nonexistent_file_name.size();
+  op.params[1].value.a = kFlagRead;
+  op.params[2].value.a = kPrivateStorage;
+  OperationResult op_result;
+  op_result.result =
+      TEEC_InvokeCommand(GetSession(), TA_STORAGE_CMD_OPEN, &op, &op_result.return_origin);
+
+  ASSERT_EQ(op_result.result, TEEC_ERROR_ITEM_NOT_FOUND);
+}
+
 }  // namespace test
 }  // namespace optee

@@ -1054,7 +1054,12 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
   zx::channel storage_channel;
   constexpr bool kNoCreate = false;
   zx_status_t status = GetStorageDirectory(path.parent_path(), kNoCreate, &storage_channel);
-  if (status != ZX_OK) {
+  if (status == ZX_ERR_NOT_FOUND) {
+    zxlogf(ERROR, "optee::%s: parent path not found (status: %d)\n", __FUNCTION__, status);
+    message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
+    return status;
+  } else if (status != ZX_OK) {
+    zxlogf(ERROR, "optee::%s: unable to get parent directory (status: %d)\n", __FUNCTION__, status);
     message->set_return_code(TEEC_ERROR_BAD_STATE);
     return status;
   }
@@ -1066,7 +1071,11 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
   static constexpr uint32_t kOpenMode = fuchsia_io_MODE_TYPE_FILE;
   status = OpenObjectInDirectory(storage_channel, kOpenFlags, kOpenMode, path.filename().string(),
                                  &file_channel);
-  if (status != ZX_OK) {
+  if (status == ZX_ERR_NOT_FOUND) {
+    zxlogf(ERROR, "optee::%s: file not found (status: %d)\n", __FUNCTION__, status);
+    message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
+    return status;
+  } else if (status != ZX_OK) {
     zxlogf(ERROR, "optee::%s: unable to open file (status: %d)\n", __FUNCTION__, status);
     message->set_return_code(TEEC_ERROR_GENERIC);
     return status;
