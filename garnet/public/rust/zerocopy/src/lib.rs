@@ -8,7 +8,8 @@
 //! parsing and serialization by allowing zero-copy conversion to/from byte
 //! slices.
 //!
-//! This is enabled by three core marker traits:
+//! This is enabled by three core marker traits, each of which can be derived
+//! (e.g., `#[derive(FromBytes)]`):
 //! - [`FromBytes`] indicates that a type may safely be converted from an
 //!   arbitrary byte sequence
 //! - [`AsBytes`] indicates that a type may safely be converted *to* a byte
@@ -163,6 +164,23 @@ pub unsafe trait FromBytes {
 ///
 /// `AsBytes` is ignorant of byte order. For byte order-aware types, see the
 /// [`byteorder`] module.
+///
+/// # Custom Derive Errors
+///
+/// Due to the way that the custom derive for `AsBytes` is implemented, you may
+/// get an error like this:
+///
+/// ```text
+/// error[E0080]: evaluation of constant value failed
+///   --> lib.rs:1:10
+///    |
+///  1 | #[derive(AsBytes)]
+///    |          ^^^^^^^ attempt to divide by zero
+/// ```
+///
+/// This error means that the type being annotated has padding bytes, which is
+/// illegal for `AsBytes` types. Consider either adding explicit struct fields
+/// where those padding bytes would be or using `#[repr(packed)]`.
 ///
 /// # Safety
 ///
