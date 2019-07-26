@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use log::debug;
+use log::{debug, trace};
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{BroadcastAddress, LinkLocalAddr, MulticastAddr, MulticastAddress, UnicastAddress};
@@ -107,6 +107,7 @@ impl EthernetDeviceStateBuilder {
         EthernetDeviceState {
             mac: self.mac,
             mtu: self.mtu,
+            hw_mtu: self.mtu,
             ipv4_addr_sub: None,
             ipv6_addr_sub: None,
             ipv4_multicast_groups: HashSet::new(),
@@ -121,7 +122,12 @@ impl EthernetDeviceStateBuilder {
 /// The state associated with an Ethernet device.
 pub(crate) struct EthernetDeviceState {
     mac: Mac,
+    /// The value this netstack assumes as the device's current MTU.
     mtu: u32,
+    /// The maximum MTU allowed by the hardware.
+    ///
+    /// `mtu` MUST NEVER be greater than `hw_mtu`.
+    hw_mtu: u32,
     ipv4_addr_sub: Option<AddrSubnet<Ipv4Addr>>,
     ipv6_addr_sub: Option<Tentative<AddrSubnet<Ipv6Addr>>>,
     ipv4_multicast_groups: HashSet<MulticastAddr<Ipv4Addr>>,
@@ -456,8 +462,8 @@ pub(crate) fn is_in_ip_multicast<D: EventDispatcher, A: IpAddress>(
 }
 
 /// Get the MTU associated with this device.
-pub(crate) fn get_mtu<D: EventDispatcher>(ctx: &mut Context<D>, device_id: usize) -> u32 {
-    get_device_state(ctx.state(), device_id).mtu
+pub(crate) fn get_mtu<D: EventDispatcher>(state: &StackState<D>, device_id: usize) -> u32 {
+    get_device_state(state, device_id).mtu
 }
 
 /// Insert a static entry into this device's ARP table.
@@ -701,6 +707,26 @@ impl ndp::NdpDevice for EthernetNdpDevice {
             }
             _ => panic!("Attempted to resolve an unknown tentative address"),
         }
+    }
+
+    fn set_mtu<D: EventDispatcher>(state: &mut StackState<D>, device_id: usize, mut mtu: u32) {
+        // TODO(ghanan): Should this new MTU be updated only from the netstack's perspective or
+        //               be exposed to the device hardware?
+
+        // `mtu` must not be less than the minimum IPv6 MTU.
+        assert!(mtu >= crate::ip::path_mtu::IPV6_MIN_MTU);
+
+        let dev_state = get_device_state_mut(state, device_id);
+
+        // If `mtu` is greater than what the device supports, set `mtu` to the maximum MTU the
+        // device supports.
+        if mtu > dev_state.hw_mtu {
+            trace!("ethernet::ndp_device::set_mtu: MTU of {:?} is greater than the device {:?}'s max MTU of {:?}, using device's max MTU instead", mtu, device_id, dev_state.hw_mtu);
+            mtu = dev_state.hw_mtu;
+        }
+
+        trace!("ethernet::ndp_device::set_mtu: setting link MTU to {:?}", mtu);
+        dev_state.mtu = mtu;
     }
 }
 

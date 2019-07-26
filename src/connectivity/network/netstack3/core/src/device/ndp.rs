@@ -255,6 +255,24 @@ pub(crate) trait NdpDevice: Sized {
         device_id: usize,
         addr: Ipv6Addr,
     );
+
+    /// Set Link MTU.
+    ///
+    /// `set_mtu` is used when a host receives a Router Advertisement with the MTU option.
+    ///
+    /// `set_mtu` MAY set the device's new MTU to a value less than `mtu` if the device does not
+    /// support using `mtu` as its new MTU. `set_mtu` MUST NOT use a new MTU value that is greater
+    /// than `mtu`.
+    ///
+    /// See [RFC 4861 section 6.3.4] for more information.
+    ///
+    /// # Panics
+    ///
+    /// `set_mtu` is allowed to panic if `mtu` is less than the minimum IPv6 MTU, [`IPV6_MIN_MTU`].
+    ///
+    /// [`IPV6_MIN_MTU`]: crate::ip::path_mtu::IPV6_MIN_MTU
+    /// [RFC 4861 section 6.3.4]: https://tools.ietf.org/html/rfc4861#section-6.3.4
+    fn set_mtu<D: EventDispatcher>(ctx: &mut StackState<D>, device_id: usize, mtu: u32);
 }
 
 /// Per interface configurations for NDP.
@@ -1136,18 +1154,27 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                     // TODO(ghanan): Mark NDP state as STALE as per the RFC once we implement
                     //               the RFC compliant states.
                     NdpOption::SourceLinkLayerAddress(a) => {
+                        let ndp_state = ND::get_ndp_state(ctx.state_mut(), device_id);
                         let link_addr =
                             ND::LinkAddress::from_bytes(&a[..ND::LinkAddress::BYTES_LENGTH]);
 
-                        trace!("receive_ndp_packet_inner: setting link address for router {:?} to {:?}", src_ip, link_addr);
+                        trace!("receive_ndp_packet_inner: NDP RA: setting link address for router {:?} to {:?}", src_ip, link_addr);
 
                         ndp_state.neighbors.set_link_address(src_ip.get(), link_addr);
                     }
-                    // TODO(ghanan): Actually handle the MTU option.
-                    NdpOption::MTU { .. } => log_unimplemented!(
-                        (),
-                        "receive_ndp_packet_inner: NDP RA's MTU option is unimplemented"
-                    ),
+                    NdpOption::MTU(mtu) => {
+                        trace!("receive_ndp_packet_inner: mtu option with mtu = {:?}", mtu);
+
+                        // TODO(ghanan): Make updating the MTU from an RA message configurable.
+                        if mtu >= crate::ip::path_mtu::IPV6_MIN_MTU {
+                            // `set_mtu` may panic if `mtu` is less than `IPV6_MIN_MTU` but we just
+                            // checked to make sure that `mtu` is at least `IPV6_MIN_MTU` so we know
+                            // `set_mtu` will not panic.
+                            ND::set_mtu(ctx.state_mut(), device_id, mtu);
+                        } else {
+                            trace!("receive_ndp_packet_inner: NDP RA: not setting link MTU (from {:?}) to {:?} as it is less than IPV6_MIN_MTU", src_ip, mtu);
+                        }
+                    }
                     // TODO(ghanan): Actually handle the prefix option.
                     NdpOption::PrefixInformation(_) => log_unimplemented!(
                         (),
@@ -1159,6 +1186,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
 
             // If the router exists in our router table, make sure it is marked as a router as
             // per RFC 4861 section 6.3.4.
+            let ndp_state = ND::get_ndp_state(ctx.state_mut(), device_id);
             if let Some(state) = ndp_state.neighbors.get_neighbor_state_mut(&src_ip) {
                 state.is_router = true;
             }
@@ -1320,7 +1348,8 @@ mod tests {
     use packet::{Buf, Buffer, ParseBuffer};
 
     use crate::device::{
-        ethernet::EthernetNdpDevice, get_ip_addr_subnet, is_in_ip_multicast, set_ip_addr_subnet,
+        ethernet::EthernetNdpDevice, get_ip_addr_subnet, get_mtu, is_in_ip_multicast,
+        set_ip_addr_subnet,
     };
     use crate::ip::IPV6_MIN_MTU;
     use crate::testutil::{
@@ -2070,5 +2099,76 @@ mod tests {
         let neighbor = ndp_state.neighbors.get_neighbor_state(&src_ip).unwrap();
         assert_eq!(neighbor.link_address, LinkAddressResolutionValue::Known { address: src_mac });
         assert!(neighbor.is_router);
+    }
+
+    #[test]
+    fn test_receiving_router_advertisement_mtu_option() {
+        fn packet_buf(src_ip: Ipv6Addr, dst_ip: Ipv6Addr, mtu: u32) -> Buf<Vec<u8>> {
+            let options = &[NdpOption::MTU(mtu)];
+            OptionsSerializer::new(options.iter())
+                .into_serializer()
+                .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                    src_ip,
+                    dst_ip,
+                    IcmpUnusedCode,
+                    RouterAdvertisement::new(1, 2, 3, 4, 5),
+                ))
+                .serialize_vec_outer()
+                .unwrap()
+                .unwrap_b()
+        }
+
+        let config = get_dummy_config::<Ipv6Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let hw_mtu = 5000;
+        let device = ctx.state_mut().device.add_ethernet_device(TEST_LOCAL_MAC, hw_mtu);;
+        let device_id = device.id();
+        let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
+        let src_ip = src_mac.to_ipv6_link_local();
+
+        //
+        // Receive a new RA with a valid mtu option (but the new mtu should only be 5000
+        // as that is the max MTU of the device).
+        //
+
+        let mut icmpv6_packet_buf = packet_buf(src_ip.get(), config.local_ip, 5781);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, Some(device), src_ip.get(), config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        assert!(ndp_state.has_default_router(&src_ip));
+        assert_eq!(get_mtu(ctx.state(), device), hw_mtu);
+
+        //
+        // Receive a new RA with an invalid MTU option (value is lower than IPv6 min mtu)
+        //
+
+        let mut icmpv6_packet_buf =
+            packet_buf(src_ip.get(), config.local_ip, crate::ip::path_mtu::IPV6_MIN_MTU - 1);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, Some(device), src_ip.get(), config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        assert!(ndp_state.has_default_router(&src_ip));
+        assert_eq!(get_mtu(ctx.state(), device), hw_mtu);
+
+        //
+        // Receive a new RA with a valid MTU option (value is exactly IPv6 min mtu)
+        //
+
+        let mut icmpv6_packet_buf =
+            packet_buf(src_ip.get(), config.local_ip, crate::ip::path_mtu::IPV6_MIN_MTU);
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip.get(), config.local_ip))
+            .unwrap();
+        receive_ndp_packet(&mut ctx, Some(device), src_ip.get(), config.local_ip, icmpv6_packet);
+        assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 3);
+        let ndp_state = EthernetNdpDevice::get_ndp_state(ctx.state_mut(), device_id);
+        assert!(ndp_state.has_default_router(&src_ip));
+        assert_eq!(get_mtu(ctx.state(), device), crate::ip::path_mtu::IPV6_MIN_MTU);
     }
 }

@@ -176,6 +176,13 @@ pub(crate) mod options {
     use crate::wire::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
     use crate::wire::U32;
 
+    /// The length of an NDP MTU option, excluding the first 2 bytes (kind and length bytes).
+    ///
+    /// See [RFC 4861 section 4.6.3] for more information.
+    ///
+    /// [RFC 4861 section 4.6.3]: https://tools.ietf.org/html/rfc4861#section-4.6.3
+    const MTU_OPTION_LEN: usize = 6;
+
     create_net_enum! {
         NdpOptionType,
         SourceLinkLayerAddress: SOURCE_LINK_LAYER_ADDRESS = 1,
@@ -219,7 +226,7 @@ pub(crate) mod options {
 
         RedirectedHeader { original_packet: &'a [u8] },
 
-        MTU { mtu: &'a [u8] },
+        MTU(u32),
     }
 
     impl<'a> From<&NdpOption<'a>> for NdpOptionType {
@@ -266,7 +273,7 @@ pub(crate) mod options {
                 Some(NdpOptionType::RedirectedHeader) => {
                     NdpOption::RedirectedHeader { original_packet: &data[6..] }
                 }
-                Some(NdpOptionType::Mtu) => NdpOption::MTU { mtu: &data[2..] },
+                Some(NdpOptionType::Mtu) => NdpOption::MTU(NetworkEndian::read_u32(&data[2..])),
                 None => return Ok(None),
             }))
         }
@@ -279,8 +286,8 @@ pub(crate) mod options {
             match option {
                 NdpOption::SourceLinkLayerAddress(data)
                 | NdpOption::TargetLinkLayerAddress(data)
-                | NdpOption::RedirectedHeader { original_packet: data }
-                | NdpOption::MTU { mtu: data } => data.len(),
+                | NdpOption::RedirectedHeader { original_packet: data } => data.len(),
+                NdpOption::MTU(mtu) => MTU_OPTION_LEN,
                 NdpOption::PrefixInformation(pfx_info) => pfx_info.bytes().len(),
             }
         }
@@ -290,14 +297,20 @@ pub(crate) mod options {
         }
 
         fn serialize(buffer: &mut [u8], option: &Self::Option) {
-            let bytes = match option {
+            match option {
                 NdpOption::SourceLinkLayerAddress(data)
                 | NdpOption::TargetLinkLayerAddress(data)
-                | NdpOption::RedirectedHeader { original_packet: data }
-                | NdpOption::MTU { mtu: data } => data,
-                NdpOption::PrefixInformation(pfx_info) => pfx_info.bytes(),
-            };
-            buffer.copy_from_slice(bytes);
+                | NdpOption::RedirectedHeader { original_packet: data } => {
+                    buffer.copy_from_slice(data);
+                }
+                NdpOption::PrefixInformation(pfx_info) => {
+                    buffer.copy_from_slice(pfx_info.bytes());
+                }
+                NdpOption::MTU(mtu) => {
+                    buffer[..2].copy_from_slice(&[0; 2]);
+                    NetworkEndian::write_u32(&mut buffer[2..], *mtu);
+                }
+            }
         }
     }
 }
@@ -311,6 +324,28 @@ mod tests {
     use crate::wire::icmp::{IcmpMessage, IcmpPacket, IcmpPacketBuilder, IcmpParseArgs};
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
     use packet::serialize::Serializer;
+
+    #[test]
+    fn parse_serialize_mtu_option() {
+        let expected_mtu = 5781;
+        let options = &[options::NdpOption::MTU(expected_mtu)];
+        let serialized = OptionsSerializer::<_>::new(options.iter())
+            .into_serializer()
+            .serialize_vec_outer()
+            .unwrap();
+        let mut expected = [5, 1, 0, 0, 0, 0, 0, 0];
+        NetworkEndian::write_u32(&mut expected[4..], expected_mtu);
+        assert_eq!(serialized.as_ref(), expected);
+
+        let parsed = Options::parse(&expected[..]).unwrap();
+        let parsed = parsed.iter().collect::<Vec<options::NdpOption>>();
+        assert_eq!(parsed.len(), 1);
+        if let options::NdpOption::MTU(mtu) = &parsed[0] {
+            assert_eq!(*mtu, expected_mtu);
+        } else {
+            unreachable!("parsed option should have been an mtu option");
+        }
+    }
 
     #[test]
     fn parse_neighbor_solicitation() {

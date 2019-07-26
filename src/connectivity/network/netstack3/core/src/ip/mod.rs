@@ -631,7 +631,7 @@ pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
                 // the sender's ability to figure out the minimum path MTU. This
                 // may break other logic, though, so we should still fix it
                 // eventually.
-                let mtu = crate::device::get_mtu(ctx, device);
+                let mtu = crate::device::get_mtu(ctx.state(), device);
                 send_packet_too_big(
                     ctx,
                     device,

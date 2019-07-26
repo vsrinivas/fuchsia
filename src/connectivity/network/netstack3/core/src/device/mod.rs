@@ -18,7 +18,7 @@ use packet::{BufferMut, Serializer};
 
 use crate::data_structures::{IdMap, IdMapCollectionKey};
 use crate::device::ethernet::{EthernetDeviceState, EthernetDeviceStateBuilder};
-use crate::{BufferDispatcher, Context, EventDispatcher};
+use crate::{BufferDispatcher, Context, EventDispatcher, StackState};
 
 /// An ID identifying a device.
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
@@ -326,9 +326,9 @@ pub(crate) fn is_in_ip_multicast<D: EventDispatcher, A: IpAddress>(
 }
 
 /// Get the MTU associated with this device.
-pub(crate) fn get_mtu<D: EventDispatcher>(ctx: &mut Context<D>, device: DeviceId) -> u32 {
+pub(crate) fn get_mtu<D: EventDispatcher>(state: &StackState<D>, device: DeviceId) -> u32 {
     match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::get_mtu(ctx, device.id),
+        DeviceProtocol::Ethernet => self::ethernet::get_mtu(state, device.id),
     }
 }
 
