@@ -2,136 +2,132 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string.h>
-
+#include <lib/zx/eventpair.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-static void check_signals_state(zx_handle_t h, zx_signals_t satisfied) {
-    zx_signals_t pending = 0;
-    EXPECT_EQ(zx_object_wait_one(h, 0u, 0u, &pending), ZX_ERR_TIMED_OUT, "wrong wait result");
-    EXPECT_EQ(pending, satisfied, "wrong satisfied state");
+namespace {
+
+zx_signals_t GetPendingSignals(const zx::eventpair& eventpair) {
+  zx_signals_t pending = 0;
+
+  EXPECT_STATUS(ZX_ERR_TIMED_OUT, eventpair.wait_one(0, zx::time::infinite_past(), &pending));
+
+  return pending;
 }
 
-static bool create_test(void) {
-    BEGIN_TEST;
+TEST(EventPairTest, HandlesNotInvalid) {
+  zx::eventpair eventpair_0, eventpair_1;
 
-    {
-        zx_handle_t h[2] = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID};
-        ASSERT_EQ(zx_eventpair_create(0, &h[0], &h[1]), ZX_OK, "eventpair_create failed");
-        ASSERT_NE(h[0], ZX_HANDLE_INVALID, "invalid handle from eventpair_create");
-        ASSERT_NE(h[1], ZX_HANDLE_INVALID, "invalid handle from eventpair_create");
+  ASSERT_OK(zx::eventpair::create(0, &eventpair_0, &eventpair_1));
 
-        zx_info_handle_basic_t info[2] = {};
-        zx_status_t status = zx_object_get_info(h[0], ZX_INFO_HANDLE_BASIC, &info[0], sizeof(info[0]), NULL, NULL);
-        ASSERT_EQ(status, ZX_OK, "");
-        EXPECT_EQ(info[0].rights, ZX_RIGHTS_BASIC | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER,
-                  "wrong rights");
-        EXPECT_EQ(info[0].type, (uint32_t)ZX_OBJ_TYPE_EVENTPAIR, "wrong type");
-        status = zx_object_get_info(h[1], ZX_INFO_HANDLE_BASIC, &info[1], sizeof(info[1]), NULL, NULL);
-        ASSERT_EQ(status, ZX_OK, "");
-        EXPECT_EQ(info[1].rights, ZX_RIGHTS_BASIC | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER,
-                  "wrong rights");
-        EXPECT_EQ(info[1].type, (uint32_t)ZX_OBJ_TYPE_EVENTPAIR, "wrong type");
-
-
-        // Check that koids line up.
-        ASSERT_NE(info[0].koid, 0u, "zero koid!");
-        ASSERT_NE(info[0].related_koid, 0u, "zero peer koid!");
-        ASSERT_NE(info[1].koid, 0u, "zero koid!");
-        ASSERT_NE(info[1].related_koid, 0u, "zero peer koid!");
-        ASSERT_EQ(info[0].koid, info[1].related_koid, "mismatched koids!");
-        ASSERT_EQ(info[1].koid, info[0].related_koid, "mismatched koids!");
-
-        EXPECT_EQ(zx_handle_close(h[0]), ZX_OK, "failed to close event pair handle");
-        EXPECT_EQ(zx_handle_close(h[1]), ZX_OK, "failed to close event pair handle");
-    }
-
-    // Currently no flags are supported.
-    {
-        zx_handle_t h[2] = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID};
-        EXPECT_EQ(zx_eventpair_create(1u, &h[0], &h[1]), ZX_ERR_NOT_SUPPORTED, "eventpair_create failed to fail");
-        EXPECT_EQ(h[0], ZX_HANDLE_INVALID, "valid handle from failed eventpair_create?");
-        EXPECT_EQ(h[1], ZX_HANDLE_INVALID, "valid handle from failed eventpair_create?");
-    }
-
-    END_TEST;
+  EXPECT_NE(eventpair_0.get(), ZX_HANDLE_INVALID);
+  EXPECT_NE(eventpair_1.get(), ZX_HANDLE_INVALID);
 }
 
-static bool signal_test(void) {
-    BEGIN_TEST;
-    zx_handle_t h[2] = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID};
-    ASSERT_EQ(zx_eventpair_create(0, &h[0], &h[1]), ZX_OK, "eventpair_create failed");
-    ASSERT_NE(h[0], ZX_HANDLE_INVALID, "invalid handle from eventpair_create");
-    ASSERT_NE(h[1], ZX_HANDLE_INVALID, "invalid handle from eventpair_create");
+TEST(EventPairTest, HandleRightsAreCorrect) {
+  zx::eventpair eventpair_0, eventpair_1;
 
-    check_signals_state(h[0], 0u);
-    check_signals_state(h[1], 0u);
+  ASSERT_OK(zx::eventpair::create(0, &eventpair_0, &eventpair_1));
 
-    EXPECT_EQ(zx_object_signal(h[0], 0u, ZX_USER_SIGNAL_0), ZX_OK, "object_signal failed");
-    check_signals_state(h[1], 0u);
-    check_signals_state(h[0], ZX_USER_SIGNAL_0);
+  zx_info_handle_basic_t info = {};
+  ASSERT_OK(eventpair_0.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(info.rights, ZX_RIGHTS_BASIC | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER);
+  EXPECT_EQ(info.type, static_cast<uint32_t>(ZX_OBJ_TYPE_EVENTPAIR));
 
-    EXPECT_EQ(zx_object_signal(h[0], ZX_USER_SIGNAL_0, 0u), ZX_OK, "object_signal failed");
-    check_signals_state(h[1], 0u);
-    check_signals_state(h[0], 0u);
-
-    EXPECT_EQ(zx_handle_close(h[0]), ZX_OK, "failed to close event pair handle");
-    check_signals_state(h[1], ZX_EVENTPAIR_PEER_CLOSED);
-    EXPECT_EQ(zx_handle_close(h[1]), ZX_OK, "failed to close event pair handle");
-    END_TEST;
+  info = {};
+  ASSERT_OK(eventpair_1.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(info.rights, ZX_RIGHTS_BASIC | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER);
+  EXPECT_EQ(info.type, static_cast<uint32_t>(ZX_OBJ_TYPE_EVENTPAIR));
 }
 
-static bool signal_peer_test(void) {
-    BEGIN_TEST;
+TEST(EventPairTest, KoidsAreCorrect) {
+  zx::eventpair eventpair_0, eventpair_1;
 
-    zx_handle_t h[2] = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID};
-    ASSERT_EQ(zx_eventpair_create(0, &h[0], &h[1]), ZX_OK, "eventpair_create failed");
-    ASSERT_NE(h[0], ZX_HANDLE_INVALID, "invalid handle from eventpair_create");
-    ASSERT_NE(h[1], ZX_HANDLE_INVALID, "invalid handle from eventpair_create");
+  ASSERT_OK(zx::eventpair::create(0, &eventpair_0, &eventpair_1));
 
-    EXPECT_EQ(zx_object_signal_peer(h[0], 0u, ZX_USER_SIGNAL_0), ZX_OK, "object_signal failed");
-    check_signals_state(h[0], 0u);
-    check_signals_state(h[1], ZX_USER_SIGNAL_0);
+  zx_info_handle_basic_t info_0 = {};
+  zx_info_handle_basic_t info_1 = {};
+  ASSERT_OK(eventpair_0.get_info(ZX_INFO_HANDLE_BASIC, &info_0, sizeof(info_0), nullptr, nullptr));
+  ASSERT_OK(eventpair_1.get_info(ZX_INFO_HANDLE_BASIC, &info_1, sizeof(info_1), nullptr, nullptr));
 
-    EXPECT_EQ(zx_object_signal_peer(h[1], 0u, ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2), ZX_OK,
-              "object_signal failed");
-    check_signals_state(h[0], ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2);
-    check_signals_state(h[1], ZX_USER_SIGNAL_0);
-
-    EXPECT_EQ(zx_object_signal_peer(h[0], ZX_USER_SIGNAL_0, ZX_USER_SIGNAL_3 | ZX_USER_SIGNAL_4),
-              ZX_OK, "object_signal failed");
-    check_signals_state(h[0], ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2);
-    check_signals_state(h[1], ZX_USER_SIGNAL_3 | ZX_USER_SIGNAL_4);
-
-    EXPECT_EQ(zx_handle_close(h[0]), ZX_OK, "failed to close event pair handle");
-
-    // Signaled flags should remain satisfied but now should now also get peer closed (and
-    // unsignaled flags should be unsatisfiable).
-    check_signals_state(h[1],
-        ZX_EVENTPAIR_PEER_CLOSED | ZX_USER_SIGNAL_3 | ZX_USER_SIGNAL_4);
-
-    EXPECT_EQ(zx_handle_close(h[1]), ZX_OK, "failed to close event pair handle");
-
-    END_TEST;
+  // Check that koids line up.
+  EXPECT_NE(info_0.koid, 0);
+  EXPECT_NE(info_0.related_koid, 0);
+  EXPECT_NE(info_1.koid, 0);
+  EXPECT_NE(info_1.related_koid, 0);
+  EXPECT_EQ(info_0.koid, info_1.related_koid);
+  EXPECT_EQ(info_1.koid, info_0.related_koid);
 }
 
-static bool signal_peer_closed_test(void) {
-    BEGIN_TEST;
+// Currently no flags are supported.
+TEST(EventPairTest, CheckNoFlagsSupported) {
+  zx::eventpair eventpair_0, eventpair_1;
 
-    zx_handle_t eventpair[2];
-    ASSERT_EQ(zx_eventpair_create(0, &eventpair[0], &eventpair[1]), ZX_OK, "");
-    ASSERT_EQ(zx_handle_close(eventpair[1]), ZX_OK, "");
-    ASSERT_EQ(zx_object_signal_peer(eventpair[0], 0u, ZX_USER_SIGNAL_0), ZX_ERR_PEER_CLOSED, "");
-    ASSERT_EQ(zx_handle_close(eventpair[0]), ZX_OK, "");
+  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zx::eventpair::create(1, &eventpair_0, &eventpair_1));
 
-    END_TEST;
+  EXPECT_EQ(eventpair_0.get(), ZX_HANDLE_INVALID);
+  EXPECT_EQ(eventpair_1.get(), ZX_HANDLE_INVALID);
 }
 
-BEGIN_TEST_CASE(eventpair_tests)
-RUN_TEST(create_test)
-RUN_TEST(signal_test)
-RUN_TEST(signal_peer_test)
-RUN_TEST(signal_peer_closed_test)
-END_TEST_CASE(eventpair_tests)
+TEST(EventPairTest, SignalEventPairAndClearVerifySignals) {
+  zx::eventpair eventpair_0, eventpair_1;
+
+  ASSERT_OK(zx::eventpair::create(0, &eventpair_0, &eventpair_1));
+
+  EXPECT_EQ(GetPendingSignals(eventpair_0), 0);
+  EXPECT_EQ(GetPendingSignals(eventpair_1), 0);
+
+  ASSERT_OK(eventpair_0.signal(0, ZX_USER_SIGNAL_0));
+  EXPECT_EQ(GetPendingSignals(eventpair_0), ZX_USER_SIGNAL_0);
+  EXPECT_EQ(GetPendingSignals(eventpair_1), 0);
+
+  ASSERT_OK(eventpair_0.signal(ZX_USER_SIGNAL_0, 0));
+  EXPECT_EQ(GetPendingSignals(eventpair_1), 0);
+  EXPECT_EQ(GetPendingSignals(eventpair_0), 0);
+}
+
+TEST(EventPairTest, SignalPeerAndVerifyRecived) {
+  zx::eventpair eventpair_0, eventpair_1;
+
+  ASSERT_OK(zx::eventpair::create(0, &eventpair_0, &eventpair_1));
+
+  ASSERT_OK(eventpair_0.signal_peer(0, ZX_USER_SIGNAL_0));
+  EXPECT_EQ(GetPendingSignals(eventpair_0), 0);
+  EXPECT_EQ(GetPendingSignals(eventpair_1), ZX_USER_SIGNAL_0);
+
+  ASSERT_OK(eventpair_1.signal_peer(0, ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2));
+  EXPECT_EQ(GetPendingSignals(eventpair_0), ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2);
+  EXPECT_EQ(GetPendingSignals(eventpair_1), ZX_USER_SIGNAL_0);
+
+  ASSERT_OK(eventpair_0.signal_peer(ZX_USER_SIGNAL_0, ZX_USER_SIGNAL_3 | ZX_USER_SIGNAL_4));
+  EXPECT_EQ(GetPendingSignals(eventpair_0), ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2);
+  EXPECT_EQ(GetPendingSignals(eventpair_1), ZX_USER_SIGNAL_3 | ZX_USER_SIGNAL_4);
+}
+
+TEST(EventPairTest, SignalPeerThenCloseAndVerifySignalReceived) {
+  zx::eventpair eventpair_0, eventpair_1;
+
+  ASSERT_OK(zx::eventpair::create(0, &eventpair_0, &eventpair_1));
+
+  ASSERT_OK(eventpair_0.signal_peer(0, ZX_USER_SIGNAL_3 | ZX_USER_SIGNAL_4));
+
+  eventpair_0.reset();
+
+  // Signaled flags should remain satisfied but now should now also get peer closed (and
+  // unsignaled flags should be unsatisfiable).
+  EXPECT_EQ(GetPendingSignals(eventpair_1),
+            ZX_EVENTPAIR_PEER_CLOSED | ZX_USER_SIGNAL_3 | ZX_USER_SIGNAL_4);
+}
+
+TEST(EventPairTest, SignalingClosedPeerReturnsPeerClosed) {
+  zx::eventpair eventpair_0, eventpair_1;
+
+  ASSERT_OK(zx::eventpair::create(0, &eventpair_0, &eventpair_1));
+
+  eventpair_1.reset();
+  EXPECT_STATUS(ZX_ERR_PEER_CLOSED, eventpair_0.signal_peer(0, ZX_USER_SIGNAL_0));
+}
+
+}  // namespace
