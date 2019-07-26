@@ -16,7 +16,7 @@ fn main() {
 
     cc::Build::new()
                  .file("src/binding.c")
-                 .compiler(format!("{}/buildtools/linux-x64/clang/bin/clang", fuchsia_root))
+                 .compiler(format!("{}/prebuilt/third_party/clang/linux-x64/bin/clang", fuchsia_root))
                  .flag(format!("--sysroot={}/out/build-zircon/build-x64/sysroot", fuchsia_root).as_str())
                  .compile("libbinding.a");
 }

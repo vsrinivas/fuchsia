@@ -53,27 +53,13 @@ toolchain, you need a Fuchsia SDK. We expect that the SDK is located in
 the directory pointed to by the `${SDK_DIR}` variable:
 
 ```bash
-SDK_DIR=${HOME}/sdk/garnet
+SDK_DIR=${HOME}/fuchsia/sdk
 ```
 
 To download the latest SDK, you can use the following:
 
 ```bash
-./buildtools/cipd install fuchsia/sdk/linux-amd64 latest -root ${SDK_DIR}
-```
-
-Alternatively, you can build the Garnet SDK from source using the
-following commands:
-
-```bash
-gn gen --args='target_cpu="x64" base_package_labels=["//garnet/packages/sdk:garnet"]' out/x64
-ninja -C out/x64
-
-gn gen --args='target_cpu="arm64" base_package_labels=["//garnet/packages/sdk:garnet"]' out/arm64
-ninja -C out/arm64
-
-./scripts/sdk/create_layout.py --manifest out/x64/gen/garnet/public/sdk/garnet_molecule.sdk --output ${SDK_DIR}
-./scripts/sdk/create_layout.py --manifest out/arm64/gen/garnet/public/sdk/garnet_molecule.sdk --output ${SDK_DIR} --overlay
+cipd install fuchsia/sdk/core/linux-amd64 latest -root ${SDK_DIR}
 ```
 
 ## Building Clang
@@ -113,7 +99,7 @@ would use:
 
 ```bash
   -DBOOTSTRAP_LLVM_DEFAULT_TARGET_TRIPLE=x86_64-linux-gnu \
-  -DSTAGE2_LINUX_x86_64-linux-gnu_SYSROOT=${FUCHSIA}/buildtools/linux-x64/sysroot \
+  -DSTAGE2_LINUX_x86_64-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
 ```
 
 To install the compiler just built into `/usr/local`, you can use the
@@ -184,7 +170,7 @@ in the Zircon build). For example, to use the compiler from your Fuchsia
 checkout (on Linux):
 
 ```bash
-CLANG_TOOLCHAIN_PREFIX=${FUCHSIA}/buildtools/linux-x64/clang/bin/
+CLANG_TOOLCHAIN_PREFIX=${FUCHSIA}/prebuilt/third_party/clang/linux-x64/bin/
 ```
 
 <aside class="note">
@@ -301,7 +287,7 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_PROJECTS="clang;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
   -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-linux-gnu \
-  -DLINUX_x86_64-linux-gnu_SYSROOT=${FUCHSIA}/buildtools/linux-x64/sysroot \
+  -DLINUX_x86_64-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
   -DFUCHSIA_SDK=${SDK_DIR} \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
   ${LLVM_SRCDIR}/llvm
@@ -323,7 +309,7 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_PROJECTS="clang;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
   -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-linux-gnu \
-  -DLINUX_x86_64-linux-gnu_SYSROOT=${FUCHSIA}/buildtools/linux-x64/sysroot \
+  -DLINUX_x86_64-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
   -DFUCHSIA_SDK=${SDK_DIR} \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
   ${LLVM_SRCDIR}/llvm

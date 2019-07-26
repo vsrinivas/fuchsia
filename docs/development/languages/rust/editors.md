@@ -22,7 +22,7 @@ The VS Code plugin uses the RLS (Rust language server) so you'll need to first
 You'll also have to tell `rustup` to use the Fuchsia Rust toolchain:
 
 ```sh
-rustup toolchain link fuchsia /<your Fuchsia root>/buildtools/<platform>/rust
+rustup toolchain link fuchsia /<your Fuchsia root>/prebuilt/third_party/rust/<platform>
 rustup default fuchsia
 ```
 
@@ -33,7 +33,7 @@ Next open File -> Preferences -> Settings (or type Ctrl+Comma). Add the followin
   "rust.target": "x86_64-fuchsia",
   "rust.target_dir": "/<your Fuchsia root>/out/cargo_target",
   "rust.unstable_features": true,
-  "rust-client.rlsPath": "/<your Fuchsia root>/buildtools/<platform>/rust/bin/rls",
+  "rust-client.rlsPath": "/<your Fuchsia root>/prebuilt/third_party/rust/<platform>/bin/rls",
   "rust-client.disableRustup": true,
 
   // Some optional settings that may help:
@@ -82,7 +82,7 @@ Now, you'll want to make sure that the default `cargo` and `rustc` that you are
 using are Fuchsia versions of those.  From your fuchsia root, type:
 
 ```elisp
-rustup toolchain link fuchsia $PWD/buildtools/linux-x64/rust && rustup default fuchsia
+rustup toolchain link fuchsia $PWD/prebuilt/third_party/rust/linux-x64 && rustup default fuchsia
 ```
 
 Run `fx gen-cargo //garnet/foo/path/to/target:label` for the GN target that you

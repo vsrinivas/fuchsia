@@ -20,8 +20,8 @@ advantages. Each feature has an [associated tracking issue on the
 
 Fuchsia currently builds using a pinned revision of upstream Rust's master branch.
 We mirror Rust into [this repository][third_party/rust]. The version used to compile
-Fuchsia is set [in `buildtools/fuchsia.ensure`][buildtools]. The latest revision of
-Rust which can be set in `buildtools` is the most recently completed build [here][rust builder].
+Fuchsia is set [in the `prebuilts` manifest][prebuilts]. The latest revision of
+Rust which can be set in `prebuilts` is the most recently completed build [here][rust builder].
 We currently update the Rust version fairly often to pick up new changes we upstream,
 such as changes to syscalls used by the standard library.
 
@@ -96,7 +96,7 @@ This list includes all of the unstable features currently used in Fuchsia.
 [Rust 2018: an early preview]: https://internals.rust-lang.org/t/rust-2018-an-early-preview/7776
 [Rust 2018: the home stretch]: https://internals.rust-lang.org/t/rust-2018-the-home-stretch/7810
 
-[buildtools]: https://fuchsia.googlesource.com/integration/+/refs/heads/master/prebuilts#52
+[prebuilts]: https://fuchsia.googlesource.com/integration/+/refs/heads/master/prebuilts
 [rust builder]: https://ci.chromium.org/p/fuchsia/g/rust/console
 [third_party/rust]: https://fuchsia.googlesource.com/third_party/rust/
 [tracking issues]: https://github.com/rust-lang/rust/issues?q=is%3Aopen+is%3Aissue+label%3AC-tracking-issue

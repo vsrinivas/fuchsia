@@ -65,7 +65,7 @@ Disable the default C/C++ extension if you have it installed.
 In settings, add:
 
 ```
-"clangd.path": "<absolute path to fuchsia root directory>/buildtools/linux-x64/clang/bin/clangd",
+"clangd.path": "<absolute path to fuchsia root directory>/prebuilt/third_party/clang/<platform>/bin/clangd",
 ```
 
 Note: the path to clangd does need to be absolute.

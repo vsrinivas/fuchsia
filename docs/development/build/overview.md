@@ -60,24 +60,31 @@ The simplest way to this is through the `fx` tool, as described in
 [Getting Started](/docs/getting_started.md#Setup-Build-Environment). Read on to see
 what `fx` does under the hood.
 
+The rest of this document assumes that `gn` and `ninja` commands are
+available in your `PATH`. These commands can be found in
+`prebuilt/third_party/gn/<platform>` and
+`prebuilt/third_party/ninja/<platform>` respectively. Alternatively, if
+you want to avoid modifying your `PATH`, you can prefix all invocations
+with `fx`, i.e. `fx gn` or `fx ninja`.
+
 ### Gen step
 
 First configure the primary build artifacts by choosing the board and product
 to build:
 
 ```bash
-$ buildtools/gn gen out/default --args='import("//boards/x64.gni") import("//products/core.gni")'
+$ gn gen out/default --args='import("//boards/x64.gni") import("//products/core.gni")'
 ```
 
 This will create an `out/default` directory containing Ninja files.
 
-The equivalent fx set command is:
+The equivalent `fx set` command is:
 
 ```bash
-$ scripts/fx set core.x64
+$ fx set core.x64
 ```
 
-For a list of all GN build arguments, run `buildtools/gn args out/default --list`.
+For a list of all GN build arguments, run `gn args out/default --list`.
 For documentation on the `select_variant` argument, see [Variants](variants.md).
 
 ### Build step
@@ -85,8 +92,8 @@ For documentation on the `select_variant` argument, see [Variants](variants.md).
 The next step is to run the actual build with Ninja:
 
 ```bash
-$ buildtools/ninja -C out/default.zircon
-$ buildtools/ninja -C out/default
+$ ninja -C out/default.zircon
+$ ninja -C out/default
 ```
 
 This is what gets run under the hood by `fx build`.
@@ -105,13 +112,13 @@ should be reported.
 ### Inspecting the content of a GN target
 
 ```bash
-$ buildtools/gn desc out/default //path/to/my:target
+$ gn desc out/default //path/to/my:target
 ```
 
 ### Finding references to a GN target
 
 ```bash
-$ buildtools/gn refs out/default //path/to/my:target
+$ gn refs out/default //path/to/my:target
 ```
 
 ### Referencing targets for the build host
@@ -138,7 +145,7 @@ If a target is defined in a GN build file as `//foo/bar/blah:dash`, that target
 (and its dependencies) can be built with:
 
 ```bash
-$ buildtools/ninja -C out/default -j64 foo/bar/blah:dash
+$ ninja -C out/default -j64 foo/bar/blah:dash
 ```
 
 Note that this only works for targets in the default toolchain.
@@ -154,14 +161,14 @@ GN extensively documents which Ninja targets it generates. The documentation is
 accessible with:
 
 ```bash
-$ buildtools/gn help ninja_rules
+$ gn help ninja_rules
 ```
 
 You can also browse the set of Ninja targets currently defined in your output
 directory with:
 
 ```bash
-$ buildtools/ninja -C out/default -t browse
+$ ninja -C out/default -t browse
 ```
 
 Note that the presence of a Ninja target does not mean it will be built - for

@@ -5,7 +5,7 @@ Defines a Fuchsia crosstool workspace.
 """
 
 # TODO(alainv): Do not hardcode download URLs but export the URL from the
-#               the one used in //buildtools, using the CIPD APIs.
+#               the one used in //prebuilt/third_party, using the CIPD APIs.
 CLANG_LINUX_DOWNLOAD_URL = (
     "https://storage.googleapis.com/fuchsia/clang/linux-amd64/2a605accf10c22e7905d2cabec22ca317869f85d"
 )

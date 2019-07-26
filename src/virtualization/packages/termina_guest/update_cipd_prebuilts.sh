@@ -165,7 +165,7 @@ main() {
   done
   shift $((OPTIND - 1))
 
-  declare -r cipd="${FUCHSIA_DIR}/buildtools/cipd"
+  declare -r cipd="${FUCHSIA_DIR}/.jiri_root/bin/cipd"
   declare -r cros_dir=${cros_dir}
   declare -r termina_revision_requested=${termina_revision_requested}
   declare -r kernel_overlay_dir=${kernel_overlay_dir}

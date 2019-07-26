@@ -10,7 +10,7 @@ set -eo pipefail
 
 declare -r LINUX_GUEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 declare -r FUCHSIA_DIR=$(git rev-parse --show-toplevel)
-declare -r CIPD="${FUCHSIA_DIR}/buildtools/cipd"
+declare -r CIPD="${FUCHSIA_DIR}/.jiri_root/bin/cipd"
 declare -r SOURCE_DIR="/tmp/linux_guest"
 declare -r LINUX_VERSION="4.18"
 

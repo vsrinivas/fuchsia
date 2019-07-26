@@ -126,7 +126,7 @@ this will cause disagreements in the tree.
 `clang-format` is run on source files as follows:
 
 ```sh
-buildtools/$HOST_PLATFORM/clang/bin/clang-format \
+prebuilt/third_party/clang/$HOST_PLATFORM/bin/clang-format \
 -i \
 -style=file \
 -fallback-style=Google \
@@ -150,7 +150,7 @@ use this script, you must also pass the `clang-tidy` and `clang-apply-replacemen
 the distributed Fuchsia toolchain to make sure the correct ones are used.
 
 ```sh
-export CLANG_TOOLCHAIN_PREFIX=buildtools/$HOST_PLATFORM/clang
+export CLANG_TOOLCHAIN_PREFIX=prebuilt/third_party/clang/$HOST_PLATFORM
 $CLANG_TOOLCHAIN_PREFIX/share/clang/run-clang-tidy.py \
   -clang-tidy-binary $CLANG_TOOLCHAIN_PREFIX/bin/clang-tidy \
   -clang-apply-replacements-binary $CLANG_TOOLCHAIN_PREFIX/bin/clang-apply-replacements \
@@ -168,7 +168,7 @@ formatter has a root-level configuration file (`rustfmt.toml`).
 `rustfmt` runs on source files as follows:
 
 ```sh
-buildtools/${HOST_PLATFORM}/rust/bin/rustfmt \
+prebuilt/third_party/rust/${HOST_PLATFORM}/bin/rustfmt \
 --config-path=rustfmt.toml \
 --unstable-features \
 --skip-children \
@@ -185,7 +185,7 @@ distributed in the Go host toolchain prebuilts.
 `gofmt` runs on source files as follows:
 
 ```sh
-buildtools/$HOST_PLATFORM/go/bin/gofmt -s -w $FILES
+prebuilt/third_party/go/$HOST_PLATFORM/bin/gofmt -s -w $FILES
 ```
 
 TODO(TC-587): Document go vet once implementation details are finalized.
@@ -241,5 +241,5 @@ prebuilt.
 It runs on source files as follows:
 
 ```sh
-buildtools/gn format <files>
+prebuilt/third_party/gn/$HOST_PLATFORM/gn format <files>
 ```

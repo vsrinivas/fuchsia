@@ -27,7 +27,7 @@ editing the GN args (substituting your build's GN output directory
 for `out/default` as necessary):
 
 ```sh
-./buildtools/gn args out/default
+gn args out/default
 ```
 
 That command will bring up an editor. Append to that file:

@@ -38,13 +38,19 @@ $ ./src/virtualization/packages/linux_guest/mktests.sh \
   S{ARCH}
 ```
 
-Ensure that `linux_guest` is working correctly. Then upload the images to cipd. There is a cipd binary at `//buildtools/cipd` and `cipd auth-login` must be run before any of the following commands.
+Ensure that `linux_guest` is working correctly. Then upload the images
+to CIPD. There is a `cipd` binary at `.jiri_root/bin/cipd` which can be
+run via `fx cipd`, and `cipd auth-login` must be executed once before
+running the following commands.
 
-Use the git revision hash from `zircon-guest.googlesource.com/third_party/
-linux` as the `kernel_git_revision` tag and from `zircon-guest.googlesource.com/linux-tests` as the `tests_git_revision` tag.
+Use the git revision hash from
+`zircon-guest.googlesource.com/third_party/ linux` as the
+`kernel_git_revision` tag and from
+`zircon-guest.googlesource.com/linux-tests` as the `tests_git_revision`
+tag.
 
 ```
-$ cipd create \
+$ fx cipd create \
   -in prebuilt/virtualization/packages/linux_guest/images/${ARCH} \
   -name fuchsia_internal/linux/linux_guest-<version>-${ARCH} \
   -install-mode copy \
@@ -52,9 +58,12 @@ $ cipd create \
   -tag "tests_git_revision:<git revision>"
 ```
 
-Then update `garnet/tools/cipd_internal.ensure` to point to the new version using the instance ID of the package you created. You can find the instance ID with CIPD like so:
+Then update `garnet/tools/cipd_internal.ensure` to point to the new
+version using the instance ID of the package you created. You can find
+the instance ID with CIPD like so:
+
 ```
-$ cipd describe \
+$ fx cipd describe \
   fuchsia_internal/linux/linux_guest-<version>-${ARCH} \
   -version "kernel_git_revision:<git revision>" \
   -version "tests_git_revision:<git revision>"

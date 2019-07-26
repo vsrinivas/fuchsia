@@ -112,7 +112,7 @@ Note: A quick overview of the basic build-and-pave workflow can be found
 
 If you don't have the supported hardware, you can run Fuchsia under emulation
 using [QEMU](/zircon/docs/qemu.md).
-Fuchsia includes prebuilt binaries for QEMU under `buildtools/qemu`.
+Fuchsia includes prebuilt binaries for QEMU under `prebuilt/third_party/qemu`.
 
 The `fx run` command will launch Zircon within QEMU, using the locally built
 disk image:
