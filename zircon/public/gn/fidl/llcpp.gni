@@ -62,6 +62,13 @@ template("fidl_llcpp_library") {
                                "testonly",
                              ])
 
+      # Depend on the fidlc generation step and compile what it produces.
+      # TODO(BLD-441): It doesn't actually produce the sources to compile
+      # yet, so depend on the checked-in generated source file explicitly.
+      # When the generation is not directly here, this can just do:
+      #   sources = invoker.fidlc_outputs
+      # as done in c.gni.
+      deps = invoker.fidlc_deps
       sources = [
         "gen/llcpp/fidl.cc",
       ]
@@ -71,8 +78,10 @@ template("fidl_llcpp_library") {
       # Users of the bindings library need the generated headers.
       public_configs = [ ":_fidl_llcpp_library.config.$library_target" ]
 
-      deps = invoker.fidlc_deps
-      public_deps = []
+      # The `.headers` subtarget of a library() only depends on its
+      # public_deps.  But all users of the headers need to depend on the
+      # generation step too, so put it in public_deps as well.
+      public_deps = invoker.fidlc_deps
 
       # The generated headers of a dependent fidl_library() will #include the
       # generated headers for its dependencies' bindings libraries, so those

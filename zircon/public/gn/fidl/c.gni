@@ -73,12 +73,16 @@ template("fidl_c_library") {
       # Users of the bindings library need the generated headers.
       public_configs = [ ":_fidl_c_library.config.$library_target" ]
 
+      # The `.headers` subtarget of a library() only depends on its
+      # public_deps.  But all users of the headers need to depend on the
+      # generation step too, so put it in public_deps as well.
+      public_deps = invoker.fidlc_deps
+
       # The generated headers of a dependent fidl_library() will #include the
       # generated headers for its dependencies' bindings libraries, so those
       # headers are needed in public_deps.  The generated bindings code may
       # call into its dependencies' bindings code, so the libraries
       # themselves are needed in deps too.
-      public_deps = []
       foreach(dep, invoker.fidl_deps) {
         deps += [ "$dep.c" ]
         public_deps += [ "$dep.c.headers" ]

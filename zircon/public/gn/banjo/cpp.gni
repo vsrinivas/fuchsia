@@ -99,18 +99,23 @@ template("banjo_cpp_library") {
                                "testonly",
                              ])
 
+      # The generated sources come from the generation step, so depend on it.
       deps = gen_deps
       sources = gen_sources
 
       # Users of the bindings library need the generated headers.
       public_configs = [ ":_banjo_cpp_library.config.$library_target" ]
 
+      # The `.headers` subtarget of a library() only depends on its
+      # public_deps.  But all users of the headers need to depend on the
+      # generation step too, so put it in public_deps as well.
+      public_deps = gen_deps
+
       # The generated headers of a dependent banjo_library() will #include the
       # generated headers for its dependencies' bindings libraries, so those
       # headers are needed in public_deps.  The generated bindings code may
       # call into its dependencies' bindings code, so the libraries
       # themselves are needed in deps too.
-      public_deps = gen_deps
       foreach(dep, invoker.banjo_deps) {
         deps += [ "$dep.cpp" ]
         public_deps += [ "$dep.cpp.headers" ]
