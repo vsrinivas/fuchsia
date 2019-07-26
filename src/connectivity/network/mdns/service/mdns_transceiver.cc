@@ -29,7 +29,14 @@ void MdnsTransceiver::Start(fuchsia::netstack::NetstackPtr netstack, const MdnsA
   netstack_ = std::move(netstack);
   addresses_ = &addresses;
   link_change_callback_ = std::move(link_change_callback);
-  inbound_message_callback_ = std::move(inbound_message_callback);
+  inbound_message_callback_ = [this, callback = std::move(inbound_message_callback)](
+                                  std::unique_ptr<DnsMessage> message,
+                                  const ReplyAddress& reply_address) {
+    if (interface_transceivers_by_address_.find(reply_address.socket_address().address()) ==
+        interface_transceivers_by_address_.end()) {
+      callback(std::move(message), reply_address);
+    }
+  };
 
   netstack_.events().OnInterfacesChanged =
       fit::bind_member(this, &MdnsTransceiver::InterfacesChanged);

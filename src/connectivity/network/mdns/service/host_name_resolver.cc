@@ -55,7 +55,11 @@ void HostNameResolver::ReceiveResource(const DnsResource& resource, MdnsResource
 }
 
 void HostNameResolver::EndOfMessage() {
-  FXL_DCHECK(callback_);
+  if (!callback_) {
+    // This can happen when a redundant response is received after the block below runs and before
+    // the posted task runs, e.g. when two NICs are connected to the same LAN.
+    return;
+  }
 
   if (v4_address_ || v6_address_) {
     callback_(host_name_, v4_address_, v6_address_);
@@ -65,9 +69,11 @@ void HostNameResolver::EndOfMessage() {
 }
 
 void HostNameResolver::Quit() {
-  FXL_DCHECK(callback_);
-  callback_(host_name_, v4_address_, v6_address_);
-  callback_ = nullptr;
+  if (callback_) {
+    callback_(host_name_, v4_address_, v6_address_);
+    callback_ = nullptr;
+  }
+
   RemoveSelf();
 }
 
