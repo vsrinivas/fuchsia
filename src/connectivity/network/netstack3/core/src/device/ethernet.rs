@@ -297,7 +297,7 @@ pub(crate) fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
             };
             match types {
                 (ArpHardwareType::Ethernet, EtherType::Ipv4) => {
-                    crate::device::arp::receive_arp_packet(ctx, device_id, src, dst, buffer)
+                    crate::device::arp::receive_arp_packet(ctx, device_id, buffer)
                 }
                 types => debug!("got ARP packet for unsupported types: {:?}", types),
             }

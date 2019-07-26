@@ -13,7 +13,9 @@ use log::{debug, error};
 use never::Never;
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder};
 
-use crate::context::{CounterContext, FrameContext, StateContext, TimerContext, TimerHandler};
+use crate::context::{
+    CounterContext, FrameContext, FrameHandler, StateContext, TimerContext, TimerHandler,
+};
 use crate::wire::arp::{ArpPacket, ArpPacketBuilder, HType, PType};
 
 /// The type of an ARP operation.
@@ -99,7 +101,7 @@ pub(crate) struct ArpFrameMetadata<D, H> {
 /// `BufferArpContext` is like [`ArpContext`], except that it also requires that
 /// the context be capable of receiving frames in buffers of type `B`. This is
 /// used when a buffer of type `B` is provided to ARP (in particular, in
-/// [`receive_arp_frame`]), and allows ARP to reuse that buffer rather than
+/// [`receive_arp_packet`]), and allows ARP to reuse that buffer rather than
 /// needing to always allocate a new one.
 pub(crate) trait BufferArpContext<P: PType, H: HType, B: BufferMut>:
     ArpContext<P, H> + FrameContext<B, ArpFrameMetadata<<Self as ArpContext<P, H>>::DeviceId, H>>
@@ -146,22 +148,23 @@ pub(crate) fn handle_timer<P: PType, H: HType, C: ArpContext<P, H>>(
     ctx: &mut C,
     id: ArpTimerId<C::DeviceId, P>,
 ) {
-    ArpTimerHandler::<P, H>::handle_timer(ctx, id)
+    ArpHandler::<P, H>::handle_timer(ctx, id)
 }
 
-/// A handler for ARP timers.
+/// A handler for ARP events.
 ///
 /// This type cannot be constructed, and is only meant to be used at the type
-/// level. We implement `TimerHandler` for `ArpTimerHandler` rather than just
-/// provide the top-level `handle_timer` function so that `ArpTimerHandler` can
-/// be used in tests with the `DummyTimerContextExt` trait.
-struct ArpTimerHandler<P, H> {
+/// level. We implement `TimerHandler` and `FrameHandler` for `ArpHandler`
+/// rather than just provide the top-level `handle_timer` and `receive_frame`
+/// functions so that `ArpHandler` can be used in tests with the
+/// `DummyTimerContextExt` trait and with the `DummyNetwork` type.
+struct ArpHandler<P, H> {
     _marker: std::marker::PhantomData<(P, H)>,
     never: Never,
 }
 
 impl<P: PType, H: HType, C: ArpContext<P, H>> TimerHandler<C, ArpTimerId<C::DeviceId, P>>
-    for ArpTimerHandler<P, H>
+    for ArpHandler<P, H>
 {
     fn handle_timer(ctx: &mut C, id: ArpTimerId<C::DeviceId, P>) {
         match id.inner {
@@ -221,140 +224,146 @@ enum ArpTimerIdInner<P: PType> {
 pub(crate) fn receive_arp_packet<P: PType, H: HType, B: BufferMut, C: BufferArpContext<P, H, B>>(
     ctx: &mut C,
     device_id: C::DeviceId,
-    src_addr: H,
-    dst_addr: H,
     mut buffer: B,
 ) {
-    // TODO(wesleyac) Add support for probe.
-    let packet = match buffer.parse::<ArpPacket<_, H, P>>() {
-        Ok(packet) => packet,
-        Err(err) => {
-            // If parse failed, it's because either the packet was malformed, or
-            // it was for an unexpected hardware or network protocol. In either
-            // case, we just drop the packet and move on. RFC 826's "Packet
-            // Reception" section says of packet processing algorithm, "Negative
-            // conditionals indicate an end of processing and a discarding of
-            // the packet."
-            debug!("discarding malformed ARP packet: {}", err);
+    ArpHandler::handle_frame(ctx, device_id, (), buffer)
+}
+
+impl<P: PType, H: HType, B: BufferMut, C: BufferArpContext<P, H, B>>
+    FrameHandler<C, C::DeviceId, (), B> for ArpHandler<P, H>
+{
+    fn handle_frame(ctx: &mut C, device_id: C::DeviceId, _meta: (), mut buffer: B) {
+        // TODO(wesleyac) Add support for probe.
+        let packet = match buffer.parse::<ArpPacket<_, H, P>>() {
+            Ok(packet) => packet,
+            Err(err) => {
+                // If parse failed, it's because either the packet was malformed, or
+                // it was for an unexpected hardware or network protocol. In either
+                // case, we just drop the packet and move on. RFC 826's "Packet
+                // Reception" section says of packet processing algorithm, "Negative
+                // conditionals indicate an end of processing and a discarding of
+                // the packet."
+                debug!("discarding malformed ARP packet: {}", err);
+                return;
+            }
+        };
+
+        let addressed_to_me =
+            Some(packet.target_protocol_address()) == ctx.get_protocol_addr(device_id);
+
+        // The following logic is equivalent to the "ARP, Proxy ARP, and Gratuitous
+        // ARP" section of RFC 2002.
+
+        // Gratuitous ARPs, which have the same sender and target address, need to
+        // be handled separately since they do not send a response.
+        if packet.sender_protocol_address() == packet.target_protocol_address() {
+            insert_dynamic(
+                ctx,
+                device_id,
+                packet.sender_protocol_address(),
+                packet.sender_hardware_address(),
+            );
+
+            // If we have an outstanding retry timer for this host, we should cancel
+            // it since we now have the mapping in cache.
+            ctx.cancel_timer(&ArpTimerId::new_request_retry_timer_id(
+                device_id,
+                packet.sender_protocol_address(),
+            ));
+
+            ctx.increment_counter("arp::rx_gratuitous_resolve");
+            // Notify device layer:
+            ctx.address_resolved(
+                device_id,
+                packet.sender_protocol_address(),
+                packet.sender_hardware_address(),
+            );
             return;
         }
-    };
 
-    let addressed_to_me =
-        Some(packet.target_protocol_address()) == ctx.get_protocol_addr(device_id);
+        // The following logic is equivalent to the "Packet Reception" section of
+        // RFC 826.
+        //
+        // We statically know that the hardware type and protocol type are correct,
+        // so we do not need to have additional code to check that. The remainder of
+        // the algorithm is:
+        //
+        // Merge_flag := false
+        // If the pair <protocol type, sender protocol address> is
+        //     already in my translation table, update the sender
+        //     hardware address field of the entry with the new
+        //     information in the packet and set Merge_flag to true.
+        // ?Am I the target protocol address?
+        // Yes:
+        //   If Merge_flag is false, add the triplet <protocol type,
+        //       sender protocol address, sender hardware address> to
+        //       the translation table.
+        //   ?Is the opcode ares_op$REQUEST?  (NOW look at the opcode!!)
+        //   Yes:
+        //     Swap hardware and protocol fields, putting the local
+        //         hardware and protocol addresses in the sender fields.
+        //     Set the ar$op field to ares_op$REPLY
+        //     Send the packet to the (new) target hardware address on
+        //         the same hardware on which the request was received.
+        //
+        // This can be summed up as follows:
+        //
+        // +----------+---------------+---------------+-----------------------------+
+        // | opcode   | Am I the TPA? | SPA in table? | action                      |
+        // +----------+---------------+---------------+-----------------------------+
+        // | REQUEST  | yes           | yes           | Update table, Send response |
+        // | REQUEST  | yes           | no            | Update table, Send response |
+        // | REQUEST  | no            | yes           | Update table                |
+        // | REQUEST  | no            | no            | NOP                         |
+        // | RESPONSE | yes           | yes           | Update table                |
+        // | RESPONSE | yes           | no            | Update table                |
+        // | RESPONSE | no            | yes           | Update table                |
+        // | RESPONSE | no            | no            | NOP                         |
+        // +----------+---------------+---------------+-----------------------------+
+        //
+        // Given that the semantics of ArpTable is that inserting and updating an
+        // entry are the same, this can be implemented with two if statements (one
+        // to update the table, and one to send a response).
 
-    // The following logic is equivalent to the "ARP, Proxy ARP, and Gratuitous
-    // ARP" section of RFC 2002.
-
-    // Gratuitous ARPs, which have the same sender and target address, need to
-    // be handled separately since they do not send a response.
-    if packet.sender_protocol_address() == packet.target_protocol_address() {
-        insert_dynamic(
-            ctx,
-            device_id,
-            packet.sender_protocol_address(),
-            packet.sender_hardware_address(),
-        );
-
-        // If we have an outstanding retry timer for this host, we should cancel
-        // it since we now have the mapping in cache.
-        ctx.cancel_timer(&ArpTimerId::new_request_retry_timer_id(
-            device_id,
-            packet.sender_protocol_address(),
-        ));
-
-        ctx.increment_counter("arp::rx_gratuitous_resolve");
-        // Notify device layer:
-        ctx.address_resolved(
-            device_id,
-            packet.sender_protocol_address(),
-            packet.sender_hardware_address(),
-        );
-        return;
-    }
-
-    // The following logic is equivalent to the "Packet Reception" section of
-    // RFC 826.
-    //
-    // We statically know that the hardware type and protocol type are correct,
-    // so we do not need to have additional code to check that. The remainder of
-    // the algorithm is:
-    //
-    // Merge_flag := false
-    // If the pair <protocol type, sender protocol address> is
-    //     already in my translation table, update the sender
-    //     hardware address field of the entry with the new
-    //     information in the packet and set Merge_flag to true.
-    // ?Am I the target protocol address?
-    // Yes:
-    //   If Merge_flag is false, add the triplet <protocol type,
-    //       sender protocol address, sender hardware address> to
-    //       the translation table.
-    //   ?Is the opcode ares_op$REQUEST?  (NOW look at the opcode!!)
-    //   Yes:
-    //     Swap hardware and protocol fields, putting the local
-    //         hardware and protocol addresses in the sender fields.
-    //     Set the ar$op field to ares_op$REPLY
-    //     Send the packet to the (new) target hardware address on
-    //         the same hardware on which the request was received.
-    //
-    // This can be summed up as follows:
-    //
-    // +----------+---------------+---------------+-----------------------------+
-    // | opcode   | Am I the TPA? | SPA in table? | action                      |
-    // +----------+---------------+---------------+-----------------------------+
-    // | REQUEST  | yes           | yes           | Update table, Send response |
-    // | REQUEST  | yes           | no            | Update table, Send response |
-    // | REQUEST  | no            | yes           | Update table                |
-    // | REQUEST  | no            | no            | NOP                         |
-    // | RESPONSE | yes           | yes           | Update table                |
-    // | RESPONSE | yes           | no            | Update table                |
-    // | RESPONSE | no            | yes           | Update table                |
-    // | RESPONSE | no            | no            | NOP                         |
-    // +----------+---------------+---------------+-----------------------------+
-    //
-    // Given that the semantics of ArpTable is that inserting and updating an
-    // entry are the same, this can be implemented with two if statements (one
-    // to update the table, and one to send a response).
-
-    if addressed_to_me
-        || ctx.get_state(device_id).table.lookup(packet.sender_protocol_address()).is_some()
-    {
-        insert_dynamic(
-            ctx,
-            device_id,
-            packet.sender_protocol_address(),
-            packet.sender_hardware_address(),
-        );
-        // Since we just got the protocol -> hardware address mapping, we can
-        // cancel a timer to resend a request.
-        ctx.cancel_timer(&ArpTimerId::new_request_retry_timer_id(
-            device_id,
-            packet.sender_protocol_address(),
-        ));
-
-        ctx.increment_counter("arp::rx_resolve");
-        // Notify device layer:
-        ctx.address_resolved(
-            device_id,
-            packet.sender_protocol_address(),
-            packet.sender_hardware_address(),
-        );
-    }
-    if addressed_to_me && packet.operation() == ArpOp::Request {
-        let self_hw_addr = ctx.get_hardware_addr(device_id);
-        ctx.increment_counter("arp::rx_request");
-        ctx.send_frame(
-            ArpFrameMetadata { device_id, dst_addr: packet.sender_hardware_address() },
-            ArpPacketBuilder::new(
-                ArpOp::Response,
-                self_hw_addr,
-                packet.target_protocol_address(),
-                packet.sender_hardware_address(),
+        if addressed_to_me
+            || ctx.get_state(device_id).table.lookup(packet.sender_protocol_address()).is_some()
+        {
+            insert_dynamic(
+                ctx,
+                device_id,
                 packet.sender_protocol_address(),
-            )
-            .into_serializer_with(buffer),
-        );
+                packet.sender_hardware_address(),
+            );
+            // Since we just got the protocol -> hardware address mapping, we can
+            // cancel a timer to resend a request.
+            ctx.cancel_timer(&ArpTimerId::new_request_retry_timer_id(
+                device_id,
+                packet.sender_protocol_address(),
+            ));
+
+            ctx.increment_counter("arp::rx_resolve");
+            // Notify device layer:
+            ctx.address_resolved(
+                device_id,
+                packet.sender_protocol_address(),
+                packet.sender_hardware_address(),
+            );
+        }
+        if addressed_to_me && packet.operation() == ArpOp::Request {
+            let self_hw_addr = ctx.get_hardware_addr(device_id);
+            ctx.increment_counter("arp::rx_request");
+            ctx.send_frame(
+                ArpFrameMetadata { device_id, dst_addr: packet.sender_hardware_address() },
+                ArpPacketBuilder::new(
+                    ArpOp::Response,
+                    self_hw_addr,
+                    packet.target_protocol_address(),
+                    packet.sender_hardware_address(),
+                    packet.sender_protocol_address(),
+                )
+                .into_serializer_with(buffer),
+            );
+        }
     }
 }
 
@@ -580,7 +589,7 @@ mod tests {
     use packet::{ParseBuffer, Serializer};
 
     use super::*;
-    use crate::context::testutil::{DummyInstant, DummyTimerContextExt};
+    use crate::context::testutil::{DummyInstant, DummyNetwork, DummyTimerContextExt};
     use crate::context::InstantContext;
     use crate::device::ethernet::EtherType;
     use crate::wire::arp::{peek_arp_types, ArpPacketBuilder};
@@ -667,7 +676,7 @@ mod tests {
         assert_eq!(hw, crate::device::arp::ArpHardwareType::Ethernet);
         assert_eq!(proto, EtherType::Ipv4);
 
-        receive_arp_packet::<Ipv4Addr, _, _, _>(ctx, (), sender_mac, target_mac, buf);
+        receive_arp_packet::<Ipv4Addr, _, _, _>(ctx, (), buf);
     }
 
     // Validate that buf is an ARP packet with the specific op, local_ipv4,
@@ -925,7 +934,7 @@ mod tests {
             );
 
             // Trigger the ARP request retry timer.
-            assert!(ctx.trigger_next_timer::<ArpTimerHandler<Ipv4Addr, Mac>>());
+            assert!(ctx.trigger_next_timer::<ArpHandler<Ipv4Addr, Mac>>());
         }
 
         // We should have sent DEFAULT_ARP_REQUEST_MAX_TRIES requests total. We
@@ -998,118 +1007,97 @@ mod tests {
 
     #[test]
     fn test_address_resolution() {
-        use net_types::ip::{Ipv4, Subnet};
-        use packet::Buf;
+        // Test a basic ARP resolution scenario with both sides participating.
+        // We expect the following steps:
+        // 1. When a lookup is performed and results in a cache miss, we send an
+        //    ARP request and set a request retry timer.
+        // 2. When the remote receives the request, it populates its cache with
+        //    the local's information, and sends an ARP reply.
+        // 3. When the reply is received, the timer is canceled, the table is
+        //    updated, a new entry expiration timer is installed, and the device
+        //    layer is notified of the resolution.
 
-        use crate::device::{DeviceId, DeviceLayerTimerId};
-        use crate::ip::{send_ip_packet_from_device, IpProto};
-        use crate::testutil::{DummyEventDispatcherBuilder, DummyNetwork};
-        use crate::wire::icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode};
-        use crate::TimerId;
+        let local = DummyContext::default();
+        let mut remote = DummyContext::default();
+        remote.get_mut().hw_addr = TEST_REMOTE_MAC;
+        remote.get_mut().proto_addr = Some(TEST_REMOTE_IPV4);
 
-        // We set up two contexts (local and remote) and add them to a
-        // DummyNetwork. We are not using the DUMMY_CONFIG_V4 configuration here
-        // because we *don't want* the ARP table to be pre-populated by the
-        // builder. The DummyNetwork is set up so that all frames from local are
-        // forwarded to remote and vice-versa.
-        let local_ip = Ipv4Addr::new([10, 0, 0, 1]);
-        let remote_ip = Ipv4Addr::new([10, 0, 0, 2]);
-        let subnet = Subnet::new(Ipv4Addr::new([10, 0, 0, 0]), 24).unwrap();
-
-        let mut local = DummyEventDispatcherBuilder::default();
-        local.add_device_with_ip(TEST_LOCAL_MAC, local_ip, subnet);
-        local.add_device_route(subnet, 0);
-
-        let mut remote = DummyEventDispatcherBuilder::default();
-        remote.add_device_with_ip(TEST_REMOTE_MAC, remote_ip, subnet);
-        remote.add_device_route(subnet, 0);
-
-        let device_id = DeviceId::new_ethernet(0);
-        let mut net = DummyNetwork::new(
-            vec![("local", local.build()), ("remote", remote.build())].into_iter(),
-            |ctx, device| {
-                if *ctx == "local" {
-                    ("remote", device_id, None)
+        let mut network = DummyNetwork::new(
+            vec![("local", local), ("remote", remote)],
+            |ctx, _state: &DummyArpContext, _meta| {
+                if ctx == "local" {
+                    ("remote", (), (), None)
                 } else {
-                    ("local", device_id, None)
+                    ("local", (), (), None)
                 }
             },
         );
 
-        // let's try to ping the remote device from the local device:
-        let req = IcmpEchoRequest::new(0, 0);
-        let req_body = &[1, 2, 3, 4];
-        let body = Buf::new(req_body.to_vec(), ..).encapsulate(
-            IcmpPacketBuilder::<Ipv4, &[u8], _>::new(local_ip, remote_ip, IcmpUnusedCode, req),
-        );
-        send_ip_packet_from_device(
-            net.context("local"),
-            device_id,
-            local_ip,
-            remote_ip,
-            remote_ip,
-            IpProto::Icmp,
-            body,
-            None,
-        );
-        // this should've triggered an ARP request to come out of local
-        assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);
-        // and a timer should've been started.
-        assert_eq!(net.context("local").dispatcher.timer_events().count(), 1);
-
-        net.step();
-
-        assert_eq!(
-            *net.context("remote").state().test_counters.get("arp::rx_request"),
+        // The lookup should fail.
+        assert!(lookup(network.context("local"), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4).is_none());
+        // We should have sent an ARP request.
+        validate_last_arp_packet(
+            network.context("local"),
             1,
-            "remote received arp request"
+            Mac::BROADCAST,
+            ArpOp::Request,
+            TEST_LOCAL_IPV4,
+            TEST_REMOTE_IPV4,
+            TEST_LOCAL_MAC,
+            Mac::BROADCAST,
         );
-        assert_eq!(net.context("remote").dispatcher.frames_sent().len(), 1);
-
-        net.step();
-
-        assert_eq!(
-            *net.context("local").state().test_counters.get("arp::rx_resolve"),
-            1,
-            "local received arp response"
+        // We should have installed a retry timer.
+        validate_single_retry_timer(
+            network.context("local"),
+            DEFAULT_ARP_REQUEST_PERIOD,
+            TEST_REMOTE_IPV4,
         );
 
-        // at the end of the exchange, both sides should have each other on
-        // their arp tables:
+        // Step once to deliver the ARP request to the remote.
+        let res = network.step::<ArpHandler<Ipv4Addr, Mac>, ArpHandler<Ipv4Addr, Mac>>();
+        assert_eq!(res.timers_fired(), 0);
+        assert_eq!(res.frames_sent(), 1);
+
+        // The remote should have populated its ARP cache with the local's
+        // information.
         assert_eq!(
-            net.context("local").get_state(device_id.id()).table.lookup(remote_ip).unwrap(),
-            &TEST_REMOTE_MAC
-        );
-        assert_eq!(
-            net.context("remote").get_state(device_id.id()).table.lookup(local_ip).unwrap(),
+            network.context("remote").get_ref().arp_state.table.lookup(TEST_LOCAL_IPV4).unwrap(),
             &TEST_LOCAL_MAC
         );
-        // and the local timer should've been unscheduled:
-        let timer_id = TimerId::from(DeviceLayerTimerId::from(
-            ArpTimerId::new_entry_expiration_timer_id(device_id.id(), remote_ip),
-        ));
-        assert_eq!(
-            net.context("local")
-                .dispatcher
-                .timer_events()
-                .filter(|(_, id)| *id != &timer_id)
-                .count(),
-            0
+        // The remote should have sent an ARP response.
+        validate_last_arp_packet(
+            network.context("remote"),
+            1,
+            TEST_LOCAL_MAC,
+            ArpOp::Response,
+            TEST_REMOTE_IPV4,
+            TEST_LOCAL_IPV4,
+            TEST_REMOTE_MAC,
+            TEST_LOCAL_MAC,
         );
 
-        // upon link layer resolution, the original ping request should've been
-        // sent out:
-        net.step();
-        assert_eq!(
-            *net.context("remote").state().test_counters.get("receive_icmp_packet::echo_request"),
-            1
-        );
+        // Step once to deliver the ARP response to the local.
+        let res = network.step::<ArpHandler<Ipv4Addr, Mac>, ArpHandler<Ipv4Addr, Mac>>();
+        assert_eq!(res.timers_fired(), 0);
+        assert_eq!(res.frames_sent(), 1);
 
-        // and the response should come back:
-        net.step();
+        // The local should have populated its cache with the remote's
+        // information.
         assert_eq!(
-            *net.context("local").state().test_counters.get("receive_icmp_packet::echo_reply"),
-            1
+            network.context("local").get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4).unwrap(),
+            &TEST_REMOTE_MAC
+        );
+        // The retry timer should be canceled, and replaced by an entry
+        // expiration timer.
+        validate_single_entry_timer(
+            network.context("local"),
+            DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
+            TEST_REMOTE_IPV4,
+        );
+        // The device layer should have been notified.
+        assert_eq!(
+            network.context("local").get_ref().addr_resolved.as_slice(),
+            [(TEST_REMOTE_IPV4, TEST_REMOTE_MAC)]
         );
     }
 
@@ -1253,7 +1241,7 @@ mod tests {
         validate_single_entry_timer(&ctx, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, TEST_REMOTE_IPV4);
 
         // Trigger the entry expiration timer.
-        assert!(ctx.trigger_next_timer::<ArpTimerHandler<Ipv4Addr, Mac>>());
+        assert!(ctx.trigger_next_timer::<ArpHandler<Ipv4Addr, Mac>>());
 
         // The right amount of time should have elapsed.
         assert_eq!(ctx.now(), DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD));
@@ -1280,7 +1268,7 @@ mod tests {
 
         // Let 5 seconds elapse.
         assert_eq!(
-            ctx.trigger_timers_until_instant::<ArpTimerHandler<Ipv4Addr, Mac>>(DummyInstant::from(
+            ctx.trigger_timers_until_instant::<ArpHandler<Ipv4Addr, Mac>>(DummyInstant::from(
                 Duration::from_secs(5)
             )),
             0
@@ -1304,7 +1292,7 @@ mod tests {
 
         // Let the remaining time elapse to the first entry expiration timer.
         assert_eq!(
-            ctx.trigger_timers_until_instant::<ArpTimerHandler<Ipv4Addr, Mac>>(DummyInstant::from(
+            ctx.trigger_timers_until_instant::<ArpHandler<Ipv4Addr, Mac>>(DummyInstant::from(
                 DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD
             )),
             0
@@ -1316,7 +1304,7 @@ mod tests {
         );
 
         // Trigger the entry expiration timer.
-        assert!(ctx.trigger_next_timer::<ArpTimerHandler<Ipv4Addr, Mac>>());
+        assert!(ctx.trigger_next_timer::<ArpHandler<Ipv4Addr, Mac>>());
         // The right amount of time should have elapsed.
         assert_eq!(
             ctx.now(),
