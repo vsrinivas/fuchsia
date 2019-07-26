@@ -46,6 +46,7 @@ if (current_toolchain == host_toolchain) {
       "interception_workflow.cc",
       "syscall_decoder.cc",
       "syscall_decoder_dispatcher.cc",
+      "syscall_definition.cc",
     ]
 
     deps = [
