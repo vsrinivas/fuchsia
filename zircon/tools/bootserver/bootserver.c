@@ -707,7 +707,7 @@ int main(int argc, char** argv) {
             }
         } else {
             log("Transfer ends incompletely.");
-			log("Wait for %u secs before retyring...\n\n", RETRY_DELAY_SEC);
+			log("Wait for %u secs before retrying...\n\n", RETRY_DELAY_SEC);
 			sleep(RETRY_DELAY_SEC);
         }
         if ((status == 0 && once) || (status != 0 && fail_fast)) {
