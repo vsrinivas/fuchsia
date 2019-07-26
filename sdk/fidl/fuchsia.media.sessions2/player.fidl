@@ -1,0 +1,161 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media.sessions2;
+
+using zx;
+using fuchsia.media;
+using fuchsia.media.audio;
+
+/// A domain identifies the ecosystem in which the session takes place.
+///
+/// Domains should take the form of
+///
+///    `domain://<unique name for protocol>.version`
+///
+/// The `|` symbol is reserved and should not be used in a domain string.
+using Domain = string:1000;
+
+/// Controls for a media player.
+[FragileBase]
+protocol PlayerControl {
+    /// Plays media.
+    Play();
+    /// Pauses playback and retains position in media
+    Pause();
+    /// Stops playback. The session should close.
+    Stop();
+    /// Seeks to a specific position in media. Implementations are free to
+    /// enter an error state if the position is out of bounds. `position`
+    /// is an offset from the beginning of the media.
+    Seek(zx.duration position);
+    /// Skips forward in media by the player's default skip amount.
+    SkipForward();
+    /// Skips in reverse in media by the player's default skip amount.
+    SkipReverse();
+    /// Changes media to the next item (e.g. next song in playlist).
+    NextItem();
+    /// Changes media to the previous item.
+    PrevItem();
+    /// Sets the playback rate of the media. This will not change the
+    /// playback mode.
+    SetPlaybackRate(float32 playback_rate);
+    /// Sets repeat mode to any of the supported repeat modes.
+    SetRepeatMode(RepeatMode repeat_mode);
+    /// Sets shuffle mode.
+    SetShuffleMode(bool shuffle_on);
+    /// Binds to the session's gain control for control and notifications.
+    BindGainControl(
+        request<fuchsia.media.audio.GainControl> gain_control_request);
+};
+
+/// The type of content playing back, which should be set to the largest
+/// applicable value.
+enum ContentType {
+    OTHER = 1;
+    AUDIO = 2;
+    VIDEO = 3;
+    MUSIC = 4;
+    TV_SHOW = 5;
+    MOVIE = 6;
+};
+
+/// Status of a media player.
+table PlayerStatus {
+    /// Total duration of playing media. Omitted if not known or not applicable.
+    1: zx.duration duration;
+    2: PlayerState player_state;
+    /// A playback function that describes the position and rate of
+    /// play through the media as a function of `CLOCK_MONOTONIC`.
+    3: fuchsia.media.TimelineFunction timeline_function;
+    4: RepeatMode repeat_mode;
+    5: bool shuffle_on;
+    /// The type of content playing back. Omitted if it is not a first class
+    /// category.
+    6: ContentType content_type;
+    7: Error error;
+};
+
+/// State of a media player.
+enum PlayerState {
+    /// The initial state of a session if there is no associated media.
+    IDLE = 0;
+    PLAYING = 1;
+    PAUSED = 2;
+    BUFFERING = 3;
+    /// The player cannot recover from this state and will close.
+    ERROR = 4;
+};
+
+// TODO(turnage): Add error codes for frontends as they are discovered to be
+//                useful.
+enum Error {
+    OTHER = 1;
+};
+
+/// Modes of repeating playback of the current media.
+enum RepeatMode {
+    /// No repeat.
+    OFF = 0;
+    /// Repeat the relevant group of media (e.g. playlist).
+    GROUP = 1;
+    /// Repeat the currently playing media.
+    SINGLE = 2;
+};
+
+bits PlayerCapabilityFlags : uint32 {
+    /// If set, the player can `Play()`.
+    PLAY = 0x1;
+    /// If set, the player can `Pause()`.
+    PAUSE = 0x4;
+    /// If set, the player can `Seek()`.
+    SEEK = 0x8;
+    /// If set, the player can `SkipForward()`.
+    SKIP_FORWARD = 0x10;
+    /// If set, the player can `SkipReverse()`.
+    SKIP_REVERSE = 0x20;
+    /// If set, the player can shuffle media.
+    SHUFFLE = 0x40;
+    // If set, the player can `NextItem()` if there is a next item.
+    CHANGE_TO_NEXT_ITEM = 0x80;
+    // If set, the player can `PrevItem()` if there is a previous item.
+    CHANGE_TO_PREV_ITEM = 0x100;
+    /// If set, the player can `BindGainControl()`.
+    HAS_GAIN_CONTROL = 0x200;
+    /// If set, the player can repeat groups.
+    REPEAT_GROUPS = 0x400;
+    /// If set, the player can repeat single media items.
+    REPEAT_SINGLE = 0x800;
+};
+
+/// `PlaybackCapabilities` enumerates the capabilities of a media player, and
+/// corresponds to the control commands it can execute.
+table PlayerCapabilities {
+    1: PlayerCapabilityFlags flags;
+};
+
+/// When emitted, fields that have changed should be set.
+/// The first emission to a new client should be a snapshot.
+table PlayerInfoDelta {
+    /// Whether the entry point for the media into our device network is the
+    /// local machine; this should be true if this is the device streaming
+    /// from a music service, but false or omitted if this machine is just
+    /// receiving an audio stream to act as a speaker.
+    1: bool local;
+    2: PlayerStatus player_status;
+    3: fuchsia.media.Metadata metadata;
+    4: vector<MediaImage>:16 media_images;
+    5: PlayerCapabilities player_capabilities;
+};
+
+/// `Player` is a handle for a media player. Unsupported commands are
+/// no-ops.  Consult `PlaybackCapabilities`, sent by to learn which
+/// commands are supported.
+protocol Player {
+    compose PlayerControl;
+
+    /// Leave hanging to receive a response when the player's
+    /// status changes.
+    WatchInfoChange() -> (PlayerInfoDelta player_info_delta);
+};

@@ -1,0 +1,21 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media.sessions2;
+
+/// All information required by the media session registry service to
+/// register a player so that clients may observe its status and control
+/// it.
+table PlayerRegistration {
+    /// The domain on which the player exists. Unset if it is the native
+    /// Fuchsia domain.
+    1: Domain domain;
+};
+
+/// `Publisher` publishes media players so they may be discovered and
+/// controlled by clients who have permission to do so.
+[Discoverable]
+protocol Publisher {
+    PublishPlayer(Player player, PlayerRegistration registration);
+};

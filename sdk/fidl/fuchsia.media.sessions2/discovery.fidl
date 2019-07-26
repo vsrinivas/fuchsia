@@ -1,0 +1,106 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media.sessions2;
+
+using zx;
+using fuchsia.media.audio;
+using fuchsia.media;
+
+using SessionId = uint64;
+
+/// SessionInfoDelta holds a description of a given session. The first
+/// time a client receives this, it is a state of the world. On successive
+/// receipts of this table, only the changed fields will be present (this
+/// property is not recursive; top-level fields if set are snapshots).
+table SessionInfoDelta {
+    /// The domain on which the session takes place. A domain identifies a set of
+    /// mutually compatable media targets and sessions; sessions on a domain may
+    /// be played back on targets of the same domain.
+    1: Domain domain;
+    /// Whether the entry point for the media into our device network is the local
+    /// machine; this should be true if this is the device streaming from
+    /// a music service, but false if this machine is just receiving an audio stream
+    /// to act as a speaker.
+    2: bool is_local;
+    /// If this is set, the playback is taking place local to the device.
+    /// Playing on the device speaker is local, playing on a remote speaker
+    /// is not. This is only set when the session is playing back; a paused
+    /// session is not active.
+    3: bool is_locally_active;
+    4: PlayerStatus player_status;
+    5: fuchsia.media.Metadata metadata;
+    6: vector<MediaImage> media_images;
+    7: PlayerCapabilities player_capabilities;
+};
+
+/// A protocol for clients to control sessions and view their status.
+protocol SessionControl {
+    /// Plays media.
+    Play();
+    /// Pauses playback and retains position in media
+    Pause();
+    /// Stops playback. The session should close.
+    Stop();
+    /// Seeks to a specific position in media. Implementations are free to
+    /// enter an error state if the position is out of bounds. `position`
+    /// is an offset from the beginning of the media.
+    Seek(zx.duration position);
+    /// Skips forward in media by the player's default skip amount.
+    SkipForward();
+    /// Skips in reverse in media by the player's default skip amount.
+    SkipReverse();
+    /// Changes media to the next item (e.g. next song in playlist).
+    NextItem();
+    /// Changes media to the previous item.
+    PrevItem();
+    /// Sets the playback rate of the media. This will not change the
+    /// playback mode.
+    SetPlaybackRate(float32 playback_rate);
+    /// Sets repeat mode to any of the supported repeat modes.
+    SetRepeatMode(RepeatMode repeat_mode);
+    /// Sets shuffle mode.
+    SetShuffleMode(bool shuffle_on);
+    /// Binds to the session's gain control for control and notifications.
+    BindGainControl(
+        request<fuchsia.media.audio.GainControl> gain_control_request);
+};
+
+table WatchOptions {
+    /// Watch only the active session. Watches all if not set.
+    1: bool only_active;
+};
+
+/// `SessionsWatcher` watches the collection of published sessions.
+protocol SessionsWatcher {
+    /// Called by the registry service when a session is updated. On first connection,
+    /// this will be called as many times as needed to communicate the state of the
+    /// world.
+    ///
+    /// `SessionsWatchers` must reply to acknlowledge receipt of the session info delta.
+    /// Delinquent watchers who do not reply will eventually be disconnected.
+    SessionUpdated(SessionId session_id, SessionInfoDelta session_info_delta) -> ();
+
+    /// Called by the registry service when a session is removed from the registered
+    /// collection.
+    ///
+    /// `SessionsWatchers` must reply to acknlowledge receipt of the session removal.
+    /// Delinquent watchers who do not reply will eventually be disconnected.
+    SessionRemoved(SessionId session_id) -> ();
+};
+
+/// `Discovery` observes the collection of published media sessions
+/// and connects clients to them.
+[Discoverable]
+protocol Discovery {
+    /// Connects a session watcher configured with the given options.
+    WatchSessions(
+        WatchOptions watch_options,
+        SessionsWatcher session_watcher);
+
+    /// Connects to a `SessionControl` for `session_id` if present. Drops the
+    /// given channel otherwise.
+    ConnectToSession(SessionId session_id,
+                     request<SessionControl> session_control_request);
+};

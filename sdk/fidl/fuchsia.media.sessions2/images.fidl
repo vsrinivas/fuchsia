@@ -1,0 +1,29 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media.sessions2;
+
+using Url = string:1000;
+
+enum MediaImageType {
+    /// Artwork for the playing media.
+    ARTWORK = 0;
+    /// An icon for the source of the playing media (e.g. the player or
+    /// streaming service).
+    SOURCE_ICON = 1;
+};
+
+/// A variant of an image at a specific size.
+struct ImageSizeVariant {
+    Url url;
+    uint32 width;
+    uint32 height;
+};
+
+/// An image for playing media.
+table MediaImage {
+    1: MediaImageType image_type;
+    /// Available variants of the image.
+    2: vector<ImageSizeVariant>:16 sizes;
+};
