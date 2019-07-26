@@ -150,12 +150,12 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 
       float* out = dest + (dest_off * DestChanCount);
 
-      for (size_t D = 0; D < DestChanCount; ++D) {
-        float s0 = filter_data_[D];
-        float s1 = SR::Read(src + (D / SR::DestPerSrc));
+      for (size_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
+        float cache = filter_data_[dest_chan];
+        float s0 = SR::Read(src + (dest_chan / SR::DestPerSrc));
 
-        float sample = LinearInterpolate(s0, s1, src_off + FRAC_ONE);
-        out[D] = DM::Mix(out[D], sample, amplitude_scale);
+        float sample = LinearInterpolate(cache, s0, src_off + FRAC_ONE);
+        out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
       }
 
       ++dest_off;
@@ -176,19 +176,20 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
 
-      uint32_t S = (src_off >> kPtsFractionalBits) * SrcChanCount;
+      uint32_t src_offset_frame_start = (src_off >> kPtsFractionalBits) * SrcChanCount;
       float* out = dest + (dest_off * DestChanCount);
 
-      for (size_t D = 0; D < DestChanCount; ++D) {
+      for (size_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
         float sample;
-        float s0 = SR::Read(src + S + (D / SR::DestPerSrc));
+        float s0 = SR::Read(src + src_offset_frame_start + (dest_chan / SR::DestPerSrc));
         if ((src_off & FRAC_MASK) == 0) {
           sample = s0;
         } else {
-          float s1 = SR::Read(src + S + (D / SR::DestPerSrc) + SrcChanCount);
+          float s1 =
+              SR::Read(src + src_offset_frame_start + (dest_chan / SR::DestPerSrc) + SrcChanCount);
           sample = LinearInterpolate(s0, s1, src_off & FRAC_MASK);
         }
-        out[D] = DM::Mix(out[D], sample, amplitude_scale);
+        out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
       }
 
       ++dest_off;
@@ -245,14 +246,15 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 
   // If next source position to consume is beyond start of last frame ...
   if (src_off > src_end) {
-    uint32_t S = (src_end >> kPtsFractionalBits) * SrcChanCount;
+    uint32_t src_offset_last_frame = (src_end >> kPtsFractionalBits) * SrcChanCount;
     // ... cache our final frame for use in future interpolation ...
-    for (size_t D = 0; D < DestChanCount; ++D) {
+    for (size_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
       if constexpr (ScaleType == ScalerType::MUTED) {
         // ... which, if MUTE, is silence (what we actually produced).
-        filter_data_[D] = 0;
+        filter_data_[dest_chan] = 0;
       } else {
-        filter_data_[D] = SR::Read(src + S + (D / SR::DestPerSrc));
+        filter_data_[dest_chan] =
+            SR::Read(src + src_offset_last_frame + (dest_chan / SR::DestPerSrc));
       }
     }
 
@@ -415,12 +417,12 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_
 
       float* out = dest + (dest_off * chan_count);
 
-      for (size_t D = 0; D < chan_count; ++D) {
-        float s0 = filter_data_u_[D];
-        float s1 = SampleNormalizer<SrcSampleType>::Read(src + D);
+      for (size_t dest_chan = 0; dest_chan < chan_count; ++dest_chan) {
+        float cache = filter_data_u_[dest_chan];
+        float s0 = SampleNormalizer<SrcSampleType>::Read(src + dest_chan);
 
-        float sample = LinearInterpolate(s0, s1, src_off + FRAC_ONE);
-        out[D] = DM::Mix(out[D], sample, amplitude_scale);
+        float sample = LinearInterpolate(cache, s0, src_off + FRAC_ONE);
+        out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
       }
 
       ++dest_off;
@@ -441,19 +443,20 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_
         amplitude_scale = info->scale_arr[dest_off - dest_off_start];
       }
 
-      uint32_t S = (src_off >> kPtsFractionalBits) * chan_count;
+      uint32_t src_offset_frame_start = (src_off >> kPtsFractionalBits) * chan_count;
       float* out = dest + (dest_off * chan_count);
 
-      for (size_t D = 0; D < chan_count; ++D) {
+      for (size_t dest_chan = 0; dest_chan < chan_count; ++dest_chan) {
         float sample;
-        float s0 = SampleNormalizer<SrcSampleType>::Read(src + S + D);
+        float s0 = SampleNormalizer<SrcSampleType>::Read(src + src_offset_frame_start + dest_chan);
         if ((src_off & FRAC_MASK) == 0) {
           sample = s0;
         } else {
-          float s1 = SampleNormalizer<SrcSampleType>::Read(src + S + D + chan_count);
+          float s1 = SampleNormalizer<SrcSampleType>::Read(src + src_offset_frame_start +
+                                                           dest_chan + chan_count);
           sample = LinearInterpolate(s0, s1, src_off & FRAC_MASK);
         }
-        out[D] = DM::Mix(out[D], sample, amplitude_scale);
+        out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
       }
 
       ++dest_off;
@@ -510,21 +513,21 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_
 
   // If next source position to consume is beyond start of last frame ...
   if (src_off > src_end) {
-    uint32_t S = (src_end >> kPtsFractionalBits) * chan_count;
+    uint32_t src_offset_last_frame = (src_end >> kPtsFractionalBits) * chan_count;
     // ... cache our final frame for use in future interpolation ...
-    for (size_t D = 0; D < chan_count; ++D) {
+    for (size_t dest_chan = 0; dest_chan < chan_count; ++dest_chan) {
       if constexpr (ScaleType == ScalerType::MUTED) {
         // ... which, if MUTE, is silence (what we actually produced).
-        filter_data_u_[D] = 0;
+        filter_data_u_[dest_chan] = 0;
       } else {
-        filter_data_u_[D] = SampleNormalizer<SrcSampleType>::Read(src + S + D);
+        filter_data_u_[dest_chan] =
+            SampleNormalizer<SrcSampleType>::Read(src + src_offset_last_frame + dest_chan);
       }
     }
 
-    // At this point the source offset (src_off) is either somewhere within
-    // the last source sample, or entirely beyond the end of the source buffer
-    // (if frac_step_size is greater than unity).  Either way, we've extracted
-    // all of the information from this source buffer, and can return TRUE.
+    // At this point the source offset (src_off) is either somewhere within the last source sample,
+    // or entirely beyond the end of the source buffer (if frac_step_size is greater than unity).
+    // Either way, we've extracted all the information from this source buffer and can return TRUE.
     return true;
   }
 
