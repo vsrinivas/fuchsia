@@ -7,7 +7,6 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("hub_client") {
   edition = "2018"
   deps = [
-    "//src/sys/component_manager/tests/fidl:fuchsia.test.hub-rustc",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/rust/fuchsia-async",

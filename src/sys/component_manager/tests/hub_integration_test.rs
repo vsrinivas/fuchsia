@@ -60,9 +60,7 @@ async fn test() -> Result<(), Error> {
     );
     let mut hooks: model::Hooks = Vec::new();
     let hub = Arc::new(Hub::new(root_component_url.clone(), root_directory).unwrap());
-    let hub_test_hook = Arc::new(hub_test_hook::HubTestHook::new());
     hooks.push(hub.clone());
-    hooks.push(hub_test_hook.clone());
 
     let params = ModelParams {
         framework_services: Arc::new(RealFrameworkServiceHost::new()),
@@ -103,7 +101,6 @@ async fn test() -> Result<(), Error> {
     );
 
     let echo_service_name = "fidl.examples.routing.echo.Echo";
-    let hub_report_service_name = "fuchsia.test.hub.HubReport";
     let expose_svc_dir = "self/children/echo_server/exec/expose/svc";
     let expose_svc_dir_proxy = io_util::open_directory(
         &hub_proxy,
@@ -121,10 +118,7 @@ async fn test() -> Result<(), Error> {
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");
-    assert_eq!(
-        vec![echo_service_name, hub_report_service_name],
-        await!(list_directory(&svc_dir_proxy))
-    );
+    assert_eq!(vec![echo_service_name], await!(list_directory(&svc_dir_proxy)));
 
     // Verify that the 'pkg' directory is avaialble.
     let pkg_dir = format!("{}/{}", in_dir, "pkg");
@@ -156,13 +150,6 @@ async fn test() -> Result<(), Error> {
     assert_eq!(
         vec!["expose", "in", "out", "resolved_url", "runtime"],
         await!(list_directory(&scoped_hub_dir_proxy))
-    );
-
-    // Verify that hub_client's view of the hub matches the view reachable from
-    // the global hub.
-    assert_eq!(
-        vec!["expose", "in", "out", "resolved_url", "runtime"],
-        await!(hub_test_hook.observe("/hub".to_string()))
     );
 
     Ok(())

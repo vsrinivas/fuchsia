@@ -11,11 +11,3 @@ fidl("components") {
     "components.fidl",
   ]
 }
-
-fidl("fuchsia.test.hub") {
-  sdk_category = "internal"
-
-  sources = [
-    "fuchsia.test.hub.fidl",
-  ]
-}

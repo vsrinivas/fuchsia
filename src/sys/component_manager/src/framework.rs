@@ -74,7 +74,6 @@ impl FrameworkCapability for DefaultFrameworkCapability {
         Box::pin(self.open_async(flags, open_mode, relative_path, server_chan))
     }
 }
-
 pub struct FrameworkServicesHook {
     model: Model,
     framework_services: Arc<dyn FrameworkServiceHost>,

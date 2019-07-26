@@ -10,8 +10,5 @@
         {
             "service": "/svc/fidl.examples.routing.echo.Echo",
         },
-        {
-            "service": "/svc/fuchsia.test.hub.HubReport", "from": "framework"
-        },
     ],
 }
