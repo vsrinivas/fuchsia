@@ -5,6 +5,7 @@
 #include "src/media/audio/audio_core/test/device/virtual_audio_device_test.h"
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/zx/clock.h>
 
 #include <cmath>
 #include <cstring>

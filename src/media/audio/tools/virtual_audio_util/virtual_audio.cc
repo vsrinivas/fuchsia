@@ -4,18 +4,20 @@
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio.h"
 
-#include <fbl/algorithm.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fsl/tasks/fd_waiter.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/zx/clock.h>
 #include <poll.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
 #include <unistd.h>
 #include <zircon/device/audio.h>
+
+#include <fbl/algorithm.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/strings/string_number_conversions.h>
 
 namespace virtual_audio {
 

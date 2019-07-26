@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/mixer/test/audio_performance.h"
 
+#include <lib/zx/clock.h>
+
 #include <string>
 
 #include "src/media/audio/audio_core/mixer/test/frequency_set.h"

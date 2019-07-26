@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/zx/clock.h>
+
+#include <fbl/algorithm.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/lib/test/audio_test_base.h"
