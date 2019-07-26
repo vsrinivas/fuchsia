@@ -14,14 +14,9 @@ protocol Intl {
     /// subsequent calls return when the value changes.
     Watch() -> (IntlSettings settings) error Error;
 
-    /// Sets the current time zone based on the [time_zone_id].
-    SetTimeZone(fuchsia.intl.TimeZoneId time_zone_id) -> () error Error;
-
-    /// Changes the temperature unit to the specified unit.
-    SetTemperatureUnit(fuchsia.intl.TemperatureUnit temperature_unit) -> () error Error;
-
-    /// Sets the ordered list of preferred locales.
-    SetLocales(vector<fuchsia.intl.LocaleId>:10 locales) -> () error Error;
+    /// Sets [IntlSettings] settings. Any field not explicitly set in the table performs a
+    /// no-op, and will not make any changes.
+    Set(IntlSettings settings) -> () error Error;
 };
 
 /// Collection of internationalization-related settings.

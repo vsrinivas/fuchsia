@@ -32,13 +32,14 @@ impl SystemStreamHandler {
             // Support future expansion of FIDL
             #[allow(unreachable_patterns)]
             match req {
-                fidl_fuchsia_settings::SystemRequest::SetLoginOverride {
-                    login_override,
-                    responder,
-                } => {
-                    self.set_login_override(login_override, |mut result| {
-                        responder.send(&mut result)
-                    })?;
+                fidl_fuchsia_settings::SystemRequest::Set { settings, responder } => {
+                    if let Some(login_override) = settings.mode {
+                        self.set_login_override(login_override, |mut result| {
+                            responder.send(&mut result)
+                        })?;
+                    } else {
+                        panic!("No operation requested");
+                    }
                 }
                 fidl_fuchsia_settings::SystemRequest::Watch { responder } => {
                     self.watch(last_seen_settings.clone(), |mut result| {
@@ -88,9 +89,9 @@ impl SystemStreamHandler {
         self.setui_handler.watch(SettingType::Account, last_seen_settings, |data| {
             if let SettingData::Account(account_settings) = data {
                 if let Some(mode) = account_settings.mode {
-                    return responder(Ok(fidl_fuchsia_settings::SystemSettings {
-                        mode: Some(convert_setui_login_override(mode)),
-                    }));
+                    let mut settings = fidl_fuchsia_settings::SystemSettings::empty();
+                    settings.mode = Some(convert_setui_login_override(mode));
+                    return responder(Ok(settings));
                 }
             }
             responder(Err(fidl_fuchsia_settings::Error::Failed))

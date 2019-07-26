@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![allow(dead_code)]
+
 use {
     failure::{format_err, Error},
     fidl_fuchsia_settings::*,
@@ -16,8 +18,10 @@ pub async fn command(proxy: SystemProxy, login_override: Option<String>) -> Resu
 
     match login_override {
         Some(override_value) => {
-            let converted_override_value = extract_login_override(&override_value)?;
-            let mutate_result = await!(proxy.set_login_override(converted_override_value))?;
+            let mut settings = SystemSettings::empty();
+            settings.mode = Some(extract_login_override(&override_value)?);
+
+            let mutate_result = await!(proxy.set(settings))?;
             match mutate_result {
                 Ok(()) => output.push_str(&format!("Successfully set to {}", override_value)),
                 Err(err) => output.push_str(&format!("{:?}", err)),

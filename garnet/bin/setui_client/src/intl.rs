@@ -8,14 +8,17 @@ pub async fn command(
     proxy: IntlProxy,
     time_zone: Option<fidl_fuchsia_intl::TimeZoneId>,
     temperature_unit: Option<fidl_fuchsia_intl::TemperatureUnit>,
-    mut locales: Vec<fidl_fuchsia_intl::LocaleId>,
+    locales: Vec<fidl_fuchsia_intl::LocaleId>,
 ) -> Result<String, Error> {
     let mut output = String::new();
 
-    if let Some(mut time_zone_value) = time_zone {
+    if let Some(time_zone_value) = time_zone {
         let time_zone_string = time_zone_value.id.clone();
 
-        let mutate_result = await!(proxy.set_time_zone(&mut time_zone_value))?;
+        let mut settings = IntlSettings::empty();
+        settings.time_zone_id = Some(time_zone_value);
+
+        let mutate_result = await!(proxy.set(settings))?;
         match mutate_result {
             Ok(_) => {
                 output.push_str(&format!("Successfully set time_zone to {}", time_zone_string))
@@ -23,7 +26,10 @@ pub async fn command(
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
     } else if let Some(temperature_unit_value) = temperature_unit {
-        let mutate_result = await!(proxy.set_temperature_unit(temperature_unit_value))?;
+        let mut settings = IntlSettings::empty();
+        settings.temperature_unit = Some(temperature_unit_value);
+
+        let mutate_result = await!(proxy.set(settings))?;
         match mutate_result {
             Ok(_) => output.push_str(&format!(
                 "Successfully set temperature unit to {}",
@@ -34,14 +40,16 @@ pub async fn command(
     } else if !locales.is_empty() {
         let locales_description = describe_locales(&locales);
 
-        let mutate_result = await!(proxy.set_locales(&mut locales.iter_mut()))?;
+        let mut settings = IntlSettings::empty();
+        settings.locales = Some(locales);
+
+        let mutate_result = await!(proxy.set(settings))?;
         match mutate_result {
             Ok(_) => {
                 output.push_str(&format!("Successfully set locales to {}", locales_description))
             }
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
-
     } else {
         let setting = await!(proxy.watch())?;
 

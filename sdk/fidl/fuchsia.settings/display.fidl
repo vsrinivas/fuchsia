@@ -11,12 +11,9 @@ protocol Display {
     /// subsequent calls return when the value changes.
     Watch() -> (DisplaySettings settings) error Error;
 
-    /// Enable or disable automatic adjustment of brightness.
-    SetAutoBrightness(bool auto_brightness) -> () error Error;
-
-    /// Changes the brightness to a value from 0-1.0, with 1.0 representing
-    /// full brightness. Values greater than 1.0 may be added in future.
-    SetBrightness(float32 brightness_value) -> () error Error;
+    /// Sets display settings. Any field not explicitly set in the table performs a
+    /// no-op, and will not make any changes.
+    Set(DisplaySettings settings) -> () error Error;
 };
 
 table DisplaySettings {

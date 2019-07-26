@@ -11,8 +11,9 @@ protocol System {
     /// subsequent calls return when the value changes.
     Watch() -> (SystemSettings settings) error Error;
 
-    /// Changes the login overide to the supplied value.
-    SetLoginOverride(LoginOverride login_override) -> () error Error;
+    /// Changes the settings specified in [SystemSettings]. Any field not set in the table will
+    /// not perform any system operation.
+    Set(SystemSettings settings) -> () error Error;
 };
 
 /// Settings related to the general system.

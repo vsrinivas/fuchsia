@@ -118,7 +118,6 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
     Ok(())
 }
 
-
 fn describe_setting(setting: SettingsObject) -> Result<String, Error> {
     match setting.setting_type {
         SettingType::Unknown => {
@@ -167,9 +166,7 @@ fn str_to_temperature_unit(src: &str) -> Result<fidl_fuchsia_intl::TemperatureUn
         }
         _ => Err("Couldn't parse temperature"),
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {

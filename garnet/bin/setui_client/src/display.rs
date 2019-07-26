@@ -12,7 +12,10 @@ pub async fn command(
     let mut output = String::new();
 
     if let Some(auto_brightness_value) = auto_brightness {
-        let mutate_result = await!(proxy.set_auto_brightness(auto_brightness_value))?;
+        let mut settings = DisplaySettings::empty();
+        settings.auto_brightness = Some(auto_brightness_value);
+
+        let mutate_result = await!(proxy.set(settings))?;
         match mutate_result {
             Ok(_) => output.push_str(&format!(
                 "Successfully set auto_brightness to {}",
@@ -21,7 +24,10 @@ pub async fn command(
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
     } else if let Some(brightness_value) = brightness {
-        let mutate_result = await!(proxy.set_brightness(brightness_value))?;
+        let mut settings = DisplaySettings::empty();
+        settings.brightness_value = Some(brightness_value);
+
+        let mutate_result = await!(proxy.set(settings))?;
         match mutate_result {
             Ok(_) => {
                 output.push_str(&format!("Successfully set brightness to {}", brightness_value))

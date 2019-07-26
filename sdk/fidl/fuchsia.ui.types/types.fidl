@@ -1,0 +1,23 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.types;
+
+/// Represents a color. Interfaces that use this struct should document whether
+/// or not the floats have been premultiplied by alpha. Range per channel is
+/// usually between 0.0 and 1.0.
+struct ColorRgba {
+    float32 red;
+    float32 green;
+    float32 blue;
+    float32 alpha;
+};
+
+/// Represents a color without alpha channel. Range per channel is usually
+/// between 0.0 and 1.0.
+struct ColorRgb {
+    float32 red;
+    float32 green;
+    float32 blue;
+};

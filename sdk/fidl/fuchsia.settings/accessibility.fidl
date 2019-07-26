@@ -4,6 +4,8 @@
 
 library fuchsia.settings;
 
+using fuchsia.ui.types;
+
 /// Modify or watch accessibility settings that are persisted.
 [Discoverable]
 protocol Accessibility {
@@ -15,36 +17,9 @@ protocol Accessibility {
     /// * see [`AccessibilitySettings`] for their meaning.
     Watch() -> (AccessibilitySettings settings);
 
-    /// Enables or disables audio description.
-    ///
-    /// * see [`AccessibilitySettings.audio_description`]
-    SetAudioDescription(bool audio_description) -> ();
-
-    /// Enables or disables the screen reader.
-    ///
-    /// * see [`AccessibilitySettings.screen_reader`]
-    SetScreenReader(bool screen_reader) -> ();
-
-    /// Enables or disables color inversion.
-    ///
-    /// * see [`AccessibilitySettings.color_inversion`]
-    SetColorInversion(bool color_inversion) -> ();
-
-    /// Enables or disables magnification by triple-tapping the display.
-    ///
-    /// * see [`AccessibilitySettings.enable_magnification`]
-    SetEnableMagnification(bool enable_magnification) -> ();
-
-    /// Sets the specific color correction to use, or none.
-    ///
-    /// * see [`AccessibilitySettings.color_correction`]
-    SetColorCorrection(ColorBlindnessType color_correction) -> ();
-
-    /// Updates closed captions settings.
-    ///
-    /// + `settings` fields to update. Only values explicitly set are changed.
-    /// * see [`CaptionsSettings`] for their meaning.
-    SetCaptionsSettings(CaptionsSettings settings) -> ();
+    /// Sets [AccessibilitySettings] settings. Any field not explicitly set in the table performs a
+    /// no-op, and will not make any changes.
+    Set(AccessibilitySettings settings) -> ();
 };
 
 /// Supported accessibility settings.
@@ -96,10 +71,10 @@ table CaptionsSettings {
     3: CaptionFontStyle font_style;
 
     /// Border color used around the closed captions window.
-    4: Color window_color;
+    4: fuchsia.ui.types.ColorRgba window_color;
 
     /// Background color of the closed captions window.
-    5: Color background_color;
+    5: fuchsia.ui.types.ColorRgba background_color;
 };
 
 /// Font, size, and color of closed captions text.
@@ -107,12 +82,12 @@ table CaptionFontStyle {
     1: CaptionFontFamily family;
     /// 47 CFR §79.103(c)(2) requires at least 3-bit RGB for user override of
     /// closed-captions color.
-    2: Color color;
+    2: fuchsia.ui.types.ColorRgba color;
     /// Size of closed captions text relative to the default captions size. A
     /// range of [0.5, 2] is guaranteed to be supported (as 47 CFR §79.103(c)(4)
     /// establishes).
     3: float32 relative_size;
-    4: CaptionEdgeStyle char_edge_style;
+    4: EdgeStyle char_edge_style;
 };
 
 /// Font family groups for closed captions, specified by 47 CFR §79.102(k).
@@ -127,23 +102,12 @@ enum CaptionFontFamily {
     SMALL_CAPITALS = 7;
 };
 
-/// 32-bit RGBA color. Color channels have not been premultiplied by `alpha`.
-// TODO: Consider extracting common types out of `fuchsia.ui.gfx` into a shared
-// library, to use `fuchsia.ui.gfx/ColorRgba` here without bringing a big
-// dependency.
-struct Color {
-    uint8 red;
-    uint8 green;
-    uint8 blue;
-    uint8 alpha;
-};
-
-/// Font edge style, for better visibility against the background.
-enum CaptionEdgeStyle {
-    /// No border around characters.
+/// Edge style for fonts as specified in 47 CFR §79.103(c)(7)
+enum EdgeStyle {
+    /// No border around fonts.
     NONE = 0;
 
-    /// A shadow "behind" and slightly offset from each character.
+    /// A shadow "behind" and slightly offset from each edge.
     DROP_SHADOW = 1;
 
     /// A bevel that mimics a 3D raised effect.
@@ -152,6 +116,6 @@ enum CaptionEdgeStyle {
     /// A bevel that mimics a 3D depressed effect.
     DEPRESSED = 3;
 
-    /// A plain border around each character.
+    /// A plain border around each shapes.
     OUTLINE = 4;
 };

@@ -58,7 +58,6 @@ async fn main() -> Result<(), Error> {
     println!("  client calls set login mode");
     await!(validate_system_override())?;
 
-
     Ok(())
 }
 
@@ -104,11 +103,14 @@ macro_rules! create_service  {
 }
 
 async fn validate_system_override() -> Result<(), Error> {
-
     let env = create_service!(Services::System,
-        SystemRequest::SetLoginOverride { login_override, responder } => {
-            assert_eq!(login_override, LoginOverride::AuthProvider);
-            responder.send(&mut Ok(()))?;
+        SystemRequest::Set { settings, responder } => {
+            if let Some(login_override) = settings.mode {
+                assert_eq!(login_override, LoginOverride::AuthProvider);
+                responder.send(&mut Ok(()))?;
+            } else {
+                panic!("Wrong call to set");
+            }
     });
 
     let system_service =
@@ -120,14 +122,17 @@ async fn validate_system_override() -> Result<(), Error> {
 }
 
 async fn validate_temperature_unit() -> Result<(), Error> {
-
     let env = create_service!(Services::Intl,
-        IntlRequest::SetTemperatureUnit { temperature_unit, responder } => {
+        IntlRequest::Set { settings, responder } => {
+            if let Some(temperature_unit) = settings.temperature_unit {
             assert_eq!(
                 temperature_unit,
                 fidl_fuchsia_intl::TemperatureUnit::Celsius
             );
             responder.send(&mut Ok(()))?;
+            } else {
+                panic!("Wrong call to set");
+            }
     });
 
     let intl_service =
@@ -148,22 +153,20 @@ async fn validate_display(
     expected_brightness: Option<f32>,
     expected_auto_brightness: Option<bool>,
 ) -> Result<(), Error> {
-
     let env = create_service!(
-        Services::Display, DisplayRequest::SetBrightness { brightness_value, responder, } => {
-            if let Some(expected_brightness_value) = expected_brightness {
+        Services::Display, DisplayRequest::Set { settings, responder, } => {
+            if let (Some(brightness_value), Some(expected_brightness_value)) =
+              (settings.brightness_value, expected_brightness) {
                 assert_eq!(brightness_value, expected_brightness_value);
                 responder.send(&mut Ok(()))?;
-            } else {
-                panic!("Unexpected call to set brightness");
-        }},
-        DisplayRequest::SetAutoBrightness { auto_brightness, responder, } => {
-            if let Some(expected_auto_brightness_value) = expected_auto_brightness {
+            } else if let (Some(auto_brightness), Some(expected_auto_brightness_value)) =
+              (settings.auto_brightness, expected_auto_brightness) {
                 assert_eq!(auto_brightness, expected_auto_brightness_value);
                 responder.send(&mut Ok(()))?;
             } else {
-                panic!("Unexpected call to set auto brightness");
-        }},
+                panic!("Unexpected call to set");
+            }
+        },
         DisplayRequest::Watch { responder } => {
             responder.send(&mut Ok(DisplaySettings {
                 auto_brightness: Some(false),
