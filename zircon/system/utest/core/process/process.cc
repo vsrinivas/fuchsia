@@ -14,6 +14,7 @@
 #include <zircon/types.h>
 
 #include <lib/test-exceptions/exception-catcher.h>
+#include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <mini-process/mini-process.h>
 
@@ -893,6 +894,59 @@ bool process_start_write_thread_state() {
     END_TEST;
 }
 
+// This checks for lock ordering violations between the acquiring the process dispatcher lock and
+// the process handle table lock.
+//
+// Given that the 'standard' lock ordering is handle table and then dispatcher, this is really
+// testing that ZX_INFO_PROCESS_VMOS doesn't acquire in the other order.
+//
+// object_wait_async and port_cancel are used as syscalls that will allow us to hold the handle
+// table lock whilst operating on a process in a way that requires grabbing the dispatcher lock.
+// This represents the 'correct' ordering.
+bool process_wait_async_cancel_self() {
+    BEGIN_TEST;
+
+    // Start up a thread in a mini-process that is given a copy of the process handle and will
+    // create a port and infinitely loop doing process.wait_async(port) + port.cancel(process)
+    zx::process process;
+    zx::vmar vmar;
+
+    constexpr const char kProcessName[] = "test_process";
+    ASSERT_EQ(zx::process::create(*zx::job::default_job(), kProcessName, sizeof(kProcessName), 0,
+                                  &process, &vmar), ZX_OK);
+
+    zx::thread thread;
+
+    constexpr const char kThreadName[] = "test_thread";
+    ASSERT_EQ(zx::thread::create(process, kThreadName, sizeof(kThreadName), 0, &thread), ZX_OK);
+
+    zx::channel cntrl_channel;
+    zx::process process_dup;
+    ASSERT_EQ(process.duplicate(ZX_RIGHT_SAME_RIGHTS, &process_dup), ZX_OK);
+    ASSERT_EQ(start_mini_process_etc(process.get(), thread.get(), vmar.get(), process_dup.release(),
+                                     true, cntrl_channel.reset_and_get_address()), ZX_OK);
+
+    ASSERT_EQ(mini_process_cmd_send(cntrl_channel.get(), MINIP_CMD_WAIT_ASYNC_CANCEL), ZX_OK);
+
+    // Call get_info several times on the process. We're trying to trigger a race that will cause a
+    // kernel deadlock. In testing with the deadlock present 10000 iterations would reliably trigger
+    // and does not take very long to run.
+    zx_info_vmo_t vmo;
+    size_t actual;
+    size_t available;
+    for (int i = 0 ; i < 10000; i++) {
+        ASSERT_EQ(process.get_info(ZX_INFO_PROCESS_VMOS, &vmo, sizeof(vmo), &actual, &available),
+                  ZX_OK);
+    }
+    // We need to explicitly kill the process tree as we gave the mini-process a handle to itself,
+    // so it is able to keep itself alive when we close our copies of the handles otherwise.
+    ASSERT_EQ(process.kill(), ZX_OK);
+    zx_signals_t pending;
+    ASSERT_EQ(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &pending), ZX_OK);
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(process_tests)
@@ -916,6 +970,7 @@ RUN_TEST(suspend_thread_and_process_before_starting_process);
 RUN_TEST(suspend_twice);
 RUN_TEST(suspend_twice_before_creating_threads);
 RUN_TEST(suspend_with_dying_thread);
+RUN_TEST(process_wait_async_cancel_self);
 // TODO(FLK-370): deflake and reenable this test.
 // RUN_TEST(process_start_write_thread_state)
 RUN_TEST_LARGE(create_and_kill_job_race_stress);

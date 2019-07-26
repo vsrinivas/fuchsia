@@ -187,6 +187,12 @@ class ProcessDispatcher final
   template <typename T>
   zx_status_t ForEachHandle(T func) const {
     Guard<BrwLockPi, BrwLockPi::Writer> guard{&handle_table_lock_};
+    return ForEachHandleLocked(func);
+  }
+
+  // Similar to |ForEachHandle|, but requires the caller to be holding the |handle_table_lock_|
+  template <typename T>
+  zx_status_t ForEachHandleLocked(T func) const TA_REQ(handle_table_lock_) {
     for (const auto& handle : handles_) {
       const Dispatcher* dispatcher = handle.dispatcher().get();
       zx_status_t s = func(MapHandleToValue(&handle), handle.rights(), dispatcher);

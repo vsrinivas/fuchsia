@@ -57,6 +57,9 @@ __BEGIN_CDECLS
 #define MINIP_CMD_ATTEMPT_AMBIENT_EXECUTABLE (1 << 14)
 // This checks the word the thread register points to against expected value.
 #define MINIP_CMD_CHECK_THREAD_POINTER       (1 << 15)
+// The process will perform an async_wait on the |transferred_handle| and then
+// port cancel on it in an infinite loop.
+#define MINIP_CMD_WAIT_ASYNC_CANCEL          (1 << 16)
 #define MINIP_THREAD_POINTER_CHECK_VALUE     (0xdeadbeeffeedfaceUL)
 
 // Create and run a minimal process with one thread that blocks forever.

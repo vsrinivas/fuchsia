@@ -234,6 +234,23 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
                     }
                     goto reply;
                 }
+                if (what & MINIP_CMD_WAIT_ASYNC_CANCEL) {
+                    zx_handle_t port = ZX_HANDLE_INVALID;
+                    if (ctx.port_create(0u, &port) != ZX_OK) {
+                        __builtin_trap();
+                    }
+                    while (1) {
+                        if (ctx.object_wait_async(original_handle, port, 42, ZX_USER_SIGNAL_0, 0)
+                            != ZX_OK) {
+                            __builtin_trap();
+                        }
+                        if (ctx.port_cancel(port, original_handle, 42) != ZX_OK) {
+                            __builtin_trap();
+                        }
+                    }
+                    cmd.status = ZX_OK;
+                    goto reply;
+                }
 
                 // Neither MINIP_CMD_BUILTIN_TRAP nor MINIP_CMD_EXIT_NORMAL send a
                 // message so the client will get ZX_CHANNEL_PEER_CLOSED.

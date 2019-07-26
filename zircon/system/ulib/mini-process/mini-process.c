@@ -26,6 +26,7 @@ static zx_status_t write_ctx_message(
     zx_handle_t channel, uintptr_t vdso_base, zx_handle_t transferred_handle) {
     minip_ctx_t ctx = {
         .handle_close = get_syscall_addr(&zx_handle_close, vdso_base),
+        .object_wait_async = get_syscall_addr(&zx_object_wait_async, vdso_base),
         .object_wait_one = get_syscall_addr(&zx_object_wait_one, vdso_base),
         .object_signal = get_syscall_addr(&zx_object_signal, vdso_base),
         .event_create = get_syscall_addr(&zx_event_create, vdso_base),
@@ -35,6 +36,7 @@ static zx_status_t write_ctx_message(
         .channel_write = get_syscall_addr(&zx_channel_write, vdso_base),
         .process_exit = get_syscall_addr(&zx_process_exit, vdso_base),
         .object_get_info = get_syscall_addr(&zx_object_get_info, vdso_base),
+        .port_cancel = get_syscall_addr(&zx_port_cancel, vdso_base),
         .port_create = get_syscall_addr(&zx_port_create, vdso_base),
         .pager_create = get_syscall_addr(&zx_pager_create, vdso_base),
         .pager_create_vmo = get_syscall_addr(&zx_pager_create_vmo, vdso_base),

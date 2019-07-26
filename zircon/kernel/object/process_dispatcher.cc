@@ -602,16 +602,22 @@ zx_status_t ProcessDispatcher::GetAspaceMaps(user_out_ptr<zx_info_maps_t> maps, 
 
 zx_status_t ProcessDispatcher::GetVmos(user_out_ptr<zx_info_vmo_t> vmos, size_t max,
                                        size_t* actual_out, size_t* available_out) {
+  // We need the handle_table_lock for |GetProcessVmosLocked|, but we must also acquire it
+  // before acquiring |get_lock()|.
+  Guard<BrwLockPi, BrwLockPi::Writer> handle_table_guard{handle_table_lock()};
   Guard<fbl::Mutex> guard{get_lock()};
   if (state_ != State::RUNNING) {
     return ZX_ERR_BAD_STATE;
   }
   size_t actual = 0;
   size_t available = 0;
-  zx_status_t s = GetProcessVmosViaHandles(this, vmos, max, &actual, &available);
+  zx_status_t s = GetProcessVmosLocked(this, vmos, max, &actual, &available);
   if (s != ZX_OK) {
     return s;
   }
+  // Done with the handle table lock now that we've called |GetProcessVmosLocked|
+  handle_table_guard.Release();
+
   size_t actual2 = 0;
   size_t available2 = 0;
   DEBUG_ASSERT(max >= actual);
