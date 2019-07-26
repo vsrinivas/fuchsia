@@ -5,8 +5,11 @@
 #include "linux_platform_device.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 using __u64 = uint64_t;
 using __u32 = uint32_t;
@@ -131,6 +134,45 @@ std::unique_ptr<PlatformMmio> LinuxPlatformDevice::CpuMapMmio(
     return DRETP(nullptr, "mmap failed");
 
   return std::make_unique<LinuxPlatformMmio>(cpu_addr, length);
+}
+
+Status LinuxPlatformDevice::LoadFirmware(const char* filename,
+                                         std::unique_ptr<PlatformBuffer>* firmware_out,
+                                         uint64_t* size_out) const {
+  int fd = open(filename, O_RDONLY);
+  if (fd < 0)
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Open firmware failed: %d", errno);
+
+  LinuxPlatformHandle firmware(fd);
+
+  struct stat stat;
+  int ret = fstat(firmware.get(), &stat);
+  if (ret != 0)
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "fstat failed: %d", ret);
+
+  int size = stat.st_size;
+  DASSERT(size > 0);
+
+  auto buffer = magma::PlatformBuffer::Create(size, filename);
+  if (!buffer)
+    return DRET_MSG(MAGMA_STATUS_MEMORY_ERROR, "Couldn't create firmware buffer size %zx",
+                    stat.st_size);
+
+  void* dst;
+  if (!buffer->MapCpu(&dst))
+    return DRET_MSG(MAGMA_STATUS_MEMORY_ERROR, "Couldn't map firmware buffer");
+
+  int bytes_read = pread(firmware.get(), dst, size, 0);
+  if (bytes_read != size)
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "unexpected bytes_read %d != size %d", bytes_read,
+                    size);
+
+  buffer->UnmapCpu();
+
+  *size_out = size;
+  *firmware_out = std::move(buffer);
+
+  return MAGMA_STATUS_OK;
 }
 
 std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle) {

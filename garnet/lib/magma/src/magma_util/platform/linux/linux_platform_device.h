@@ -27,9 +27,7 @@ class LinuxPlatformDevice : public PlatformDevice {
   std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const override;
 
   Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
-                      uint64_t* size_out) const override {
-    return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "LoadFirmware not implemented");
-  }
+                      uint64_t* size_out) const override;
 
   std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,
                                            PlatformMmio::CachePolicy cache_policy) override;
