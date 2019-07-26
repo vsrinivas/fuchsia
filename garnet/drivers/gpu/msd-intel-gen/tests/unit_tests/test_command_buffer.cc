@@ -35,6 +35,8 @@ class Test {
   }
 
   void TestMapUnmapResourcesGpu() {
+    CreateCommandBuffer();
+
     auto address_space_owner = std::make_unique<AddressSpaceOwner>();
     auto addr_space =
         std::make_shared<MockAddressSpace>(address_space_owner.get(), 0, 1024 * PAGE_SIZE);
@@ -78,6 +80,11 @@ class Test {
   }
 
   void TestPrepareForExecution() {
+    uint32_t batch_start_offset = 0x10;
+    helper_->abi_cmd_buf()->batch_start_offset = batch_start_offset;
+
+    CreateCommandBuffer();
+
     {
       gpu_addr_t gpu_addr = 0;
       std::vector<MagmaSystemBuffer*>& resources = helper_->resources();
@@ -95,9 +102,6 @@ class Test {
 
     auto device = MsdIntelDevice::cast(helper_->dev()->msd_dev());
     auto engine = TestCommandBuffer::render_engine(device);
-
-    uint32_t batch_start_offset = 0x10;
-    helper_->abi_cmd_buf()->batch_start_offset = batch_start_offset;
 
     ASSERT_TRUE(cmd_buf_->PrepareForExecution());
 
@@ -127,6 +131,8 @@ class Test {
   }
 
   void TestExecute() {
+    CreateCommandBuffer();
+
     gpu_addr_t gpu_addr = 0;
     {
       std::vector<MagmaSystemBuffer*>& resources = helper_->resources();
@@ -187,24 +193,19 @@ class Test {
   }
 
  private:
+  void CreateCommandBuffer() {
+    cmd_buf_ = CommandBuffer::Create(
+        MsdIntelAbiContext::cast(helper_->ctx())->ptr(), helper_->abi_cmd_buf(),
+        helper_->abi_resources(), helper_->msd_resources().data(), helper_->msd_wait_semaphores(),
+        helper_->msd_signal_semaphores());
+  }
+
   Test() {
     auto platform_device = TestPlatformPciDevice::GetInstance();
     if (!platform_device)
       DLOG("TestCommandBuffer: No platform device");
     DLOG("creating helper");
     helper_ = CommandBufferHelper::Create(platform_device);
-
-    DLOG("creating command buffer");
-    uint32_t handle;
-    helper_->buffer()->duplicate_handle(&handle);
-    buffer_ = MagmaSystemBuffer::Create(magma::PlatformBuffer::Import(handle));
-    // It's important that the CommandBuffer created here match the serialized content
-    // inside the command buffer provided by the helper.
-    cmd_buf_ =
-        CommandBuffer::Create(buffer_->msd_buf(), helper_->msd_resources().data(),
-                              MsdIntelAbiContext::cast(helper_->ctx())->ptr(),
-                              helper_->msd_wait_semaphores(), helper_->msd_signal_semaphores());
-    DLOG("command buffer created");
   }
 
   std::unique_ptr<MagmaSystemBuffer> buffer_;

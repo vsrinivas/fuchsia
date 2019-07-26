@@ -8,7 +8,6 @@
 #include <memory>
 #include <vector>
 
-#include "magma_util/command_buffer.h"
 #include "mapped_batch.h"
 #include "msd.h"
 #include "msd_intel_buffer.h"
@@ -19,14 +18,15 @@ class ClientContext;
 class EngineCommandStreamer;
 class MsdIntelContext;
 
-class CommandBuffer : public MappedBatch, private magma::CommandBuffer {
+class CommandBuffer : public MappedBatch {
  public:
   // Takes a weak reference on the context which it locks for the duration of its execution
   // holds a shared reference to the buffers backing |abi_cmd_buf| and |exec_buffers| for the
   // lifetime of this object
-  static std::unique_ptr<CommandBuffer> Create(msd_buffer_t* abi_cmd_buf,
+  static std::unique_ptr<CommandBuffer> Create(std::weak_ptr<ClientContext> context,
+                                               magma_system_command_buffer* cmd_buf,
+                                               magma_system_exec_resource* exec_resources,
                                                msd_buffer_t** msd_buffers,
-                                               std::weak_ptr<ClientContext> context,
                                                msd_semaphore_t** msd_wait_semaphores,
                                                msd_semaphore_t** msd_signal_semaphores);
 
@@ -64,9 +64,22 @@ class CommandBuffer : public MappedBatch, private magma::CommandBuffer {
   }
 
  private:
-  CommandBuffer(std::shared_ptr<MsdIntelBuffer> abi_cmd_buf, std::weak_ptr<ClientContext> context);
+  CommandBuffer(std::weak_ptr<ClientContext> context,
+                std::unique_ptr<magma_system_command_buffer> command_buffer);
 
   bool IsCommandBuffer() override { return true; }
+
+  uint32_t batch_buffer_resource_index() const {
+    return command_buffer_->batch_buffer_resource_index;
+  }
+
+  uint32_t num_resources() const { return command_buffer_->num_resources; }
+
+  uint32_t wait_semaphore_count() const { return command_buffer_->wait_semaphore_count; }
+
+  uint32_t signal_semaphore_count() const { return command_buffer_->signal_semaphore_count; }
+
+  uint32_t batch_start_offset() const { return command_buffer_->batch_start_offset; }
 
   // maps all execution resources into the given |address_space|.
   // fills |resource_gpu_addresses_out| with the mapped addresses of every object in
@@ -76,22 +89,19 @@ class CommandBuffer : public MappedBatch, private magma::CommandBuffer {
 
   void UnmapResourcesGpu();
 
-  bool InitializeResources(
-      std::vector<std::shared_ptr<MsdIntelBuffer>> buffers,
-      std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
-      std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores);
-
   struct ExecResource {
     std::shared_ptr<MsdIntelBuffer> buffer;
     uint64_t offset;
     uint64_t length;
   };
 
-  // magma::CommandBuffer implementation
-  magma::PlatformBuffer* platform_buffer() override { return abi_cmd_buf_->platform_buffer(); }
+  bool InitializeResources(
+      std::vector<ExecResource> resources,
+      std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
+      std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores);
 
-  const std::shared_ptr<MsdIntelBuffer> abi_cmd_buf_;
   const std::weak_ptr<ClientContext> context_;
+  const std::unique_ptr<magma_system_command_buffer> command_buffer_;
   const uint64_t nonce_;
 
   // Set on connection thread; valid only when prepared_to_execute_ is true

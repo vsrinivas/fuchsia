@@ -15,21 +15,30 @@ class TestCommandBuffer {
       std::weak_ptr<ClientContext> context, std::vector<std::shared_ptr<MsdIntelBuffer>> buffers,
       std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
       std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores) {
+    void* ptr;
+    if (!command_buffer_descriptor->platform_buffer()->MapCpu(&ptr))
+      return DRETP(nullptr, "MapCpu failed");
+
+    auto cmd_buf_ptr = reinterpret_cast<magma_system_command_buffer*>(ptr);
+    auto semaphores_ptr = reinterpret_cast<uint64_t*>(cmd_buf_ptr + 1);
+    auto exec_resources_ptr = reinterpret_cast<magma_system_exec_resource*>(
+        semaphores_ptr + cmd_buf_ptr->wait_semaphore_count + cmd_buf_ptr->signal_semaphore_count);
+
     auto command_buffer = std::unique_ptr<CommandBuffer>(
-        new CommandBuffer(std::move(command_buffer_descriptor), context));
+        new CommandBuffer(context, std::make_unique<magma_system_command_buffer>(*cmd_buf_ptr)));
 
-    if (!command_buffer->Initialize())
-      return DRETP(nullptr, "failed to initialize command buffer");
+    std::vector<CommandBuffer::ExecResource> resources;
+    resources.reserve(cmd_buf_ptr->num_resources);
+    for (uint32_t i = 0; i < cmd_buf_ptr->num_resources; i++) {
+      resources.emplace_back(CommandBuffer::ExecResource{buffers[i], exec_resources_ptr[i].offset,
+                                                         exec_resources_ptr[i].length});
+    }
 
-    if (!command_buffer->InitializeResources(std::move(buffers), std::move(wait_semaphores),
+    if (!command_buffer->InitializeResources(std::move(resources), std::move(wait_semaphores),
                                              std::move(signal_semaphores)))
       return DRETP(nullptr, "failed to initialize command buffer resources");
 
     return command_buffer;
-  }
-
-  static magma::PlatformBuffer* platform_buffer(CommandBuffer* command_buffer) {
-    return command_buffer->platform_buffer();
   }
 
   static bool MapResourcesGpu(CommandBuffer* command_buffer,
@@ -48,11 +57,6 @@ class TestCommandBuffer {
 
   static std::vector<CommandBuffer::ExecResource>& exec_resources(CommandBuffer* command_buffer) {
     return command_buffer->exec_resources_;
-  }
-
-  static const magma::CommandBuffer::ExecResource& resource(const CommandBuffer* command_buffer,
-                                                            uint32_t resource_index) {
-    return command_buffer->resource(resource_index);
   }
 
   // TODO(MA-208) - move this

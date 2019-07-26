@@ -11,45 +11,44 @@
 #include "msd_intel_semaphore.h"
 #include "platform_trace.h"
 
-std::unique_ptr<CommandBuffer> CommandBuffer::Create(msd_buffer_t* abi_cmd_buf,
+std::unique_ptr<CommandBuffer> CommandBuffer::Create(std::weak_ptr<ClientContext> context,
+                                                     magma_system_command_buffer* cmd_buf,
+                                                     magma_system_exec_resource* exec_resources,
                                                      msd_buffer_t** msd_buffers,
-                                                     std::weak_ptr<ClientContext> context,
                                                      msd_semaphore_t** msd_wait_semaphores,
                                                      msd_semaphore_t** msd_signal_semaphores) {
-  auto command_buffer = std::unique_ptr<CommandBuffer>(
-      new CommandBuffer(MsdIntelAbiBuffer::cast(abi_cmd_buf)->ptr(), context));
-
-  if (!command_buffer->Initialize())
-    return DRETP(nullptr, "failed to initialize command buffer");
-
-  std::vector<std::shared_ptr<MsdIntelBuffer>> buffers;
-  buffers.reserve(command_buffer->num_resources());
-  for (uint32_t i = 0; i < command_buffer->num_resources(); i++) {
-    buffers.emplace_back(MsdIntelAbiBuffer::cast(msd_buffers[i])->ptr());
+  std::vector<ExecResource> resources;
+  resources.reserve(cmd_buf->num_resources);
+  for (uint32_t i = 0; i < cmd_buf->num_resources; i++) {
+    resources.emplace_back(ExecResource{MsdIntelAbiBuffer::cast(msd_buffers[i])->ptr(),
+                                        exec_resources[i].offset, exec_resources[i].length});
   }
 
   std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores;
-  wait_semaphores.reserve(command_buffer->wait_semaphore_count());
-  for (uint32_t i = 0; i < command_buffer->wait_semaphore_count(); i++) {
+  wait_semaphores.reserve(cmd_buf->wait_semaphore_count);
+  for (uint32_t i = 0; i < cmd_buf->wait_semaphore_count; i++) {
     wait_semaphores.emplace_back(MsdIntelAbiSemaphore::cast(msd_wait_semaphores[i])->ptr());
   }
 
   std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores;
-  signal_semaphores.reserve(command_buffer->signal_semaphore_count());
-  for (uint32_t i = 0; i < command_buffer->signal_semaphore_count(); i++) {
+  signal_semaphores.reserve(cmd_buf->signal_semaphore_count);
+  for (uint32_t i = 0; i < cmd_buf->signal_semaphore_count; i++) {
     signal_semaphores.emplace_back(MsdIntelAbiSemaphore::cast(msd_signal_semaphores[i])->ptr());
   }
 
-  if (!command_buffer->InitializeResources(std::move(buffers), std::move(wait_semaphores),
+  auto command_buffer = std::unique_ptr<CommandBuffer>(
+      new CommandBuffer(context, std::make_unique<magma_system_command_buffer>(*cmd_buf)));
+
+  if (!command_buffer->InitializeResources(std::move(resources), std::move(wait_semaphores),
                                            std::move(signal_semaphores)))
     return DRETP(nullptr, "failed to initialize command buffer resources");
 
   return command_buffer;
 }
 
-CommandBuffer::CommandBuffer(std::shared_ptr<MsdIntelBuffer> abi_cmd_buf,
-                             std::weak_ptr<ClientContext> context)
-    : abi_cmd_buf_(std::move(abi_cmd_buf)), context_(context), nonce_(TRACE_NONCE()) {}
+CommandBuffer::CommandBuffer(std::weak_ptr<ClientContext> context,
+                             std::unique_ptr<magma_system_command_buffer> cmd_buf)
+    : context_(context), command_buffer_(std::move(cmd_buf)), nonce_(TRACE_NONCE()) {}
 
 CommandBuffer::~CommandBuffer() {
   if (!prepared_to_execute_)
@@ -59,7 +58,7 @@ CommandBuffer::~CommandBuffer() {
   uint64_t connection_id = connection ? connection->client_id() : 0;
   uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
 
-  uint64_t ATTRIBUTE_UNUSED buffer_id = resource(batch_buffer_resource_index()).buffer_id();
+  uint64_t ATTRIBUTE_UNUSED buffer_id = GetBatchBufferId();
   TRACE_DURATION("magma", "Command Buffer End");
   TRACE_VTHREAD_FLOW_STEP("magma", "command_buffer", "GPU", connection_id, buffer_id,
                           current_ticks);
@@ -83,22 +82,18 @@ CommandBuffer::~CommandBuffer() {
 }
 
 void CommandBuffer::SetSequenceNumber(uint32_t sequence_number) {
-  uint64_t ATTRIBUTE_UNUSED buffer_id = resource(batch_buffer_resource_index()).buffer_id();
-
-  TRACE_ASYNC_BEGIN("magma-exec", "CommandBuffer Exec", nonce_, "id", buffer_id);
+  TRACE_ASYNC_BEGIN("magma-exec", "CommandBuffer Exec", nonce_, "id", GetBatchBufferId());
   sequence_number_ = sequence_number;
 }
 
 bool CommandBuffer::InitializeResources(
-    std::vector<std::shared_ptr<MsdIntelBuffer>> buffers,
+    std::vector<ExecResource> resources,
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores) {
   TRACE_DURATION("magma", "InitializeResources");
-  if (!magma::CommandBuffer::initialized())
-    return DRETF(false, "base command buffer not initialized");
 
-  if (num_resources() != buffers.size())
-    return DRETF(false, "buffers size mismatch");
+  if (num_resources() != resources.size())
+    return DRETF(false, "resources size mismatch");
 
   if (wait_semaphores.size() != wait_semaphore_count())
     return DRETF(false, "wait semaphore count mismatch");
@@ -106,22 +101,17 @@ bool CommandBuffer::InitializeResources(
   if (signal_semaphores.size() != signal_semaphore_count())
     return DRETF(false, "wait semaphore count mismatch");
 
-  exec_resources_.clear();
-  exec_resources_.reserve(num_resources());
-  for (uint32_t i = 0; i < num_resources(); i++) {
-    exec_resources_.emplace_back(
-        ExecResource{buffers[i], resource(i).offset(), resource(i).length()});
-    {
-      TRACE_DURATION("magma", "CommitPages");
-      uint64_t num_pages = AddressSpace::GetMappedSize(resource(i).length()) >> PAGE_SHIFT;
-      DASSERT(magma::is_page_aligned(resource(i).offset()));
-      uint64_t page_offset = resource(i).offset() >> PAGE_SHIFT;
-      buffers[i]->platform_buffer()->CommitPages(page_offset, num_pages);
-    }
-  }
-
+  exec_resources_ = std::move(resources);
   wait_semaphores_ = std::move(wait_semaphores);
   signal_semaphores_ = std::move(signal_semaphores);
+
+  for (uint32_t i = 0; i < num_resources(); i++) {
+    TRACE_DURATION("magma", "CommitPages");
+    uint64_t num_pages = AddressSpace::GetMappedSize(exec_resources_[i].length) >> PAGE_SHIFT;
+    DASSERT(magma::is_page_aligned(exec_resources_[i].offset));
+    uint64_t page_offset = exec_resources_[i].offset >> PAGE_SHIFT;
+    exec_resources_[i].buffer->platform_buffer()->CommitPages(page_offset, num_pages);
+  }
 
   return true;
 }
@@ -155,8 +145,8 @@ bool CommandBuffer::GetGpuAddress(gpu_addr_t* gpu_addr_out) {
 }
 
 uint64_t CommandBuffer::GetBatchBufferId() {
-  if (batch_buffer_resource_index() < num_resources())
-    return resource(batch_buffer_resource_index()).buffer_id();
+  if (batch_buffer_resource_index() < exec_resources_.size())
+    return exec_resources_[batch_buffer_resource_index()].buffer->platform_buffer()->id();
   return 0;
 }
 
@@ -170,8 +160,7 @@ bool CommandBuffer::PrepareForExecution() {
   exec_resource_mappings_.clear();
   exec_resource_mappings_.reserve(exec_resources_.size());
 
-  uint64_t ATTRIBUTE_UNUSED buffer_id = resource(batch_buffer_resource_index()).buffer_id();
-  TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
+  TRACE_FLOW_STEP("magma", "command_buffer", GetBatchBufferId());
 
   if (!MapResourcesGpu(locked_context_->exec_address_space(), exec_resource_mappings_))
     return DRETF(false, "failed to map execution resources");

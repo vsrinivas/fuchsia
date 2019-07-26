@@ -146,6 +146,13 @@ magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer
   return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "msd_context_execute_command_buffer not implemented");
 }
 
+magma_status_t msd_context_execute_command_buffer_with_resources(
+    struct msd_context_t* ctx, struct magma_system_command_buffer* command_buffer,
+    struct magma_system_exec_resource* exec_resources, struct msd_buffer_t** buffers,
+    struct msd_semaphore_t** wait_semaphores, struct msd_semaphore_t** signal_semaphores) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
 magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64_t commands_size,
                                                       void* commands, uint64_t semaphore_count,
                                                       msd_semaphore_t** msd_semaphores) {

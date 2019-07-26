@@ -66,6 +66,15 @@ class MsdMockContext : public msd_context_t {
     return MAGMA_STATUS_OK;
   }
 
+  magma_status_t ExecuteCommandBufferWithResources(magma_system_command_buffer* cmd_buf,
+                                                   msd_buffer_t** buffers) {
+    last_submitted_exec_resources_.clear();
+    for (uint32_t i = 0; i < cmd_buf->num_resources; i++) {
+      last_submitted_exec_resources_.push_back(MsdMockBuffer::cast(buffers[i]));
+    }
+    return MAGMA_STATUS_OK;
+  }
+
   static MsdMockContext* cast(msd_context_t* ctx) {
     DASSERT(ctx);
     DASSERT(ctx->magic_ == kMagic);

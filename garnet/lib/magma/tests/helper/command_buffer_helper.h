@@ -80,10 +80,20 @@ class CommandBufferHelper {
   }
 
   bool Execute() {
-    uint32_t handle;
-    if (!buffer_->duplicate_handle(&handle))
-      return DRETF(false, "failed to dupe handle");
-    if (!ctx_->ExecuteCommandBuffer(magma::PlatformBuffer::Import(handle)))
+    auto command_buffer = std::make_unique<magma_system_command_buffer>(*abi_cmd_buf());
+    std::vector<magma_system_exec_resource> resources;
+    for (uint32_t i = 0; i < kNumResources; i++) {
+      resources.emplace_back(abi_resources()[i]);
+    }
+    std::vector<uint64_t> semaphores;
+    for (uint32_t i = 0; i < kWaitSemaphoreCount; i++) {
+      semaphores.emplace_back(abi_wait_semaphore_ids()[i]);
+    }
+    for (uint32_t i = 0; i < kSignalSemaphoreCount; i++) {
+      semaphores.emplace_back(abi_signal_semaphore_ids()[i]);
+    }
+    if (!ctx_->ExecuteCommandBufferWithResources(std::move(command_buffer), std::move(resources),
+                                                 std::move(semaphores)))
       return false;
     for (uint32_t i = 0; i < wait_semaphores_.size(); i++) {
       wait_semaphores_[i]->Signal();
