@@ -9,6 +9,16 @@ Summary counts:
   1 test case added
   0 test cases removed
 
+
+Results from test cases with differences:
+
+Test case      Improve/regress?  Factor change  Mean before  Mean after
+-------------  ----------------  -------------  -----------  -----------
+SecondExample  added             -              -            1975 +/- 78
+
+
+Results from all test cases:
+
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
 ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26   991 +/- 26
@@ -23,6 +33,16 @@ Summary counts:
   0 test cases got slower
   0 test cases added
   0 test cases removed
+
+
+Results from test cases with differences:
+
+Test case            Improve/regress?  Factor change  Mean before  Mean after
+-------------------  ----------------  -------------  -----------  -----------
+ClockGetTimeExample  faster            0.900-0.967    1491 +/- 26  1391 +/- 26
+
+
+Results from all test cases:
 
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
@@ -39,6 +59,9 @@ Summary counts:
   0 test cases added
   0 test cases removed
 
+
+Results from all test cases:
+
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
 ClockGetTimeExample  no_sig_diff       0.933-1.002    1491 +/- 26  1441 +/- 26
@@ -53,6 +76,9 @@ Summary counts:
   0 test cases got slower
   0 test cases added
   0 test cases removed
+
+
+Results from all test cases:
 
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
@@ -69,6 +95,16 @@ Summary counts:
   0 test cases added
   0 test cases removed
 
+
+Results from test cases with differences:
+
+Test case            Improve/regress?  Factor change  Mean before  Mean after
+-------------------  ----------------  -------------  -----------  -----------
+ClockGetTimeExample  slower            1.031-1.104    1491 +/- 26  1591 +/- 26
+
+
+Results from all test cases:
+
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  -----------
 ClockGetTimeExample  slower            1.031-1.104    1491 +/- 26  1591 +/- 26
@@ -83,6 +119,16 @@ Summary counts:
   0 test cases got slower
   0 test cases added
   1 test case removed
+
+
+Results from test cases with differences:
+
+Test case      Improve/regress?  Factor change  Mean before  Mean after
+-------------  ----------------  -------------  -----------  ----------
+SecondExample  removed           -              1975 +/- 78  -
+
+
+Results from all test cases:
 
 Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  ----------

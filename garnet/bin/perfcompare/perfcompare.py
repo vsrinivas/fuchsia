@@ -169,15 +169,14 @@ def ResultsFromDir(filename):
     return {name: Stats(values) for name, values in results_map.iteritems()}
 
 
-def FormatTable(rows, out_fh):
-    assert len(rows) > 0
-    column_count = len(rows[0])
+def FormatTable(heading_row, rows, out_fh):
+    column_count = len(heading_row)
     for row in rows:
         assert len(row) == column_count
+    rows = [heading_row] + rows
     widths = [2 + max(len(row[col_number]) for row in rows)
               for col_number in xrange(column_count)]
-    # Underline the header row.  This assumes that the first row is a
-    # header row.
+    # Underline the heading row.
     rows.insert(1, ['-' * (width - 2) for width in widths])
     for row in rows:
         for col_number, value in enumerate(row):
@@ -202,8 +201,10 @@ def ComparePerf(args, out_fh):
         'slower': 0,
         'no_sig_diff': 0,
     }
-    rows = [['Test case', 'Improve/regress?', 'Factor change',
-             'Mean before', 'Mean after']]
+    heading_row = ['Test case', 'Improve/regress?', 'Factor change',
+                   'Mean before', 'Mean after']
+    all_rows = []
+    diff_rows = []
     for label in sorted(labels):
         if label not in results_maps[0]:
             result = 'added'
@@ -231,12 +232,10 @@ def ComparePerf(args, out_fh):
             after_range = stats[1].FormatConfidenceInterval()
             factor_range = '%.3f-%.3f' % (factor_min, factor_max)
         counts[result] += 1
-        rows.append([
-            label,
-            result,
-            factor_range,
-            before_range,
-            after_range])
+        row = [label, result, factor_range, before_range, after_range]
+        all_rows.append(row)
+        if result != 'no_sig_diff':
+            diff_rows.append(row)
 
     def FormatCount(count, text):
         noun = 'test case' if count == 1 else 'test cases'
@@ -250,9 +249,15 @@ def ComparePerf(args, out_fh):
     FormatCount(counts['slower'], 'got slower')
     FormatCount(counts['added'], 'added')
     FormatCount(counts['removed'], 'removed')
-    out_fh.write('\n')
+    out_fh.write('\n\n')
 
-    FormatTable(rows, out_fh)
+    if len(diff_rows) != 0:
+        out_fh.write('Results from test cases with differences:\n\n')
+        FormatTable(heading_row, diff_rows, out_fh)
+        out_fh.write('\n\n')
+
+    out_fh.write('Results from all test cases:\n\n')
+    FormatTable(heading_row, all_rows, out_fh)
 
 
 def IntervalsIntersect(interval1, interval2):
