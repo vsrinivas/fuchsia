@@ -152,7 +152,11 @@ void EngineRendererVisitor::Visit(ShapeNode* r) {
     renderer_->DrawRect(rect->width(), rect->height(), escher_material, flags);
   } else if (shape->IsKindOf<CircleShape>()) {
     auto circle = static_cast<CircleShape*>(shape.get());
-    renderer_->DrawCircle(circle->radius(), escher_material, flags);
+
+    // Only draw the circle if its radius is greater than epsilon.
+    if (circle->radius() > escher::kEpsilon) {
+      renderer_->DrawCircle(circle->radius(), escher_material, flags);
+    }
   } else if (shape->IsKindOf<MeshShape>()) {
     auto mesh_shape = static_cast<MeshShape*>(shape.get());
     renderer_->DrawMesh(mesh_shape->escher_mesh(), escher_material, flags);

@@ -1183,6 +1183,13 @@ bool GfxCommandApplier::ApplyCreateCircle(Session* session, ResourceId id,
     return false;
   }
 
+  // Emit a warning that the radius is too small.
+  // TODO(FLK-467): Convert warning to error and kill the session if the
+  // code enters this path.
+  if (args.radius.vector1() <= escher::kEpsilon) {
+    session->error_reporter()->WARN() << "Circle radius is too small " << args.radius.vector1();
+  }
+
   auto circle = CreateCircle(session, id, args.radius.vector1());
   return circle ? session->resources()->AddResource(id, std::move(circle)) : false;
 }
