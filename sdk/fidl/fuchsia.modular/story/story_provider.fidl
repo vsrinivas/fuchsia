@@ -71,8 +71,14 @@ protocol StoryProviderWatcher {
     ///
     /// `story_visibility_state` is DEFAULT until a mod on the current device
     /// requests for the visibility state to be changed.
+    [Transitional]
     OnChange(StoryInfo story_info, StoryState story_state,
              StoryVisibilityState story_visibility_state);
+    /// This method *will not be called* but exists for transition purposes.
+    /// Clients should implement a no-op stub.
+    [Transitional = "Implement only while OnChange is transitional"]
+    OnChange2(StoryInfo2 story_info, StoryState story_state,
+              StoryVisibilityState story_visibility_state);
 
     /// Called when a story record is permanently deleted. The deletion could
     /// have originated on this or on another device.
