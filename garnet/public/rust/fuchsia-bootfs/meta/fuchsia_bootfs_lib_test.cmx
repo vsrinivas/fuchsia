@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/fuchsia_bootfs_lib_test"
+    }
+}

@@ -1174,6 +1174,7 @@ group("rust_crates") {
     "//garnet/public/rust:rust-crates-tests",
     "//garnet/public/rust/fdio:tests",
     "//garnet/public/rust/fuchsia-async:fuchsia-async-tests",
+    "//garnet/public/rust/fuchsia-bootfs:fuchsia-bootfs-tests",
     "//garnet/public/rust/fuchsia-hyper:fuchsia-hyper-tests",
     "//garnet/public/rust/fuchsia-syslog:fuchsia-syslog-tests",
     "//garnet/public/rust/fuchsia-vfs:fuchsia-vfs-tests",
