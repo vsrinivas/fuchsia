@@ -168,19 +168,13 @@ int SingleVmoTestInstance::vmo_thread() {
 
         int r = rand() % 100;
         switch (r) {
-        case 0 ... 9: // commit a range of the vmo
+        case 0 ... 4: // commit a range of the vmo
             Printf("c");
             rand_vmo_range(&off, &len);
             status = vmo_.op_range(ZX_VMO_OP_COMMIT, off, len, nullptr, 0);
             CheckVmoThreadError(status, "Failed to commit range");
             break;
-        case 10 ... 19: // decommit a range of the vmo
-            Printf("d");
-            rand_vmo_range(&off, &len);
-            status = vmo_.op_range(ZX_VMO_OP_DECOMMIT, off, len, nullptr, 0);
-            CheckVmoThreadError(status, "failed to decommit range");
-            break;
-        case 20 ... 29:
+        case 5 ... 19:
             if (ptrs_[idx]) {
                 // unmap the vmo if it already was
                 Printf("u");
@@ -194,14 +188,14 @@ int SingleVmoTestInstance::vmo_thread() {
                                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, ptrs_ + idx);
             CheckVmoThreadError(status, "failed to map range");
             break;
-        case 30 ... 39:
+        case 20 ... 34:
             // read from a random range of the vmo
             Printf("r");
             rand_buffer_range(&off, &len);
             status = vmo_.read(buf.get(), off, len);
             CheckVmoThreadError(status, "error reading from vmo");
             break;
-        case 40 ... 49:
+        case 35 ... 49:
             // write to a random range of the vmo
             Printf("w");
             rand_buffer_range(&off, &len);
@@ -236,8 +230,7 @@ void SingleVmoTestInstance::CheckVmoThreadError(zx_status_t status, const char* 
     // Ignore errors while shutting down, since they're almost certainly due to the
     // pager disappearing.
     if (!shutdown_ && status != ZX_OK) {
-        fprintf(stderr, "failed to commit range, error %d (%s)\n",
-                status, zx_status_get_string(status));
+        fprintf(stderr, "%s, error %d\n", error, status);
     }
 }
 
