@@ -7,6 +7,8 @@
 
 #include <type_traits>
 
+#include <fbl/algorithm.h>
+
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 
@@ -100,10 +102,9 @@ class SrcReader;
 
 template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
 class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
-                typename std::enable_if_t<(SrcChanCount == DestChanCount) ||
-                                          ((SrcChanCount == 1) && (DestChanCount == 2))>> {
+                typename std::enable_if_t<(SrcChanCount == DestChanCount) || (SrcChanCount == 1) ||
+                                          ((SrcChanCount == 2) && (DestChanCount == 4))>> {
  public:
-  static constexpr size_t DestPerSrc = DestChanCount / SrcChanCount;
   static inline float Read(const SrcSampleType* src) {
     return SampleNormalizer<SrcSampleType>::Read(src);
   }
@@ -113,7 +114,6 @@ template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
 class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
                 typename std::enable_if_t<(SrcChanCount == 2) && (DestChanCount == 1)>> {
  public:
-  static constexpr size_t DestPerSrc = 1;
   static inline float Read(const SrcSampleType* src) {
     return 0.5f * (SampleNormalizer<SrcSampleType>::Read(src + 0) +
                    SampleNormalizer<SrcSampleType>::Read(src + 1));

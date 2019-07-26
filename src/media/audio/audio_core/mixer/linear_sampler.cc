@@ -33,7 +33,8 @@ class LinearSamplerImpl : public LinearSampler {
   float filter_data_[DestChanCount] = {0.0f};
 };
 
-// TODO(mpuryear): MTWN-75 factor to minimize LinearSamplerImpl code duplication
+// TODO(MTWN-75): refactor to minimize code duplication, or even better eliminate NxN
+// implementations altogether, replaced by flexible rechannelization (MTWN-399).
 template <typename SrcSampleType>
 class NxNLinearSamplerImpl : public LinearSampler {
  public:
@@ -152,7 +153,8 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 
       for (size_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
         float cache = filter_data_[dest_chan];
-        float s0 = SR::Read(src + (dest_chan / SR::DestPerSrc));
+        auto src_chan_offset = dest_chan % SrcChanCount;
+        float s0 = SR::Read(src + src_chan_offset);
 
         float sample = LinearInterpolate(cache, s0, src_off + FRAC_ONE);
         out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
@@ -181,12 +183,12 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 
       for (size_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
         float sample;
-        float s0 = SR::Read(src + src_offset_frame_start + (dest_chan / SR::DestPerSrc));
+        auto src_chan_offset = dest_chan % SrcChanCount;
+        float s0 = SR::Read(src + src_offset_frame_start + src_chan_offset);
         if ((src_off & FRAC_MASK) == 0) {
           sample = s0;
         } else {
-          float s1 =
-              SR::Read(src + src_offset_frame_start + (dest_chan / SR::DestPerSrc) + SrcChanCount);
+          float s1 = SR::Read(src + src_offset_frame_start + src_chan_offset + SrcChanCount);
           sample = LinearInterpolate(s0, s1, src_off & FRAC_MASK);
         }
         out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
@@ -253,8 +255,8 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
         // ... which, if MUTE, is silence (what we actually produced).
         filter_data_[dest_chan] = 0;
       } else {
-        filter_data_[dest_chan] =
-            SR::Read(src + src_offset_last_frame + (dest_chan / SR::DestPerSrc));
+        auto src_chan_offset = dest_chan % SrcChanCount;
+        filter_data_[dest_chan] = SR::Read(src + src_offset_last_frame + src_chan_offset);
       }
     }
 
@@ -650,6 +652,8 @@ static inline std::unique_ptr<Mixer> SelectNxNLSM(
 
 std::unique_ptr<Mixer> LinearSampler::Select(const fuchsia::media::AudioStreamType& src_format,
                                              const fuchsia::media::AudioStreamType& dest_format) {
+  // If num_channels for src and dest are equal and > 2, directly map these one-to-one.
+  // TODO(MTWN-75): eliminate the NxN mixers, replacing with flexible rechannelization (see below).
   if (src_format.channels == dest_format.channels && src_format.channels > 2) {
     return SelectNxNLSM(src_format);
   }
@@ -659,6 +663,13 @@ std::unique_ptr<Mixer> LinearSampler::Select(const fuchsia::media::AudioStreamTy
       return SelectLSM<1>(src_format, dest_format);
     case 2:
       return SelectLSM<2>(src_format, dest_format);
+    case 4:
+      // For now, to mix Mono and Stereo sources to 4-channel destinations, we duplicate source
+      // channels across multiple destinations (Stereo LR becomes LRLR, Mono M becomes MMMM). Audio
+      // formats do not include info needed to filter frequencies or locate channels in 3D space.
+      // TODO(MTWN-399): enable the mixer to rechannelize in a more sophisticated way.
+      // TODO(MTWN-402): account for frequency range (e.g. a "4-channel" stereo woofer+tweeter).
+      return SelectLSM<4>(src_format, dest_format);
     default:
       return nullptr;
   }

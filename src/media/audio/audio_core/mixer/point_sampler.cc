@@ -32,7 +32,8 @@ class PointSamplerImpl : public PointSampler {
                          uint32_t frac_src_frames, int32_t* frac_src_offset, Bookkeeping* info);
 };
 
-// TODO(mpuryear): MTWN-75 factor to minimize PointSamplerImpl code duplication
+// TODO(MTWN-75): refactor to minimize code duplication, or even better eliminate NxN
+// implementations altogether, replaced by flexible rechannelization (MTWN-399).
 template <typename SrcSampleType>
 class NxNPointSamplerImpl : public PointSampler {
  public:
@@ -137,7 +138,8 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       float* out = dest + (dest_off * DestChanCount);
 
       for (size_t dest_iter = 0; dest_iter < DestChanCount; ++dest_iter) {
-        float sample = SR::Read(src + src_iter + (dest_iter / SR::DestPerSrc));
+        auto src_chan_offset = dest_iter % SrcChanCount;
+        float sample = SR::Read(src + src_iter + src_chan_offset);
         out[dest_iter] = DM::Mix(out[dest_iter], sample, amplitude_scale);
       }
 
@@ -516,6 +518,8 @@ static inline std::unique_ptr<Mixer> SelectNxNPSM(
 
 std::unique_ptr<Mixer> PointSampler::Select(const fuchsia::media::AudioStreamType& src_format,
                                             const fuchsia::media::AudioStreamType& dest_format) {
+  // If num_channels for src and dest are equal and > 2, directly map these one-to-one.
+  // TODO(MTWN-75): eliminate the NxN mixers, replacing with flexible rechannelization (see below).
   if (src_format.channels == dest_format.channels && src_format.channels > 2) {
     return SelectNxNPSM(src_format);
   }
@@ -525,6 +529,13 @@ std::unique_ptr<Mixer> PointSampler::Select(const fuchsia::media::AudioStreamTyp
       return SelectPSM<1>(src_format, dest_format);
     case 2:
       return SelectPSM<2>(src_format, dest_format);
+    case 4:
+      // For now, to mix Mono and Stereo sources to 4-channel destinations, we duplicate source
+      // channels across multiple destinations (Stereo LR becomes LRLR, Mono M becomes MMMM). Audio
+      // formats do not include info needed to filter frequencies or locate channels in 3D space.
+      // TODO(MTWN-399): enable the mixer to rechannelize in a more sophisticated way.
+      // TODO(MTWN-402): account for frequency range (e.g. a "4-channel" stereo woofer+tweeter).
+      return SelectPSM<4>(src_format, dest_format);
     default:
       return nullptr;
   }
