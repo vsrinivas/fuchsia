@@ -10,9 +10,7 @@ driver("i2c-hid") {
     "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/dev/lib/device-protocol-i2c",
-    "$zx/system/dev/lib/device-protocol-i2c-channel",
     "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fbl",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/trace:trace-driver",
@@ -26,32 +24,4 @@ driver("i2c-hid") {
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
   deprecated_inhibit_driver_shlib_allowlist = true
-}
-
-test("i2c-hid-test") {
-  sources = [
-    "i2c-hid-test.cc",
-    "i2c-hid.cc",
-  ]
-  deps = [
-    "$zx/system/banjo/ddk.protocol.hidbus",
-    "$zx/system/banjo/ddk.protocol.i2c",
-    "$zx/system/dev/lib/device-protocol-i2c",
-    "$zx/system/dev/lib/device-protocol-i2c-channel",
-    "$zx/system/dev/lib/fake-hidbus-ifc",
-    "$zx/system/dev/lib/fake-i2c",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/hid",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/trace:trace-driver",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxtest",
-
-    # TODO(BLD-353): This is actually a transitive dependency of the ddk
-    # library, but the library doesn't express it properly because of
-    # legacy complications.
-    "$zx/system/ulib/trace:headers",
-  ]
 }
