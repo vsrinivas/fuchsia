@@ -3,10 +3,12 @@
 
 #include "src/media/audio/audio_core/audio_driver.h"
 
-#include <audio-proto-utils/format-utils.h>
+#include <lib/zx/clock.h>
 #include <zircon/status.h>
 
 #include <cstdio>
+
+#include <audio-proto-utils/format-utils.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "src/lib/fxl/logging.h"

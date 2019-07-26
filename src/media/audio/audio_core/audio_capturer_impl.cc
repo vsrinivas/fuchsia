@@ -6,6 +6,7 @@
 
 #include <lib/fit/defer.h>
 #include <lib/media/audio/cpp/types.h>
+#include <lib/zx/clock.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
