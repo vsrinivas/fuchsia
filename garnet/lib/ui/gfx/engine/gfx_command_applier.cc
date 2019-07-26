@@ -8,6 +8,7 @@
 #include <lib/async/default.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/zx/eventpair.h>
+
 #include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
