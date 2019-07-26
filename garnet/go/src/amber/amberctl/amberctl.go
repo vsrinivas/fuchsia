@@ -43,9 +43,6 @@ Commands
         -m:      merkle root of the package to retrieve, if none is supplied
                  any package instance could match
 
-    get_blob      - get the specified content blob
-        -i: content ID of the blob
-
     add_src       - add a source to the list we can use
         -n: name of the update source (optional, with URL)
         -f: file path or url to a source config file
@@ -81,7 +78,6 @@ var (
 	hash         = fs.String("h", "", "SHA256 hash of source config file (required if -f is a URL, ignored otherwise)")
 	name         = fs.String("n", "", "Name of a source or package")
 	version      = fs.String("v", "", "Version of a package")
-	blobID       = fs.String("i", "", "Content ID of the blob")
 	merkle       = fs.String("m", "", "Merkle root of the desired update.")
 	nonExclusive = fs.Bool("x", false, "[Obsolete] When adding or enabling a source, do not disable other sources.")
 )
@@ -390,17 +386,6 @@ func addSource(services Services, repoOnly bool) error {
 		cfg.BlobRepoUrl = filepath.Join(cfg.RepoUrl, "blobs")
 	}
 
-	if !repoOnly {
-		added, err := services.amber.AddSrc(cfg)
-		if err != nil {
-			return fmt.Errorf("fuchsia.amber.Control IPC encountered an error: %s", err)
-		}
-		if !added {
-			return fmt.Errorf("request arguments properly formatted, but possibly otherwise invalid")
-		}
-
-	}
-
 	repoCfg := upgradeSourceConfig(cfg)
 	s, err := services.repoMgr.Add(repoCfg)
 	if err != nil {
@@ -432,25 +417,10 @@ func rmSource(services Services) error {
 		return fmt.Errorf("no source id provided")
 	}
 
-	status, err := services.amber.RemoveSrc(name)
-	if err != nil {
-		return fmt.Errorf("fuchsia.amber.Control IPC encountered an error: %s", err)
-	}
-	switch status {
-	case amber.StatusOk:
-		break
-	case amber.StatusErrNotFound:
-		return fmt.Errorf("Source not found")
-	case amber.StatusErr:
-		return fmt.Errorf("Unspecified error")
-	default:
-		return fmt.Errorf("Unexpected status: %v", status)
-	}
-
-	// Since modifications to amber.Control, RepositoryManager, and rewrite.Engine aren't
-	// atomic and amberctl could be interrupted or encounter an error during any step,
-	// unregister the rewrite rule before removing the repo config to prevent a dangling
-	// rewrite rule to a repo that no longer exists.
+	// Since modifications to RepositoryManager and rewrite.Engine aren't atomic and amberctl
+	// could be interrupted or encounter an error during any step, unregister the rewrite rule
+	// before removing the repo config to prevent a dangling rewrite rule to a repo that no
+	// longer exists.
 	if err := removeAllDynamicRewriteRules(services.rewriteEngine); err != nil {
 		return err
 	}
@@ -484,19 +454,32 @@ func getUp(r *pkg.PackageResolverInterface) error {
 	return err
 }
 
-func listSources(a *amber.ControlInterface) error {
-	srcs, err := a.ListSrcs()
+func listSources(r *pkg.RepositoryManagerInterface) error {
+	req, iter, err := pkg.NewRepositoryIteratorInterfaceRequest()
 	if err != nil {
-		fmt.Printf("failed to list sources: %s\n", err)
+		return err
+	}
+	defer iter.Close()
+	if err := r.List(req); err != nil {
 		return err
 	}
 
-	for _, src := range srcs {
-		encoder := json.NewEncoder(os.Stdout)
-		encoder.SetIndent("", "    ")
-		if err := encoder.Encode(src); err != nil {
-			fmt.Printf("failed to encode source into json: %s\n", err)
+	for {
+		repos, err := iter.Next()
+		if err != nil {
 			return err
+		}
+		if len(repos) == 0 {
+			break
+		}
+
+		for _, repo := range repos {
+			encoder := json.NewEncoder(os.Stdout)
+			encoder.SetIndent("", "    ")
+			if err := encoder.Encode(repo); err != nil {
+				fmt.Printf("failed to encode source into json: %s\n", err)
+				return err
+			}
 		}
 	}
 
@@ -515,15 +498,6 @@ func do(services Services) int {
 	case "get_up":
 		if err := getUp(services.resolver); err != nil {
 			log.Printf("error getting an update: %s", err)
-			return 1
-		}
-	case "get_blob":
-		if *blobID == "" {
-			log.Printf("no blob id provided")
-			return 1
-		}
-		if err := services.amber.GetBlob(*blobID); err != nil {
-			log.Printf("error requesting blob fetch: %s", err)
 			return 1
 		}
 	case "add_repo_cfg":
@@ -550,7 +524,7 @@ func do(services Services) int {
 			return 1
 		}
 	case "list_srcs":
-		if err := listSources(services.amber); err != nil {
+		if err := listSources(services.repoMgr); err != nil {
 			log.Printf("error listing sources: %s", err)
 			return 1
 		}

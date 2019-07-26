@@ -7,8 +7,13 @@
             "build-info",
             "config-data",
             "deprecated-misc-storage",
-            "deprecated-shell",
             "isolated-temp"
+        ],
+        "pkgfs": [
+            "ctl",
+            "install",
+            "needs",
+            "versions"
         ],
         "services": [
             "fuchsia.amber.Control",

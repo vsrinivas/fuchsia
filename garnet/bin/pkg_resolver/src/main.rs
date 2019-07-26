@@ -19,7 +19,6 @@ use {
     std::sync::Arc,
 };
 
-mod amber;
 mod amber_connector;
 mod experiment;
 mod repository_manager;
@@ -60,7 +59,7 @@ fn main() -> Result<(), Error> {
 
     let amber_connector = AmberConnector::new();
 
-    let repo_manager = Arc::new(RwLock::new(load_repo_manager(amber_connector.clone())));
+    let repo_manager = Arc::new(RwLock::new(load_repo_manager(amber_connector)));
     let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager(rewrite_inspect_node)));
     let experiment_state = Arc::new(RwLock::new(experiment::State::new(experiment_inspect_node)));
 
@@ -95,8 +94,7 @@ fn main() -> Result<(), Error> {
     };
 
     let rewrite_cb = move |stream| {
-        let mut rewrite_service =
-            RewriteService::new(rewrite_manager.clone(), amber_connector.clone());
+        let mut rewrite_service = RewriteService::new(rewrite_manager.clone());
 
         fasync::spawn(
             async move { await!(rewrite_service.handle_client(stream)) }

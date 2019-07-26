@@ -20,127 +20,13 @@ import (
 	"testing"
 	"time"
 
-	"fidl/fuchsia/amber"
 	"fidl/fuchsia/pkg"
 
-	"amber/daemon"
 	"amber/source"
 
 	"fuchsia.googlesource.com/pm/build"
 	"fuchsia.googlesource.com/pm/repo"
 )
-
-func TestSourceRecoverFromInterruptedInstall(t *testing.T) {
-	// Make the test package
-	cfg := build.TestConfig()
-	cfg.PkgName = randName(t.Name())
-	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
-	build.BuildTestPackage(cfg)
-
-	pkgManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
-	blobs, err := cfg.BlobInfo()
-	if err != nil {
-		t.Fatal(err)
-	}
-	metaFar, blobs := blobs[0], blobs[1:]
-
-	// Ensure pkgfs is in a good state (no previous test has written this test package)
-	if _, err := os.Stat(filepath.Join("/pkgfs/versions", metaFar.Merkle.String())); err == nil {
-		t.Fatal("test package already readable")
-	}
-
-	if _, err := os.Stat(filepath.Join("/pkgfs/needs/packages", metaFar.Merkle.String())); err == nil {
-		t.Fatal("test package already has needs dir")
-	}
-
-	// Make the test repo, and start serving it over http
-	repoDir, err := ioutil.TempDir("", "amber-install-test-repo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(repoDir)
-
-	repo, err := repo.New(repoDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.Init(); err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.GenKeys(); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := repo.PublishManifest(pkgManifestPath); err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.CommitUpdates(false); err != nil {
-		t.Fatal(err)
-	}
-
-	keys, err := repo.RootKeys()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	server, err := serveStaticRepo(t, filepath.Join(repoDir, "repository"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer server.Close()
-
-	// Start a new amber daemon, and register this source
-	store, err := ioutil.TempDir("", "amber-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(store)
-
-	d, err := daemon.NewDaemon(store, source.PkgfsDir{"/pkgfs"}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rootKeys := []amber.KeyConfig{}
-	for _, key := range keys {
-		rootKeys = append(rootKeys, amber.KeyConfig{
-			Type:  "ed25519",
-			Value: fmt.Sprintf("%x", ([]byte)(key.Value.Public)),
-		})
-	}
-	if err := d.AddSource(&amber.SourceConfig{
-		Id:           "installtest",
-		RepoUrl:      server.baseURL,
-		RootKeys:     rootKeys,
-		StatusConfig: &amber.StatusConfig{Enabled: true},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	// Install the package's blobs before pkgfs knows about the package
-	for _, blob := range blobs {
-		// Install only those blobs that are missing
-		installBlob(t, blob.SourcePath, blob.Merkle.String(), int64(blob.Size), true)
-	}
-
-	// Write the meta FAR as a blob (so the package installation flow is not triggered)
-	installBlob(t, metaFar.SourcePath, metaFar.Merkle.String(), int64(metaFar.Size), false)
-
-	// Now attempt to install the package
-	if err := d.GetPkg(metaFar.Merkle.String(), int64(metaFar.Size)); err != nil {
-		t.Fatal(err)
-	}
-
-	// Ensure the package now exists and is readable
-	pkgDir := filepath.Join("/pkgfs/versions", metaFar.Merkle.String())
-	if _, err := os.Stat(pkgDir); err != nil {
-		t.Fatal(err)
-	}
-
-	actualMerkle := readMerkle(t, filepath.Join(pkgDir, "meta"))
-	if metaFar.Merkle.String() != actualMerkle {
-		t.Fatalf("invalid merkle: expected %q, got %q", metaFar.Merkle, actualMerkle)
-	}
-}
 
 func TestRepoRecoverFromPreinstalledBlobs(t *testing.T) {
 	// Make the test package

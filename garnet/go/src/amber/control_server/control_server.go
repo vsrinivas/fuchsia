@@ -7,7 +7,6 @@ package control_server
 import (
 	"fmt"
 	"log"
-	"regexp"
 	"sync"
 	"syscall/zx"
 	"syscall/zx/fidl"
@@ -31,7 +30,19 @@ type EventsImpl struct{}
 
 var _ = amber.Events(EventsImpl{})
 
-var merklePat = regexp.MustCompile("^[0-9a-f]{64}$")
+func logFailure(msg string) error {
+	log.Printf(msg)
+	// Return nil to FIDL clients so the channel is not closed.  All moved/obsolete APIs are essentially no-ops.
+	return nil
+}
+
+func moved(from, to string) error {
+	return logFailure(fmt.Sprintf("%s moved to %s", from, to))
+}
+
+func obsolete(name string) error {
+	return logFailure(fmt.Sprintf("%s no longer supported", name))
+}
 
 func NewControlServer(d *daemon.Daemon) *ControlServer {
 	return &ControlServer{
@@ -45,81 +56,43 @@ func (c *ControlServer) DoTest(in int32) (out string, err error) {
 }
 
 func (c *ControlServer) AddSrc(cfg amber.SourceConfig) (bool, error) {
-	if err := c.daemon.AddSource(&cfg); err != nil {
-		log.Printf("error adding source: %s", err)
-		return false, nil
-	}
-
-	return true, nil
+	return true, moved("AddSrc", "fuchsia.pkg.RepositoryManager")
 }
 
 func (c *ControlServer) CheckForSystemUpdate() (bool, error) {
-	msg := "CheckForSystemUpdate moved to fuchsia.update.Manager"
-	log.Printf(msg)
-	return false, fmt.Errorf(msg)
+	return false, moved("CheckForSystemUpdate", "fuchsia.update.Manager")
 }
 
 func (c *ControlServer) RemoveSrc(id string) (amber.Status, error) {
-	return c.daemon.RemoveSource(id)
+	return amber.StatusOk, moved("RemoveSrc", "fuchsia.pkg.RepositoryManager")
 }
 
 func (c *ControlServer) ListSrcs() ([]amber.SourceConfig, error) {
-	m := c.daemon.GetSources()
-	v := make([]amber.SourceConfig, 0, len(m))
-	for _, src := range m {
-		c := *src.GetConfig()
-		c.StatusConfig.Enabled = src.Enabled()
-		v = append(v, c)
-	}
-
-	return v, nil
+	return nil, moved("ListSrcs", "fuchsia.pkg.RepositoryManager")
 }
 
 func (c *ControlServer) GetUpdateComplete(name string, ver, mer *string) (zx.Channel, error) {
-	r, ch, e := zx.NewChannel(0)
-	if e != nil {
-		log.Printf("getupdatecomplete: could not create channel")
-		// TODO(raggi): the client is just going to get peer closed, and no indication of why
-		return zx.Channel(zx.HandleInvalid), nil
-	}
-
-	log.Printf("getupdatecomplete: stub")
-	ch.Handle().SignalPeer(0, zx.SignalUser0)
-	ch.Write([]byte(zx.ErrNotSupported.String()), []zx.Handle{}, 0)
-	ch.Close()
-	return r, nil
+	return zx.Channel(zx.HandleInvalid), moved("GetUpdateComplete", "fuchsia.pkg.PackageResolver")
 }
 
 func (c *ControlServer) PackagesActivated(merkle []string) error {
-	return nil
+	return obsolete("PackagesActivated")
 }
 
 func (c *ControlServer) PackagesFailed(merkle []string, status int32, blobMerkle string) error {
-	return nil
+	return obsolete("PackagesFailed")
 }
 
 func (c *ControlServer) SetSrcEnabled(id string, enabled bool) (amber.Status, error) {
-	var err error
-	if enabled {
-		err = c.daemon.EnableSource(id)
-	} else {
-		err = c.daemon.DisableSource(id)
-	}
-
-	if err != nil {
-		log.Printf("control_server: ERROR: SetSrcEnabled(%s, %v) -> %v", id, enabled, err)
-		return amber.StatusErr, nil
-	}
-
-	return amber.StatusOk, nil
+	return amber.StatusErr, moved("SetSrcEnabled", "fuchsia.pkg.rewrite.Engine")
 }
 
 func (c *ControlServer) GetBlob(merkle string) error {
-	return nil
+	return obsolete("GetBlob")
 }
 
 func (c *ControlServer) Login(srcId string) (*amber.DeviceCode, error) {
-	return nil, nil
+	return nil, obsolete("Login")
 }
 
 func (c *ControlServer) Gc() error {

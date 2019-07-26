@@ -16,7 +16,6 @@ import (
 	"strings"
 	"testing"
 
-	"fidl/fuchsia/amber"
 	"fidl/fuchsia/pkg"
 
 	"amber/source"
@@ -24,118 +23,6 @@ import (
 	"fuchsia.googlesource.com/merkle"
 	"fuchsia.googlesource.com/pm/repo"
 )
-
-func TestSources(t *testing.T) {
-	store, err := ioutil.TempDir("", "amber-test")
-	if err != nil {
-		panic(err)
-	}
-	defer os.RemoveAll(store)
-
-	d, err := NewDaemon(store, source.PkgfsDir{""}, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	t.Run("Add", func(t *testing.T) {
-		if err := d.AddSource(&amber.SourceConfig{
-			Id:      "addtest",
-			RepoUrl: "http://localhost/addtest",
-			RootKeys: []amber.KeyConfig{
-				{
-					Type:  "ed25519",
-					Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
-				},
-			},
-			StatusConfig: &amber.StatusConfig{Enabled: true},
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		if d.GetSources()["addtest"] == nil {
-			t.Errorf("source missing after add, got %#v", d.GetSources())
-		}
-	})
-
-	t.Run("Remove", func(t *testing.T) {
-		if err := d.AddSource(&amber.SourceConfig{
-			Id:      "removetest",
-			RepoUrl: "http://localhost/removetest",
-			RootKeys: []amber.KeyConfig{
-				{
-					Type:  "ed25519",
-					Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
-				},
-			},
-			StatusConfig: &amber.StatusConfig{Enabled: true},
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		if _, err := d.RemoveSource("removetest"); err != nil {
-			t.Fatal(err)
-		}
-		if s := d.GetSources()["removetest"]; s != nil {
-			t.Errorf("expected source to be removed, got %#v", s)
-		}
-	})
-
-	t.Run("Disable", func(t *testing.T) {
-		if err := d.AddSource(&amber.SourceConfig{
-			Id:      "disabletest",
-			RepoUrl: "http://localhost/disabletest",
-			RootKeys: []amber.KeyConfig{
-				{
-					Type:  "ed25519",
-					Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
-				},
-			},
-			StatusConfig: &amber.StatusConfig{Enabled: true},
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		if d.GetActiveSources()["disabletest"] == nil {
-			t.Fatal("expected source to be enabled initially")
-		}
-
-		d.DisableSource("disabletest")
-
-		if d.GetActiveSources()["disabletest"] != nil {
-			t.Fatal("expected source to be disabled")
-		}
-	})
-
-	t.Run("Enable", func(t *testing.T) {
-		if err := d.AddSource(&amber.SourceConfig{
-			Id:      "enabletest",
-			RepoUrl: "http://localhost/enabletest",
-			RootKeys: []amber.KeyConfig{
-				{
-					Type:  "ed25519",
-					Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
-				},
-			},
-			StatusConfig: &amber.StatusConfig{Enabled: true},
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		d.DisableSource("enabletest")
-		if d.GetActiveSources()["enabletest"] != nil {
-			t.Fatal("expected source to be disabled")
-		}
-
-		d.EnableSource("enabletest")
-		if d.GetActiveSources()["enabletest"] == nil {
-			t.Fatal("expected source to be enabled")
-		}
-	})
-
-	t.Run("Login", func(t *testing.T) {
-		t.Skip("TODO: add coverage for oauth2")
-	})
-}
 
 func panicerr(err error) {
 	if err != nil {
@@ -162,116 +49,6 @@ func tempPkgFs() source.PkgfsDir {
 	os.MkdirAll(pkgfs.PkgNeedsDir(), 0700)
 	os.MkdirAll(pkgfs.VersionsDir(), 0700)
 	return pkgfs
-}
-
-func TestDaemon(t *testing.T) {
-	store, err := ioutil.TempDir("", "amber-test-store")
-	panicerr(err)
-	defer os.RemoveAll(store)
-
-	// TODO(raggi): make this a real package instead, but that's a lot more setup
-	pkgContent := "very fake package"
-	pkgBlobLength := int64(len(pkgContent))
-	pkgBlob, err := makeBlob(store, pkgContent)
-	panicerr(err)
-	root1, err := makeBlob(store, "first blob")
-	panicerr(err)
-
-	repoDir, err := ioutil.TempDir("", "amber-test-repo")
-	panicerr(err)
-	defer os.RemoveAll(repoDir)
-
-	// initialize the repo, adding the staged target
-	repo, err := repo.New(repoDir)
-	panicerr(err)
-	panicerr(repo.Init())
-	panicerr(repo.GenKeys())
-
-	mf, err := os.Open(store + "/" + pkgBlob)
-	panicerr(err)
-	defer mf.Close()
-	panicerr(repo.AddPackage("foo/0", mf, ""))
-
-	for _, blob := range []string{pkgBlob, root1} {
-		b, err := os.Open(store + "/" + blob)
-		panicerr(err)
-		_, _, err = repo.AddBlob(blob, b)
-		b.Close()
-		panicerr(err)
-	}
-
-	panicerr(repo.CommitUpdates(false))
-
-	keys, err := repo.RootKeys()
-	panicerr(err)
-	rootKey := keys[0]
-
-	server := httptest.NewServer(http.FileServer(http.Dir(repoDir + "/repository")))
-
-	// XXX(raggi): cleanup disabled because networking bug!
-	// defer server.Close()
-	// // so that the httptest server can close:
-	// defer http.DefaultTransport.(*http.Transport).CloseIdleConnections()
-
-	store, err = ioutil.TempDir("", "amber-test")
-	panicerr(err)
-	defer os.RemoveAll(store)
-
-	pkgfs := tempPkgFs()
-	defer os.RemoveAll(pkgfs.RootDir)
-	pkgsDir := pkgfs.PkgInstallDir()
-	blobsDir := pkgfs.BlobInstallDir()
-	pkgNeedsDir := pkgfs.PkgNeedsDir()
-
-	d, err := NewDaemon(store, pkgfs, nil)
-	panicerr(err)
-
-	err = d.AddSource(&amber.SourceConfig{
-		Id:          "testing",
-		RepoUrl:     server.URL,
-		BlobRepoUrl: server.URL + "/blobs",
-		// TODO(raggi): fix keyconfig
-		RootKeys: []amber.KeyConfig{
-			{
-				Type:  rootKey.Type,
-				Value: rootKey.Value.Public.String(),
-			},
-		},
-		StatusConfig: &amber.StatusConfig{Enabled: true},
-	})
-	panicerr(err)
-
-	// TODO(raggi): add test for the update semantics
-	d.Update()
-
-	merkle, length, err := d.MerkleFor("foo", "0", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if merkle != pkgBlob {
-		t.Errorf("merkleFor: got %q, want %q", merkle, pkgBlob)
-	}
-	if length != int64(pkgBlobLength) {
-		t.Errorf("merkleFor length: got %d, want %d", length, pkgBlobLength)
-	}
-
-	os.MkdirAll(filepath.Join(pkgNeedsDir, pkgBlob), 0755)
-	panicerr(ioutil.WriteFile(filepath.Join(pkgNeedsDir, pkgBlob, root1), []byte{}, 0644))
-	panicerr(os.MkdirAll(filepath.Join(pkgfs.VersionsDir(), merkle), 0700))
-
-	panicerr(d.GetPkg(pkgBlob, pkgBlobLength))
-
-	c, err := ioutil.ReadFile(pkgsDir + "/" + pkgBlob)
-	panicerr(err)
-	if got := string(c); got != pkgContent {
-		t.Errorf("getpkg: got %q, want %q", got, pkgContent)
-	}
-
-	c, err = ioutil.ReadFile(blobsDir + "/" + root1)
-	panicerr(err)
-	if got, want := string(c), "first blob"; got != want {
-		t.Errorf("getblob: got %q, want %q", got, want)
-	}
 }
 
 func TestOpenRepository(t *testing.T) {
@@ -385,7 +162,7 @@ func TestOpenRepository(t *testing.T) {
 	}
 }
 
-func TestDaemonWithEncryption(t *testing.T) {
+func TestOpenRepositoryWithEncryption(t *testing.T) {
 	store, err := ioutil.TempDir("", "amber-test-store")
 	panicerr(err)
 	defer os.RemoveAll(store)
@@ -443,41 +220,40 @@ func TestDaemonWithEncryption(t *testing.T) {
 	// // so that the httptest server can close:
 	// defer http.DefaultTransport.(*http.Transport).CloseIdleConnections()
 
-	store, err = ioutil.TempDir("", "amber-test")
-	panicerr(err)
-	defer os.RemoveAll(store)
-
 	pkgfs := tempPkgFs()
 	defer os.RemoveAll(pkgfs.RootDir)
 	pkgsDir := pkgfs.PkgInstallDir()
 	blobsDir := pkgfs.BlobInstallDir()
 	pkgNeedsDir := pkgfs.PkgNeedsDir()
 
-	d, err := NewDaemon(store, pkgfs, nil)
-	panicerr(err)
+	keyConfig := &pkg.RepositoryKeyConfig{}
+	keyConfig.SetEd25519Key(([]byte)(rootKey.Value.Public))
 
-	err = d.AddSource(&amber.SourceConfig{
-		Id:          "testing",
-		RepoUrl:     server.URL,
-		BlobRepoUrl: server.URL + "/blobs",
-		// TODO(raggi): fix keyconfig
-		RootKeys: []amber.KeyConfig{
+	blobKey := &pkg.RepositoryBlobKey{}
+	blobKey.SetAesKey(key[:])
+
+	r, err := source.OpenRepository(&pkg.RepositoryConfig{
+		RepoUrl:        "fuchsia-pkg://testing",
+		RepoUrlPresent: true,
+		Mirrors: []pkg.MirrorConfig{
 			{
-				Type:  rootKey.Type,
-				Value: rootKey.Value.Public.String(),
+				MirrorUrl:        server.URL,
+				MirrorUrlPresent: true,
+				BlobKey:          *blobKey,
+				BlobKeyPresent:   true,
 			},
 		},
-		BlobKey: &amber.BlobEncryptionKey{
-			Data: key,
-		},
-		StatusConfig: &amber.StatusConfig{Enabled: true},
-	})
+		MirrorsPresent: true,
+		// TODO(raggi): fix keyconfig
+		RootKeys:        []pkg.RepositoryKeyConfig{*keyConfig},
+		RootKeysPresent: true,
+	}, pkgfs)
 	panicerr(err)
 
-	// TODO(raggi): add test for the update semantics
-	d.Update()
+	err = r.Update()
+	panicerr(err)
 
-	merkle, length, err := d.MerkleFor("foo", "0", "")
+	merkle, length, err := r.MerkleFor("foo", "0", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -492,7 +268,11 @@ func TestDaemonWithEncryption(t *testing.T) {
 	panicerr(ioutil.WriteFile(filepath.Join(pkgNeedsDir, pkgBlob, root1), []byte{}, 0644))
 	panicerr(os.MkdirAll(filepath.Join(pkgfs.VersionsDir(), merkle), 0700))
 
-	panicerr(d.GetPkg(pkgBlob, pkgBlobLength))
+	result, _, err := r.GetUpdateComplete("foo", nil, nil)
+	panicerr(err)
+	if result != pkgBlob {
+		t.Errorf("GetUpdateComplete: got %q, want %q", result, pkgBlob)
+	}
 
 	c, err := ioutil.ReadFile(pkgsDir + "/" + pkgBlob)
 	panicerr(err)

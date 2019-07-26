@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        amber::AmberSourceSelector,
-        rewrite_manager::{CommitError, RewriteManager},
-    },
+    crate::rewrite_manager::{CommitError, RewriteManager},
     failure::Error,
     fidl_fuchsia_pkg_rewrite::{
         EditTransactionRequest, EditTransactionRequestStream, EngineRequest, EngineRequestStream,
@@ -25,20 +22,13 @@ use {
 const LIST_CHUNK_SIZE: usize = 100;
 
 #[derive(Debug, Clone)]
-pub struct RewriteService<A>
-where
-    A: AmberSourceSelector,
-{
+pub struct RewriteService {
     state: Arc<RwLock<RewriteManager>>,
-    amber: A,
 }
 
-impl<A> RewriteService<A>
-where
-    A: AmberSourceSelector + 'static,
-{
-    pub fn new(state: Arc<RwLock<RewriteManager>>, amber: A) -> Self {
-        RewriteService { state, amber }
+impl RewriteService {
+    pub fn new(state: Arc<RwLock<RewriteManager>>) -> Self {
+        RewriteService { state }
     }
 
     pub async fn handle_client(&mut self, mut stream: EngineRequestStream) -> Result<(), Error> {
@@ -97,7 +87,6 @@ where
 
     pub(self) fn serve_edit_transaction(&mut self, mut stream: EditTransactionRequestStream) {
         let state = self.state.clone();
-        let amber = self.amber.clone();
         let mut transaction = state.read().transaction();
 
         fasync::spawn(
@@ -126,38 +115,10 @@ where
                             responder.send(status.into_raw())?;
                         }
                         EditTransactionRequest::Commit { responder } => {
-                            let (status, work) = {
-                                let mut state = state.write();
-                                let old_source_name = state.amber_source_name();
-                                match state.apply(transaction) {
-                                    Ok(()) => {
-                                        // Before reporting success, make a best effort to push the
-                                        // rewrite rule configs down to the Amber service.
-                                        let work =
-                                            match (old_source_name, state.amber_source_name()) {
-                                                (None, None) => None,
-                                                (Some(_), None) => {
-                                                    Some(amber.disable_all_sources())
-                                                }
-                                                (None, Some(after)) => {
-                                                    Some(amber.enable_source_exclusive(&after))
-                                                }
-                                                (Some(before), Some(after)) => {
-                                                    if before != after {
-                                                        Some(amber.enable_source_exclusive(&after))
-                                                    } else {
-                                                        None
-                                                    }
-                                                }
-                                            };
-                                        (Status::OK, work)
-                                    }
-                                    Err(CommitError::TooLate) => (Status::UNAVAILABLE, None),
-                                }
+                            let status = match state.write().apply(transaction) {
+                                Ok(()) => Status::OK,
+                                Err(CommitError::TooLate) => Status::UNAVAILABLE,
                             };
-                            if let Some(work) = work {
-                                await!(work);
-                            }
                             responder.send(status.into_raw())?;
                             return Ok(());
                         }
@@ -200,8 +161,6 @@ mod tests {
         fidl_fuchsia_pkg_rewrite::{
             EditTransactionMarker, EditTransactionProxy, RuleIteratorMarker,
         },
-        futures::future::BoxFuture,
-        parking_lot::Mutex,
     };
 
     macro_rules! rule {
@@ -225,46 +184,6 @@ mod tests {
         };
     }
 
-    #[derive(Debug, Clone, Default)]
-    struct FakeAmberSourceSelector {
-        events: Arc<Mutex<Vec<AmberSourceEvent>>>,
-    }
-
-    #[derive(Debug, Clone, PartialEq, Eq)]
-    enum AmberSourceEvent {
-        DisableAllSources,
-        EnableSource(String),
-    }
-
-    impl FakeAmberSourceSelector {
-        fn take_events(&mut self) -> Vec<AmberSourceEvent> {
-            std::mem::replace(&mut self.events.lock(), vec![])
-        }
-    }
-
-    impl AmberSourceSelector for FakeAmberSourceSelector {
-        fn disable_all_sources(&self) -> BoxFuture<'_, ()> {
-            self.events.lock().push(AmberSourceEvent::DisableAllSources);
-            future::ready(()).boxed()
-        }
-        fn enable_source_exclusive(&self, id: &str) -> BoxFuture<'_, ()> {
-            self.events.lock().push(AmberSourceEvent::EnableSource(id.to_owned()));
-            future::ready(()).boxed()
-        }
-    }
-
-    #[derive(Debug, Clone, Default)]
-    struct UnreachableAmberSourceSelector;
-
-    impl AmberSourceSelector for UnreachableAmberSourceSelector {
-        fn disable_all_sources(&self) -> BoxFuture<'_, ()> {
-            unreachable!();
-        }
-        fn enable_source_exclusive(&self, _id: &str) -> BoxFuture<'_, ()> {
-            unreachable!();
-        }
-    }
-
     async fn collect_iterator<F, I, O>(mut next: impl FnMut() -> F) -> Vec<O>
     where
         F: Future<Output = Result<Vec<I>, fidl::Error>>,
@@ -285,15 +204,14 @@ mod tests {
 
     fn list_rules(state: Arc<RwLock<RewriteManager>>) -> impl Future<Output = Vec<Rule>> {
         let (iterator, request_stream) = create_proxy_and_stream::<RuleIteratorMarker>().unwrap();
-        RewriteService::new(state, UnreachableAmberSourceSelector).serve_list(request_stream);
+        RewriteService::new(state).serve_list(request_stream);
 
         collect_iterator(move || iterator.next())
     }
 
     fn list_static_rules(state: Arc<RwLock<RewriteManager>>) -> impl Future<Output = Vec<Rule>> {
         let (iterator, request_stream) = create_proxy_and_stream::<RuleIteratorMarker>().unwrap();
-        RewriteService::new(state, UnreachableAmberSourceSelector)
-            .serve_list_static(request_stream);
+        RewriteService::new(state).serve_list_static(request_stream);
 
         collect_iterator(move || iterator.next())
     }
@@ -359,7 +277,7 @@ mod tests {
         let dynamic_config = make_rule_config(rules.clone());
         let state =
             Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
-        let mut service = RewriteService::new(state.clone(), UnreachableAmberSourceSelector);
+        let mut service = RewriteService::new(state.clone());
 
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
         service.serve_edit_transaction(request_stream);
@@ -381,7 +299,7 @@ mod tests {
         let state = Arc::new(RwLock::new(
             RewriteManagerBuilder::new(&dynamic_config).unwrap().static_rules(static_rules).build(),
         ));
-        let mut service = RewriteService::new(state.clone(), UnreachableAmberSourceSelector);
+        let mut service = RewriteService::new(state.clone());
 
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
         service.serve_edit_transaction(request_stream);
@@ -412,8 +330,7 @@ mod tests {
         let dynamic_config = make_rule_config(rules.clone());
         let state =
             Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
-        let amber = FakeAmberSourceSelector::default();
-        let mut service = RewriteService::new(state.clone(), amber);
+        let mut service = RewriteService::new(state.clone());
 
         let client1 = {
             let (client, request_stream) =
@@ -456,8 +373,7 @@ mod tests {
         let dynamic_config = make_rule_config(vec![]);
         let state =
             Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
-        let mut amber = FakeAmberSourceSelector::default();
-        let mut service = RewriteService::new(state.clone(), amber.clone());
+        let mut service = RewriteService::new(state.clone());
 
         assert_eq!(await!(list_rules(state.clone())), vec![]);
 
@@ -485,10 +401,6 @@ mod tests {
         assert_eq!(await!(long_list_call.next()).unwrap(), vec![]);
 
         assert_eq!(await!(list_rules(state.clone())), vec![rule]);
-        assert_eq!(
-            amber.take_events(),
-            vec![AmberSourceEvent::EnableSource("devhost.fuchsia.com".to_owned())]
-        );
     }
 
     #[fasync::run_until_stalled(test)]
@@ -505,7 +417,7 @@ mod tests {
                 .static_rules(static_rules.clone())
                 .build(),
         ));
-        let service = RewriteService::new(state.clone(), UnreachableAmberSourceSelector);
+        let service = RewriteService::new(state.clone());
 
         for (url, rewritten) in &[
             ("fuchsia-pkg://fuchsia.com/old/a", "fuchsia-pkg://fuchsia.com/new/a"),
@@ -529,7 +441,7 @@ mod tests {
         let dynamic_config = make_rule_config(vec![]);
         let state =
             Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
-        let service = RewriteService::new(state.clone(), UnreachableAmberSourceSelector);
+        let service = RewriteService::new(state.clone());
 
         for url in &["not-fuchsia-pkg://fuchsia.com/test", "fuchsia-pkg://fuchsia.com/a*"] {
             assert_eq!(service.handle_test_apply(url), Err(Status::INVALID_ARGS));
@@ -542,7 +454,7 @@ mod tests {
             make_rule_config(vec![rule!("fuchsia.com" => "fuchsia.com", "/a" => "/b")]);
         let state =
             Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
-        let mut service = RewriteService::new(state.clone(), UnreachableAmberSourceSelector);
+        let mut service = RewriteService::new(state.clone());
 
         let (edit_client, request_stream) =
             create_proxy_and_stream::<EditTransactionMarker>().unwrap();
@@ -573,8 +485,7 @@ mod tests {
         let dynamic_config = make_rule_config(vec![]);
         let state =
             Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
-        let mut amber = FakeAmberSourceSelector::default();
-        let mut service = RewriteService::new(state.clone(), amber.clone());
+        let mut service = RewriteService::new(state.clone());
 
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
         service.serve_edit_transaction(request_stream);
@@ -591,18 +502,12 @@ mod tests {
         }
         assert_yields_status!(client.commit(), Status::OK);
 
-        assert_eq!(
-            amber.take_events(),
-            vec![AmberSourceEvent::EnableSource("correct.fuchsia.com".to_owned())]
-        );
-
         // Adding a duplicate of the currently enabled source is a no-op.
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
         service.serve_edit_transaction(request_stream);
         let rule = rule!("fuchsia.com" => "correct.fuchsia.com", "/" => "/");
         assert_yields_status!(client.add(&mut rule.into()), Status::OK);
         assert_yields_status!(client.commit(), Status::OK);
-        assert_eq!(amber.take_events(), vec![]);
 
         // Adding a different entry with higher priority enables the new source.
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
@@ -610,10 +515,6 @@ mod tests {
         let rule = rule!("fuchsia.com" => "correcter.fuchsia.com", "/" => "/");
         assert_yields_status!(client.add(&mut rule.into()), Status::OK);
         assert_yields_status!(client.commit(), Status::OK);
-        assert_eq!(
-            amber.take_events(),
-            vec![AmberSourceEvent::EnableSource("correcter.fuchsia.com".to_owned())]
-        );
     }
 
     #[fasync::run_until_stalled(test)]
@@ -623,20 +524,17 @@ mod tests {
         let dynamic_config = make_rule_config(rules);
         let state =
             Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
-        let mut amber = FakeAmberSourceSelector::default();
-        let mut service = RewriteService::new(state.clone(), amber.clone());
+        let mut service = RewriteService::new(state.clone());
 
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
         service.serve_edit_transaction(request_stream);
         client.reset_all().unwrap();
         assert_yields_status!(client.commit(), Status::OK);
-        assert_eq!(amber.take_events(), vec![AmberSourceEvent::DisableAllSources]);
 
         // Edits that don't change the enabled source are a no-op.
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
         service.serve_edit_transaction(request_stream);
         client.reset_all().unwrap();
         assert_yields_status!(client.commit(), Status::OK);
-        assert_eq!(amber.take_events(), vec![]);
     }
 }

@@ -41,16 +41,9 @@ const (
 
 var merklePat = regexp.MustCompile("^[0-9a-f]{64}$")
 
-// ErrNoUpdate is returned if no update is available.
-var ErrNoUpdate = errors.New("amber/source: no update available")
-
 // ErrUnknownPkg is returned if the Source doesn't have any data about any
 // version of the package.
 var ErrUnknownPkg = errors.New("amber/source: package not known")
-
-// ErrNoUpdateContent is returned if the requested package content couldn't be
-// retrieved.
-var ErrNoUpdateContent = errors.New("amber/source: update content not available")
 
 type tufSourceConfig struct {
 	Config *amber.SourceConfig
@@ -60,56 +53,6 @@ type tufSourceConfig struct {
 
 type SourceStatus struct {
 	Enabled *bool
-}
-
-// LoadSourceConfigs loads source configs from a directory.  The directory
-// structure looks like:
-//
-//     $dir/source1/config.json
-//     $dir/source2/config.json
-//     ...
-//
-// If an error is encountered loading any config, none are returned.
-func LoadSourceConfigs(dir string) ([]*amber.SourceConfig, error) {
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	configs := make([]*amber.SourceConfig, 0, len(files))
-	for _, file := range files {
-		p := filepath.Join(dir, file.Name(), configFileName)
-		log.Printf("loading source config %s", p)
-
-		cfg, err := LoadSourceConfigFromPath(p)
-		if err != nil {
-			return nil, err
-		}
-		configs = append(configs, cfg)
-	}
-
-	return configs, nil
-}
-
-func LoadSourceConfigFromPath(path string) (*amber.SourceConfig, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	var cfg amber.SourceConfig
-	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
-		return nil, err
-	}
-
-	// it is possible we encounter a config on disk that does not have
-	// this value set, set the defaults
-	if cfg.StatusConfig == nil {
-		cfg.StatusConfig = &amber.StatusConfig{Enabled: true}
-	}
-
-	return &cfg, nil
 }
 
 func newSourceConfig(cfg *amber.SourceConfig) (tufSourceConfig, error) {
@@ -197,67 +140,6 @@ func NewSource(dir string, c *amber.SourceConfig) (*Source, error) {
 		dir:    dir,
 		ctx:    ctx,
 		cancel: cancel,
-	}
-
-	if err := src.initSource(); err != nil {
-		return nil, err
-	}
-
-	return &src, nil
-}
-
-// setEnabledStatus examines the config to see if the Status field exists and
-// if enabled is set. If either is not present the field is added and set to
-// enabled. If the sourceConfig is changed true is returned, otherwise false.
-func setEnabledStatus(cfg *tufSourceConfig) bool {
-	dirty := false
-	if cfg.Status == nil {
-		enabled := true
-		cfg.Status = &SourceStatus{&enabled}
-		dirty = true
-	} else if cfg.Status.Enabled == nil {
-		enabled := true
-		cfg.Status.Enabled = &enabled
-		dirty = true
-	}
-
-	// it is possible we encounter a config on disk that does not have
-	// this value set, set the defaults
-	if cfg.Config.StatusConfig == nil {
-		cfg.Config.StatusConfig = &amber.StatusConfig{Enabled: true}
-		dirty = true
-	}
-
-	return dirty
-}
-
-func LoadSourceFromPath(dir string) (*Source, error) {
-	log.Printf("loading source from %s", dir)
-
-	f, err := os.Open(filepath.Join(dir, configFileName))
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	var cfg tufSourceConfig
-	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
-		return nil, err
-	}
-
-	dirty := setEnabledStatus(&cfg)
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	src := Source{
-		cfg:    cfg,
-		dir:    dir,
-		ctx:    ctx,
-		cancel: cancel,
-	}
-
-	if dirty {
-		src.Save()
 	}
 
 	if err := src.initSource(); err != nil {
@@ -559,20 +441,6 @@ func (f *Source) Save() error {
 	defer f.mu.Unlock()
 
 	return f.saveLocked()
-}
-
-func (f *Source) DeleteConfig() error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	return os.Remove(filepath.Join(f.dir, configFileName))
-}
-
-func (f *Source) Delete() error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	return os.RemoveAll(f.dir)
 }
 
 func (f *Source) Close() {
