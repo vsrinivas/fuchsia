@@ -13,6 +13,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
+#include <ddktl/protocol/composite.h>
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_ptr.h>
@@ -171,6 +173,26 @@ int PilDevice::PilThread() {
 }
 
 zx_status_t PilDevice::Bind() {
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
+    zxlogf(ERROR, "%s could not get composite protocol\n", __func__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_device_t* components[kClockCount + 1];
+  size_t actual;
+  composite.GetComponents(components, fbl::count_of(components), &actual);
+  if (actual != fbl::count_of(components)) {
+    zxlogf(ERROR, "%s could not get components\n", __func__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  pdev_ = components[0];
+  if (!pdev_.is_valid()) {
+    zxlogf(ERROR, "%s could not get pdev protocol\n", __func__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   auto status = pdev_.GetSmc(0, &smc_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s GetSmc failed %d\n", __func__, status);
@@ -183,7 +205,7 @@ zx_status_t PilDevice::Bind() {
   }
 
   for (unsigned i = 0; i < kClockCount; i++) {
-    clks_[i] = pdev_.GetClk(i);
+    clks_[i] = components[i + 1];
     if (!clks_[i].is_valid()) {
       zxlogf(ERROR, "%s GetClk failed %d\n", __func__, status);
       return status;
@@ -201,7 +223,6 @@ zx_status_t PilDevice::Bind() {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  size_t actual = 0;
   status = device_get_metadata(parent_, DEVICE_METADATA_PRIVATE, fw_.get(), metadata_size, &actual);
   if (status != ZX_OK || metadata_size != actual) {
     zxlogf(ERROR, "%s device_get_metadata failed %d\n", __func__, status);
@@ -261,7 +282,7 @@ void PilDevice::DdkUnbind() {
 
 void PilDevice::DdkRelease() { delete this; }
 
-zx_status_t PilDevice::Create(zx_device_t* parent) {
+zx_status_t PilDevice::Create(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
   auto dev = fbl::make_unique_checked<PilDevice>(&ac, parent);
   if (!ac.check()) {
@@ -278,8 +299,18 @@ zx_status_t PilDevice::Create(zx_device_t* parent) {
   return ptr->Init();
 }
 
-zx_status_t qcom_pil_bind(void* ctx, zx_device_t* parent) {
-  return qcom_pil::PilDevice::Create(parent);
-}
+static constexpr zx_driver_ops_t driver_ops = []() {
+  zx_driver_ops_t ops = {};
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = PilDevice::Create;
+  return ops;
+}();
 
 }  // namespace qcom_pil
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(qcom_pil, qcom_pil::driver_ops, "zircon", "0.1", 3)
+  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
+  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_QUALCOMM),
+  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_QUALCOMM_PIL),
+ZIRCON_DRIVER_END(qcom_pil)

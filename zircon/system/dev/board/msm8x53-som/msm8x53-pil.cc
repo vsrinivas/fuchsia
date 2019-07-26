@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 #include <ddktl/metadata/fw.h>
 #include <soc/msm8x53/msm8x53-clock.h>
 #include <zircon/syscalls/smc.h>
@@ -21,11 +21,6 @@ zx_status_t Msm8x53::PilInit() {
       .count = ARM_SMC_SERVICE_CALL_NUM_SIP_SERVICE_LENGTH,
       .exclusive = true,
   }};
-  constexpr pbus_clk_t clks[] = {
-      {.clk = msm8x53::kCryptoAhbClk},
-      {.clk = msm8x53::kCryptoAxiClk},
-      {.clk = msm8x53::kCryptoClk},
-  };
   constexpr pbus_bti_t btis[] = {{
       .iommu_index = 0,
       .bti_id = BTI_PIL,
@@ -65,8 +60,6 @@ zx_status_t Msm8x53::PilInit() {
   dev.did = PDEV_DID_QUALCOMM_PIL;
   dev.smc_list = smcs;
   dev.smc_count = countof(smcs);
-  dev.clk_list = clks;
-  dev.clk_count = countof(clks);
   dev.bti_list = btis;
   dev.bti_count = countof(btis);
   dev.metadata_list = metadata;
@@ -74,8 +67,41 @@ zx_status_t Msm8x53::PilInit() {
   dev.mmio_list = fw_mmios;
   dev.mmio_count = countof(fw_mmios);
 
-  zx_status_t status;
-  if ((status = pbus_.DeviceAdd(&dev)) != ZX_OK) {
+  constexpr zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+  };
+  constexpr zx_bind_inst_t clk_crypto_ahb_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, msm8x53::kCryptoAhbClk),
+  };
+  constexpr zx_bind_inst_t clk_crypto_axi_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, msm8x53::kCryptoAxiClk),
+  };
+  constexpr zx_bind_inst_t clk_crypto_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, msm8x53::kCryptoClk),
+  };
+  const device_component_part_t clk_crypto_ahb_component[] = {
+    {fbl::count_of(root_match), root_match},
+    {fbl::count_of(clk_crypto_ahb_match), clk_crypto_ahb_match},
+  };
+  const device_component_part_t clk_crypto_axi_component[] = {
+    {fbl::count_of(root_match), root_match},
+    {fbl::count_of(clk_crypto_axi_match), clk_crypto_axi_match},
+  };
+  const device_component_part_t clk_crypto_component[] = {
+    {fbl::count_of(root_match), root_match},
+    {fbl::count_of(clk_crypto_match), clk_crypto_match},
+  };
+  const device_component_t components[] = {
+    {fbl::count_of(clk_crypto_ahb_component), clk_crypto_ahb_component},
+    {fbl::count_of(clk_crypto_axi_component), clk_crypto_axi_component},
+    {fbl::count_of(clk_crypto_component), clk_crypto_component},
+  };
+
+  auto status = pbus_.CompositeDeviceAdd(&dev, components, fbl::count_of(components), UINT32_MAX);
+  if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not add dev %d\n", __func__, status);
     return status;
   }

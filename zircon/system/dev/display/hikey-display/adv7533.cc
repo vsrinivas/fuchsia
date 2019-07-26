@@ -50,8 +50,10 @@ void Adv7533::Adv7533EdidChannelRead(uint8_t d1, uint8_t len) {
 
 zx_status_t Adv7533::Adv7533Init(pdev_protocol_t* pdev_) {
   uint8_t g = 0;
-  size_t actual;
+
+#if 0 // This needs to be rewritten to use composite protocol instead.
   zx_status_t status;
+  size_t actual;
 
   if ((status = pdev_get_protocol(pdev_, ZX_PROTOCOL_I2C, 0, &i2c_dev.i2c_main,
                                   sizeof(i2c_dev.i2c_main), &actual)) != ZX_OK) {
@@ -77,6 +79,8 @@ zx_status_t Adv7533::Adv7533Init(pdev_protocol_t* pdev_) {
       return status;
     }
   }
+#endif
+
   HdmiGpioInit();
 
   Adv7533MainChannelRead(ADV7533_REG_CHIP_REVISION, 1);

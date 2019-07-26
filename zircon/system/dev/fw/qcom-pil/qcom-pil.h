@@ -8,10 +8,10 @@
 #include <threads.h>
 
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/metadata/fw.h>
+#include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/platform/device.h>
 #include <fbl/array.h>
 #include <lib/device-protocol/pdev.h>
@@ -138,9 +138,9 @@ using DeviceType = ddk::Device<PilDevice, ddk::Unbindable>;
 
 class PilDevice : public DeviceType {
  public:
-  static zx_status_t Create(zx_device_t* parent);
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  explicit PilDevice(zx_device_t* parent) : DeviceType(parent), pdev_(parent) {}
+  explicit PilDevice(zx_device_t* parent) : DeviceType(parent) {}
 
   zx_status_t Bind();
   zx_status_t Init();

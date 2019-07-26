@@ -6,6 +6,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_free_ptr.h>
@@ -27,15 +28,28 @@ const size_t kRstMmio = 2;
 const size_t kPllMmio = 3;
 
 zx_status_t AmlPcieDevice::InitProtocols() {
-  zx_status_t st;
+  ddk::CompositeProtocolClient composite(parent_);
+  if (!composite.is_valid()) {
+    zxlogf(ERROR, "ZX_PROTOCOL_COMPOSITE not available\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-  st = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev_);
+  // Zeroth component is pdev, first is GPIO
+  zx_device_t* components[kClockCount + 2];
+  size_t actual;
+  composite.GetComponents(components, fbl::count_of(components), &actual);
+  if (actual != fbl::count_of(components)) {
+    zxlogf(ERROR, "could not retrieve all our components\n");
+    return ZX_ERR_INTERNAL;
+  }
+
+  auto st = device_get_protocol(components[0], ZX_PROTOCOL_PDEV, &pdev_);
   if (st != ZX_OK) {
     zxlogf(ERROR, "aml_pcie: failed to get pdev protocol, st = %d", st);
     return st;
   }
 
-  st = device_get_protocol(parent_, ZX_PROTOCOL_GPIO, &gpio_);
+  st = device_get_protocol(components[1], ZX_PROTOCOL_GPIO, &gpio_);
   if (st != ZX_OK) {
     zxlogf(ERROR, "aml_pcie: failed to get gpio protocol, st = %d", st);
     return st;
@@ -48,11 +62,9 @@ zx_status_t AmlPcieDevice::InitProtocols() {
   }
 
   for (unsigned i = 0; i < kClockCount; i++) {
-    size_t actual;
-    auto status =
-        pdev_get_protocol(&pdev_, ZX_PROTOCOL_CLOCK, i, &clks_[i], sizeof(clks_[i]), &actual);
+    auto status = device_get_protocol(components[i + 2], ZX_PROTOCOL_CLOCK, &clks_[i]);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol\n");
+      zxlogf(ERROR, "aml_pcie: failed to get clk protocol\n");
       return status;
     }
   }
@@ -323,8 +335,8 @@ static constexpr zx_driver_ops_t aml_pcie_driver_ops = []() {
 // clang-format off
 // Bind to ANY Amlogic SoC with a DWC PCIe controller.
 ZIRCON_DRIVER_BEGIN(aml_pcie, aml_pcie_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_DW_PCIE),
+  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
+  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
+  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_DW_PCIE),
 ZIRCON_DRIVER_END(aml_pcie)
