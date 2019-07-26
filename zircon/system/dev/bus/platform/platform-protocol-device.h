@@ -55,8 +55,6 @@ class ProtocolDevice : public ProtocolDeviceType,
   zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info);
   zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info);
   zx_status_t PDevDeviceAdd(uint32_t index, const device_add_args_t* args, zx_device_t** device);
-  zx_status_t PDevGetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol,
-                              size_t protocol_size, size_t* protocol_actual);
 
   // Starts the underlying devmgr device.
   zx_status_t Start();

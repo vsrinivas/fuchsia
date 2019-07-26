@@ -8,6 +8,7 @@ driver("as370-tdm-output") {
     "codec.cc",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.codec",
     "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.platform.device",

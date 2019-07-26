@@ -5,7 +5,6 @@
 #pragma once
 
 #include <ddktl/device.h>
-#include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/platform/device.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
@@ -17,30 +16,7 @@ namespace platform_bus {
 
 class PlatformProxy;
 
-class ProxyClock : public ddk::ClockProtocol<ProxyClock> {
- public:
-  explicit ProxyClock(uint32_t index, PlatformProxy* proxy) : index_(index), proxy_(proxy) {}
-
-  // Clock protocol implementation.
-  zx_status_t ClockEnable();
-  zx_status_t ClockDisable();
-  zx_status_t ClockIsEnabled(bool* out_enabled);
-
-  zx_status_t ClockSetRate(uint64_t hz);
-  zx_status_t ClockQuerySupportedRate(uint64_t max_rate, uint64_t* out_max_supported_rate);
-  zx_status_t ClockGetRate(uint64_t* out_current_rate);
-
-  void GetProtocol(clock_protocol_t* proto) {
-    proto->ops = &clock_protocol_ops_;
-    proto->ctx = this;
-  }
-
- private:
-  uint32_t index_;
-  PlatformProxy* proxy_;
-};
-
-using PlatformProxyType = ddk::Device<PlatformProxy, ddk::GetProtocolable>;
+using PlatformProxyType = ddk::Device<PlatformProxy>;
 
 // This is the main class for the proxy side platform bus driver.
 // It handles RPC communication with the main platform bus driver in the root devhost.
@@ -55,7 +31,6 @@ class PlatformProxy : public PlatformProxyType,
                             zx_handle_t rpc_channel);
 
   // Device protocol implementation.
-  zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   void DdkRelease();
 
   // Platform device protocol implementation.
@@ -65,8 +40,6 @@ class PlatformProxy : public PlatformProxyType,
   zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_resource);
   zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info);
   zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info);
-  zx_status_t PDevGetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol,
-                              size_t protocol_size, size_t* protocol_actual);
 
   zx_status_t Rpc(const platform_proxy_req_t* req, size_t req_length, platform_proxy_rsp_t* resp,
                   size_t resp_length, const zx_handle_t* in_handles, size_t in_handle_count,
@@ -101,7 +74,6 @@ class PlatformProxy : public PlatformProxyType,
 
   fbl::Vector<Mmio> mmios_;
   fbl::Vector<Irq> irqs_;
-  fbl::Vector<ProxyClock> clocks_;
 };
 
 }  // namespace platform_bus

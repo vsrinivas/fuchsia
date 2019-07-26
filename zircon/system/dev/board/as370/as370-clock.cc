@@ -48,9 +48,9 @@ zx_status_t As370::ClockInit() {
   dev.metadata_list = clock_metadata;
   dev.metadata_count = countof(clock_metadata);
 
-  auto status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &dev);
+  auto status = pbus_.DeviceAdd(&dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
     return status;
   }
 

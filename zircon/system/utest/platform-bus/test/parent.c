@@ -27,22 +27,6 @@ static zx_protocol_device_t test_device_protocol = {
     .release = test_release,
 };
 
-static zx_status_t test_gpio(pdev_protocol_t* pdev) {
-    zx_status_t status;
-    gpio_protocol_t gpio;
-    size_t actual;
-
-    status = pdev_get_protocol(pdev, ZX_PROTOCOL_GPIO, 0, &gpio, sizeof(gpio), &actual);
-    if (status == ZX_OK) {
-        // Parent doesn't have any BTIs so this call should have failed.
-        zxlogf(ERROR, "%s: parent got gpio it doesn't own!\n", DRIVER_NAME);
-        return ZX_ERR_INTERNAL;
-    }
-
-    // Treat any error as a success.
-    return ZX_OK;
-}
-
 static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     pdev_protocol_t pdev;
     zx_status_t status;
@@ -53,11 +37,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_PDEV\n", DRIVER_NAME);
         return status;
-    }
-
-    status = test_gpio(&pdev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: gpio test failed, st = %d\n", DRIVER_NAME, status);
     }
 
     test_t* test = calloc(1, sizeof(test_t));

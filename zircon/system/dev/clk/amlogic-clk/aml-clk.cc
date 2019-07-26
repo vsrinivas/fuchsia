@@ -12,7 +12,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 #include <lib/device-protocol/pdev.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -69,28 +68,6 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio,
   }
 }
 
-zx_status_t AmlClock::Init(uint32_t did) {
-  pbus_protocol_t pbus;
-  zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-clk: failed to get ZX_PROTOCOL_PBUS, st = %d\n", status);
-    return status;
-  }
-
-  clock_impl_protocol_t clk_proto = {
-      .ops = &clock_impl_protocol_ops_,
-      .ctx = this,
-  };
-
-  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK_IMPL, &clk_proto, sizeof(clk_proto));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "meson_clk_bind: pbus_register_protocol failed, st = %d\n", status);
-    return status;
-  }
-
-  return ZX_OK;
-}
-
 zx_status_t AmlClock::Create(zx_device_t* parent) {
   zx_status_t status;
 
@@ -131,11 +108,6 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
 
   auto clock_device = std::make_unique<amlogic_clock::AmlClock>(parent, std::move(*hiu_mmio),
                                                                 *std::move(msr_mmio), info.did);
-
-  status = clock_device->Init(info.did);
-  if (status != ZX_OK) {
-    return status;
-  }
 
   status = clock_device->DdkAdd("clocks");
   if (status != ZX_OK) {

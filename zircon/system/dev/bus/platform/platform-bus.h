@@ -6,9 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/clockimpl.h>
 #include <ddktl/protocol/gpioimpl.h>
-#include <ddktl/protocol/powerimpl.h>
 #include <ddktl/protocol/iommu.h>
 #include <ddktl/protocol/platform/bus.h>
 #include <ddktl/protocol/sysmem.h>
@@ -71,8 +69,6 @@ class PlatformBus : public PlatformBusType,
   zx_status_t GetBootItem(uint32_t type, uint32_t extra, zx::vmo* vmo, uint32_t* length);
   zx_status_t GetBootItem(uint32_t type, uint32_t extra, fbl::Array<uint8_t>* out);
 
-  // Protocol accessors for PlatformDevice.
-  inline ddk::ClockImplProtocolClient* clk() { return &*clk_; }
   inline ddk::GpioImplProtocolClient* gpio() { return &*gpio_; }
 
   pbus_sys_suspend_t suspend_cb() { return suspend_cb_; }
@@ -90,10 +86,8 @@ class PlatformBus : public PlatformBusType,
   pdev_board_info_t board_info_;
 
   // Protocols that are optionally provided by the board driver.
-  std::optional<ddk::ClockImplProtocolClient> clk_;
   std::optional<ddk::GpioImplProtocolClient> gpio_;
   std::optional<ddk::IommuProtocolClient> iommu_;
-  std::optional<ddk::PowerImplProtocolClient> power_;
   std::optional<ddk::SysmemProtocolClient> sysmem_;
 
   // Completion used by WaitProtocol().

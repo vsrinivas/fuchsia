@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/platform/device.h>
 
 #include <lib/zx/bti.h>
@@ -39,8 +38,6 @@ class PDev : public PDevProtocolClient {
   zx_status_t GetBti(uint32_t index, zx::bti* out) {
     return PDevProtocolClient::GetBti(index, out);
   }
-
-  ClockProtocolClient GetClk(uint32_t index);
 };
 
 }  // namespace ddk

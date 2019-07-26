@@ -48,8 +48,6 @@ class Msm8x53Clk : public DeviceType,
   Msm8x53Clk(zx_device_t* parent, ddk::MmioBuffer mmio)
       : DeviceType(parent), mmio_(std::move(mmio)) {}
 
-  zx_status_t RegisterClockProtocol();
-
   enum class Toggle { Enabled, Disabled };
 
   // Gate Clocks

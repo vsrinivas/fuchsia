@@ -70,7 +70,6 @@ class Msm8x53Power : public Msm8x53PowerType,
   ddk::MmioBuffer intr_mmio_;
   ddk::MmioBuffer cfg_mmio_;
 
-  zx_status_t Bind();
   zx_status_t Init();
   zx_status_t ReadPMICReg(uint32_t reg_addr, uint32_t* reg_value);
   zx_status_t WritePMICReg(uint32_t reg_addr, uint32_t value);

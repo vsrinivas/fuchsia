@@ -27,9 +27,9 @@ zx_status_t Vim::ClkInit() {
   clk_dev.mmio_list = clk_mmios;
   clk_dev.mmio_count = countof(clk_mmios);
 
-  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clk_dev);
+  zx_status_t status = pbus_.DeviceAdd(&clk_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ClkInit: pbus_protocol_device_add failed, st = %d\n", status);
+    zxlogf(ERROR, "ClkInit: DeviceAdd failed, st = %d\n", status);
     return status;
   }
 

@@ -55,9 +55,9 @@ zx_status_t Msm8x53::PowerInit() {
   power_dev.irq_list = pmic_arb_irqs;
   power_dev.irq_count = countof(pmic_arb_irqs);
 
-  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_POWER_IMPL, &power_dev);
+  zx_status_t status = pbus_.DeviceAdd(&power_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
     return status;
   }
 

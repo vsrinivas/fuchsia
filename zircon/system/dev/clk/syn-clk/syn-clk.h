@@ -21,8 +21,6 @@ class SynClk : public DeviceType, public ddk::ClockImplProtocol<SynClk, ddk::bas
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  zx_status_t Init();
-
   // Clock Protocol Implementation
   zx_status_t ClockImplEnable(uint32_t index);
   zx_status_t ClockImplDisable(uint32_t index);
@@ -45,7 +43,6 @@ class SynClk : public DeviceType, public ddk::ClockImplProtocol<SynClk, ddk::bas
         avio_mmio_(std::move(avio_mmio)) {}
 
  private:
-  zx_status_t RegisterClockProtocol();
   zx_status_t AvpllClkEnable(bool avpll0, bool enable);
   zx_status_t AvpllSetRate(bool avpll0, uint64_t rate);
 

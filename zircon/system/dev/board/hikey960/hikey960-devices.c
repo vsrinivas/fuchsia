@@ -244,7 +244,7 @@ static const pbus_dev_t i2c_test_dev = {
 zx_status_t hikey960_add_devices(hikey960_t* hikey) {
     zx_status_t status;
 
-    if ((status = pbus_protocol_device_add(&hikey->pbus, ZX_PROTOCOL_CLOCK_IMPL, &hikey960_clk_dev))
+    if ((status = pbus_device_add(&hikey->pbus, &hikey960_clk_dev))
             != ZX_OK) {
         zxlogf(ERROR, "hikey960_add_devices could not add clk_dev: %d\n", status);
     }

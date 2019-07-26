@@ -152,31 +152,6 @@ void HisiClock::DeInit() {
   sctrl_mmio_.reset();
 }
 
-zx_status_t HisiClock::RegisterClockProtocol() {
-  zx_status_t st;
-
-  ddk::PBusProtocolClient pbus(parent());
-  if (!pbus.is_valid()) {
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  clock_impl_protocol_t clk_proto = {
-      .ops = &clock_impl_protocol_ops_,
-      .ctx = this,
-  };
-
-  st = pbus.RegisterProtocol(ZX_PROTOCOL_CLOCK_IMPL, &clk_proto, sizeof(clk_proto));
-  if (st != ZX_OK) {
-    zxlogf(ERROR,
-           "HisiClock::RegisterClockProtocol: pbus_register_protocol"
-           " failed with st = %d\n",
-           st);
-    return st;
-  }
-
-  return ZX_OK;
-}
-
 zx_status_t HisiClock::Init() {
   zx_status_t st;
 
@@ -197,8 +172,6 @@ zx_status_t HisiClock::Init() {
     zxlogf(ERROR, "HisiClock::Init: map sctrl mmio failed, st = %d\n", st);
     return st;
   }
-
-  st = RegisterClockProtocol();
 
   return ZX_OK;
 }

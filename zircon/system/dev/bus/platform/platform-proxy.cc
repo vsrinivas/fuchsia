@@ -20,122 +20,6 @@
 
 namespace platform_bus {
 
-zx_status_t ProxyClock::ClockEnable() {
-  rpc_clk_req_t req = {};
-  rpc_clk_rsp_t resp = {};
-  req.header.proto_id = ZX_PROTOCOL_CLOCK;
-  req.header.op = CLK_ENABLE;
-  req.index = index_;
-
-  return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-}
-
-zx_status_t ProxyClock::ClockDisable() {
-  rpc_clk_req_t req = {};
-  rpc_clk_rsp_t resp = {};
-  req.header.proto_id = ZX_PROTOCOL_CLOCK;
-  req.header.op = CLK_DISABLE;
-  req.index = index_;
-
-  return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-}
-
-zx_status_t ProxyClock::ClockIsEnabled(bool* out_enabled) {
-  rpc_clk_req_t req = {};
-  rpc_clk_rsp_t resp = {};
-
-  req.header.proto_id = ZX_PROTOCOL_CLOCK;
-  req.header.op = CLK_IS_ENABLED;
-
-  req.index = index_;
-
-  zx_status_t status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-
-  if (status == ZX_OK) {
-    *out_enabled = resp.is_enabled;
-  }
-
-  return status;
-}
-
-zx_status_t ProxyClock::ClockSetRate(uint64_t rate) {
-  rpc_clk_req_t req = {};
-  rpc_clk_rsp_t resp = {};
-
-  req.header.proto_id = ZX_PROTOCOL_CLOCK;
-  req.header.op = CLK_SET_RATE;
-
-  req.index = index_;
-  req.rate = rate;
-
-  return proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-}
-
-zx_status_t ProxyClock::ClockQuerySupportedRate(uint64_t max_rate,
-                                                uint64_t* out_max_supported_rate) {
-  rpc_clk_req_t req = {};
-  rpc_clk_rsp_t resp = {};
-
-  req.header.proto_id = ZX_PROTOCOL_CLOCK;
-  req.header.op = CLK_QUERY_SUPPORTED_RATE;
-
-  req.index = index_;
-  req.rate = max_rate;
-
-  zx_status_t status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-
-  if (status == ZX_OK) {
-    *out_max_supported_rate = resp.rate;
-  }
-
-  return status;
-}
-
-zx_status_t ProxyClock::ClockGetRate(uint64_t* out_current_rate) {
-  rpc_clk_req_t req = {};
-  rpc_clk_rsp_t resp = {};
-
-  req.header.proto_id = ZX_PROTOCOL_CLOCK;
-  req.header.op = CLK_GET_RATE;
-
-  req.index = index_;
-
-  zx_status_t status = proxy_->Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
-
-  if (status == ZX_OK) {
-    *out_current_rate = resp.rate;
-  }
-
-  return status;
-}
-
-zx_status_t PlatformProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
-  auto* proto = static_cast<ddk::AnyProtocol*>(out);
-
-  switch (proto_id) {
-    case ZX_PROTOCOL_PDEV: {
-      proto->ops = &pdev_protocol_ops_;
-      proto->ctx = this;
-      return ZX_OK;
-    }
-    case ZX_PROTOCOL_CLOCK: {
-      auto count = clocks_.size();
-      if (count == 0) {
-        return ZX_ERR_NOT_SUPPORTED;
-      } else if (count > 1) {
-        zxlogf(ERROR, "%s: device has more than one clock\n", __func__);
-        return ZX_ERR_BAD_STATE;
-      }
-      // Return zeroth clock resource.
-      auto* proto = static_cast<clock_protocol_t*>(out);
-      clocks_[0].GetProtocol(proto);
-      return ZX_OK;
-    }
-    default:
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-}
-
 void PlatformProxy::DdkRelease() { delete this; }
 
 zx_status_t PlatformProxy::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
@@ -190,7 +74,6 @@ zx_status_t PlatformProxy::PDevGetInterrupt(uint32_t index, uint32_t flags,
 zx_status_t PlatformProxy::PDevGetBti(uint32_t index, zx::bti* out_bti) {
   rpc_pdev_req_t req = {};
   rpc_pdev_rsp_t resp = {};
-  req.header.proto_id = ZX_PROTOCOL_PDEV;
   req.header.op = PDEV_GET_BTI;
   req.index = index;
 
@@ -201,7 +84,6 @@ zx_status_t PlatformProxy::PDevGetBti(uint32_t index, zx::bti* out_bti) {
 zx_status_t PlatformProxy::PDevGetSmc(uint32_t index, zx::resource* out_resource) {
   rpc_pdev_req_t req = {};
   rpc_pdev_rsp_t resp = {};
-  req.header.proto_id = ZX_PROTOCOL_PDEV;
   req.header.op = PDEV_GET_SMC;
   req.index = index;
 
@@ -212,7 +94,6 @@ zx_status_t PlatformProxy::PDevGetSmc(uint32_t index, zx::resource* out_resource
 zx_status_t PlatformProxy::PDevGetDeviceInfo(pdev_device_info_t* out_info) {
   rpc_pdev_req_t req = {};
   rpc_pdev_rsp_t resp = {};
-  req.header.proto_id = ZX_PROTOCOL_PDEV;
   req.header.op = PDEV_GET_DEVICE_INFO;
 
   auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
@@ -226,7 +107,6 @@ zx_status_t PlatformProxy::PDevGetDeviceInfo(pdev_device_info_t* out_info) {
 zx_status_t PlatformProxy::PDevGetBoardInfo(pdev_board_info_t* out_info) {
   rpc_pdev_req_t req = {};
   rpc_pdev_rsp_t resp = {};
-  req.header.proto_id = ZX_PROTOCOL_PDEV;
   req.header.op = PDEV_GET_BOARD_INFO;
 
   auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
@@ -235,29 +115,6 @@ zx_status_t PlatformProxy::PDevGetBoardInfo(pdev_board_info_t* out_info) {
   }
   memcpy(out_info, &resp.board_info, sizeof(*out_info));
   return ZX_OK;
-}
-
-zx_status_t PlatformProxy::PDevGetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol,
-                                           size_t protocol_size, size_t* protocol_actual) {
-  if (protocol_size < sizeof(ddk::AnyProtocol)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  *protocol_actual = sizeof(ddk::AnyProtocol);
-
-  if (proto_id == ZX_PROTOCOL_CLOCK) {
-    if (index >= clocks_.size()) {
-      return ZX_ERR_OUT_OF_RANGE;
-    }
-    auto* proto = static_cast<clock_protocol_t*>(out_protocol);
-    clocks_[index].GetProtocol(proto);
-    return ZX_OK;
-  }
-
-  // For other protocols, fall through to DdkGetProtocol if index is zero
-  if (index != 0) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  return DdkGetProtocol(proto_id, out_protocol);
 }
 
 zx_status_t PlatformProxy::Rpc(const platform_proxy_req_t* req, size_t req_length,
@@ -349,7 +206,6 @@ zx_status_t PlatformProxy::Init(zx_device_t* parent) {
     rpc_pdev_rsp_t resp = {};
     zx_handle_t rsrc_handle;
 
-    req.header.proto_id = ZX_PROTOCOL_PDEV;
     req.header.op = PDEV_GET_MMIO;
     req.index = i;
     status =
@@ -376,7 +232,6 @@ zx_status_t PlatformProxy::Init(zx_device_t* parent) {
     rpc_pdev_rsp_t resp = {};
     zx_handle_t rsrc_handle;
 
-    req.header.proto_id = ZX_PROTOCOL_PDEV;
     req.header.op = PDEV_GET_INTERRUPT;
     req.index = i;
     status =
@@ -396,14 +251,6 @@ zx_status_t PlatformProxy::Init(zx_device_t* parent) {
 
     zxlogf(SPEW, "%s: received IRQ %u (irq %#x handle %#x)\n", name_, i, irq.irq,
            irq.resource.get());
-  }
-
-  for (uint32_t i = 0; i < info.clk_count; i++) {
-    ProxyClock clock(i, this);
-    clocks_.push_back(std::move(clock), &ac);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
   }
 
   return DdkAdd(name_);

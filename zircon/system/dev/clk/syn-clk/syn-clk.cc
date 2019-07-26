@@ -44,12 +44,6 @@ zx_status_t SynClk::Create(void* ctx, zx_device_t* parent) {
   std::unique_ptr<SynClk> device(
       new SynClk(parent, *std::move(global_mmio), *std::move(avio_mmio)));
 
-  status = device->Init();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to initialize %d\n", __FILE__, status);
-    return status;
-  }
-
   status = device->DdkAdd("synaptics-clk");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DdkAdd failed %d\n", __FILE__, status);
@@ -58,16 +52,6 @@ zx_status_t SynClk::Create(void* ctx, zx_device_t* parent) {
 
   // Intentially leak, devmgr owns the memory now.
   __UNUSED auto* unused = device.release();
-
-  return ZX_OK;
-}
-
-zx_status_t SynClk::Init() {
-  auto status = RegisterClockProtocol();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to register clock impl protocol %d\n", __FILE__, status);
-    return status;
-  }
 
   return ZX_OK;
 }
@@ -265,30 +249,6 @@ void SynClk::DdkUnbind() {
 }
 
 void SynClk::DdkRelease() { delete this; }
-
-zx_status_t SynClk::RegisterClockProtocol() {
-  ddk::PBusProtocolClient pbus(parent());
-  if (!pbus.is_valid()) {
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  clock_impl_protocol_t clk_proto = {
-      .ops = &clock_impl_protocol_ops_,
-      .ctx = this,
-  };
-//#define TEST_DAI_CLOCKS
-#ifdef TEST_DAI_CLOCKS
-  ClockImplEnable(as370::kClkAvpll0);
-  ClockImplSetRate(as370::kClkAvpll0, static_cast<uint32_t>(48000) * 64 * 8);
-#endif
-
-  auto status = pbus.RegisterProtocol(ZX_PROTOCOL_CLOCK_IMPL, &clk_proto, sizeof(clk_proto));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pbus_register_protocol failed %d\n", __FILE__, status);
-    return status;
-  }
-  return ZX_OK;
-}
 
 }  // namespace clk
 

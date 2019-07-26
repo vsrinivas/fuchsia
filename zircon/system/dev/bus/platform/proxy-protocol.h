@@ -11,9 +11,6 @@ namespace platform_bus {
 // Maximum transfer size we can proxy.
 static constexpr size_t PROXY_MAX_TRANSFER_SIZE = 4096;
 
-// Device ID for a top level platform device (that is, an immediate child of the platform bus).
-static constexpr uint32_t ROOT_DEVICE_ID = 0;
-
 // ZX_PROTOCOL_PDEV proxy support.
 enum {
   PDEV_GET_MMIO,
@@ -28,7 +25,6 @@ enum {
 /// Header for RPC requests.
 struct platform_proxy_req_t {
   uint32_t txid;
-  uint32_t proto_id;
   uint32_t op;
 };
 
@@ -63,28 +59,6 @@ static constexpr uint32_t PROXY_MAX_METADATA_SIZE =
 struct rpc_pdev_metadata_rsp_t {
   rpc_pdev_rsp_t pdev;
   uint8_t metadata[PROXY_MAX_METADATA_SIZE];
-};
-
-// ZX_PROTOCOL_CLOCK proxy support.
-enum {
-  CLK_ENABLE,
-  CLK_DISABLE,
-  CLK_IS_ENABLED,
-  CLK_SET_RATE,
-  CLK_QUERY_SUPPORTED_RATE,
-  CLK_GET_RATE,
-};
-
-struct rpc_clk_req_t {
-  platform_proxy_req_t header;
-  uint32_t index;
-  uint64_t rate;
-};
-
-struct rpc_clk_rsp_t {
-  platform_proxy_rsp_t header;
-  bool is_enabled;
-  uint64_t rate;
 };
 
 }  // namespace platform_bus

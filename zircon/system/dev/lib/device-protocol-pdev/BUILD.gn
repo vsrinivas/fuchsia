@@ -9,9 +9,6 @@ library("device-protocol-pdev") {
     "pdev.cc",
   ]
   public_deps = [
-    # <lib/device-protocol/pdev.h> has #include <ddktl/protocol/clock.h>.
-    "$zx/system/banjo/ddk.protocol.clock",
-
     # <lib/device-protocol/pdev.h> has #include <ddktl/protocol/platform/device.h>.
     "$zx/system/banjo/ddk.protocol.platform.device",
 

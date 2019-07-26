@@ -57,8 +57,6 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
  private:
   // Toggle clocks enable bit.
   zx_status_t ClkToggle(uint32_t clk, const bool enable);
-  // Initialize platform device.
-  zx_status_t Init(uint32_t did);
   // Clock measure helper API.
   zx_status_t ClkMeasureUtil(uint32_t clk, uint64_t* clk_freq);
 

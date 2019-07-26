@@ -517,32 +517,6 @@ zx_status_t MtkPower::Init() {
   return ZX_OK;
 }
 
-zx_status_t MtkPower::Bind() {
-  pbus_protocol_t pbus;
-  zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to get ZX_PROTOCOL_PBUS, %d\n", __FUNCTION__, status);
-    return status;
-  }
-
-  power_impl_protocol_t power_proto = {
-      .ops = &power_impl_protocol_ops_,
-      .ctx = this,
-  };
-
-  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_POWER_IMPL, &power_proto, sizeof(power_proto));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s pbus_register_protocol failed: %d\n", __FUNCTION__, status);
-    return status;
-  }
-  status = DdkAdd("mtk-power");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s DdkAdd failed: %d\n", __FUNCTION__, status);
-  }
-
-  return status;
-}
-
 zx_status_t MtkPower::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status = ZX_OK;
 
@@ -564,7 +538,7 @@ zx_status_t MtkPower::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  if ((status = dev->Bind()) != ZX_OK) {
+  if ((status = dev->DdkAdd("mtk-power")) != ZX_OK) {
     return status;
   }
 

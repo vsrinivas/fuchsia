@@ -46,7 +46,8 @@ static const pbus_metadata_t clock_metadata[] = {
 
 static pbus_dev_t clk_dev = []() {
   pbus_dev_t dev = {};
-  dev.name = "sherlock-clk", dev.vid = PDEV_VID_AMLOGIC;
+  dev.name = "sherlock-clk",
+  dev.vid = PDEV_VID_AMLOGIC;
   dev.did = PDEV_DID_AMLOGIC_G12B_CLK;
   dev.mmio_list = clk_mmios;
   dev.mmio_count = countof(clk_mmios);
@@ -56,9 +57,9 @@ static pbus_dev_t clk_dev = []() {
 }();
 
 zx_status_t Sherlock::ClkInit() {
-  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clk_dev);
+  zx_status_t status = pbus_.DeviceAdd(&clk_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __func__, status);
+    zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
     return status;
   }
 

@@ -44,8 +44,6 @@ class CompositeDevice : public CompositeDeviceType,
   zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info);
   zx_status_t PDevDeviceAdd(uint32_t index, const device_add_args_t* args,
                             zx_device_t** out_device);
-  zx_status_t PDevGetProtocol(uint32_t proto_id, uint32_t index, void* out_out_protocol_buffer,
-                              size_t out_protocol_size, size_t* out_out_protocol_actual);
 
   // Starts the underlying devmgr device.
   zx_status_t Start();

@@ -67,12 +67,6 @@ class PlatformDevice : public PlatformDeviceType {
   zx_status_t RpcGetDeviceInfo(pdev_device_info_t* out_info);
   zx_status_t RpcGetMetadata(uint32_t index, uint32_t* out_type, uint8_t* buf, uint32_t buf_size,
                              uint32_t* actual);
-  zx_status_t RpcClockEnable(uint32_t index);
-  zx_status_t RpcClockDisable(uint32_t index);
-  zx_status_t RpcClockIsEnabled(uint32_t index, bool* result);
-  zx_status_t RpcClockSetRate(uint32_t index, uint64_t rate);
-  zx_status_t RpcClockQuerySupportedRate(uint32_t index, uint64_t max_rate, uint64_t* out_rate);
-  zx_status_t RpcClockGetRate(uint32_t index, uint64_t* out_current_rate);
 
   PlatformBus* bus_;
   char name_[ZX_DEVICE_NAME_MAX + 1];

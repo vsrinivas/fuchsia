@@ -162,7 +162,6 @@ zx_status_t PlatformDevice::RpcGetDeviceInfo(pdev_device_info_t* out_info) {
       .did = did_,
       .mmio_count = static_cast<uint32_t>(resources_.mmio_count()),
       .irq_count = static_cast<uint32_t>(resources_.irq_count()),
-      .clk_count = static_cast<uint32_t>(resources_.clk_count()),
       .bti_count = static_cast<uint32_t>(resources_.bti_count()),
       .smc_count = static_cast<uint32_t>(resources_.smc_count()),
       .metadata_count =
@@ -216,73 +215,6 @@ zx_status_t PlatformDevice::RpcGetMetadata(uint32_t index, uint32_t* out_type, u
   return ZX_OK;
 }
 
-zx_status_t PlatformDevice::RpcClockEnable(uint32_t index) {
-  if (bus_->clk() == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (index >= resources_.clk_count()) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  return bus_->clk()->Enable(resources_.clk(index).clk);
-}
-
-zx_status_t PlatformDevice::RpcClockDisable(uint32_t index) {
-  if (bus_->clk() == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (index >= resources_.clk_count()) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  return bus_->clk()->Disable(resources_.clk(index).clk);
-}
-
-zx_status_t PlatformDevice::RpcClockIsEnabled(uint32_t index, bool* result) {
-  if (bus_->clk() == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (index >= resources_.clk_count()) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  return bus_->clk()->IsEnabled(resources_.clk(index).clk, result);
-}
-
-zx_status_t PlatformDevice::RpcClockSetRate(uint32_t index, uint64_t rate) {
-  if (bus_->clk() == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (index >= resources_.clk_count()) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  return bus_->clk()->SetRate(resources_.clk(index).clk, rate);
-}
-
-zx_status_t PlatformDevice::RpcClockQuerySupportedRate(uint32_t index, uint64_t max_rate,
-                                                       uint64_t* out_rate) {
-  if (bus_->clk() == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (index >= resources_.clk_count()) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  return bus_->clk()->QuerySupportedRate(resources_.clk(index).clk, max_rate, out_rate);
-}
-
-zx_status_t PlatformDevice::RpcClockGetRate(uint32_t index, uint64_t* out_current_rate) {
-  if (bus_->clk() == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (index >= resources_.clk_count()) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  return bus_->clk()->GetRate(resources_.clk(index).clk, out_current_rate);
-}
-
 zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
   if (channel == ZX_HANDLE_INVALID) {
     // proxy device has connected
@@ -309,89 +241,47 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
   resp_header->txid = req_header->txid;
   uint32_t resp_len;
 
-  switch (req_header->proto_id) {
-    case ZX_PROTOCOL_PDEV: {
-      auto req = reinterpret_cast<rpc_pdev_req_t*>(&req_buf);
-      if (actual < sizeof(*req)) {
-        zxlogf(ERROR, "%s received %u, expecting %zu (PDEV)\n", __func__, actual, sizeof(*req));
-        return ZX_ERR_INTERNAL;
-      }
-      auto resp = reinterpret_cast<rpc_pdev_rsp_t*>(&resp_buf);
-      resp_len = sizeof(*resp);
+  auto req = reinterpret_cast<rpc_pdev_req_t*>(&req_buf);
+  if (actual < sizeof(*req)) {
+    zxlogf(ERROR, "%s received %u, expecting %zu (PDEV)\n", __func__, actual, sizeof(*req));
+    return ZX_ERR_INTERNAL;
+  }
+  auto resp = reinterpret_cast<rpc_pdev_rsp_t*>(&resp_buf);
+  resp_len = sizeof(*resp);
 
-      switch (req_header->op) {
-        case PDEV_GET_MMIO:
-          status =
-              RpcGetMmio(req->index, &resp->paddr, &resp->length, resp_handles, &resp_handle_count);
-          break;
-        case PDEV_GET_INTERRUPT:
-          status = RpcGetInterrupt(req->index, &resp->irq, &resp->mode, resp_handles,
-                                   &resp_handle_count);
-          break;
-        case PDEV_GET_BTI:
-          status = RpcGetBti(req->index, resp_handles, &resp_handle_count);
-          break;
-        case PDEV_GET_SMC:
-          status = RpcGetSmc(req->index, resp_handles, &resp_handle_count);
-          break;
-        case PDEV_GET_DEVICE_INFO:
-          status = RpcGetDeviceInfo(&resp->device_info);
-          break;
-        case PDEV_GET_BOARD_INFO:
-          status = bus_->PBusGetBoardInfo(&resp->board_info);
-          break;
-        case PDEV_GET_METADATA: {
-          auto resp = reinterpret_cast<rpc_pdev_metadata_rsp_t*>(resp_buf);
-          static_assert(sizeof(*resp) == sizeof(resp_buf), "");
-          auto buf_size = static_cast<uint32_t>(sizeof(resp_buf) - sizeof(*resp_header));
-          status = RpcGetMetadata(req->index, &resp->pdev.metadata_type, resp->metadata, buf_size,
-                                  &resp->pdev.metadata_length);
-          resp_len += resp->pdev.metadata_length;
-          break;
-        }
-        default:
-          zxlogf(ERROR, "%s: unknown pdev op %u\n", __func__, req_header->op);
-          return ZX_ERR_INTERNAL;
-      }
-      break;
-    }
-    case ZX_PROTOCOL_CLOCK: {
-      auto req = reinterpret_cast<rpc_clk_req_t*>(&req_buf);
-      if (actual < sizeof(*req)) {
-        zxlogf(ERROR, "%s received %u, expecting %zu (CLOCK)\n", __func__, actual, sizeof(*req));
-        return ZX_ERR_INTERNAL;
-      }
-      auto resp = reinterpret_cast<rpc_clk_rsp_t*>(&resp_buf);
-      resp_len = sizeof(*resp);
-
-      switch (req_header->op) {
-        case CLK_ENABLE:
-          status = RpcClockEnable(req->index);
-          break;
-        case CLK_DISABLE:
-          status = RpcClockDisable(req->index);
-          break;
-        case CLK_IS_ENABLED:
-          status = RpcClockIsEnabled(req->index, &resp->is_enabled);
-          break;
-        case CLK_SET_RATE:
-          status = RpcClockSetRate(req->index, req->rate);
-          break;
-        case CLK_QUERY_SUPPORTED_RATE:
-          status = RpcClockQuerySupportedRate(req->index, req->rate, &resp->rate);
-          break;
-        case CLK_GET_RATE:
-          status = RpcClockGetRate(req->index, &resp->rate);
-          break;
-        default:
-          zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, req_header->op);
-          return ZX_ERR_INTERNAL;
-      }
-      break;
-    }
-    default:
-      zxlogf(ERROR, "%s: unknown protocol %u\n", __func__, req_header->proto_id);
-      return ZX_ERR_INTERNAL;
+  switch (req_header->op) {
+  case PDEV_GET_MMIO:
+    status = RpcGetMmio(req->index, &resp->paddr, &resp->length, resp_handles,
+                        &resp_handle_count);
+    break;
+  case PDEV_GET_INTERRUPT:
+    status = RpcGetInterrupt(req->index, &resp->irq, &resp->mode, resp_handles,
+                             &resp_handle_count);
+    break;
+  case PDEV_GET_BTI:
+    status = RpcGetBti(req->index, resp_handles, &resp_handle_count);
+    break;
+  case PDEV_GET_SMC:
+    status = RpcGetSmc(req->index, resp_handles, &resp_handle_count);
+    break;
+  case PDEV_GET_DEVICE_INFO:
+    status = RpcGetDeviceInfo(&resp->device_info);
+    break;
+  case PDEV_GET_BOARD_INFO:
+    status = bus_->PBusGetBoardInfo(&resp->board_info);
+    break;
+  case PDEV_GET_METADATA: {
+    auto resp = reinterpret_cast<rpc_pdev_metadata_rsp_t*>(resp_buf);
+    static_assert(sizeof(*resp) == sizeof(resp_buf), "");
+    auto buf_size = static_cast<uint32_t>(sizeof(resp_buf) - sizeof(*resp_header));
+    status = RpcGetMetadata(req->index, &resp->pdev.metadata_type, resp->metadata,
+                            buf_size, &resp->pdev.metadata_length);
+    resp_len += resp->pdev.metadata_length;
+    break;
+  }
+  default:
+    zxlogf(ERROR, "%s: unknown pdev op %u\n", __func__, req_header->op);
+    return ZX_ERR_INTERNAL;
   }
 
   // set op to match request so zx_channel_write will return our response

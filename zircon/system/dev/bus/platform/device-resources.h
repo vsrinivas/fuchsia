@@ -21,7 +21,6 @@ class DeviceResources {
   // Platform bus resources copied from the pbus_dev_t struct from the board driver.
   inline const pbus_mmio_t& mmio(size_t i) const { return mmios_[i]; }
   inline const pbus_irq_t& irq(size_t i) const { return irqs_[i]; }
-  inline const pbus_clk_t& clk(size_t i) const { return clks_[i]; }
   inline const pbus_bti_t& bti(size_t i) const { return btis_[i]; }
   inline const pbus_smc_t& smc(size_t i) const { return smcs_[i]; }
   inline const pbus_metadata_t& metadata(size_t i) const { return metadata_[i]; }
@@ -30,7 +29,6 @@ class DeviceResources {
   // Counts for the above resource lists.
   inline size_t mmio_count() const { return mmios_.size(); }
   inline size_t irq_count() const { return irqs_.size(); }
-  inline size_t clk_count() const { return clks_.size(); }
   inline size_t bti_count() const { return btis_.size(); }
   inline size_t smc_count() const { return smcs_.size(); }
   inline size_t metadata_count() const { return metadata_.size(); }
@@ -40,7 +38,6 @@ class DeviceResources {
   // Platform bus resources copied from the pbus_dev_t struct from the board driver.
   fbl::Array<pbus_mmio_t> mmios_;
   fbl::Array<pbus_irq_t> irqs_;
-  fbl::Array<pbus_clk_t> clks_;
   fbl::Array<pbus_bti_t> btis_;
   fbl::Array<pbus_smc_t> smcs_;
   fbl::Array<pbus_metadata_t> metadata_;

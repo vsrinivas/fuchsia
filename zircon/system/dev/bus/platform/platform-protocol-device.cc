@@ -162,7 +162,6 @@ zx_status_t ProtocolDevice::PDevGetDeviceInfo(pdev_device_info_t* out_info) {
       .did = did_,
       .mmio_count = static_cast<uint32_t>(resources_.mmio_count()),
       .irq_count = static_cast<uint32_t>(resources_.irq_count()),
-      .clk_count = static_cast<uint32_t>(resources_.clk_count()),
       .bti_count = static_cast<uint32_t>(resources_.bti_count()),
       .smc_count = static_cast<uint32_t>(resources_.smc_count()),
       .metadata_count = static_cast<uint32_t>(resources_.metadata_count()),
@@ -183,19 +182,6 @@ zx_status_t ProtocolDevice::PDevGetBoardInfo(pdev_board_info_t* out_info) {
 zx_status_t ProtocolDevice::PDevDeviceAdd(uint32_t index, const device_add_args_t* args,
                                           zx_device_t** device) {
   return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t ProtocolDevice::PDevGetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol,
-                                            size_t protocol_size, size_t* protocol_actual) {
-  // Pass through to DdkGetProtocol if index is zero
-  if (index != 0) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  if (protocol_size < sizeof(ddk::AnyProtocol)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  *protocol_actual = sizeof(ddk::AnyProtocol);
-  return DdkGetProtocol(proto_id, out_protocol);
 }
 
 zx_status_t ProtocolDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
