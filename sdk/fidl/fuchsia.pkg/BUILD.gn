@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.pkg") {
   sources = [
+    "admin.fidl",
     "cache.fidl",
     "common.fidl",
     "font_resolver.fidl",

@@ -21,6 +21,7 @@ use {
 
 mod amber;
 mod amber_connector;
+mod experiment;
 mod repository_manager;
 mod repository_service;
 mod resolver_service;
@@ -55,11 +56,13 @@ fn main() -> Result<(), Error> {
 
     let inspector = fuchsia_inspect::Inspector::new();
     let rewrite_inspect_node = inspector.root().create_child("rewrite_manager");
+    let experiment_inspect_node = inspector.root().create_child("experiments");
 
     let amber_connector = AmberConnector::new();
 
     let repo_manager = Arc::new(RwLock::new(load_repo_manager(amber_connector.clone())));
     let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager(rewrite_inspect_node)));
+    let experiment_state = Arc::new(RwLock::new(experiment::State::new(experiment_inspect_node)));
 
     let resolver_cb = {
         // Capture a clone of repo and rewrite manager's Arc so the new client callback has a copy
@@ -101,11 +104,20 @@ fn main() -> Result<(), Error> {
         )
     };
 
+    let admin_cb = move |stream| {
+        let experiment_state = experiment_state.clone();
+        fasync::spawn(async move {
+            await!(experiment::run_admin_service(experiment_state, stream))
+                .unwrap_or_else(|e| fx_log_err!("while handling admin client {:?}", e))
+        });
+    };
+
     let mut fs = ServiceFs::new();
     fs.dir("svc")
         .add_fidl_service(resolver_cb)
         .add_fidl_service(repo_cb)
-        .add_fidl_service(rewrite_cb);
+        .add_fidl_service(rewrite_cb)
+        .add_fidl_service(admin_cb);
 
     inspector.export(&mut fs);
 
