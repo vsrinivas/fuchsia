@@ -1,14 +1,14 @@
-# fidlcat: User guide
+# fidlcat: Guide
 
 ## Launching fidlcat
 
-For information about launching fidlcat: [fidlcat](README.md).
+For information about launching fidlcat: [fidlcat](../fidl_inspecting).
 
 ## Disclaimer
 
-This file only render correctly within fuchsia.dev. If you don't see the
-examples, navigate to
-https://fuchsia.dev/fuchsia-src/development/fidl_inspecting/fidlcat_usage
+This file only renders correctly within [fuchsia.dev](https://fuchsia.dev). If
+you don't see the examples, navigate to
+[https://fuchsia.dev/fuchsia-src/development/fidl_inspecting/fidlcat_usage](https://fuchsia.dev/fuchsia-src/development/fidl_inspecting/fidlcat_usage)
 
 ## Default display
 
@@ -179,4 +179,4 @@ the associated handle (**0243b493**) is the handle which controls the directory
 we just opened.
 
 When we receive **Node.OnOpen** on **0243b493** we know that it's a response to
-our **Directory.Open**. We can also use the handle to call **Node.Close**.
+our **Directory.Open**. We also used the handle to call **Node.Close**.

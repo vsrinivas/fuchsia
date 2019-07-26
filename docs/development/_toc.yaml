@@ -47,8 +47,9 @@ toc:
   - include: /fuchsia-src/development/workflows/_toc.yaml
 - title: "Tools"
   section:
-  - title: "FIDLcat"
-    path: /fuchsia-src/development/fidl_inspecting
+  - title: "Fidlcat"
+    section:
+    - include: /fuchsia-src/development/fidl_inspecting/_toc.yaml
   - title: "System monitor"
     section:
     - include: /fuchsia-src/development/system_monitor/_toc.yaml

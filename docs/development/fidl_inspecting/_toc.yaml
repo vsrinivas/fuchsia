@@ -1,0 +1,11 @@
+# Warning: the paths in this file represent the content location in
+# https://fuchsia.dev, not the path in the filesystem.
+#
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Fidlcat overview"
+  path: /fuchsia-src/development/fidl_inspecting
+- title: "Fidlcat guide"
+  path: /fuchsia-src/development/fidl_inspecting/fidlcat_usage
