@@ -127,8 +127,8 @@ class VmObjectPaged final : public VmObject {
       // Calls a Locked method of the parent, which confuses analysis.
       TA_NO_THREAD_SAFETY_ANALYSIS;
 
-  zx_status_t CreateCowClone(Resizability resizable, CloneType type, uint64_t offset, uint64_t size,
-                             bool copy_name, fbl::RefPtr<VmObject>* child_vmo) override
+  zx_status_t CreateClone(Resizability resizable, CloneType type, uint64_t offset, uint64_t size,
+                          bool copy_name, fbl::RefPtr<VmObject>* child_vmo) override
       // This function reaches into the created child, which confuses analysis.
       TA_NO_THREAD_SAFETY_ANALYSIS;
   // Inserts |hidden_parent| as a hidden parent of |this|. This vmo and |hidden_parent|
@@ -210,7 +210,7 @@ class VmObjectPaged final : public VmObject {
       // Walks the parent chain to get the root page source, which confuses analysis.
       TA_NO_THREAD_SAFETY_ANALYSIS;
 
-  bool IsBidirectionalClonable() const
+  bool IsCowClonable() const
       // Walks the parent chain since the root determines clonability.
       TA_NO_THREAD_SAFETY_ANALYSIS;
 
