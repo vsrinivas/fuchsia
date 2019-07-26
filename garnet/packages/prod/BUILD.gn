@@ -225,7 +225,6 @@ group("all") {
     "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:memory_monitor",
     "//garnet/packages/prod:net-cli",
-    "//garnet/packages/prod:net_ctl",
     "//garnet/packages/prod:netcfg",
     "//garnet/packages/prod:netstack",
     "//garnet/packages/prod:netstack3",
@@ -496,13 +495,6 @@ group("vboot_reference") {
   public_deps = [
     "//garnet/tools/vboot_reference:cgpt_host",
     "//garnet/tools/vboot_reference:futility_host",
-  ]
-}
-
-group("net_ctl") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/net_ctl",
   ]
 }
 

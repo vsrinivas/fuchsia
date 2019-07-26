@@ -76,7 +76,7 @@ protocol BridgeInterfaceController {
 [Discoverable]
 // Observer receives events from all interfaces and queries interface info.
 // It is used by clients like mdns which only care about interface change events
-// and the first-class clients like sysUI and net_ctl.
+// and the first-class clients like sysUI.
 protocol Observer {
     /// Retrieve info of all the interfaces.
     ListInterfaces() -> (vector<InterfaceInfo>? infos, zx.status status);
@@ -102,7 +102,7 @@ protocol BasePolicy {
 
 [Discoverable]
 // PrivilegedPolicy provides any interface's controller.
-// It is used by clients such as SysUI and net_ctl.
+// It is used by clients such as SysUI.
 // Infrastructure team is working on capability control mechanism and details can be found:
 // https://docs.google.com/document/d/1pOPFRfdh6AnWt2d37F1k7YH0AhJ1AnrGEdUU3zyzCkQ/edit#
 // That said, the component infrastrastructure will block unqualified client from accessing the PrivilegedPolicy interface.
